@@ -18,10 +18,22 @@ import {
   Play
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { clientApi } from "@/lib/api";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, token, activeAgencyId, agencies } = useAuth();
   const [metricView, setMetricView] = useState<"views" | "engagement">("views");
+  const [clientsCount, setClientsCount] = useState<number>(0);
+
+  const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+
+  React.useEffect(() => {
+    if (token && effectiveAgencyId) {
+      clientApi.list(effectiveAgencyId, token).then((data: any) => {
+        if (Array.isArray(data)) setClientsCount(data.length);
+      }).catch(() => {});
+    }
+  }, [token, effectiveAgencyId]);
 
   return (
     <main className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -66,9 +78,9 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">3</span>
+            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{clientsCount}</span>
             <span className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-              <ArrowUpRight className="w-3 h-3 mr-0.5" /> +1 this month
+              <ArrowUpRight className="w-3 h-3 mr-0.5" /> Live in Database
             </span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">1 onboarding, 0 churned</p>

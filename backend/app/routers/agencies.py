@@ -23,19 +23,21 @@ async def create_agency(
 ) -> AgencyOut:
     """Create a new agency and assign the requester as owner."""
     from app.models.agency import Agency
-    # Check slug uniqueness
-    result = await db.execute(select(Agency).where(Agency.slug == payload.slug))
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Slug already taken."
-        )
+    # Check slug uniqueness if explicitly provided
+    if payload.slug:
+        result = await db.execute(select(Agency).where(Agency.slug == payload.slug))
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Slug already taken."
+            )
     agency = await create_agency_with_owner(payload.name, current_user, db)
     # Override slug if provided explicitly
-    if payload.slug != agency.slug:
+    if payload.slug and payload.slug != agency.slug:
         agency.slug = payload.slug
+    if payload.timezone:
         agency.timezone = payload.timezone
-        await db.commit()
-        await db.refresh(agency)
+    await db.commit()
+    await db.refresh(agency)
     return AgencyOut.model_validate(agency)
 
 

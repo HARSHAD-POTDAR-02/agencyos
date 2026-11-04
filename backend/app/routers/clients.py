@@ -37,14 +37,14 @@ async def create_client(
     return ClientOut.model_validate(client)
 
 
-@router.get("", response_model=list[ClientListItem])
+@router.get("", response_model=list[ClientOut])
 async def list_clients(
     agency_id: uuid.UUID,
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=100),
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
-) -> list[ClientListItem]:
+) -> list[ClientOut]:
     """List all clients for the agency (paginated)."""
     result = await db.execute(
         select(Client)
@@ -53,7 +53,7 @@ async def list_clients(
         .limit(limit)
     )
     clients = result.scalars().all()
-    return [ClientListItem.model_validate(c) for c in clients]
+    return [ClientOut.model_validate(c) for c in clients]
 
 
 @router.get("/{client_id}", response_model=ClientOut)

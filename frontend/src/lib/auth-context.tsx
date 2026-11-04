@@ -49,12 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAgencies = async (authToken: string) => {
     try {
-      const data = await agencyApi.listMine(authToken) as any[];
-      const mapped = data.map((item) => ({
-        agency_id: item.agency?.id || item.agency_id,
-        role: item.role,
-        agency_name: item.agency?.name || "Unnamed Agency",
-      }));
+      const data = (await agencyApi.listMine(authToken)) as any[];
+      const mapped = (data || [])
+        .map((item) => ({
+          agency_id: item.id || item.agency_id || item.agency?.id,
+          role: item.role || "owner",
+          agency_name: item.name || item.agency_name || item.agency?.name || "My Agency",
+        }))
+        .filter((item) => Boolean(item.agency_id));
+
       setAgencies(mapped);
       if (mapped.length > 0) {
         const stored = localStorage.getItem("agencyos_active_agency");

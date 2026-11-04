@@ -35,7 +35,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
-  const { token, activeAgencyId } = useAuth();
+  const { token, activeAgencyId, agencies } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,22 +53,24 @@ export default function ClientsPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
+  const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+
   const loadClients = useCallback(async () => {
-    if (!token || !activeAgencyId) {
+    if (!token || !effectiveAgencyId) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const data = (await clientApi.list(activeAgencyId, token)) as Client[];
+      const data = (await clientApi.list(effectiveAgencyId, token)) as Client[];
       setClients(data);
     } catch (err: any) {
       setError(err.message || "Failed to load clients");
     } finally {
       setLoading(false);
     }
-  }, [token, activeAgencyId]);
+  }, [token, effectiveAgencyId]);
 
   useEffect(() => {
     loadClients();
@@ -76,13 +78,21 @@ export default function ClientsPage() {
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !activeAgencyId) return;
+    if (!token) {
+      setError("You must be logged in to create a client.");
+      return;
+    }
+    if (!effectiveAgencyId) {
+      setError("No active agency found. Please create or select an agency workspace first.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
     try {
       await clientApi.create(
-        activeAgencyId,
+        effectiveAgencyId,
         {
           business_name: businessName,
           industry: industry || undefined,

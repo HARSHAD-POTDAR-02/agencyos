@@ -10,7 +10,7 @@ from app.models.user import RoleEnum
 
 class AgencyCreate(BaseModel):
     name: str
-    slug: str
+    slug: str | None = None
     timezone: str = "Asia/Kolkata"
 
 
