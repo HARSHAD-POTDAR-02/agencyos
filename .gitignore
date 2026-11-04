@@ -1,0 +1,54 @@
+# Git ignore for AgencyOS
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Environment files (NEVER commit these)
+.env
+.env.local
+.env.production
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Alembic versions (commit these — they are migrations)
+# DO NOT add backend/alembic/versions/ here
+
+# Docker
+# docker-compose.override.yml  (commit base, ignore overrides if sensitive)
