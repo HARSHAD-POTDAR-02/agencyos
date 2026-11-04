@@ -62,8 +62,8 @@ class Deliverable(Base):
     campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="deliverables")  # noqa: F821
     scope_item: Mapped["ScopeItem | None"] = relationship("ScopeItem")  # noqa: F821
     tasks: Mapped[list["Task"]] = relationship(  # noqa: F821
-        "Task", back_populates="deliverable", lazy="selectin"
+        "Task", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
     )
     content_versions: Mapped[list["ContentVersion"]] = relationship(  # noqa: F821
-        "ContentVersion", back_populates="deliverable", lazy="selectin"
+        "ContentVersion", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
     )

@@ -3,8 +3,8 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -271,3 +271,32 @@ async def convert_campaign_to_tasks(
         tasks_created=tasks_created,
         status="converted_to_production",
     )
+
+
+@router.delete(
+    "/agencies/{agency_id}/campaigns/{campaign_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+async def delete_campaign(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Delete a campaign and cascade delete its deliverables and tasks."""
+    campaign = await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+
+    # Explicitly cascade delete deliverables and tasks for SQLite compatibility
+    deliv_res = await db.execute(
+        select(Deliverable.id).where(Deliverable.campaign_id == campaign_id)
+    )
+    deliv_ids = list(deliv_res.scalars().all())
+    if deliv_ids:
+        await db.execute(delete(Task).where(Task.deliverable_id.in_(deliv_ids)))
+        await db.execute(delete(Deliverable).where(Deliverable.campaign_id == campaign_id))
+
+    await db.delete(campaign)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

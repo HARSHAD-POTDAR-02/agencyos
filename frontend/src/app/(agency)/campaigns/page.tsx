@@ -26,6 +26,7 @@ import {
   FileText,
   Building2,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 interface Client {
@@ -92,6 +93,7 @@ function CampaignsContent() {
 
   const [generating, setGenerating] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [expandedDay, setExpandedDay] = useState<number | null>(1);
   const [selectedPillarFilter, setSelectedPillarFilter] = useState<string>("all");
@@ -208,6 +210,31 @@ function CampaignsContent() {
       setNotification({ type: "error", text: err.message || "Failed to convert plan to tasks." });
     } finally {
       setConverting(false);
+    }
+  };
+
+  // Delete campaign sprint
+  const handleDeleteCampaign = async (campaignId: string) => {
+    if (!confirm("Are you sure you want to delete this campaign sprint? This will permanently remove all 30 reels and associated production tasks.")) {
+      return;
+    }
+    if (!token || !effectiveAgencyId) return;
+    setDeleting(true);
+    setNotification(null);
+
+    try {
+      await campaignApi.delete(effectiveAgencyId, campaignId, token);
+      const remaining = campaigns.filter((c) => c.id !== campaignId);
+      setCampaigns(remaining);
+      setSelectedCampaign(remaining.length > 0 ? remaining[0] : null);
+      setNotification({
+        type: "success",
+        text: "Campaign sprint and all deliverables deleted. You can now generate a fresh sprint.",
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to delete campaign." });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -397,8 +424,18 @@ function CampaignsContent() {
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl">{plan.objective}</p>
               </div>
 
-              {/* Convert to Kanban Tasks CTA */}
-              <div className="flex items-center gap-3">
+              {/* Actions: Convert or Delete */}
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => handleDeleteCampaign(selectedCampaign.id)}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                  title="Delete this entire 30-day sprint and all associated tasks"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-500" />
+                  <span>{deleting ? "Deleting..." : "Delete Sprint"}</span>
+                </button>
+
                 {selectedCampaign.status === "in_production" ? (
                   <Link
                     href="/tasks"

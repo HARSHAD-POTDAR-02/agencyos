@@ -61,5 +61,5 @@ class Campaign(Base):
     client: Mapped["Client"] = relationship("Client", back_populates="campaigns")  # noqa: F821
     approved_by: Mapped["User | None"] = relationship("User")  # noqa: F821
     deliverables: Mapped[list["Deliverable"]] = relationship(  # noqa: F821
-        "Deliverable", back_populates="campaign", lazy="selectin"
+        "Deliverable", back_populates="campaign", lazy="selectin", cascade="all, delete-orphan"
     )

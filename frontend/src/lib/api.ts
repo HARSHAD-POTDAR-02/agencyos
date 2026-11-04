@@ -33,6 +33,10 @@ async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> 
     throw new Error(error.detail ?? `HTTP ${res.status}`);
   }
 
+  if (res.status === 204) {
+    return null as unknown as T;
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -118,6 +122,9 @@ export const campaignApi = {
 
   convertToTasks: (agencyId: string, campaignId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`, { method: "POST", token }),
+
+  delete: (agencyId: string, campaignId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}`, { method: "DELETE", token }),
 };
 
 /* ── Task endpoints ── */
