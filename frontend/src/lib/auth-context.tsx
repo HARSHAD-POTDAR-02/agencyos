@@ -25,6 +25,7 @@ interface AuthContextType {
   login: (token: string) => Promise<void>;
   logout: () => void;
   setActiveAgencyId: (id: string) => void;
+  createAgency: (name: string) => Promise<string>;
   refreshAgencies: () => Promise<void>;
 }
 
@@ -37,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   logout: () => {},
   setActiveAgencyId: () => {},
+  createAgency: async () => "",
   refreshAgencies: async () => {},
 });
 
@@ -100,6 +102,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("agencyos_active_agency", id);
   };
 
+  const createAgency = async (name: string): Promise<string> => {
+    if (!token) throw new Error("You must be logged in to create an agency.");
+    const newAgency = (await agencyApi.create({ name }, token)) as any;
+    await fetchAgencies(token);
+    if (newAgency && newAgency.id) {
+      setActiveAgencyId(newAgency.id);
+      localStorage.setItem("agencyos_active_agency", newAgency.id);
+      return newAgency.id;
+    }
+    return "";
+  };
+
   useEffect(() => {
     const savedToken = localStorage.getItem("agencyos_token");
     if (savedToken) {
@@ -120,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         setActiveAgencyId: handleSetActiveAgency,
+        createAgency,
         refreshAgencies: () => (token ? fetchAgencies(token) : Promise.resolve()),
       }}
     >

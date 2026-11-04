@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
@@ -15,7 +15,8 @@ import {
   LogOut,
   ChevronRight,
   ShieldCheck,
-  Building2
+  Building2,
+  Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -62,9 +63,27 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, activeAgencyId, agencies, setActiveAgencyId, logout } = useAuth();
+  const { user, activeAgencyId, agencies, setActiveAgencyId, createAgency, logout } = useAuth();
+  const [showAgencyModal, setShowAgencyModal] = useState(false);
+  const [newAgencyName, setNewAgencyName] = useState("");
+  const [creatingAgency, setCreatingAgency] = useState(false);
 
   const currentAgency = agencies.find((a) => a.agency_id === activeAgencyId);
+
+  const handleCreateAgency = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAgencyName.trim()) return;
+    setCreatingAgency(true);
+    try {
+      await createAgency(newAgencyName.trim());
+      setNewAgencyName("");
+      setShowAgencyModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCreatingAgency(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -75,22 +94,32 @@ export function Sidebar() {
     <aside className="w-64 shrink-0 bg-[#0B0D14] text-slate-300 border-r border-white/[0.08] flex flex-col h-screen select-none">
       {/* Brand & Agency Selector */}
       <div className="p-4 border-b border-white/[0.08]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/25 ring-1 ring-white/20">
-            <span className="text-white font-extrabold text-base tracking-wider">A</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-white text-sm tracking-tight truncate">
-                {currentAgency?.agency_name || "AgencyOS"}
-              </span>
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/25 ring-1 ring-white/20">
+              <span className="text-white font-extrabold text-base tracking-wider">A</span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium capitalize flex items-center gap-1">
-              <Building2 className="w-3 h-3 text-slate-500" />
-              {currentAgency?.role ? `${currentAgency.role}` : "Agency Workspace"}
-            </p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-white text-sm tracking-tight truncate">
+                  {currentAgency?.agency_name || "Select Workspace"}
+                </span>
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium capitalize flex items-center gap-1">
+                <Building2 className="w-3 h-3 text-slate-500" />
+                {currentAgency?.role ? `${currentAgency.role}` : "No Active Agency"}
+              </p>
+            </div>
           </div>
+
+          <button
+            onClick={() => setShowAgencyModal(true)}
+            title="Create New Agency Workspace"
+            className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Agency Switcher if multiple */}
@@ -108,6 +137,16 @@ export function Sidebar() {
               ))}
             </select>
           </div>
+        )}
+
+        {agencies.length === 0 && (
+          <button
+            onClick={() => setShowAgencyModal(true)}
+            className="mt-3 w-full py-1.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create Agency Workspace</span>
+          </button>
         )}
       </div>
 
@@ -218,6 +257,54 @@ export function Sidebar() {
           </Link>
         )}
       </div>
+
+      {/* Create Agency Modal */}
+      {showAgencyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-[#11131C] text-white rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-white">Create Agency Workspace</h3>
+              <button
+                onClick={() => setShowAgencyModal(false)}
+                className="text-slate-400 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleCreateAgency} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Agency Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Elevate Social"
+                  value={newAgencyName}
+                  onChange={(e) => setNewAgencyName(e.target.value)}
+                  className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAgencyModal(false)}
+                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingAgency}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-md transition-all disabled:opacity-50"
+                >
+                  {creatingAgency ? "Creating..." : "Create Agency"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
