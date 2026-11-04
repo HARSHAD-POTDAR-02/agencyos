@@ -51,7 +51,7 @@ async def list_agency_tasks(
     assignee_id: uuid.UUID | None = Query(None),
     client_id: uuid.UUID | None = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(200, ge=1, le=500),
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[TaskOut]:

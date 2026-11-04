@@ -324,52 +324,52 @@ async def generate_campaign_plan(
     }}
     """
 
-    try:
-        async with httpx.AsyncClient(timeout=45.0) as http_client:
-            response = await http_client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.7,
-                },
-            )
-            if response.status_code == 200:
-                data = response.json()
-                content = data["choices"][0]["message"]["content"]
-                parsed = json.loads(content)
-                parsed["generator"] = "groq-llama-3.3-70b-versatile"
-                return parsed
-            else:
-                logger.warning("Groq API error %s: %s. Using brand-aware sprint engine.", response.status_code, response.text)
-                fallback = _build_procedural_fallback_plan(
-                    client=client,
-                    brand_profile=brand_profile,
-                    scopes=scopes,
-                    period_month=period_month,
-                    period_year=period_year,
-                    objective=objective,
-                )
-                fallback["generator"] = f"fallback-due-to-groq-{response.status_code}"
-                return fallback
+    candidate_models = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b",
+        "llama-3.3-70b-versatile",
+    ]
 
-    except Exception as exc:
-        logger.warning("Groq generation failed with exception: %s. Using brand-aware sprint engine.", exc)
-        fallback = _build_procedural_fallback_plan(
-            client=client,
-            brand_profile=brand_profile,
-            scopes=scopes,
-            period_month=period_month,
-            period_year=period_year,
-            objective=objective,
-        )
-        fallback["generator"] = "fallback-exception"
-        return fallback
+    for model in candidate_models:
+        try:
+            async with httpx.AsyncClient(timeout=90.0) as http_client:
+                response = await http_client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        "response_format": {"type": "json_object"},
+                        "temperature": 0.7,
+                        "max_tokens": 8192,
+                    },
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"]
+                    parsed = json.loads(content)
+                    parsed["generator"] = f"groq-{model}"
+                    return parsed
+                else:
+                    logger.warning("Groq API model %s failed with %s: %s", model, response.status_code, response.text)
+        except Exception as exc:
+            logger.warning("Groq model %s exception: %s", model, exc)
+
+    logger.warning("All Groq models exhausted. Using intelligent brand-aware sprint engine.")
+    fallback = _build_procedural_fallback_plan(
+        client=client,
+        brand_profile=brand_profile,
+        scopes=scopes,
+        period_month=period_month,
+        period_year=period_year,
+        objective=objective,
+    )
+    fallback["generator"] = "fallback-brand-aware-engine"
+    return fallback
