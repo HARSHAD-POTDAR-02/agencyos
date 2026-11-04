@@ -1,46 +1,61 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { 
+  LayoutDashboard, 
+  Users, 
+  CalendarDays, 
+  CheckSquare, 
+  FileCheck2, 
+  BarChart3, 
+  Settings, 
+  Sparkles, 
+  LogOut,
+  ChevronRight,
+  ShieldCheck,
+  Building2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 
 const navigation = [
   {
-    name: "Overview",
+    name: "Dashboard",
     href: "/dashboard",
-    icon: IconGrid,
-    description: "Agency workload & health",
+    icon: LayoutDashboard,
+    badge: null,
   },
   {
     name: "Clients",
     href: "/clients",
-    icon: IconUsers,
-    description: "Profiles, contracts & assets",
+    icon: Users,
+    badge: null,
   },
   {
     name: "Campaigns",
     href: "/campaigns",
-    icon: IconCalendar,
-    description: "Monthly plans & calendars",
+    icon: CalendarDays,
+    badge: "AI",
   },
   {
     name: "Tasks",
     href: "/tasks",
-    icon: IconCheckSquare,
-    description: "Kanban & assignments",
+    icon: CheckSquare,
+    badge: "12",
   },
   {
     name: "Approvals",
     href: "/approvals",
-    icon: IconThumbsUp,
-    description: "Client review queue",
+    icon: FileCheck2,
+    badge: "3",
   },
   {
-    name: "Reports",
+    name: "Analytics",
     href: "/reports",
-    icon: IconBarChart,
-    description: "Delivery & performance",
+    icon: BarChart3,
+    badge: null,
   },
 ];
 
@@ -57,40 +72,52 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen">
-      {/* Agency Header & Switcher */}
-      <div className="px-5 py-4 border-b border-gray-100">
+    <aside className="w-64 shrink-0 bg-[#0B0D14] text-slate-300 border-r border-white/[0.08] flex flex-col h-screen select-none">
+      {/* Brand & Agency Selector */}
+      <div className="p-4 border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center shrink-0 shadow-sm shadow-purple-200">
-            <span className="text-white font-bold text-base">A</span>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/25 ring-1 ring-white/20">
+            <span className="text-white font-extrabold text-base tracking-wider">A</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-gray-900 truncate">
-              {currentAgency?.agency_name || "AgencyOS"}
-            </p>
-            <p className="text-xs text-purple-600 font-medium capitalize">
-              {currentAgency?.role ? `${currentAgency.role} role` : "Workspace"}
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-white text-sm tracking-tight truncate">
+                {currentAgency?.agency_name || "AgencyOS"}
+              </span>
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium capitalize flex items-center gap-1">
+              <Building2 className="w-3 h-3 text-slate-500" />
+              {currentAgency?.role ? `${currentAgency.role}` : "Agency Workspace"}
             </p>
           </div>
         </div>
 
+        {/* Agency Switcher if multiple */}
         {agencies.length > 1 && (
-          <select
-            value={activeAgencyId || ""}
-            onChange={(e) => setActiveAgencyId(e.target.value)}
-            className="mt-3 w-full text-xs bg-gray-50 border border-gray-200 rounded-md p-1.5 text-gray-700"
-          >
-            {agencies.map((agency) => (
-              <option key={agency.agency_id} value={agency.agency_id}>
-                {agency.agency_name}
-              </option>
-            ))}
-          </select>
+          <div className="mt-3">
+            <select
+              value={activeAgencyId || ""}
+              onChange={(e) => setActiveAgencyId(e.target.value)}
+              className="w-full text-xs bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-lg py-1.5 px-2.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors"
+            >
+              {agencies.map((agency) => (
+                <option key={agency.agency_id} value={agency.agency_id} className="bg-[#121520] text-slate-200">
+                  {agency.agency_name}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      {/* Main Navigation */}
+      <div className="px-3 pt-4 pb-2">
+        <p className="px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+          Main Menu
+        </p>
+      </div>
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           const isActive =
             item.href === "/dashboard"
@@ -103,117 +130,94 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors group",
+                "flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group relative",
                 isActive
-                  ? "bg-purple-50 text-purple-700 font-medium"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-purple-600/15 text-white font-semibold border border-purple-500/30 shadow-sm shadow-purple-950/50"
+                  : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]"
               )}
             >
-              <Icon
-                className={cn(
-                  "w-4 h-4 shrink-0",
-                  isActive ? "text-purple-600" : "text-gray-400 group-hover:text-gray-600"
-                )}
-              />
-              <span>{item.name}</span>
+              <div className="flex items-center gap-3">
+                <Icon
+                  className={cn(
+                    "w-4 h-4 shrink-0 transition-transform group-hover:scale-110",
+                    isActive ? "text-purple-400" : "text-slate-400 group-hover:text-slate-200"
+                  )}
+                />
+                <span>{item.name}</span>
+              </div>
+
+              {item.badge && (
+                <span
+                  className={cn(
+                    "px-1.5 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider",
+                    item.badge === "AI"
+                      ? "bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30"
+                      : "bg-white/[0.08] text-slate-300"
+                  )}
+                >
+                  {item.badge}
+                </span>
+              )}
+
+              {isActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-purple-500 rounded-r-full" />
+              )}
             </Link>
           );
         })}
       </nav>
 
+      {/* AI Pro Banner */}
+      <div className="p-3 mx-3 mb-3 rounded-2xl bg-gradient-to-b from-purple-950/40 via-purple-900/20 to-transparent border border-purple-500/20 relative overflow-hidden group">
+        <div className="absolute -top-6 -right-6 w-20 h-20 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-colors" />
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="p-1 rounded-md bg-purple-500/20 text-purple-300">
+            <Sparkles className="w-3.5 h-3.5" />
+          </div>
+          <span className="text-xs font-semibold text-white tracking-tight">AI Strategy Copilot</span>
+        </div>
+        <p className="text-[11px] text-slate-400 leading-relaxed mb-2.5">
+          Generate full month reels, hooks & shot lists in 1-click.
+        </p>
+        <Link
+          href="/campaigns"
+          className="inline-flex items-center justify-between w-full px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-semibold transition-all shadow-sm shadow-purple-600/30"
+        >
+          <span>Open AI Planner</span>
+          <ChevronRight className="w-3 h-3" />
+        </Link>
+      </div>
+
       {/* User profile & actions */}
-      <div className="p-3 border-t border-gray-100 bg-gray-50/50">
+      <div className="p-3 border-t border-white/[0.08] bg-[#0E1018]">
         {user ? (
-          <div className="flex items-center justify-between gap-2 p-2 rounded-lg">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-gray-900 truncate">{user.full_name}</p>
-              <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl hover:bg-white/[0.04] transition-colors">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 shrink-0">
+                {user.full_name?.charAt(0).toUpperCase() || "A"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-white truncate">{user.full_name}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
               title="Sign out"
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
             >
-              <IconLogout className="w-4 h-4" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         ) : (
           <Link
             href="/login"
-            className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
           >
             Sign in
           </Link>
         )}
       </div>
     </aside>
-  );
-}
-
-function IconLogout({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  );
-}
-
-/* ── Inline SVG icons (no external dep needed) ── */
-
-function IconGrid({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-function IconUsers({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-function IconCalendar({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-function IconCheckSquare({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <polyline points="9 11 12 14 22 4" />
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-    </svg>
-  );
-}
-function IconThumbsUp({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" />
-      <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-    </svg>
-  );
-}
-function IconBarChart({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
-    </svg>
-  );
-}
-function IconSettings({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
   );
 }

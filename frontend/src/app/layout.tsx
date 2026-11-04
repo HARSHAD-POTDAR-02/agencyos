@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "AgencyOS",
-  description: "Workflow and delivery management for social media agencies",
+  title: "AgencyOS — Operating System for Social Media Agencies",
+  description: "Workflow and delivery management from onboarding to campaign delivery, approvals and reporting.",
 };
 
 export default function RootLayout({
@@ -24,10 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={jakarta.variable}>
+      <body className="font-sans antialiased bg-slate-50 text-slate-900 selection:bg-purple-500/20 selection:text-purple-900">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
