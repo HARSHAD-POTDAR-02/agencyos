@@ -1,0 +1,819 @@
+"use client";
+
+import React, { useEffect, useState, useCallback, Suspense } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+import { clientApi, brandProfileApi, contractApi, campaignApi } from "@/lib/api";
+import {
+  ArrowLeft,
+  Building2,
+  Sparkles,
+  ShieldCheck,
+  FileText,
+  Calendar,
+  Plus,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Layers,
+  Save,
+  Trash2,
+  HelpCircle,
+  ExternalLink,
+} from "lucide-react";
+
+interface Client {
+  id: string;
+  agency_id: string;
+  business_name: string;
+  industry: string | null;
+  website: string | null;
+  location: string | null;
+  contact_person: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  status: "active" | "onboarding" | "paused" | "offboarded";
+}
+
+interface BrandProfile {
+  id?: string;
+  brand_voice: string | null;
+  tone_examples: string[] | string | null;
+  approved_phrases: string[] | string | null;
+  prohibited_claims: string[] | string | null;
+  target_audience: string[] | string | null;
+  content_pillars: string[] | string | null;
+  goals: string[] | string | null;
+  is_confirmed: boolean;
+}
+
+interface ScopeItem {
+  id?: string;
+  deliverable_type: string;
+  platform: string;
+  monthly_quantity: number;
+}
+
+interface Contract {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string | null;
+  monthly_fee_inr: number | null;
+  status: string;
+  revision_allowance: number;
+  notes: string | null;
+  scope_items: ScopeItem[];
+}
+
+interface Campaign {
+  id: string;
+  name: string;
+  period_month: number | null;
+  period_year: number | null;
+  objective: string | null;
+  status: string;
+  created_at: string;
+}
+
+function ClientWorkspaceContent() {
+  const params = useParams();
+  const router = useRouter();
+  const clientId = params.id as string;
+  const { token, activeAgencyId, agencies } = useAuth();
+
+  const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+
+  const [client, setClient] = useState<Client | null>(null);
+  const [activeTab, setActiveTab] = useState<"brand" | "contracts" | "campaigns">("brand");
+  const [loading, setLoading] = useState(true);
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Brand Profile State
+  const [brandVoice, setBrandVoice] = useState("");
+  const [toneExamplesText, setToneExamplesText] = useState("");
+  const [targetAudienceText, setTargetAudienceText] = useState("");
+  const [contentPillarsText, setContentPillarsText] = useState("");
+  const [prohibitedClaimsText, setProhibitedClaimsText] = useState("");
+  const [approvedPhrasesText, setApprovedPhrasesText] = useState("");
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  // Contracts State
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [contractName, setContractName] = useState("Social Media Retainer");
+  const [monthlyFee, setMonthlyFee] = useState("65000");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [scopeType, setScopeType] = useState("reel");
+  const [scopePlatform, setScopePlatform] = useState("instagram");
+  const [scopeQuantity, setScopeQuantity] = useState("30");
+  const [creatingContract, setCreatingContract] = useState(false);
+
+  // Campaigns State
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  const loadData = useCallback(async () => {
+    if (!token || !effectiveAgencyId || !clientId) return;
+    setLoading(true);
+    try {
+      // 1. Fetch Client Details
+      const c = (await clientApi.get(effectiveAgencyId, clientId, token)) as Client;
+      setClient(c);
+
+      // 2. Fetch Brand Profile
+      try {
+        const bp = (await brandProfileApi.get(effectiveAgencyId, clientId, token)) as BrandProfile | null;
+        if (bp) {
+          setBrandVoice(bp.brand_voice || "");
+          setToneExamplesText(Array.isArray(bp.tone_examples) ? bp.tone_examples.join("\n") : (bp.tone_examples as string) || "");
+          setTargetAudienceText(Array.isArray(bp.target_audience) ? bp.target_audience.join("\n") : (bp.target_audience as string) || "");
+          setContentPillarsText(Array.isArray(bp.content_pillars) ? bp.content_pillars.join("\n") : (bp.content_pillars as string) || "");
+          setProhibitedClaimsText(Array.isArray(bp.prohibited_claims) ? bp.prohibited_claims.join("\n") : (bp.prohibited_claims as string) || "");
+          setApprovedPhrasesText(Array.isArray(bp.approved_phrases) ? bp.approved_phrases.join("\n") : (bp.approved_phrases as string) || "");
+          setIsConfirmed(bp.is_confirmed || false);
+        }
+      } catch (e) {
+        // profile might not exist yet
+      }
+
+      // 3. Fetch Contracts
+      try {
+        const ctList = (await contractApi.list(effectiveAgencyId, clientId, token)) as Contract[];
+        setContracts(ctList || []);
+      } catch (e) {
+        // ignore
+      }
+
+      // 4. Fetch Campaigns
+      try {
+        const campList = (await campaignApi.list(effectiveAgencyId, clientId, token)) as Campaign[];
+        setCampaigns(campList || []);
+      } catch (e) {
+        // ignore
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to load client details." });
+    } finally {
+      setLoading(false);
+    }
+  }, [token, effectiveAgencyId, clientId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSaveBrandProfile = async (confirmProfile = false) => {
+    if (!token || !effectiveAgencyId) return;
+    setSavingBrand(true);
+    setNotification(null);
+
+    const parseLines = (text: string) =>
+      text
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+    const payload = {
+      brand_voice: brandVoice,
+      tone_examples: parseLines(toneExamplesText),
+      target_audience: parseLines(targetAudienceText),
+      content_pillars: parseLines(contentPillarsText),
+      prohibited_claims: parseLines(prohibitedClaimsText),
+      approved_phrases: parseLines(approvedPhrasesText),
+      is_confirmed: confirmProfile || isConfirmed,
+    };
+
+    try {
+      await brandProfileApi.upsert(effectiveAgencyId, clientId, payload, token);
+      setIsConfirmed(confirmProfile || isConfirmed);
+      setNotification({
+        type: "success",
+        text: confirmProfile
+          ? "Brand guidelines successfully locked and confirmed! AI planner and team will strictly follow this."
+          : "Brand profile saved successfully.",
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to save brand profile." });
+    } finally {
+      setSavingBrand(false);
+    }
+  };
+
+  const handleCreateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !effectiveAgencyId) return;
+    setCreatingContract(true);
+    setNotification(null);
+
+    try {
+      await contractApi.create(
+        effectiveAgencyId,
+        clientId,
+        {
+          name: contractName,
+          monthly_fee_inr: parseFloat(monthlyFee) || 0,
+          start_date: startDate,
+          scope_items: [
+            {
+              deliverable_type: scopeType,
+              platform: scopePlatform,
+              monthly_quantity: parseInt(scopeQuantity, 10) || 30,
+            },
+          ],
+        },
+        token
+      );
+      setShowContractModal(false);
+      setNotification({ type: "success", text: "Retainer contract and scope quotas activated!" });
+      loadData();
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to create contract." });
+    } finally {
+      setCreatingContract(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="flex-1 overflow-y-auto p-8 max-w-7xl mx-auto flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-slate-500">Loading client workspace...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!client) {
+    return (
+      <main className="flex-1 overflow-y-auto p-8 max-w-7xl mx-auto">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-md mx-auto shadow-sm">
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+          <h2 className="text-base font-bold text-slate-900">Client Not Found</h2>
+          <p className="text-xs text-slate-500 mt-1 mb-4">
+            The requested client workspace does not exist or you do not have permission to access it.
+          </p>
+          <Link
+            href="/clients"
+            className="inline-flex items-center gap-2 bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Clients</span>
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* Top Breadcrumb & Navigation */}
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-4">
+        <Link href="/clients" className="hover:text-purple-600 flex items-center gap-1 transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Clients</span>
+        </Link>
+        <span>/</span>
+        <span className="text-slate-800 font-bold">{client.business_name}</span>
+      </div>
+
+      {/* Client Header Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 text-white font-black text-xl flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
+              {client.business_name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">{client.business_name}</h1>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200/60">
+                  {client.status}
+                </span>
+                {isConfirmed && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Brand Locked</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                {client.industry || "General Industry"} &bull; {client.location || "Location not set"}
+                {client.website && (
+                  <a
+                    href={client.website.startsWith("http") ? client.website : `https://${client.website}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 ml-3 text-purple-600 hover:underline font-semibold"
+                  >
+                    <span>Website</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Link
+              href={`/campaigns?clientId=${client.id}`}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Sparkles className="w-4 h-4 text-purple-200" />
+              <span>Generate AI Plan ✨</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-2 mt-6 border-t border-slate-100 pt-4">
+          <button
+            onClick={() => setActiveTab("brand")}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "brand"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Brand Voice & Guidelines</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("contracts")}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "contracts"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Retainer Contracts & Quotas ({contracts.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("campaigns")}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "campaigns"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Campaign Plans ({campaigns.length})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      {notification && (
+        <div
+          className={`mb-6 p-4 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
+            notification.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-rose-50 text-rose-800 border-rose-200"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {notification.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{notification.text}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="text-slate-400 hover:text-slate-600">
+            &times;
+          </button>
+        </div>
+      )}
+
+      {/* TAB 1: BRAND GUIDELINES */}
+      {activeTab === "brand" && (
+        <div className="space-y-6">
+          <div className="bg-purple-50/70 border border-purple-200/70 rounded-2xl p-4 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-xs font-bold text-purple-950">Why Brand Guidelines Matter in AgencyOS</h4>
+              <p className="text-[12px] text-purple-800/90 mt-0.5 leading-relaxed">
+                When you save and confirm this profile, AgencyOS injects these rules directly into the Groq AI Campaign Planner
+                and Content Version approvals. Any prohibited claims or off-brand phrases will be automatically flagged before
+                content goes to client review.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+            {/* Brand Voice */}
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                Brand Voice & Personality <span className="text-purple-600">*</span>
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">
+                Describe how the brand speaks to its audience (e.g. &quot;Authoritative yet approachable, relatable Hinglish blend, witty hook-driven&quot;).
+              </p>
+              <textarea
+                rows={3}
+                value={brandVoice}
+                onChange={(e) => setBrandVoice(e.target.value)}
+                placeholder="e.g. Confident, modern Indian conversational tone with smart humor and zero corporate jargon."
+                className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+              />
+            </div>
+
+            {/* Tone Examples */}
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1.5">Tone & Copy Examples (1 per line)</label>
+              <p className="text-[11px] text-slate-400 mb-2">Sample sentences or caption hooks that capture the brand vibe perfectly.</p>
+              <textarea
+                rows={3}
+                value={toneExamplesText}
+                onChange={(e) => setToneExamplesText(e.target.value)}
+                placeholder={"&quot;Chai isn&apos;t just tea, it&apos;s our 4 PM therapy session.&quot;\n&quot;No fake promises, only pure organic brew.&quot;"}
+                className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all font-mono"
+              />
+            </div>
+
+            {/* 2-Column Grid: Content Pillars & Target Audience */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">Content Pillars (1 per line)</label>
+                <p className="text-[11px] text-slate-400 mb-2">The key themes repeated in 30-day sprints.</p>
+                <textarea
+                  rows={4}
+                  value={contentPillarsText}
+                  onChange={(e) => setContentPillarsText(e.target.value)}
+                  placeholder={"Industry Insights & Busting Myths\nRelatable Work Humor & Trends\nBehind The Scenes\nCustomer Transformation Stories\nQuick Tips & Frameworks"}
+                  className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">Target Audience</label>
+                <p className="text-[11px] text-slate-400 mb-2">Who are we talking to? Demographics, geography, pain points.</p>
+                <textarea
+                  rows={4}
+                  value={targetAudienceText}
+                  onChange={(e) => setTargetAudienceText(e.target.value)}
+                  placeholder={"Urban Indian professionals aged 22-38 in tier 1 & 2 cities\nInterested in fitness, premium lifestyle, and productivity\nActive primarily on Instagram Reels & LinkedIn"}
+                  className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* 2-Column Grid: Prohibited Claims & Approved Phrases */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100">
+                <div className="flex items-center gap-1.5 text-rose-700 font-bold text-xs mb-1">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Prohibited Claims & Forbidden Words (1 per line)</span>
+                </div>
+                <p className="text-[11px] text-rose-600/80 mb-2">AgencyOS will flag and block any draft containing these.</p>
+                <textarea
+                  rows={3}
+                  value={prohibitedClaimsText}
+                  onChange={(e) => setProhibitedClaimsText(e.target.value)}
+                  placeholder={"100% guaranteed results\nCheapest in India\nInstant cure\nUnverified clinical claims"}
+                  className="w-full bg-white text-xs text-slate-800 p-3 rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                />
+              </div>
+
+              <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs mb-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approved Taglines & Required Phrases</span>
+                </div>
+                <p className="text-[11px] text-emerald-600/80 mb-2">Mandatory disclaimers or client-approved slogans.</p>
+                <textarea
+                  rows={3}
+                  value={approvedPhrasesText}
+                  onChange={(e) => setApprovedPhrasesText(e.target.value)}
+                  placeholder={"Brewed with Real Passion\nAvailable exclusively at artisanstores.in\nT&C Apply"}
+                  className="w-full bg-white text-xs text-slate-800 p-3 rounded-xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Save Action Buttons */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="confirmCheck"
+                  checked={isConfirmed}
+                  onChange={(e) => setIsConfirmed(e.target.checked)}
+                  className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                />
+                <label htmlFor="confirmCheck" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                  Mark as Confirmed by Client
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  disabled={savingBrand}
+                  onClick={() => handleSaveBrandProfile(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                >
+                  Save Draft
+                </button>
+                <button
+                  type="button"
+                  disabled={savingBrand}
+                  onClick={() => handleSaveBrandProfile(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs transition-all"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingBrand ? "Saving..." : "Lock & Confirm Guidelines"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: CONTRACTS & SCOPE QUOTAS */}
+      {activeTab === "contracts" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Retainer Contracts & Monthly Deliverable Quotas</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                AgencyOS enforces hard caps on deliverables so your agency never executes out-of-scope work for free.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowContractModal(true)}
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ New Retainer Contract</span>
+            </button>
+          </div>
+
+          {contracts.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
+              <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-slate-800">No active contracts</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+                Create a retainer contract defining the monthly retainer fee and contracted deliverables (e.g. 30 Reels / month).
+              </p>
+              <button
+                onClick={() => setShowContractModal(true)}
+                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create First Contract</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5">
+              {contracts.map((ct) => (
+                <div key={ct.id} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h4 className="text-base font-bold text-slate-900">{ct.name}</h4>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {ct.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Effective from {ct.start_date} &bull; {ct.revision_allowance} Revisions Included
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-xs text-slate-400 font-semibold">Monthly Retainer Fee</div>
+                      <div className="text-lg font-black text-slate-900">
+                        ₹{(ct.monthly_fee_inr || 0).toLocaleString("en-IN")}
+                        <span className="text-xs font-normal text-slate-500"> / month</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Scope Items Breakdown */}
+                  <div className="pt-4">
+                    <h5 className="text-xs font-bold text-slate-700 mb-3">Contracted Deliverables & Quota Cap</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {ct.scope_items && ct.scope_items.length > 0 ? (
+                        ct.scope_items.map((item, idx) => (
+                          <div key={idx} className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center justify-between">
+                            <div>
+                              <div className="text-xs font-bold text-slate-800 capitalize">
+                                {item.deliverable_type}s
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-semibold uppercase">{item.platform}</div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-base font-black text-purple-600">{item.monthly_quantity}</span>
+                              <span className="text-[10px] text-slate-400 font-bold block">per month</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-slate-400">Standard 30 reels/month active.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: CAMPAIGNS */}
+      {activeTab === "campaigns" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Campaign Sprints for {client.business_name}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Every month has an AI-generated plan containing 30 day-by-day deliverables and hooks.
+              </p>
+            </div>
+            <Link
+              href={`/campaigns?clientId=${client.id}`}
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+            >
+              <Sparkles className="w-4 h-4 text-purple-200" />
+              <span>+ Generate New Sprint</span>
+            </Link>
+          </div>
+
+          {campaigns.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
+              <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-slate-800">No campaigns created yet</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+                Generate your first 30-day content calendar using Groq AI. All reels will be mapped to the brand tone.
+              </p>
+              <Link
+                href={`/campaigns?clientId=${client.id}`}
+                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Generate Plan with AI ✨</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {campaigns.map((camp) => (
+                <div key={camp.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">
+                        {camp.period_month && camp.period_year ? `${camp.period_month}/${camp.period_year}` : "Sprint"}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200/50">
+                        {camp.status}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">{camp.name}</h4>
+                    <p className="text-xs text-slate-500 line-clamp-2">{camp.objective || "Standard monthly content sprint."}</p>
+                  </div>
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400">Created {new Date(camp.created_at).toLocaleDateString()}</span>
+                    <Link
+                      href={`/campaigns?campaignId=${camp.id}`}
+                      className="text-xs font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                    >
+                      <span>View Content Calendar</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CREATE CONTRACT MODAL */}
+      {showContractModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">New Retainer Contract</h3>
+                <p className="text-xs text-slate-500">Define the monthly retainer fee and deliverable quota cap.</p>
+              </div>
+              <button onClick={() => setShowContractModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateContract} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Contract Name</label>
+                <input
+                  type="text"
+                  required
+                  value={contractName}
+                  onChange={(e) => setContractName(e.target.value)}
+                  className="w-full bg-slate-50 text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">Monthly Fee (₹ INR)</label>
+                  <input
+                    type="number"
+                    required
+                    value={monthlyFee}
+                    onChange={(e) => setMonthlyFee(e.target.value)}
+                    className="w-full bg-slate-50 text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-slate-50 text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* Scope Quota Inputs */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                <span className="text-xs font-bold text-slate-800 block">Deliverable Scope Quota</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Type</label>
+                    <select
+                      value={scopeType}
+                      onChange={(e) => setScopeType(e.target.value)}
+                      className="w-full bg-white text-xs text-slate-800 p-2 rounded-lg border border-slate-200"
+                    >
+                      <option value="reel">Reel / Video</option>
+                      <option value="carousel">Carousel</option>
+                      <option value="static_post">Static Post</option>
+                      <option value="story">Story</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Platform</label>
+                    <select
+                      value={scopePlatform}
+                      onChange={(e) => setScopePlatform(e.target.value)}
+                      className="w-full bg-white text-xs text-slate-800 p-2 rounded-lg border border-slate-200"
+                    >
+                      <option value="instagram">Instagram</option>
+                      <option value="youtube_shorts">YouTube Shorts</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="facebook">Facebook</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Qty / Month</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={scopeQuantity}
+                      onChange={(e) => setScopeQuantity(e.target.value)}
+                      className="w-full bg-white text-xs text-slate-800 p-2 rounded-lg border border-slate-200"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowContractModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingContract}
+                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs"
+                >
+                  {creatingContract ? "Activating..." : "Activate Retainer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+export default function ClientWorkspacePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading client workspace...</div>}>
+      <ClientWorkspaceContent />
+    </Suspense>
+  );
+}

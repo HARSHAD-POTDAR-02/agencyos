@@ -80,8 +80,26 @@ export const clientApi = {
   update: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients/${clientId}`, { method: "PATCH", body: data, token }),
 
-  quota: (agencyId: string, clientId: string, token: string) =>
-    apiFetch(`/agencies/${agencyId}/clients/${clientId}/quota`, { token }),
+  quota: (agencyId: string, clientId: string, month: number, year: number, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/quota?period_month=${month}&period_year=${year}`, { token }),
+};
+
+/* ── Brand Profile endpoints ── */
+export const brandProfileApi = {
+  get: (agencyId: string, clientId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/brand-profile`, { token }),
+
+  upsert: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/brand-profile`, { method: "PUT", body: data, token }),
+};
+
+/* ── Contract endpoints ── */
+export const contractApi = {
+  list: (agencyId: string, clientId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/contracts`, { token }),
+
+  create: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/contracts`, { method: "POST", body: data, token }),
 };
 
 /* ── Campaign endpoints ── */
@@ -94,6 +112,12 @@ export const campaignApi = {
 
   get: (agencyId: string, campaignId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}`, { token }),
+
+  generatePlan: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/campaigns/generate-plan`, { method: "POST", body: data, token }),
+
+  convertToTasks: (agencyId: string, campaignId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`, { method: "POST", token }),
 };
 
 /* ── Task endpoints ── */

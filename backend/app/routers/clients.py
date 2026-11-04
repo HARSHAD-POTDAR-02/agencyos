@@ -8,10 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member
+from app.models.brand_profile import BrandProfile
 from app.models.client import Client
+from app.models.contract import Contract, ScopeItem
 from app.models.user import Membership, User
 from app.schemas.campaign import QuotaSummaryOut
 from app.schemas.client import ClientCreate, ClientListItem, ClientOut, ClientUpdate
+from app.schemas.contract import (
+    BrandProfileOut,
+    BrandProfileUpdate,
+    ContractCreate,
+    ContractOut,
+)
 from app.services.quota_service import get_monthly_quota_summary
 from app.services.tenant_service import get_client_for_agency
 
@@ -99,3 +107,120 @@ async def get_quota(
     await get_client_for_agency(client_id, agency_id, db)
     summary = await get_monthly_quota_summary(client_id, period_month, period_year, db)
     return [QuotaSummaryOut(**s) for s in summary]
+
+
+# ── Brand Profile Endpoints ──
+@router.get("/{client_id}/brand-profile", response_model=BrandProfileOut | None)
+async def get_brand_profile(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> BrandProfileOut | None:
+    """Get the confirmed or latest brand profile for a client."""
+    await get_client_for_agency(client_id, agency_id, db)
+    result = await db.execute(
+        select(BrandProfile)
+        .where(BrandProfile.client_id == client_id)
+        .order_by(BrandProfile.version.desc())
+    )
+    profile = result.scalars().first()
+    if profile is None:
+        return None
+    return BrandProfileOut.model_validate(profile)
+
+
+@router.put("/{client_id}/brand-profile", response_model=BrandProfileOut)
+async def upsert_brand_profile(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: BrandProfileUpdate,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> BrandProfileOut:
+    """Upsert brand guidelines & voice profile for a client."""
+    await get_client_for_agency(client_id, agency_id, db)
+    result = await db.execute(
+        select(BrandProfile)
+        .where(BrandProfile.client_id == client_id)
+        .order_by(BrandProfile.version.desc())
+    )
+    existing = result.scalars().first()
+
+    if existing is None:
+        profile = BrandProfile(
+            id=uuid.uuid4(),
+            client_id=client_id,
+            version=1,
+            is_confirmed=payload.is_confirmed or False,
+            brand_voice=payload.brand_voice,
+            tone_examples=payload.tone_examples,
+            approved_phrases=payload.approved_phrases,
+            prohibited_claims=payload.prohibited_claims,
+            target_audience=payload.target_audience,
+            content_pillars=payload.content_pillars,
+            goals=payload.goals,
+        )
+        db.add(profile)
+    else:
+        # Update existing
+        update_data = payload.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(existing, field, value)
+        profile = existing
+
+    await db.commit()
+    await db.refresh(profile)
+    return BrandProfileOut.model_validate(profile)
+
+
+# ── Contract & Retainer Quota Endpoints ──
+@router.get("/{client_id}/contracts", response_model=list[ContractOut])
+async def list_contracts(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[ContractOut]:
+    """List all retainer contracts and their scope items for a client."""
+    await get_client_for_agency(client_id, agency_id, db)
+    result = await db.execute(
+        select(Contract).where(Contract.client_id == client_id).order_by(Contract.created_at.desc())
+    )
+    contracts = result.scalars().all()
+    return [ContractOut.model_validate(c) for c in contracts]
+
+
+@router.post("/{client_id}/contracts", response_model=ContractOut, status_code=status.HTTP_201_CREATED)
+async def create_contract(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: ContractCreate,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ContractOut:
+    """Create a new contract and associated monthly scope items."""
+    await get_client_for_agency(client_id, agency_id, db)
+    
+    contract_data = payload.model_dump(exclude={"scope_items"})
+    contract = Contract(
+        id=uuid.uuid4(),
+        client_id=client_id,
+        **contract_data,
+    )
+    db.add(contract)
+    await db.flush()
+
+    for item in payload.scope_items:
+        scope = ScopeItem(
+            id=uuid.uuid4(),
+            contract_id=contract.id,
+            deliverable_type=item.deliverable_type,
+            platform=item.platform,
+            monthly_quantity=item.monthly_quantity,
+        )
+        db.add(scope)
+
+    await db.commit()
+    await db.refresh(contract)
+    return ContractOut.model_validate(contract)

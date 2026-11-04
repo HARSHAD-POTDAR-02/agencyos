@@ -259,9 +259,11 @@ export default function ClientsPage() {
                       {client.business_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-700 transition-colors">
-                        {client.business_name}
-                      </h3>
+                      <Link href={`/clients/${client.id}`}>
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-700 transition-colors cursor-pointer">
+                          {client.business_name}
+                        </h3>
+                      </Link>
                       <p className="text-[11px] text-slate-400 font-medium">
                         {client.industry || "General Industry"}
                       </p>
@@ -311,16 +313,19 @@ export default function ClientsPage() {
               {/* Action Buttons */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                 <Link
-                  href="/campaigns"
+                  href={`/campaigns?clientId=${client.id}`}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-800 py-1"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>AI Plan</span>
                 </Link>
-                <button className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-purple-700 py-1">
+                <Link
+                  href={`/clients/${client.id}`}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-purple-700 py-1"
+                >
                   <span>Workspace</span>
                   <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                </Link>
               </div>
             </div>
           ))}

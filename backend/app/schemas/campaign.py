@@ -70,3 +70,18 @@ class QuotaSummaryOut(BaseModel):
     approved: int
     published: int
     remaining: int
+
+
+class GeneratePlanRequest(BaseModel):
+    period_month: int = 11
+    period_year: int = 2026
+    objective: str | None = None
+    custom_brief: str | None = None
+
+
+class ConvertToTasksResponse(BaseModel):
+    campaign_id: uuid.UUID
+    deliverables_created: int
+    tasks_created: int
+    status: str
+
