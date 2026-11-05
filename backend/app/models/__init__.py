@@ -13,3 +13,5 @@ from app.models.task import Task, TaskPriority, TaskStatus  # noqa: F401
 from app.models.content_version import ContentVersion  # noqa: F401
 from app.models.approval import Approval, ApprovalDecision  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.client_reviewer import ClientReviewer  # noqa: F401
+from app.models.comment import DeliverableComment  # noqa: F401

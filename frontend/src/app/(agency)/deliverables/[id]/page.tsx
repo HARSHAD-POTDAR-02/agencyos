@@ -26,7 +26,19 @@ import {
   ChevronRight,
   Layers,
   Calendar,
+  Send,
 } from "lucide-react";
+
+interface Comment {
+  id: string;
+  author_id: string;
+  author_name: string | null;
+  author_role: string | null;
+  message: string;
+  is_internal: boolean;
+  content_version_id: string | null;
+  created_at: string;
+}
 
 interface ContentVersion {
   id: string;
@@ -63,6 +75,7 @@ interface DeliverableDetail {
   created_at: string;
   updated_at: string;
   content_versions: ContentVersion[];
+  comments?: Comment[];
 }
 
 function formatBytes(bytes: number | null): string {
@@ -112,6 +125,10 @@ function DeliverableDetailContent() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [copiedChecksum, setCopiedChecksum] = useState(false);
+
+  // Comments state
+  const [newComment, setNewComment] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -190,6 +207,30 @@ function DeliverableDetailContent() {
       await fetchDeliverable();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to update status");
+    }
+  };
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeAgencyId || !token || !id || !newComment.trim()) return;
+    try {
+      setSubmittingComment(true);
+      await deliverableApi.postComment(
+        activeAgencyId,
+        id,
+        {
+          message: newComment.trim(),
+          content_version_id: selectedVersionId,
+          is_internal: false,
+        },
+        token
+      );
+      setNewComment("");
+      await fetchDeliverable();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to post comment");
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -583,6 +624,89 @@ function DeliverableDetailContent() {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Feedback & Collaboration Thread Card */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-slate-100 text-slate-700">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <h3 className="text-xs font-extrabold text-slate-900 tracking-tight">
+                  Client & Team Feedback
+                </h3>
+              </div>
+              <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                {deliverable.comments?.length || 0}
+              </span>
+            </div>
+
+            {(!deliverable.comments || deliverable.comments.length === 0) ? (
+              <p className="text-xs text-slate-400 italic text-center py-4">
+                No feedback recorded yet. Client review comments and revisions will appear here.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {deliverable.comments.map((c) => {
+                  const isClient = c.author_role === "client";
+                  return (
+                    <div key={c.id} className="flex gap-3">
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                          isClient
+                            ? "bg-purple-100 text-purple-700 border border-purple-200"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {(c.author_name || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-slate-900">
+                            {c.author_name || "Reviewer"}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase ${
+                              isClient
+                                ? "bg-purple-50 text-purple-700 border border-purple-200/50"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {isClient ? "Client" : "Agency Team"}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {formatDate(c.created_at)}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-800 bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2 leading-relaxed mt-0.5">
+                          {c.message}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Post comment */}
+            <form onSubmit={handlePostComment} className="pt-2 border-t border-slate-100 flex gap-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Reply to client or add internal note..."
+                className="flex-1 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+              />
+              <button
+                type="submit"
+                disabled={submittingComment || !newComment.trim()}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl disabled:opacity-40 transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Reply</span>
+              </button>
+            </form>
           </div>
         </div>
 

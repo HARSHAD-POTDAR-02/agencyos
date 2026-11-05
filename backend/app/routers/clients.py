@@ -11,9 +11,12 @@ from app.dependencies import get_current_user, require_agency_member
 from app.models.brand_profile import BrandProfile
 from app.models.client import Client
 from app.models.contract import Contract, ScopeItem
-from app.models.user import Membership, User
+from app.models.client_reviewer import ClientReviewer
+from app.models.user import Membership, RoleEnum, User
+from app.core.security import hash_password
 from app.schemas.campaign import QuotaSummaryOut
 from app.schemas.client import ClientCreate, ClientListItem, ClientOut, ClientUpdate
+from app.schemas.portal import ClientReviewerCreate, ClientReviewerOut
 from app.schemas.contract import (
     BrandProfileOut,
     BrandProfileUpdate,
@@ -224,3 +227,121 @@ async def create_contract(
     await db.commit()
     await db.refresh(contract)
     return ContractOut.model_validate(contract)
+
+
+# ---------------------------------------------------------------------------
+# Client Reviewers
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{client_id}/reviewers", response_model=list[ClientReviewerOut])
+async def list_client_reviewers(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[ClientReviewerOut]:
+    """List all reviewers assigned to this client."""
+    await get_client_for_agency(client_id, agency_id, db)
+
+    result = await db.execute(
+        select(ClientReviewer, User)
+        .join(User, ClientReviewer.user_id == User.id)
+        .where(ClientReviewer.client_id == client_id)
+        .order_by(ClientReviewer.created_at.desc())
+    )
+
+    reviewers: list[ClientReviewerOut] = []
+    for cr, u in result.all():
+        reviewers.append(
+            ClientReviewerOut(
+                id=cr.id,
+                client_id=cr.client_id,
+                user_id=cr.user_id,
+                email=u.email,
+                full_name=u.full_name,
+                created_at=cr.created_at,
+            )
+        )
+    return reviewers
+
+
+@router.post(
+    "/{client_id}/reviewers",
+    response_model=ClientReviewerOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def invite_client_reviewer(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: ClientReviewerCreate,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ClientReviewerOut:
+    """
+    Invite or link a client reviewer to this client.
+    Creates user account if needed, sets role=client, and registers client review permissions.
+    """
+    await get_client_for_agency(client_id, agency_id, db)
+
+    # Check if user already exists
+    user_res = await db.execute(select(User).where(User.email == payload.email))
+    user = user_res.scalar_one_or_none()
+
+    if user is None:
+        user = User(
+            id=uuid.uuid4(),
+            email=payload.email,
+            hashed_password=hash_password(payload.password),
+            full_name=payload.full_name,
+        )
+        db.add(user)
+        await db.flush()
+
+    # Ensure agency membership exists with role=client
+    mem_res = await db.execute(
+        select(Membership).where(
+            Membership.user_id == user.id,
+            Membership.agency_id == agency_id,
+        )
+    )
+    membership = mem_res.scalar_one_or_none()
+    if membership is None:
+        membership = Membership(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            agency_id=agency_id,
+            role=RoleEnum.client,
+        )
+        db.add(membership)
+        await db.flush()
+
+    # Ensure client reviewer link exists
+    rev_res = await db.execute(
+        select(ClientReviewer).where(
+            ClientReviewer.client_id == client_id,
+            ClientReviewer.user_id == user.id,
+        )
+    )
+    reviewer = rev_res.scalar_one_or_none()
+    if reviewer is None:
+        reviewer = ClientReviewer(
+            id=uuid.uuid4(),
+            client_id=client_id,
+            user_id=user.id,
+        )
+        db.add(reviewer)
+        await db.commit()
+        await db.refresh(reviewer)
+    else:
+        await db.commit()
+
+    return ClientReviewerOut(
+        id=reviewer.id,
+        client_id=reviewer.client_id,
+        user_id=reviewer.user_id,
+        email=user.email,
+        full_name=user.full_name,
+        created_at=reviewer.created_at,
+    )
+

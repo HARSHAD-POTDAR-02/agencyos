@@ -165,6 +165,18 @@ export const deliverableApi = {
       method: "DELETE",
       token,
     }),
+
+  postComment: (
+    agencyId: string,
+    deliverableId: string,
+    data: { message: string; content_version_id?: string | null; is_internal?: boolean },
+    token: string
+  ) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/comments`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
 };
 
 /* ── Approval endpoints ── */
@@ -183,4 +195,54 @@ export const approvalApi = {
 
   list: (agencyId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/approvals`, { token }),
+
+  queue: (agencyId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/approvals/queue`, { token }),
+};
+
+/* ── Client Reviewer endpoints ── */
+export const reviewerApi = {
+  list: (agencyId: string, clientId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/reviewers`, { token }),
+
+  invite: (agencyId: string, clientId: string, data: { email: string; full_name?: string; password?: string }, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/reviewers`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+};
+
+/* ── Client Portal endpoints ── */
+export const portalApi = {
+  clients: (token: string) =>
+    apiFetch(`/portal/clients`, { token }),
+
+  deliverables: (token: string, clientId?: string) => {
+    const qs = clientId ? `?client_id=${clientId}` : "";
+    return apiFetch(`/portal/deliverables${qs}`, { token });
+  },
+
+  deliverable: (deliverableId: string, token: string) =>
+    apiFetch(`/portal/deliverables/${deliverableId}`, { token }),
+
+  postComment: (deliverableId: string, message: string, token: string, contentVersionId?: string) =>
+    apiFetch(`/portal/deliverables/${deliverableId}/comments`, {
+      method: "POST",
+      body: { message, content_version_id: contentVersionId ?? null, is_internal: false },
+      token,
+    }),
+
+  decide: (
+    deliverableId: string,
+    versionId: string,
+    decision: "approved" | "changes_requested",
+    comment: string | undefined,
+    token: string
+  ) =>
+    apiFetch(`/portal/deliverables/${deliverableId}/versions/${versionId}/decision`, {
+      method: "POST",
+      body: { decision, comment: comment || undefined },
+      token,
+    }),
 };

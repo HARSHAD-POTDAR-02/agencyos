@@ -46,6 +46,7 @@ Thumbs.db
 # Uploads
 backend/uploads/*
 !backend/uploads/.gitkeep
+uploads/
 
 # Logs
 *.log

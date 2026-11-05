@@ -20,8 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member
 from app.models.content_version import ContentVersion
+from app.models.comment import DeliverableComment
 from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.user import Membership, User
+from app.schemas.comment import CommentCreate, CommentOut
 from app.schemas.deliverable import ContentVersionOut, DeliverableDetailOut
 from app.schemas.campaign import DeliverableOut
 from app.services.storage_service import delete_file, save_file
@@ -222,3 +224,50 @@ async def update_deliverable_status(
     await db.commit()
     await db.refresh(deliverable)
     return DeliverableOut.model_validate(deliverable)
+
+
+# ---------------------------------------------------------------------------
+# Comments
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/agencies/{agency_id}/deliverables/{deliverable_id}/comments",
+    response_model=CommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_deliverable_comment(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    payload: CommentCreate,
+    membership: Membership = Depends(require_agency_member),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CommentOut:
+    """Post an internal or client-facing comment on a deliverable."""
+    await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+
+    comment = DeliverableComment(
+        id=uuid.uuid4(),
+        deliverable_id=deliverable_id,
+        content_version_id=payload.content_version_id,
+        author_id=current_user.id,
+        message=payload.message,
+        is_internal=payload.is_internal,
+    )
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+
+    return CommentOut(
+        id=comment.id,
+        deliverable_id=comment.deliverable_id,
+        content_version_id=comment.content_version_id,
+        author_id=comment.author_id,
+        author_name=current_user.full_name or current_user.email,
+        author_role=membership.role.value,
+        message=comment.message,
+        is_internal=comment.is_internal,
+        created_at=comment.created_at,
+    )
+

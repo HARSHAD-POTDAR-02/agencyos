@@ -67,3 +67,6 @@ class Deliverable(Base):
     content_versions: Mapped[list["ContentVersion"]] = relationship(  # noqa: F821
         "ContentVersion", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
     )
+    comments: Mapped[list["DeliverableComment"]] = relationship(  # noqa: F821
+        "DeliverableComment", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
+    )

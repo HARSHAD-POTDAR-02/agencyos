@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { clientApi, brandProfileApi, contractApi, campaignApi } from "@/lib/api";
+import { clientApi, brandProfileApi, contractApi, campaignApi, reviewerApi } from "@/lib/api";
 import {
   ArrowLeft,
   Building2,
@@ -21,6 +21,10 @@ import {
   Trash2,
   HelpCircle,
   ExternalLink,
+  UserCheck,
+  Mail,
+  X,
+  Eye,
 } from "lucide-react";
 
 interface Client {
@@ -86,10 +90,18 @@ function ClientWorkspaceContent() {
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
   const [client, setClient] = useState<Client | null>(null);
-  const [activeTab, setActiveTab] = useState<"brand" | "contracts" | "campaigns">("brand");
+  const [activeTab, setActiveTab] = useState<"brand" | "contracts" | "campaigns" | "reviewers">("brand");
   const [loading, setLoading] = useState(true);
   const [savingBrand, setSavingBrand] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Reviewer state
+  const [reviewers, setReviewers] = useState<{ id: string; email: string; full_name: string | null; user_id: string }[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteFullName, setInviteFullName] = useState("");
+  const [invitePassword, setInvitePassword] = useState("ClientPass123!");
+  const [inviting, setInviting] = useState(false);
 
   // Brand Profile State
   const [brandVoice, setBrandVoice] = useState("");
@@ -153,6 +165,14 @@ function ClientWorkspaceContent() {
       } catch (e) {
         // ignore
       }
+
+      // 5. Fetch Reviewers
+      try {
+        const revList = (await reviewerApi.list(effectiveAgencyId, clientId, token)) as any[];
+        setReviewers(revList || []);
+      } catch (e) {
+        // ignore
+      }
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Failed to load client details." });
     } finally {
@@ -198,6 +218,30 @@ function ClientWorkspaceContent() {
       setNotification({ type: "error", text: err.message || "Failed to save brand profile." });
     } finally {
       setSavingBrand(false);
+    }
+  };
+
+  const handleInviteReviewer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !effectiveAgencyId || !inviteEmail.trim()) return;
+    setInviting(true);
+    setNotification(null);
+    try {
+      const r = (await reviewerApi.invite(effectiveAgencyId, clientId, {
+        email: inviteEmail.trim(),
+        full_name: inviteFullName.trim() || undefined,
+        password: invitePassword.trim() || "ClientPass123!",
+      }, token)) as any;
+      setReviewers((prev) => [...prev, r]);
+      setShowInviteModal(false);
+      setInviteEmail("");
+      setInviteFullName("");
+      setInvitePassword("ClientPass123!");
+      setNotification({ type: "success", text: `${r.email} invited as reviewer. Share the /portal link and their temporary password.` });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to invite reviewer." });
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -361,6 +405,17 @@ function ClientWorkspaceContent() {
           >
             <Calendar className="w-4 h-4" />
             <span>Campaign Plans ({campaigns.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("reviewers")}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "reviewers"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Client Reviewers ({reviewers.length})</span>
           </button>
         </div>
       </div>
@@ -688,6 +743,150 @@ function ClientWorkspaceContent() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* REVIEWERS TAB */}
+      {activeTab === "reviewers" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Client Reviewers</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Reviewers can log into <span className="font-semibold text-purple-600">/portal</span> to preview deliverables, leave comments, and approve or request changes.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Invite Reviewer</span>
+            </button>
+          </div>
+
+          {reviewers.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
+              <UserCheck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-slate-800">No reviewers yet</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+                Invite your client's point-of-contact to review and approve content in a clean, distraction-free portal.
+              </p>
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Invite First Reviewer</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+              <div className="divide-y divide-slate-100">
+                {reviewers.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-500 text-white font-bold text-sm flex items-center justify-center shrink-0">
+                        {(r.full_name || r.email).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{r.full_name || "—"}</p>
+                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          {r.email}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                        <UserCheck className="w-3 h-3" />
+                        Client Reviewer
+                      </span>
+                      <a
+                        href="/portal"
+                        target="_blank"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-purple-600 bg-slate-100 hover:bg-purple-50 rounded-lg transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        Portal
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* INVITE REVIEWER MODAL */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Invite Client Reviewer</h3>
+                <p className="text-xs text-slate-500">Create a secure login for your client to review and approve content.</p>
+              </div>
+              <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteReviewer} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Reviewer Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="raj@clientbrand.com"
+                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Full Name (optional)</label>
+                <input
+                  type="text"
+                  value={inviteFullName}
+                  onChange={(e) => setInviteFullName(e.target.value)}
+                  placeholder="Raj Mehta"
+                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Temporary Password</label>
+                <input
+                  type="text"
+                  value={invitePassword}
+                  onChange={(e) => setInvitePassword(e.target.value)}
+                  placeholder="Temporary password"
+                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Share this with your client. They'll use it to log into the review portal.</p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={inviting}
+                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs disabled:opacity-50"
+                >
+                  {inviting ? "Inviting..." : "Invite Reviewer"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

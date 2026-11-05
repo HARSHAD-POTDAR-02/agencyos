@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.models.deliverable import DeliverableStatus
 from app.schemas.campaign import DeliverableOut
+from app.schemas.comment import CommentOut
 
 
 class ContentVersionOut(BaseModel):
@@ -31,5 +32,6 @@ class ContentVersionOut(BaseModel):
 
 
 class DeliverableDetailOut(DeliverableOut):
-    """Deliverable with its full version history attached."""
+    """Deliverable with its full version history and comments attached."""
     content_versions: list[ContentVersionOut] = []
+    comments: list[CommentOut] = []
