@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.dependencies import require_agency_member
 from app.models.brand_profile import BrandProfile
 from app.models.campaign import Campaign, CampaignStatus
+from app.models.client import Client, ClientStatus
 from app.models.contract import Contract, ScopeItem
 from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.task import Task, TaskPriority, TaskStatus
@@ -263,6 +264,13 @@ async def convert_campaign_to_tasks(
             tasks_created += 1
 
     campaign.status = CampaignStatus.in_production
+
+    # Auto-promote client from onboarding to active now that tasks are in production
+    client = await db.get(Client, campaign.client_id)
+    if client and client.status == ClientStatus.onboarding:
+        client.status = ClientStatus.active
+        db.add(client)
+
     await db.commit()
 
     return ConvertToTasksResponse(

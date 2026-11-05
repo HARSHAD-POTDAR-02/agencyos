@@ -2,10 +2,22 @@
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { portalApi } from "@/lib/api";
-import { Building2, ChevronRight, Film, Image as ImageIcon, Clock, CheckCircle2, AlertCircle, LogOut, Sparkles } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  Building2,
+  ChevronRight,
+  Film,
+  Image as ImageIcon,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  LogOut,
+  Sparkles,
+  RefreshCw,
+  Check,
+} from "lucide-react";
 
 interface PortalClient {
   id: string;
@@ -34,13 +46,22 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: React.
 };
 
 function PortalHomeContent() {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
   const [clients, setClients] = useState<PortalClient[]>([]);
   const [deliverables, setDeliverables] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [statusTab, setStatusTab] = useState<"pending" | "approved" | "all">("pending");
+
+  // Protect client portal: redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !token) {
+      router.replace("/login");
+    }
+  }, [authLoading, token, router]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -59,15 +80,33 @@ function PortalHomeContent() {
     }
   }, [token, selectedClientId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (token) load();
+  }, [token, load]);
 
-  const filtered = selectedClientId
+  // Client filtering
+  const clientFiltered = selectedClientId
     ? deliverables.filter((d) => d.client_id === selectedClientId)
     : deliverables;
 
-  if (loading) {
+  // Status filtering
+  const pendingItems = clientFiltered.filter(
+    (d) => d.status === "client_review" || d.status === "changes_requested"
+  );
+  const approvedItems = clientFiltered.filter(
+    (d) => d.status === "approved" || d.status === "published"
+  );
+
+  const displayedItems =
+    statusTab === "pending"
+      ? pendingItems
+      : statusTab === "approved"
+      ? approvedItems
+      : clientFiltered;
+
+  if (authLoading || (loading && deliverables.length === 0 && !error)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-purple-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm font-semibold text-slate-500">Loading your review queue…</p>
@@ -76,26 +115,38 @@ function PortalHomeContent() {
     );
   }
 
+  const primaryClient = clients.length > 0 ? clients[0] : null;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Top Nav */}
+      {/* Top Nav (Client Specific) */}
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 shadow-2xs">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-xs">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-extrabold text-slate-900 tracking-tight">AgencyOS</span>
-            <span className="text-slate-300 mx-1">|</span>
-            <span className="text-xs font-semibold text-slate-500">Client Review Portal</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black tracking-tight text-slate-900">
+                  {primaryClient ? primaryClient.business_name : "AgencyOS"}
+                </span>
+                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200/60">
+                  Client Review Portal
+                </span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-medium hidden sm:block">
+            <span className="text-xs text-slate-500 font-semibold hidden sm:block">
               {user?.full_name || user?.email}
             </span>
             <button
-              onClick={logout}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
+              onClick={() => {
+                logout();
+                router.push("/login");
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
               Sign Out
@@ -105,23 +156,34 @@ function PortalHomeContent() {
       </header>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {/* Welcome */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Hello, {user?.full_name?.split(" ")[0] || "there"} 👋
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Review and approve content below. Your feedback directly drives what gets published.
-          </p>
+        {/* Welcome Banner */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Welcome, {user?.full_name?.split(" ")[0] || "Reviewer"} 👋
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 font-medium">
+              Review and approve your upcoming social media content before it gets published.
+            </p>
+          </div>
+          <button
+            onClick={load}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl shadow-2xs self-start sm:self-auto transition-all"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+            <span>Refresh</span>
+          </button>
         </div>
 
-        {/* Client Filter */}
+        {/* Brand Switcher (if multiple clients assigned) */}
         {clients.length > 1 && (
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <button
               onClick={() => setSelectedClientId(null)}
               className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
-                !selectedClientId ? "bg-purple-600 text-white border-purple-600" : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
+                !selectedClientId
+                  ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
               }`}
             >
               All Brands
@@ -131,7 +193,9 @@ function PortalHomeContent() {
                 key={c.id}
                 onClick={() => setSelectedClientId(c.id)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
-                  selectedClientId === c.id ? "bg-purple-600 text-white border-purple-600" : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
+                  selectedClientId === c.id
+                    ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
                 }`}
               >
                 {c.business_name}
@@ -140,29 +204,120 @@ function PortalHomeContent() {
           </div>
         )}
 
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-2 mb-6 border-b border-slate-200/80 pb-3">
+          <button
+            onClick={() => setStatusTab("pending")}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              statusTab === "pending"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Pending Review</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                statusTab === "pending"
+                  ? "bg-white/20 text-white"
+                  : "bg-slate-100 text-slate-700"
+              }`}
+            >
+              {pendingItems.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setStatusTab("approved")}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              statusTab === "approved"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Approved & Ready</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                statusTab === "approved"
+                  ? "bg-white/20 text-white"
+                  : "bg-slate-100 text-slate-700"
+              }`}
+            >
+              {approvedItems.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setStatusTab("all")}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              statusTab === "all"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
+            }`}
+          >
+            <span>All Content ({clientFiltered.length})</span>
+          </button>
+        </div>
+
         {error && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={load}
+              className="px-2.5 py-1 bg-white border border-rose-300 text-rose-800 rounded-lg text-[11px] font-bold"
+            >
+              Retry
+            </button>
           </div>
         )}
 
         {/* Deliverables Grid */}
-        {filtered.length === 0 ? (
+        {displayedItems.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-14 text-center shadow-2xs">
-            <CheckCircle2 className="w-12 h-12 text-emerald-200 mx-auto mb-4" />
-            <h3 className="text-sm font-bold text-slate-800">You're all caught up!</h3>
+            <CheckCircle2 className="w-12 h-12 text-emerald-300 mx-auto mb-4" />
+            <h3 className="text-sm font-bold text-slate-800">
+              {statusTab === "pending"
+                ? "All caught up! No content pending review."
+                : statusTab === "approved"
+                ? "No approved content yet."
+                : "No content available."}
+            </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              No content is currently awaiting your review. Your agency will notify you when new content is ready.
+              {statusTab === "pending" && approvedItems.length > 0 ? (
+                <>
+                  You have{" "}
+                  <span className="font-bold text-slate-700">
+                    {approvedItems.length} approved deliverable(s)
+                  </span>
+                  . Switch to the Approved tab to view them.
+                </>
+              ) : (
+                "Content submitted by your agency team will appear here for your review and sign-off."
+              )}
             </p>
+            {statusTab === "pending" && approvedItems.length > 0 && (
+              <button
+                onClick={() => setStatusTab("approved")}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 font-bold text-xs rounded-xl border border-purple-200 hover:bg-purple-100 transition-colors"
+              >
+                <span>View Approved Deliverables ({approvedItems.length})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filtered.map((item: any) => {
+            {displayedItems.map((item: any) => {
               const st = STATUS_CONFIG[item.status] || STATUS_CONFIG["client_review"];
               const StatusIcon = st.icon;
               const latestVersion = item.content_versions?.length
-                ? [...item.content_versions].sort((a: any, b: any) => b.version_number - a.version_number)[0]
+                ? [...item.content_versions].sort(
+                    (a: any, b: any) => b.version_number - a.version_number
+                  )[0]
                 : null;
               const isVideo = latestVersion?.file_name?.match(/\.(mp4|mov|webm)$/i);
 
@@ -170,7 +325,7 @@ function PortalHomeContent() {
                 <Link
                   key={item.id}
                   href={`/portal/${item.id}`}
-                  className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-purple-300/50 transition-all group flex flex-col"
+                  className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-purple-300/60 transition-all group flex flex-col"
                 >
                   {/* Media preview area */}
                   <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200/60 rounded-t-2xl flex items-center justify-center relative overflow-hidden">
@@ -178,7 +333,7 @@ function PortalHomeContent() {
                       {isVideo ? <Film className="w-12 h-12" /> : <ImageIcon className="w-12 h-12" />}
                     </div>
                     {latestVersion && (
-                      <span className="absolute top-3 right-3 text-[10px] font-black text-slate-500 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full border border-slate-200">
+                      <span className="absolute top-3 right-3 text-[10px] font-black text-slate-600 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-slate-200 shadow-2xs">
                         v{latestVersion.version_number}
                       </span>
                     )}
@@ -194,7 +349,9 @@ function PortalHomeContent() {
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 mb-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${st.badge}`}>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${st.badge}`}
+                      >
                         <StatusIcon className="w-2.5 h-2.5" />
                         {st.label}
                       </span>
@@ -206,9 +363,9 @@ function PortalHomeContent() {
                       </span>
                     </div>
 
-                    <div className="mt-auto flex items-center justify-between">
-                      <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                        <Building2 className="w-3 h-3" />
+                    <div className="mt-auto flex items-center justify-between pt-2 border-t border-slate-100">
+                      <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                        <Building2 className="w-3 h-3 text-slate-400" />
                         {item.client_name}
                       </span>
                       {item.planned_date && (
@@ -230,7 +387,13 @@ function PortalHomeContent() {
 
 export default function PortalPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-400">Loading…</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-xs text-slate-400">
+          Loading…
+        </div>
+      }
+    >
       <PortalHomeContent />
     </Suspense>
   );

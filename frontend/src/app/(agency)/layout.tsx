@@ -1,30 +1,41 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
+"use client";
+
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-
-export const metadata: Metadata = {
-  title: "AgencyOS — Dashboard",
-};
+import { useAuth } from "@/lib/auth-context";
 
 export default function AgencyLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { user, token, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!token) {
+        router.replace("/login");
+      } else if (user?.is_client) {
+        router.replace("/portal");
+      }
+    }
+  }, [user, token, isLoading, router]);
+
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden antialiased">
-      <Suspense fallback={<div className="w-64 bg-[#0B0F19]" />}>
-        <Sidebar />
-      </Suspense>
+      <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Suspense fallback={<div className="h-14 bg-white border-b border-slate-200/80" />}>
-          <Header />
-        </Suspense>
-        <div className="flex-1 overflow-y-auto">
-          <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading...</div>}>
-            {children}
-          </Suspense>
+        <Header />
+        <div className="flex-1 overflow-y-auto relative">
+          {(!isLoading && user?.is_client) && (
+            <div className="absolute inset-0 z-50 bg-[#F8FAFC] flex items-center justify-center">
+              <div className="w-8 h-8 border-[3px] border-purple-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          {children}
         </div>
       </div>
     </div>

@@ -80,6 +80,7 @@ function ApprovalsContent() {
     try {
       const data = (await approvalApi.queue(effectiveAgencyId, token)) as QueueItem[];
       setItems(data || []);
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
     } catch (err: any) {
       setError(err.message || "Failed to load approvals queue.");
     } finally {

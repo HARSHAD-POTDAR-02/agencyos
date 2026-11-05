@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member
 from app.models.campaign import Campaign
 from app.models.client import Client
-from app.models.deliverable import Deliverable
+from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import Membership, User
 from app.schemas.task import TaskCreate, TaskOut, TaskUpdate
@@ -100,6 +100,27 @@ async def update_task(
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(task, field, value)
+
+    # Synchronize parent Deliverable status when task status changes
+    if "status" in update_data:
+        status_map = {
+            TaskStatus.backlog: DeliverableStatus.not_started,
+            TaskStatus.todo: DeliverableStatus.not_started,
+            TaskStatus.in_progress: DeliverableStatus.in_production,
+            TaskStatus.internal_review: DeliverableStatus.internal_review,
+            TaskStatus.client_review: DeliverableStatus.client_review,
+            TaskStatus.changes_requested: DeliverableStatus.changes_requested,
+            TaskStatus.approved: DeliverableStatus.approved,
+            TaskStatus.done: DeliverableStatus.approved,
+        }
+        if task.status in status_map:
+            deliv_res = await db.execute(
+                select(Deliverable).where(Deliverable.id == task.deliverable_id)
+            )
+            deliverable = deliv_res.scalar_one_or_none()
+            if deliverable:
+                deliverable.status = status_map[task.status]
+
     await db.commit()
     await db.refresh(task)
     return TaskOut.model_validate(task)

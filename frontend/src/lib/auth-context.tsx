@@ -8,6 +8,7 @@ export interface User {
   email: string;
   full_name: string;
   is_active: boolean;
+  is_client?: boolean;
 }
 
 export interface AgencyMembership {
@@ -22,7 +23,7 @@ interface AuthContextType {
   activeAgencyId: string | null;
   agencies: AgencyMembership[];
   isLoading: boolean;
-  login: (token: string) => Promise<void>;
+  login: (token: string) => Promise<User | null>;
   logout: () => void;
   setActiveAgencyId: (id: string) => void;
   createAgency: (name: string) => Promise<string>;
@@ -35,7 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   activeAgencyId: null,
   agencies: [],
   isLoading: true,
-  login: async () => {},
+  login: async () => null,
   logout: () => {},
   setActiveAgencyId: () => {},
   createAgency: async () => "",
@@ -75,16 +76,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (newToken: string) => {
+  const login = async (newToken: string): Promise<User | null> => {
     localStorage.setItem("agencyos_token", newToken);
     setToken(newToken);
     try {
       const userData = (await authApi.me(newToken)) as User;
       setUser(userData);
       await fetchAgencies(newToken);
+      return userData;
     } catch (e) {
       console.error("Login verification failed", e);
       logout();
+      return null;
     }
   };
 

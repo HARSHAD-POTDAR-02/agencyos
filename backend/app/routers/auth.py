@@ -40,6 +40,30 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
 
 
 @router.get("/me", response_model=UserOut)
-async def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
-    """Return the currently authenticated user."""
-    return UserOut.model_validate(current_user)
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserOut:
+    """Return the currently authenticated user with client role detection."""
+    from sqlalchemy import select
+    from app.models.client_reviewer import ClientReviewer
+    from app.models.user import Membership, RoleEnum
+
+    rev_res = await db.execute(
+        select(ClientReviewer.id).where(ClientReviewer.user_id == current_user.id).limit(1)
+    )
+    is_reviewer = rev_res.scalar_one_or_none() is not None
+
+    mem_res = await db.execute(
+        select(Membership.role).where(
+            Membership.user_id == current_user.id,
+            Membership.is_active.is_(True),
+        )
+    )
+    roles = set(mem_res.scalars().all())
+    is_agency_staff = bool(roles & {RoleEnum.owner, RoleEnum.account_manager, RoleEnum.strategist, RoleEnum.designer})
+    is_client = is_reviewer or (RoleEnum.client in roles and not is_agency_staff)
+
+    out = UserOut.model_validate(current_user)
+    out.is_client = is_client
+    return out

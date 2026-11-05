@@ -16,7 +16,7 @@ from app.models.comment import DeliverableComment
 from app.models.content_version import ContentVersion
 from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import Membership, RoleEnum, User
 from app.schemas.comment import CommentCreate, CommentOut
 from app.schemas.deliverable import ContentVersionOut
 from app.schemas.portal import PortalDecisionRequest, PortalDeliverableOut
@@ -25,17 +25,39 @@ router = APIRouter(prefix="/portal", tags=["client-portal"])
 
 
 async def get_authorized_client_ids(current_user: User, db: AsyncSession) -> list[uuid.UUID]:
-    """Retrieve all client IDs this user is authorized to review."""
+    """
+    Retrieve all client IDs this user is authorized to review.
+    1. If the user is assigned as a client reviewer, returns their assigned client IDs.
+    2. If the user is an internal agency member (owner/manager/etc), returns their agency's clients (allowing preview).
+    """
     result = await db.execute(
         select(ClientReviewer.client_id).where(ClientReviewer.user_id == current_user.id)
     )
     client_ids = list(result.scalars().all())
-    if not client_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to any client review portals.",
+    if client_ids:
+        return client_ids
+
+    # Allow internal agency staff to preview the portal for their agency's clients
+    mem_res = await db.execute(
+        select(Membership.agency_id).where(
+            Membership.user_id == current_user.id,
+            Membership.is_active.is_(True),
+            Membership.role.in_([RoleEnum.owner, RoleEnum.account_manager, RoleEnum.strategist, RoleEnum.designer]),
         )
-    return client_ids
+    )
+    agency_ids = list(mem_res.scalars().all())
+    if agency_ids:
+        client_res = await db.execute(
+            select(Client.id).where(Client.agency_id.in_(agency_ids))
+        )
+        agency_client_ids = list(client_res.scalars().all())
+        if agency_client_ids:
+            return agency_client_ids
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You do not have access to any client review portals.",
+    )
 
 
 @router.get("/clients")

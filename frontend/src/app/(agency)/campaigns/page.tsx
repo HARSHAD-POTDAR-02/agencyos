@@ -201,6 +201,7 @@ function CampaignsContent() {
         ...selectedCampaign,
         status: "in_production",
       });
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
 
       setNotification({
         type: "success",

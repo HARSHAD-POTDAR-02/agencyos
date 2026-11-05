@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
@@ -20,55 +20,105 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    badge: null,
-  },
-  {
-    name: "Clients",
-    href: "/clients",
-    icon: Users,
-    badge: null,
-  },
-  {
-    name: "Campaigns",
-    href: "/campaigns",
-    icon: CalendarDays,
-    badge: "AI",
-  },
-  {
-    name: "Tasks",
-    href: "/tasks",
-    icon: CheckSquare,
-    badge: "12",
-  },
-  {
-    name: "Approvals",
-    href: "/approvals",
-    icon: FileCheck2,
-    badge: "3",
-  },
-  {
-    name: "Analytics",
-    href: "/reports",
-    icon: BarChart3,
-    badge: null,
-  },
-];
+import { agencyApi, taskApi, approvalApi } from "@/lib/api";
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, activeAgencyId, agencies, setActiveAgencyId, createAgency, logout } = useAuth();
+  const { user, token, activeAgencyId, agencies, setActiveAgencyId, createAgency, logout } = useAuth();
   const [showAgencyModal, setShowAgencyModal] = useState(false);
   const [newAgencyName, setNewAgencyName] = useState("");
   const [creatingAgency, setCreatingAgency] = useState(false);
 
-  const currentAgency = agencies.find((a) => a.agency_id === activeAgencyId);
+  const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+  const currentAgency = agencies.find((a) => a.agency_id === (activeAgencyId || effectiveAgencyId));
+
+  const [taskCount, setTaskCount] = useState<number | null>(null);
+  const [approvalCount, setApprovalCount] = useState<number | null>(null);
+
+  const fetchBadgeCounts = useCallback(async () => {
+    if (!token || !effectiveAgencyId) {
+      setTaskCount(null);
+      setApprovalCount(null);
+      return;
+    }
+    try {
+      const res = await agencyApi.badgeCounts(effectiveAgencyId, token);
+      setTaskCount(res.tasks_active);
+      setApprovalCount(res.approvals_count);
+    } catch {
+      try {
+        const [taskList, queue] = await Promise.all([
+          taskApi.list(effectiveAgencyId, token, { limit: "200" }) as Promise<any[]>,
+          approvalApi.queue(effectiveAgencyId, token) as Promise<any[]>,
+        ]);
+        const remaining = (taskList || []).filter(
+          (t) => t.status !== "done" && t.status !== "approved"
+        ).length;
+        setTaskCount(remaining);
+        const pending = (queue || []).filter(
+          (i) => i.status === "client_review" || i.status === "internal_review" || i.status === "changes_requested"
+        ).length;
+        setApprovalCount(pending);
+      } catch (err) {
+        console.error("Failed to load badge counts", err);
+      }
+    }
+  }, [token, effectiveAgencyId]);
+
+  useEffect(() => {
+    fetchBadgeCounts();
+  }, [fetchBadgeCounts, pathname]);
+
+  useEffect(() => {
+    const handleRefresh = () => fetchBadgeCounts();
+    window.addEventListener("agencyos:badge-refresh", handleRefresh);
+    const interval = setInterval(fetchBadgeCounts, 15000);
+    return () => {
+      window.removeEventListener("agencyos:badge-refresh", handleRefresh);
+      clearInterval(interval);
+    };
+  }, [fetchBadgeCounts]);
+
+  const navigation = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      badge: null,
+    },
+    {
+      name: "Clients",
+      href: "/clients",
+      icon: Users,
+      badge: null,
+    },
+    {
+      name: "Campaigns",
+      href: "/campaigns",
+      icon: CalendarDays,
+      badge: "AI",
+    },
+    {
+      name: "Tasks",
+      href: "/tasks",
+      icon: CheckSquare,
+      badge: taskCount !== null ? String(taskCount) : null,
+    },
+    {
+      name: "Approvals",
+      href: "/approvals",
+      icon: FileCheck2,
+      badge: approvalCount !== null ? String(approvalCount) : null,
+    },
+    {
+      name: "Analytics",
+      href: "/reports",
+      icon: BarChart3,
+      badge: null,
+    },
+  ];
+
 
   const handleCreateAgency = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,9 +238,11 @@ export function Sidebar() {
               {item.badge && (
                 <span
                   className={cn(
-                    "px-1.5 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider",
+                    "px-1.5 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider transition-colors",
                     item.badge === "AI"
                       ? "bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30"
+                      : item.name === "Approvals" && Number(item.badge) > 0
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-xs shadow-amber-500/20"
                       : "bg-white/[0.08] text-slate-300"
                   )}
                 >

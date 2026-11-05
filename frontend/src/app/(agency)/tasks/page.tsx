@@ -149,6 +149,7 @@ function TasksContent() {
       )) as Task;
 
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Failed to update task status." });
     } finally {
@@ -232,6 +233,7 @@ function TasksContent() {
   const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
   const reviewCount = tasks.filter((t) => ["internal_review", "client_review"].includes(t.status)).length;
   const doneCount = tasks.filter((t) => ["approved", "done"].includes(t.status)).length;
+  const remainingCount = tasks.filter((t) => !["approved", "done"].includes(t.status)).length;
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -263,8 +265,11 @@ function TasksContent() {
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Total Tasks</span>
-          <span className="text-xl font-black text-slate-900 mt-0.5 block">{totalCount}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">Remaining</span>
+            <span className="text-[10px] font-semibold text-slate-400">{totalCount} total</span>
+          </div>
+          <span className="text-xl font-black text-slate-900 mt-0.5 block">{remainingCount}</span>
         </div>
         <div className="bg-white rounded-2xl border border-purple-200/80 p-4 shadow-2xs bg-gradient-to-br from-white to-purple-50/30">
           <span className="text-[11px] font-bold text-purple-600 block uppercase tracking-wider">Ready to Script</span>

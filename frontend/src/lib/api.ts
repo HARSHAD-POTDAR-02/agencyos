@@ -56,6 +56,41 @@ export const authApi = {
     apiFetch("/auth/me", { token }),
 };
 
+export interface DashboardStats {
+  clients_total: number;
+  clients_active: number;
+  clients_onboarding: number;
+  clients_paused: number;
+  clients_offboarded: number;
+  tasks_total: number;
+  tasks_remaining: number;
+  tasks_high_priority: number;
+  tasks_in_review: number;
+  tasks_todo: number;
+  deliverables_total: number;
+  deliverables_done: number;
+  deliverables_by_status: Record<string, number>;
+  tasks_by_status: Record<string, number>;
+  total_monthly_retainer_inr: number;
+  active_contracts_count: number;
+  recent_activity: Array<{
+    id: string;
+    kind: string;
+    title: string;
+    subtitle: string;
+    status: string;
+    timestamp: string;
+  }>;
+  upcoming_deadlines: Array<{
+    id: string;
+    title: string;
+    client_name: string;
+    due_date: string;
+    days_remaining: number;
+    task_type?: string | null;
+  }>;
+}
+
 /* ── Agency endpoints ── */
 export const agencyApi = {
   create: (data: { name: string }, token: string) =>
@@ -69,6 +104,17 @@ export const agencyApi = {
 
   listMembers: (agencyId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/members`, { token }),
+
+  badgeCounts: (agencyId: string, token: string) =>
+    apiFetch<{
+      tasks_count: number;
+      tasks_active: number;
+      approvals_count: number;
+      approvals_total: number;
+    }>(`/agencies/${agencyId}/badge-counts`, { token }),
+
+  dashboardStats: (agencyId: string, token: string) =>
+    apiFetch<DashboardStats>(`/agencies/${agencyId}/dashboard-stats`, { token }),
 };
 
 /* ── Client endpoints ── */

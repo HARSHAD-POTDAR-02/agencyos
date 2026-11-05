@@ -40,3 +40,65 @@ class MembershipOut(BaseModel):
 class InviteMemberRequest(BaseModel):
     email: str
     role: RoleEnum
+
+
+class AgencyBadgeCountsOut(BaseModel):
+    tasks_count: int
+    tasks_active: int
+    approvals_count: int
+    approvals_total: int
+
+
+# ── Dashboard Stats ──
+
+class ActivityItem(BaseModel):
+    id: uuid.UUID
+    kind: str  # "task_update", "deliverable_update", "client_created", "comment"
+    title: str
+    subtitle: str
+    status: str
+    timestamp: datetime
+
+
+class DeadlineItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    client_name: str
+    due_date: str  # ISO date string
+    days_remaining: int
+    task_type: str | None = None
+
+
+class DashboardStatsOut(BaseModel):
+    # Clients
+    clients_total: int
+    clients_active: int
+    clients_onboarding: int
+    clients_paused: int
+    clients_offboarded: int
+
+    # Tasks
+    tasks_total: int
+    tasks_remaining: int
+    tasks_high_priority: int
+    tasks_in_review: int
+    tasks_todo: int
+
+    # Deliverables
+    deliverables_total: int
+    deliverables_done: int
+    deliverables_by_status: dict[str, int] = {}
+
+    # Tasks breakdown by status
+    tasks_by_status: dict[str, int] = {}
+
+    # Retainers
+    total_monthly_retainer_inr: float
+    active_contracts_count: int
+
+    # Recent Activity
+    recent_activity: list[ActivityItem]
+
+    # Upcoming Deadlines
+    upcoming_deadlines: list[DeadlineItem]
+

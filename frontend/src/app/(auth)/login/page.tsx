@@ -22,8 +22,12 @@ export default function LoginPage() {
 
     try {
       const res = await authApi.login({ email, password });
-      await login(res.access_token);
-      router.push("/dashboard");
+      const loggedInUser = await login(res.access_token);
+      if (loggedInUser?.is_client) {
+        router.push("/portal");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to log in. Please check your email and password.");
     } finally {

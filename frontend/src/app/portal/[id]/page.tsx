@@ -87,7 +87,13 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: React.
 function PortalDeliverableContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !token) {
+      router.replace("/login");
+    }
+  }, [authLoading, token, router]);
 
   const [deliverable, setDeliverable] = useState<DeliverableDetail | null>(null);
   const [loading, setLoading] = useState(true);

@@ -22,6 +22,7 @@ from app.dependencies import get_current_user, require_agency_member
 from app.models.content_version import ContentVersion
 from app.models.comment import DeliverableComment
 from app.models.deliverable import Deliverable, DeliverableStatus
+from app.models.task import Task, TaskStatus
 from app.models.user import Membership, User
 from app.schemas.comment import CommentCreate, CommentOut
 from app.schemas.deliverable import ContentVersionOut, DeliverableDetailOut
@@ -221,6 +222,23 @@ async def update_deliverable_status(
     """Update the status of a deliverable (e.g. move to internal_review, approved, published)."""
     deliverable = await _get_deliverable_or_404(deliverable_id, agency_id, db)
     deliverable.status = payload.status
+
+    # Synchronize linked tasks
+    task_map = {
+        DeliverableStatus.not_started: TaskStatus.todo,
+        DeliverableStatus.in_production: TaskStatus.in_progress,
+        DeliverableStatus.internal_review: TaskStatus.internal_review,
+        DeliverableStatus.client_review: TaskStatus.client_review,
+        DeliverableStatus.changes_requested: TaskStatus.changes_requested,
+        DeliverableStatus.approved: TaskStatus.approved,
+    }
+    if deliverable.status in task_map:
+        tasks_res = await db.execute(
+            select(Task).where(Task.deliverable_id == deliverable.id)
+        )
+        for t in tasks_res.scalars().all():
+            t.status = task_map[deliverable.status]
+
     await db.commit()
     await db.refresh(deliverable)
     return DeliverableOut.model_validate(deliverable)
