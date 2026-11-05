@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import async_engine, Base
-from app.routers import auth, agencies, clients, campaigns, tasks, approvals
+from app.routers import auth, agencies, clients, campaigns, tasks, approvals, deliverables
 
 
 @asynccontextmanager
@@ -19,6 +21,8 @@ async def lifespan(app: FastAPI):
             # Import all models to ensure they are registered on metadata
             import app.models  # noqa: F401
             await conn.run_sync(Base.metadata.create_all)
+    # Ensure upload directory exists
+    Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
     yield
     # Dispose the engine on shutdown
     await async_engine.dispose()
@@ -51,6 +55,14 @@ app.include_router(clients.router)
 app.include_router(campaigns.router)
 app.include_router(tasks.router)
 app.include_router(approvals.router)
+app.include_router(deliverables.router)
+
+# ---------------------------------------------------------------------------
+# Static file serving for uploads
+# ---------------------------------------------------------------------------
+upload_path = Path(settings.UPLOAD_DIR)
+upload_path.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
 
 
 # ---------------------------------------------------------------------------

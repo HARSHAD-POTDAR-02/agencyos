@@ -431,6 +431,16 @@ function TasksContent() {
                           {t.title}
                         </h4>
 
+                        {t.deliverable_id && (
+                          <Link
+                            href={`/deliverables/${t.deliverable_id}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 hover:text-purple-700 hover:underline pt-0.5"
+                          >
+                            <Film className="w-3 h-3" />
+                            <span>Media & Versions &rarr;</span>
+                          </Link>
+                        )}
+
                         {/* Status Transition Selector */}
                         <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                           <span className="text-[10px] font-semibold text-slate-400">Move stage:</span>
@@ -475,7 +485,17 @@ function TasksContent() {
                 <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="py-3 px-4">
                     <span className="font-bold text-slate-900 block">{t.title}</span>
-                    <span className="text-[11px] text-slate-400">ID: {t.id.slice(0, 8)}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[11px] text-slate-400">ID: {t.id.slice(0, 8)}</span>
+                      {t.deliverable_id && (
+                        <Link
+                          href={`/deliverables/${t.deliverable_id}`}
+                          className="text-[11px] font-bold text-purple-600 hover:text-purple-700 hover:underline inline-flex items-center gap-1"
+                        >
+                          <Film className="w-2.5 h-2.5" /> Media &rarr;
+                        </Link>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">{getStageBadge(t.task_type)}</td>
                   <td className="py-3 px-4">{getPriorityBadge(t.priority)}</td>

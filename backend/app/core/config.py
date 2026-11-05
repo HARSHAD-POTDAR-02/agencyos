@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = "minioadmin"
     S3_BUCKET: str = "agencyos-assets"
 
+    # File storage (local filesystem for MVP)
+    UPLOAD_DIR: str = "uploads"
+
     # App
     APP_ENV: str = "development"
     FRONTEND_URL: str = "http://localhost:3000"

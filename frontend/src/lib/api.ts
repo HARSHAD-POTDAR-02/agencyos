@@ -3,7 +3,7 @@
  * Base URL points to FastAPI backend
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -14,9 +14,10 @@ type RequestOptions = {
 async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, token } = opts;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
+  if (!(body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -24,7 +25,7 @@ async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
 
@@ -135,4 +136,51 @@ export const taskApi = {
   },
   update: (agencyId: string, taskId: string, data: Record<string, unknown>, token: string) =>
     apiFetch(`/agencies/${agencyId}/tasks/${taskId}`, { method: "PATCH", body: data, token }),
+};
+
+/* ── Deliverable & Content Version endpoints ── */
+export const deliverableApi = {
+  get: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}`, { token }),
+
+  listVersions: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/versions`, { token }),
+
+  uploadVersion: (agencyId: string, deliverableId: string, formData: FormData, token: string) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/versions`, {
+      method: "POST",
+      body: formData,
+      token,
+    }),
+
+  updateStatus: (agencyId: string, deliverableId: string, status: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}`, {
+      method: "PATCH",
+      body: { status },
+      token,
+    }),
+
+  deleteVersion: (agencyId: string, deliverableId: string, versionId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/versions/${versionId}`, {
+      method: "DELETE",
+      token,
+    }),
+};
+
+/* ── Approval endpoints ── */
+export const approvalApi = {
+  submit: (
+    agencyId: string,
+    versionId: string,
+    data: { decision: "approved" | "changes_requested" | "rejected"; comment?: string },
+    token: string
+  ) =>
+    apiFetch(`/agencies/${agencyId}/content-versions/${versionId}/approve`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  list: (agencyId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/approvals`, { token }),
 };

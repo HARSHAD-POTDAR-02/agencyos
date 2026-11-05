@@ -43,6 +43,10 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # Logs
 *.log
 logs/
