@@ -423,13 +423,30 @@ async def get_client_monthly_delivery_report(
     )
     total_scope_quota = (await db.execute(scope_query)).scalar() or 0
 
-    # 2. Query Deliverables for this client
+    # 2. Query Deliverables for this client along with their campaign
     deliv_query = (
-        select(Deliverable)
+        select(Deliverable, Campaign)
         .join(Campaign, Deliverable.campaign_id == Campaign.id)
         .where(Campaign.client_id == client.id)
     )
-    deliverables = (await db.execute(deliv_query)).scalars().all()
+    rows = (await db.execute(deliv_query)).all()
+
+    # Filter deliverables that belong to target_month and target_year
+    deliverables: list[Deliverable] = []
+    for d, c in rows:
+        belongs_to_month = False
+        if d.published_at:
+            # Published deliverables belong to the month they were published
+            belongs_to_month = (d.published_at.year == target_year and d.published_at.month == target_month)
+        elif d.planned_date:
+            belongs_to_month = (d.planned_date.year == target_year and d.planned_date.month == target_month)
+        elif c and c.period_year and c.period_month:
+            belongs_to_month = (c.period_year == target_year and c.period_month == target_month)
+        elif d.created_at:
+            belongs_to_month = (d.created_at.year == target_year and d.created_at.month == target_month)
+
+        if belongs_to_month:
+            deliverables.append(d)
 
     deliverables_delivered = sum(
         1 for d in deliverables if d.status in (DeliverableStatus.approved, DeliverableStatus.published)
@@ -461,12 +478,22 @@ async def get_client_monthly_delivery_report(
         reverse=True,
     )[:5]
 
+    def get_actual_platform(d: Deliverable) -> str:
+        if d.publishing_platform:
+            return d.publishing_platform.lower()
+        if d.live_post_url:
+            if "facebook.com" in d.live_post_url:
+                return "facebook"
+            if "instagram.com" in d.live_post_url:
+                return "instagram"
+        return (d.platform or "instagram").lower()
+
     top_deliverables = [
         TopDeliverableItem(
             id=d.id,
             title=d.title,
             deliverable_type=d.deliverable_type,
-            platform=d.platform,
+            platform=get_actual_platform(d),
             live_post_url=d.live_post_url,
             views_count=d.views_count or 0,
             likes_count=d.likes_count or 0,
@@ -477,16 +504,22 @@ async def get_client_monthly_delivery_report(
 
     # Generate an executive summary
     month_name = datetime(target_year, target_month, 1).strftime("%B %Y")
-    executive_summary = (
-        f"For {month_name}, the agency delivered {deliverables_delivered} approved content assets "
-        f"for {client.business_name} ({deliverables_published} published live), achieving a "
-        f"{quota_rate}% contract scope fulfillment rate. "
-        + (
-            f"Published content generated {total_views:,} impressions with an average engagement rate of {engagement_rate}%."
-            if total_views > 0
-            else "All deliverables have completed production and client portal signoff."
+    if deliverables_delivered == 0:
+        executive_summary = (
+            f"For {month_name}, no deliverables have been approved or published yet for {client.business_name}. "
+            f"Monthly retainer scope target is {total_scope_quota} deliverables."
         )
-    )
+    else:
+        executive_summary = (
+            f"For {month_name}, the agency delivered {deliverables_delivered} approved content assets "
+            f"for {client.business_name} ({deliverables_published} published live), achieving a "
+            f"{quota_rate}% contract scope fulfillment rate. "
+            + (
+                f"Published content generated {total_views:,} impressions with an average engagement rate of {engagement_rate}%."
+                if total_views > 0
+                else "Content is currently in production and client review."
+            )
+        )
 
     return MonthlyReportOut(
         client_id=client.id,
