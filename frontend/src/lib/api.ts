@@ -420,8 +420,20 @@ export const publishingApi = {
       comments_count: number;
       shares_count: number;
       synced: boolean;
+      post_deleted?: boolean;
       message: string;
     }>(`/agencies/${agencyId}/deliverables/${deliverableId}/sync-metrics`, {
+      method: "POST",
+      token,
+    }),
+
+  unpublish: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch<{
+      deliverable_id: string;
+      status: string;
+      unpublish: boolean;
+      message: string;
+    }>(`/agencies/${agencyId}/deliverables/${deliverableId}/unpublish`, {
       method: "POST",
       token,
     }),

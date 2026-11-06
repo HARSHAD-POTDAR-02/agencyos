@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, Suspense, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { deliverableApi, approvalApi, publishingApi, API_BASE } from "@/lib/api";
@@ -32,6 +32,7 @@ import {
   Heart,
   Eye,
   Share2,
+  Undo2,
 } from "lucide-react";
 
 interface Comment {
@@ -126,7 +127,11 @@ function formatDate(iso: string): string {
 function DeliverableDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { activeAgencyId, token } = useAuth();
+
+  const fromParam = searchParams.get("from");
+  const tabParam = searchParams.get("tab");
 
   const [deliverable, setDeliverable] = useState<DeliverableDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -213,21 +218,42 @@ function DeliverableDetailContent() {
     try {
       setSyncingMetrics(true);
       const synced = await publishingApi.syncMetrics(activeAgencyId, id, token);
-      setDeliverable((prev) =>
-        prev
-          ? {
-              ...prev,
-              views_count: synced.views_count,
-              likes_count: synced.likes_count,
-              comments_count: synced.comments_count,
-              shares_count: synced.shares_count,
-            }
-          : prev
-      );
+      if (synced.post_deleted) {
+        alert("This post was deleted on Meta (Facebook/Instagram). It has been removed from Published Live and returned to Ready to Publish.");
+        await fetchDeliverable();
+        window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+      } else {
+        setDeliverable((prev) =>
+          prev
+            ? {
+                ...prev,
+                views_count: synced.views_count,
+                likes_count: synced.likes_count,
+                comments_count: synced.comments_count,
+                shares_count: synced.shares_count,
+              }
+            : prev
+        );
+      }
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to sync metrics from Meta");
     } finally {
       setSyncingMetrics(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!activeAgencyId || !token || !id || !deliverable) return;
+    const ok = window.confirm(
+      `Remove "${deliverable.title}" from Published Live? This deliverable will be moved back to Ready to Publish.`
+    );
+    if (!ok) return;
+    try {
+      await publishingApi.unpublish(activeAgencyId, id, token);
+      await fetchDeliverable();
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to unpublish deliverable");
     }
   };
 
@@ -468,6 +494,27 @@ function DeliverableDetailContent() {
     );
   }
 
+  const getBackLink = () => {
+    if (fromParam === "tasks") {
+      return { href: "/tasks", label: "Tasks" };
+    }
+    if (tabParam) {
+      return { href: `/approvals?tab=${tabParam}`, label: "Approvals Queue" };
+    }
+    if (deliverable?.status === "published") {
+      return { href: "/approvals?tab=published", label: "Approvals Queue" };
+    }
+    if (deliverable?.status === "approved") {
+      return { href: "/approvals?tab=approved", label: "Approvals Queue" };
+    }
+    if (deliverable?.status === "changes_requested") {
+      return { href: "/approvals?tab=changes_requested", label: "Approvals Queue" };
+    }
+    return { href: "/approvals", label: "Approvals Queue" };
+  };
+
+  const backLink = getBackLink();
+
   if (error || !deliverable) {
     return (
       <div className="p-8 max-w-xl mx-auto text-center space-y-4">
@@ -477,10 +524,10 @@ function DeliverableDetailContent() {
         <h2 className="text-lg font-bold text-slate-900">Deliverable Not Found</h2>
         <p className="text-xs text-slate-500">{error || "Unable to locate this deliverable record."}</p>
         <Link
-          href="/tasks"
+          href={backLink.href}
           className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl shadow-xs"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Tasks
+          <ArrowLeft className="w-4 h-4" /> Back to {backLink.label}
         </Link>
       </div>
     );
@@ -500,8 +547,8 @@ function DeliverableDetailContent() {
       {/* Navigation & Breadcrumbs */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-          <Link href="/tasks" className="hover:text-purple-600 flex items-center gap-1">
-            <ArrowLeft className="w-3.5 h-3.5" /> Tasks
+          <Link href={backLink.href} className="hover:text-purple-600 flex items-center gap-1 font-semibold transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> {backLink.label}
           </Link>
           <ChevronRight className="w-3 h-3 text-slate-300" />
           <span className="text-slate-900 font-bold truncate max-w-xs">{deliverable.title}</span>
@@ -548,6 +595,18 @@ function DeliverableDetailContent() {
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Live Post</span>
             </a>
+          )}
+
+          {/* Unpublish Button (when published) */}
+          {deliverable.status === "published" && (
+            <button
+              onClick={handleUnpublish}
+              title="Remove from Published Live"
+              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200/80 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+            >
+              <Undo2 className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+              <span>Unpublish</span>
+            </button>
           )}
 
           {/* Upload Button */}
@@ -658,6 +717,14 @@ function DeliverableDetailContent() {
               >
                 <BarChart2 className="w-3.5 h-3.5 text-indigo-300" />
                 <span>Edit Manual</span>
+              </button>
+              <button
+                onClick={handleUnpublish}
+                title="Remove deliverable from Published Live"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-400/40 text-rose-200 hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                <Undo2 className="w-3.5 h-3.5 text-rose-300" />
+                <span>Unpublish</span>
               </button>
               {deliverable.live_post_url && (
                 <a

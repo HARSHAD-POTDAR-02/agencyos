@@ -32,6 +32,33 @@ class MetaPublishingError(Exception):
         self.meta_error = meta_error or {}
 
 
+class MetaPostNotFoundError(MetaPublishingError):
+    """Raised when a post has been deleted on Facebook or Instagram."""
+    pass
+
+
+def _is_meta_post_deleted(data: dict[str, Any]) -> bool:
+    """Helper to detect if Meta Graph API returned an error indicating a deleted or nonexistent post."""
+    if not isinstance(data, dict):
+        return False
+    error = data.get("error")
+    if not isinstance(error, dict):
+        return False
+    code = error.get("code")
+    subcode = error.get("error_subcode")
+    message = str(error.get("message", "")).lower()
+
+    if subcode == 33:
+        return True
+    if code in (100, 803) and (
+        "does not exist" in message
+        or "cannot be loaded" in message
+        or "unsupported get request" in message
+    ):
+        return True
+    return False
+
+
 def _get_api_version() -> str:
     return getattr(settings, "META_GRAPH_API_VERSION", "v22.0")
 
@@ -400,13 +427,17 @@ async def sync_facebook_metrics(
                     "access_token": page_token,
                 },
             )
+            data = res.json()
             if res.status_code == 200:
-                data = res.json()
                 likes = int(data.get("likes", {}).get("summary", {}).get("total_count", 0))
                 reactions = int(data.get("reactions", {}).get("summary", {}).get("total_count", 0))
                 metrics["likes_count"] = max(likes, reactions)
                 metrics["comments_count"] = int(data.get("comments", {}).get("summary", {}).get("total_count", 0))
                 metrics["shares_count"] = int(data.get("shares", {}).get("count", 0))
+            elif _is_meta_post_deleted(data):
+                raise MetaPostNotFoundError(f"Facebook post {post_id} was deleted.")
+        except MetaPostNotFoundError:
+            raise
         except Exception as e:
             logger.warning(f"Error fetching Facebook post metrics for {post_id}: {e}")
 
@@ -486,10 +517,14 @@ async def sync_instagram_metrics(
                     "access_token": access_token,
                 },
             )
+            data = res.json()
             if res.status_code == 200:
-                data = res.json()
                 metrics["likes_count"] = int(data.get("like_count") or 0)
                 metrics["comments_count"] = int(data.get("comments_count") or 0)
+            elif _is_meta_post_deleted(data):
+                raise MetaPostNotFoundError(f"Instagram media {media_id} was deleted.")
+        except MetaPostNotFoundError:
+            raise
         except Exception as e:
             logger.warning(f"Error fetching basic media fields for {media_id}: {e}")
 

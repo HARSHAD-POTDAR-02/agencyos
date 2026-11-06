@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { approvalApi, publishingApi } from "@/lib/api";
 import {
@@ -21,6 +22,8 @@ import {
   Heart,
   MessageCircle,
   Share2,
+  Undo2,
+  Check,
 } from "lucide-react";
 import PublishModal from "@/components/publishing/PublishModal";
 
@@ -88,14 +91,42 @@ function formatRelativeTime(iso: string): string {
 function ApprovalsContent() {
   const { token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as "all" | "client_review" | "changes_requested" | "approved" | "published" | null;
 
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "client_review" | "changes_requested" | "approved" | "published">("all");
+  const [filter, setFilter] = useState<"all" | "client_review" | "changes_requested" | "approved" | "published">(() => {
+    if (tabParam && ["all", "client_review", "changes_requested", "approved", "published"].includes(tabParam)) {
+      return tabParam;
+    }
+    return "all";
+  });
+  const [statusNotification, setStatusNotification] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
   const [publishingItem, setPublishingItem] = useState<QueueItem | null>(null);
+
+  useEffect(() => {
+    if (tabParam && ["all", "client_review", "changes_requested", "approved", "published"].includes(tabParam)) {
+      setFilter(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (newTab: "all" | "client_review" | "changes_requested" | "approved" | "published") => {
+    setFilter(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (newTab === "all") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", newTab);
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
 
   const load = useCallback(async (silent = false) => {
     if (!token || !effectiveAgencyId) return;
@@ -119,25 +150,54 @@ function ApprovalsContent() {
   const handleSyncMetrics = async (item: QueueItem) => {
     if (!token || !effectiveAgencyId) return;
     setSyncingId(item.deliverable_id);
+    setStatusNotification(null);
     try {
       const res = await publishingApi.syncMetrics(effectiveAgencyId, item.deliverable_id, token);
-      setItems((prev) =>
-        prev.map((it) =>
-          it.deliverable_id === item.deliverable_id
-            ? {
-                ...it,
-                views_count: res.views_count,
-                likes_count: res.likes_count,
-                comments_count: res.comments_count,
-                shares_count: res.shares_count,
-              }
-            : it
-        )
-      );
+      if (res.post_deleted) {
+        setStatusNotification(
+          `Post "${item.deliverable_title}" was deleted on ${item.publishing_platform || "Meta"}. It has been removed from Published Live and returned to Ready to Publish.`
+        );
+        await load(true);
+      } else {
+        setItems((prev) =>
+          prev.map((it) =>
+            it.deliverable_id === item.deliverable_id
+              ? {
+                  ...it,
+                  views_count: res.views_count,
+                  likes_count: res.likes_count,
+                  comments_count: res.comments_count,
+                  shares_count: res.shares_count,
+                }
+              : it
+          )
+        );
+      }
     } catch (err: any) {
       console.error("Failed to sync metrics:", err);
     } finally {
       setSyncingId(null);
+    }
+  };
+
+  const handleUnpublish = async (item: QueueItem) => {
+    if (!token || !effectiveAgencyId) return;
+    const ok = window.confirm(
+      `Remove "${item.deliverable_title}" from Published Live? This deliverable will be moved back to Ready to Publish.`
+    );
+    if (!ok) return;
+
+    setUnpublishingId(item.deliverable_id);
+    setStatusNotification(null);
+    try {
+      await publishingApi.unpublish(effectiveAgencyId, item.deliverable_id, token);
+      setStatusNotification(`"${item.deliverable_title}" has been unpublished and moved back to Ready to Publish.`);
+      await load(true);
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      alert(err.message || "Failed to unpublish deliverable.");
+    } finally {
+      setUnpublishingId(null);
     }
   };
 
@@ -187,6 +247,21 @@ function ApprovalsContent() {
         </button>
       </div>
 
+      {statusNotification && (
+        <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 text-xs font-semibold flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>{statusNotification}</span>
+          </div>
+          <button
+            onClick={() => setStatusNotification(null)}
+            className="text-purple-600 hover:text-purple-900 text-xs font-bold underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -197,7 +272,7 @@ function ApprovalsContent() {
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 mb-6 p-1 bg-slate-100 rounded-2xl w-fit">
         <button
-          onClick={() => setFilter("all")}
+          onClick={() => handleTabChange("all")}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             filter === "all" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
           }`}
@@ -205,7 +280,7 @@ function ApprovalsContent() {
           All ({counts.all})
         </button>
         <button
-          onClick={() => setFilter("client_review")}
+          onClick={() => handleTabChange("client_review")}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             filter === "client_review" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
           }`}
@@ -214,7 +289,7 @@ function ApprovalsContent() {
           In Review ({counts.client_review})
         </button>
         <button
-          onClick={() => setFilter("changes_requested")}
+          onClick={() => handleTabChange("changes_requested")}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             filter === "changes_requested" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
           }`}
@@ -223,7 +298,7 @@ function ApprovalsContent() {
           Changes ({counts.changes_requested})
         </button>
         <button
-          onClick={() => setFilter("approved")}
+          onClick={() => handleTabChange("approved")}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             filter === "approved" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
           }`}
@@ -232,7 +307,7 @@ function ApprovalsContent() {
           Ready to Publish ({counts.approved})
         </button>
         <button
-          onClick={() => setFilter("published")}
+          onClick={() => handleTabChange("published")}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             filter === "published" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
           }`}
@@ -274,7 +349,7 @@ function ApprovalsContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <Link
-                        href={`/deliverables/${item.deliverable_id}`}
+                        href={`/deliverables/${item.deliverable_id}?from=approvals&tab=${filter}`}
                         className="text-sm font-bold text-slate-900 hover:text-purple-700 truncate max-w-[260px] group-hover:underline"
                       >
                         {item.deliverable_title}
@@ -384,11 +459,21 @@ function ApprovalsContent() {
                             <span className="hidden sm:inline">Live Post</span>
                           </a>
                         )}
+
+                        <button
+                          onClick={() => handleUnpublish(item)}
+                          disabled={unpublishingId === item.deliverable_id}
+                          title="Remove from Published Live"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:text-rose-700 bg-slate-100 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          <Undo2 className={`w-3 h-3 ${unpublishingId === item.deliverable_id ? "animate-spin text-rose-600" : "text-slate-500"}`} />
+                          <span className="hidden sm:inline">{unpublishingId === item.deliverable_id ? "Removing..." : "Unpublish"}</span>
+                        </button>
                       </>
                     )}
 
                     <Link
-                      href={`/deliverables/${item.deliverable_id}`}
+                      href={`/deliverables/${item.deliverable_id}?from=approvals&tab=${filter}`}
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                     >
                       View

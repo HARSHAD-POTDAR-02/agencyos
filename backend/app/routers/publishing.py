@@ -28,6 +28,7 @@ from app.schemas.publishing import (
 )
 from app.services.meta_publisher import (
     MetaPublishingError,
+    MetaPostNotFoundError,
     publish_facebook_page_post,
     publish_instagram_photo,
     publish_instagram_reel,
@@ -304,17 +305,44 @@ async def sync_deliverable_metrics(
         )
 
     # Sync from Meta
-    if (deliverable.publishing_platform or "").lower() == "facebook":
-        synced = await sync_facebook_metrics(
-            access_token=social_account.access_token,
-            post_id=deliverable.external_post_id,
-            page_id=social_account.facebook_page_id,
-        )
-    else:
-        synced = await sync_instagram_metrics(
-            access_token=social_account.access_token,
-            media_id=deliverable.external_post_id,
-        )
+    try:
+        if (deliverable.publishing_platform or "").lower() == "facebook":
+            synced = await sync_facebook_metrics(
+                access_token=social_account.access_token,
+                post_id=deliverable.external_post_id,
+                page_id=social_account.facebook_page_id,
+            )
+        else:
+            synced = await sync_instagram_metrics(
+                access_token=social_account.access_token,
+                media_id=deliverable.external_post_id,
+            )
+    except MetaPostNotFoundError:
+        # Post was deleted on Meta (Facebook or Instagram)!
+        # Revert deliverable back to approved so it is removed from Published Live.
+        deliverable.status = DeliverableStatus.approved
+        deliverable.published_at = None
+        deliverable.live_post_url = None
+        deliverable.external_post_id = None
+        deliverable.views_count = 0
+        deliverable.likes_count = 0
+        deliverable.comments_count = 0
+        deliverable.shares_count = 0
+
+        await db.commit()
+        await db.refresh(deliverable)
+
+        return {
+            "deliverable_id": deliverable.id,
+            "status": "approved",
+            "post_deleted": True,
+            "views_count": 0,
+            "likes_count": 0,
+            "comments_count": 0,
+            "shares_count": 0,
+            "synced": True,
+            "message": "This post was deleted on Facebook/Instagram. It has been removed from Published Live and returned to Ready to Publish.",
+        }
 
     deliverable.likes_count = synced.get("likes_count", deliverable.likes_count or 0)
     deliverable.comments_count = synced.get("comments_count", deliverable.comments_count or 0)
@@ -331,7 +359,41 @@ async def sync_deliverable_metrics(
         "comments_count": deliverable.comments_count,
         "shares_count": deliverable.shares_count,
         "synced": True,
+        "post_deleted": False,
         "message": f"Successfully synced live metrics from Meta: {deliverable.likes_count} likes, {deliverable.views_count} views, {deliverable.comments_count} comments.",
+    }
+
+
+@router.post("/deliverables/{deliverable_id}/unpublish")
+@router.delete("/deliverables/{deliverable_id}/publish")
+async def unpublish_deliverable(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Unpublish a deliverable, removing it from Published Live and returning it
+    to Ready to Publish (approved).
+    """
+    deliverable = await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+    deliverable.status = DeliverableStatus.approved
+    deliverable.published_at = None
+    deliverable.live_post_url = None
+    deliverable.external_post_id = None
+    deliverable.views_count = 0
+    deliverable.likes_count = 0
+    deliverable.comments_count = 0
+    deliverable.shares_count = 0
+
+    await db.commit()
+    await db.refresh(deliverable)
+
+    return {
+        "deliverable_id": deliverable.id,
+        "status": "approved",
+        "unpublish": True,
+        "message": "Deliverable has been removed from Published Live and moved back to Ready to Publish.",
     }
 
 

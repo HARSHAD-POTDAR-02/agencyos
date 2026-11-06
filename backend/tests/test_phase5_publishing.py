@@ -317,3 +317,23 @@ async def test_facebook_automated_publishing_and_metrics_sync(
     assert sync_data["comments_count"] == 8
     assert sync_data["views_count"] == 550
     assert sync_data["shares_count"] == 14
+
+    # 3. Unpublish deliverable (moves back to approved status)
+    unpub_res = await agency_a_client.post(
+        f"/agencies/{agency.id}/deliverables/{deliv_id}/unpublish"
+    )
+    assert unpub_res.status_code == 200
+    unpub_data = unpub_res.json()
+    assert unpub_data["status"] == "approved"
+    assert unpub_data["unpublish"] is True
+
+    # Verify deliverable state in DB
+    async with TestSessionLocal() as db:
+        updated = await db.get(Deliverable, deliverable.id)
+        assert updated.status == DeliverableStatus.approved
+        assert updated.live_post_url is None
+        assert updated.external_post_id is None
+        assert updated.published_at is None
+        assert updated.views_count == 0
+        assert updated.likes_count == 0
+
