@@ -9,7 +9,18 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import async_engine, Base
-from app.routers import auth, agencies, clients, campaigns, tasks, approvals, deliverables, portal
+from app.routers import (
+    agencies,
+    approvals,
+    auth,
+    campaigns,
+    clients,
+    deliverables,
+    portal,
+    publishing,
+    social,
+    tasks,
+)
 
 
 @asynccontextmanager
@@ -57,6 +68,8 @@ app.include_router(tasks.router)
 app.include_router(approvals.router)
 app.include_router(deliverables.router)
 app.include_router(portal.router)
+app.include_router(social.router)
+app.include_router(publishing.router)
 
 # ---------------------------------------------------------------------------
 # Static file serving for uploads

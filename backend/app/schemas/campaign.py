@@ -55,6 +55,16 @@ class DeliverableOut(BaseModel):
     platform: str
     planned_date: date | None
     status: DeliverableStatus
+    published_at: datetime | None = None
+    live_post_url: str | None = None
+    external_post_id: str | None = None
+    publishing_platform: str | None = None
+    views_count: int | None = 0
+    likes_count: int | None = 0
+    comments_count: int | None = 0
+    shares_count: int | None = 0
+    client_id: uuid.UUID | None = None
+    client_name: str | None = None
     created_at: datetime
     updated_at: datetime
 

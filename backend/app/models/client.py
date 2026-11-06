@@ -70,3 +70,6 @@ class Client(Base):
     reviewers: Mapped[list["ClientReviewer"]] = relationship(  # noqa: F821
         "ClientReviewer", back_populates="client", lazy="selectin", cascade="all, delete-orphan"
     )
+    social_accounts: Mapped[list["ClientSocialAccount"]] = relationship(  # noqa: F821
+        "ClientSocialAccount", back_populates="client", lazy="selectin", cascade="all, delete-orphan"
+    )

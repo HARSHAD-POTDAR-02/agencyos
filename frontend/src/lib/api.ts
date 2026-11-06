@@ -292,3 +292,145 @@ export const portalApi = {
       token,
     }),
 };
+
+/* ── Social Account endpoints (Phase 5) ── */
+export interface SocialAccount {
+  id: string;
+  client_id: string;
+  platform: string;
+  account_name: string | null;
+  account_handle: string | null;
+  instagram_business_id: string | null;
+  facebook_page_id: string | null;
+  is_active: boolean;
+  token_expires_at: string | null;
+  created_at: string;
+}
+
+export const socialApi = {
+  list: (agencyId: string, clientId: string, token: string) =>
+    apiFetch<SocialAccount[]>(`/agencies/${agencyId}/clients/${clientId}/social-accounts`, { token }),
+
+  connect: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
+    apiFetch<SocialAccount>(`/agencies/${agencyId}/clients/${clientId}/social-accounts`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  delete: (agencyId: string, clientId: string, accountId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}/social-accounts/${accountId}`, {
+      method: "DELETE",
+      token,
+    }),
+
+  verify: (agencyId: string, clientId: string, data: { access_token: string; instagram_business_id: string }, token: string) =>
+    apiFetch<{ id: string; username?: string; name?: string; profile_picture_url?: string }>(
+      `/agencies/${agencyId}/clients/${clientId}/social-accounts/verify`,
+      { method: "POST", body: data, token }
+    ),
+
+  exchangeToken: (agencyId: string, clientId: string, data: { app_id: string; app_secret: string; short_lived_token: string }, token: string) =>
+    apiFetch<{ access_token: string; token_type: string; expires_in?: number }>(
+      `/agencies/${agencyId}/clients/${clientId}/social-accounts/exchange-token`,
+      { method: "POST", body: data, token }
+    ),
+};
+
+/* ── Publishing & Delivery endpoints (Phase 5) ── */
+export interface PublishResult {
+  success: boolean;
+  deliverable_id: string;
+  status: string;
+  live_post_url: string | null;
+  external_post_id: string | null;
+  published_at: string;
+  platform: string;
+  message: string;
+}
+
+export interface MonthlyReport {
+  client_id: string;
+  client_name: string;
+  month: number;
+  year: number;
+  total_scope_quota: number;
+  deliverables_delivered: number;
+  deliverables_published: number;
+  quota_fulfillment_rate: number;
+  total_views: number;
+  total_likes: number;
+  total_comments: number;
+  avg_engagement_rate: number;
+  top_deliverables: Array<{
+    id: string;
+    title: string;
+    deliverable_type: string;
+    platform: string;
+    live_post_url: string | null;
+    views_count: number;
+    likes_count: number;
+    comments_count: number;
+  }>;
+  executive_summary: string;
+}
+
+export const publishingApi = {
+  publish: (
+    agencyId: string,
+    deliverableId: string,
+    data: {
+      mode: "automated" | "manual";
+      platform?: string;
+      live_post_url?: string;
+      caption_override?: string;
+      media_url_override?: string;
+      share_to_feed?: boolean;
+    },
+    token: string
+  ) =>
+    apiFetch<PublishResult>(`/agencies/${agencyId}/deliverables/${deliverableId}/publish`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  updateMetrics: (
+    agencyId: string,
+    deliverableId: string,
+    data: {
+      views_count?: number;
+      likes_count?: number;
+      comments_count?: number;
+      shares_count?: number;
+    },
+    token: string
+  ) =>
+    apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/metrics`, {
+      method: "PATCH",
+      body: data,
+      token,
+    }),
+
+  syncMetrics: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch<{
+      deliverable_id: string;
+      views_count: number;
+      likes_count: number;
+      comments_count: number;
+      shares_count: number;
+      synced: boolean;
+      message: string;
+    }>(`/agencies/${agencyId}/deliverables/${deliverableId}/sync-metrics`, {
+      method: "POST",
+      token,
+    }),
+
+  monthlyReport: (agencyId: string, clientId: string, token: string, month?: number, year?: number) => {
+    const params = new URLSearchParams();
+    if (month) params.append("month", month.toString());
+    if (year) params.append("year", year.toString());
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiFetch<MonthlyReport>(`/agencies/${agencyId}/clients/${clientId}/reports/monthly${qs}`, { token });
+  },
+};

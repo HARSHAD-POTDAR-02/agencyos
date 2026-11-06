@@ -21,9 +21,17 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { agencyApi, DashboardStats } from "@/lib/api";
 
+function parseDate(iso: string | null | undefined): Date {
+  if (!iso) return new Date();
+  const hasTimezone = iso.endsWith("Z") || /[+-]\d{2}(:\d{2})?$/.test(iso);
+  const normalized = hasTimezone ? iso : `${iso.replace(" ", "T")}Z`;
+  const d = new Date(normalized);
+  return isNaN(d.getTime()) ? new Date(iso) : d;
+}
+
 function formatRelativeTime(dateStr: string): string {
   try {
-    const date = new Date(dateStr);
+    const date = parseDate(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     if (diffMs < 0) return "Just now";

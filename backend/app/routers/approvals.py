@@ -136,6 +136,7 @@ async def get_approvals_queue(
         DeliverableStatus.internal_review,
         DeliverableStatus.changes_requested,
         DeliverableStatus.approved,
+        DeliverableStatus.published,
     ]
 
     result = await db.execute(
@@ -174,7 +175,8 @@ async def get_approvals_queue(
                 deliverable_id=deliv.id,
                 deliverable_title=deliv.title,
                 deliverable_type=deliv.deliverable_type,
-                platform=deliv.platform,
+                platform=deliv.publishing_platform or deliv.platform,
+                publishing_platform=deliv.publishing_platform,
                 status=deliv.status,
                 client_id=cl.id,
                 client_name=cl.business_name,
@@ -189,6 +191,11 @@ async def get_approvals_queue(
                 last_comment=last_comment_text,
                 last_comment_author=last_comment_author,
                 last_comment_at=last_comment_time,
+                live_post_url=deliv.live_post_url,
+                views_count=deliv.views_count,
+                likes_count=deliv.likes_count,
+                comments_count=deliv.comments_count,
+                shares_count=deliv.shares_count,
             )
         )
 

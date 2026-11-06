@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback, Suspense, useRef } from "react
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { deliverableApi, approvalApi, API_BASE } from "@/lib/api";
+import { deliverableApi, approvalApi, publishingApi, API_BASE } from "@/lib/api";
+import PublishModal from "@/components/publishing/PublishModal";
 import {
   ArrowLeft,
   Upload,
@@ -27,6 +28,10 @@ import {
   Layers,
   Calendar,
   Send,
+  BarChart2,
+  Heart,
+  Eye,
+  Share2,
 } from "lucide-react";
 
 interface Comment {
@@ -59,6 +64,8 @@ interface DeliverableDetail {
   id: string;
   campaign_id: string;
   scope_item_id: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
   title: string;
   deliverable_type: string;
   platform: string;
@@ -72,6 +79,14 @@ interface DeliverableDetail {
     | "approved"
     | "published"
     | "cancelled";
+  published_at?: string | null;
+  live_post_url?: string | null;
+  external_post_id?: string | null;
+  publishing_platform?: string | null;
+  views_count?: number;
+  likes_count?: number;
+  comments_count?: number;
+  shares_count?: number;
   created_at: string;
   updated_at: string;
   content_versions: ContentVersion[];
@@ -86,9 +101,17 @@ function formatBytes(bytes: number | null): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
+function parseDate(iso: string | null | undefined): Date {
+  if (!iso) return new Date();
+  const hasTimezone = iso.endsWith("Z") || /[+-]\d{2}(:\d{2})?$/.test(iso);
+  const normalized = hasTimezone ? iso : `${iso.replace(" ", "T")}Z`;
+  const d = new Date(normalized);
+  return isNaN(d.getTime()) ? new Date(iso) : d;
+}
+
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString("en-IN", {
+    return parseDate(iso).toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -130,6 +153,18 @@ function DeliverableDetailContent() {
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
+  // Publishing state
+  const [showPublishModal, setShowPublishModal] = useState(false);
+
+  // Metrics update modal state
+  const [showMetricsModal, setShowMetricsModal] = useState(false);
+  const [metricsViews, setMetricsViews] = useState(0);
+  const [metricsLikes, setMetricsLikes] = useState(0);
+  const [metricsComments, setMetricsComments] = useState(0);
+  const [metricsShares, setMetricsShares] = useState(0);
+  const [savingMetrics, setSavingMetrics] = useState(false);
+  const [syncingMetrics, setSyncingMetrics] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDeliverable = useCallback(async () => {
@@ -146,12 +181,55 @@ function DeliverableDetailContent() {
       if (res.content_versions.length > 0) {
         setSelectedVersionId(res.content_versions[res.content_versions.length - 1].id);
       }
+
+      // If published with external Meta ID, auto-sync latest metrics in background
+      if (res.status === "published" && res.external_post_id) {
+        publishingApi
+          .syncMetrics(activeAgencyId, id, token)
+          .then((synced) => {
+            setDeliverable((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    views_count: synced.views_count,
+                    likes_count: synced.likes_count,
+                    comments_count: synced.comments_count,
+                    shares_count: synced.shares_count,
+                  }
+                : prev
+            );
+          })
+          .catch((e) => console.log("Background live metrics sync:", e));
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load deliverable");
     } finally {
       setLoading(false);
     }
   }, [activeAgencyId, token, id]);
+
+  const handleSyncLiveMetrics = async () => {
+    if (!activeAgencyId || !token || !id) return;
+    try {
+      setSyncingMetrics(true);
+      const synced = await publishingApi.syncMetrics(activeAgencyId, id, token);
+      setDeliverable((prev) =>
+        prev
+          ? {
+              ...prev,
+              views_count: synced.views_count,
+              likes_count: synced.likes_count,
+              comments_count: synced.comments_count,
+              shares_count: synced.shares_count,
+            }
+          : prev
+      );
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to sync metrics from Meta");
+    } finally {
+      setSyncingMetrics(false);
+    }
+  };
 
   useEffect(() => {
     fetchDeliverable();
@@ -267,6 +345,39 @@ function DeliverableDetailContent() {
       await fetchDeliverable();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to delete version");
+    }
+  };
+
+  const openMetricsModal = () => {
+    setMetricsViews(deliverable?.views_count || 0);
+    setMetricsLikes(deliverable?.likes_count || 0);
+    setMetricsComments(deliverable?.comments_count || 0);
+    setMetricsShares(deliverable?.shares_count || 0);
+    setShowMetricsModal(true);
+  };
+
+  const handleSaveMetrics = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeAgencyId || !token || !id) return;
+    try {
+      setSavingMetrics(true);
+      await publishingApi.updateMetrics(
+        activeAgencyId,
+        id,
+        {
+          views_count: Number(metricsViews),
+          likes_count: Number(metricsLikes),
+          comments_count: Number(metricsComments),
+          shares_count: Number(metricsShares),
+        },
+        token
+      );
+      setShowMetricsModal(false);
+      await fetchDeliverable();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to update metrics");
+    } finally {
+      setSavingMetrics(false);
     }
   };
 
@@ -415,6 +526,30 @@ function DeliverableDetailContent() {
             </select>
           </div>
 
+          {/* Publish Button (when approved) */}
+          {deliverable.status === "approved" && (
+            <button
+              onClick={() => setShowPublishModal(true)}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Publish Live</span>
+            </button>
+          )}
+
+          {/* View Live Post (when published) */}
+          {deliverable.status === "published" && deliverable.live_post_url && (
+            <a
+              href={deliverable.live_post_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-indigo-600/20 transition-all hover:scale-[1.02]"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Live Post</span>
+            </a>
+          )}
+
           {/* Upload Button */}
           <button
             onClick={() => setShowUploadModal(true)}
@@ -438,6 +573,14 @@ function DeliverableDetailContent() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-500">
+            {deliverable.client_name && (
+              <>
+                <span className="font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200/60">
+                  {deliverable.client_name}
+                </span>
+                <span>&bull;</span>
+              </>
+            )}
             <span className="capitalize font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
               {deliverable.platform}
             </span>
@@ -461,6 +604,123 @@ function DeliverableDetailContent() {
 
         <div>{getStatusBadge(deliverable.status)}</div>
       </div>
+
+      {/* Live Publishing & Performance Banner (when published) */}
+      {deliverable.status === "published" && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-2xl p-5 shadow-lg border border-indigo-500/30 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                    Published Live
+                  </span>
+                  <span className="text-xs text-slate-500">&bull;</span>
+                  <span className="text-xs text-indigo-200 capitalize font-medium">
+                    {deliverable.publishing_platform || deliverable.platform}
+                  </span>
+                  {deliverable.published_at && (
+                    <>
+                      <span className="text-xs text-slate-500">&bull;</span>
+                      <span className="text-xs text-slate-300 font-mono">
+                        {formatDate(deliverable.published_at)}
+                      </span>
+                    </>
+                  )}
+                </div>
+                {deliverable.external_post_id && (
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    Post ID: {deliverable.external_post_id}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {deliverable.external_post_id && (
+                <button
+                  onClick={handleSyncLiveMetrics}
+                  disabled={syncingMetrics}
+                  title="Query Meta Graph API for real-time likes, views, comments"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/30 hover:bg-indigo-500/50 border border-indigo-400/40 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-indigo-300 ${syncingMetrics ? "animate-spin" : ""}`} />
+                  <span>{syncingMetrics ? "Syncing..." : "Sync Live Stats"}</span>
+                </button>
+              )}
+              <button
+                onClick={openMetricsModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                <BarChart2 className="w-3.5 h-3.5 text-indigo-300" />
+                <span>Edit Manual</span>
+              </button>
+              {deliverable.live_post_url && (
+                <a
+                  href={deliverable.live_post_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Live Post</span>
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Metrics summary row */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                <Eye className="w-3 h-3 text-indigo-300" /> Views
+              </div>
+              <p className="text-lg font-black text-white mt-1">
+                {(deliverable.views_count || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                <Heart className="w-3 h-3 text-rose-300" /> Likes
+              </div>
+              <p className="text-lg font-black text-white mt-1">
+                {(deliverable.likes_count || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                <MessageSquare className="w-3 h-3 text-amber-300" /> Comments
+              </div>
+              <p className="text-lg font-black text-white mt-1">
+                {(deliverable.comments_count || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                <Share2 className="w-3 h-3 text-emerald-300" /> Shares
+              </div>
+              <p className="text-lg font-black text-white mt-1">
+                {(deliverable.shares_count || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-purple-300" /> Engagement
+              </div>
+              <p className="text-lg font-black text-purple-300 mt-1">
+                {(((deliverable.likes_count || 0) + (deliverable.comments_count || 0) + (deliverable.shares_count || 0)) /
+                  Math.max(deliverable.views_count || 1, 1) *
+                  100).toFixed(1)}
+                %
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2-Column Main Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -760,6 +1020,27 @@ function DeliverableDetailContent() {
                 <span>Approve Cut</span>
               </button>
             </div>
+
+            {/* If approved, show Publish to Social trigger */}
+            {deliverable.status === "approved" && (
+              <div className="pt-3 border-t border-purple-200/60 space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-800 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Approved & Ready for Delivery</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-tight">
+                  This deliverable has passed review. Publish directly to client Instagram/Facebook or record a manual live URL.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowPublishModal(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Publish to Social Accounts</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Version History List Card */}
@@ -991,6 +1272,118 @@ function DeliverableDetailContent() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Metrics Modal */}
+      {showMetricsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                  <BarChart2 className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-extrabold text-slate-900">
+                  Update Performance Metrics
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowMetricsModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold p-1 rounded-lg hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMetrics} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Views / Impressions
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={metricsViews}
+                    onChange={(e) => setMetricsViews(Number(e.target.value))}
+                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Likes
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={metricsLikes}
+                    onChange={(e) => setMetricsLikes(Number(e.target.value))}
+                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Comments
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={metricsComments}
+                    onChange={(e) => setMetricsComments(Number(e.target.value))}
+                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Shares
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={metricsShares}
+                    onChange={(e) => setMetricsShares(Number(e.target.value))}
+                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowMetricsModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMetrics}
+                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {savingMetrics ? "Saving..." : "Save Metrics"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Publish Modal */}
+      {showPublishModal && deliverable && (
+        <PublishModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          deliverableId={deliverable.id}
+          deliverableTitle={deliverable.title}
+          deliverableType={deliverable.deliverable_type}
+          platform={deliverable.platform}
+          caption={currentPreviewVersion?.caption || undefined}
+          clientId={deliverable.client_id || ""}
+          clientName={deliverable.client_name || "Client Account"}
+          onSuccess={() => {
+            fetchDeliverable();
+          }}
+        />
       )}
     </main>
   );

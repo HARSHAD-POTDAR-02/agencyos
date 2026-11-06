@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { clientApi, brandProfileApi, contractApi, campaignApi, reviewerApi } from "@/lib/api";
+import { clientApi, brandProfileApi, contractApi, campaignApi, reviewerApi, socialApi, publishingApi, SocialAccount, MonthlyReport } from "@/lib/api";
 import {
   ArrowLeft,
   Building2,
@@ -25,7 +25,31 @@ import {
   Mail,
   X,
   Eye,
+  Share2,
+  Key,
+  BarChart3,
+  TrendingUp,
+  Send,
+  RefreshCw,
 } from "lucide-react";
+
+function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
+
+function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  );
+}
 
 interface Client {
   id: string;
@@ -90,11 +114,37 @@ function ClientWorkspaceContent() {
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
   const [client, setClient] = useState<Client | null>(null);
-  const [activeTab, setActiveTab] = useState<"brand" | "contracts" | "campaigns" | "reviewers">("brand");
+  const [activeTab, setActiveTab] = useState<"brand" | "contracts" | "campaigns" | "reviewers" | "social" | "reports">("brand");
   const [loading, setLoading] = useState(true);
   const [savingBrand, setSavingBrand] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Social accounts state (Phase 5)
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [socialPlatform, setSocialPlatform] = useState<"instagram" | "facebook">("instagram");
+  const [socialAccountName, setSocialAccountName] = useState("");
+  const [socialHandle, setSocialHandle] = useState("");
+  const [igBusinessId, setIgBusinessId] = useState("");
+  const [fbPageId, setFbPageId] = useState("");
+  const [socialAccessToken, setSocialAccessToken] = useState("");
+  const [verifyingToken, setVerifyingToken] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{ username?: string; name?: string } | null>(null);
+  const [connectingSocial, setConnectingSocial] = useState(false);
+
+  // Token exchange helper state
+  const [showTokenHelper, setShowTokenHelper] = useState(false);
+  const [appId, setAppId] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [shortToken, setShortToken] = useState("");
+  const [exchangingToken, setExchangingToken] = useState(false);
+
+  // Monthly Report state (Phase 5)
+  const [monthlyReport, setMonthlyReport] = useState<MonthlyReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
 
   // Reviewer state
   const [reviewers, setReviewers] = useState<{ id: string; email: string; full_name: string | null; user_id: string }[]>([]);
@@ -174,6 +224,14 @@ function ClientWorkspaceContent() {
       } catch (e) {
         // ignore
       }
+
+      // 6. Fetch Social Accounts (Phase 5)
+      try {
+        const socList = await socialApi.list(effectiveAgencyId, clientId, token);
+        setSocialAccounts(socList || []);
+      } catch (e) {
+        // ignore
+      }
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Failed to load client details." });
     } finally {
@@ -184,6 +242,109 @@ function ClientWorkspaceContent() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const fetchMonthlyReport = async (m?: number, y?: number) => {
+    if (!token || !effectiveAgencyId || !clientId) return;
+    setLoadingReport(true);
+    try {
+      const data = await publishingApi.monthlyReport(
+        effectiveAgencyId,
+        clientId,
+        token,
+        m || reportMonth,
+        y || reportYear
+      );
+      setMonthlyReport(data);
+    } catch (err: any) {
+      console.error("Failed to load monthly report:", err);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const handleVerifySocial = async () => {
+    if (!token || !effectiveAgencyId || !igBusinessId.trim() || !socialAccessToken.trim()) {
+      setNotification({ type: "error", text: "Please provide Instagram Business ID and Access Token to test." });
+      return;
+    }
+    setVerifyingToken(true);
+    setVerifyResult(null);
+    try {
+      const res = await socialApi.verify(effectiveAgencyId, clientId, {
+        instagram_business_id: igBusinessId.trim(),
+        access_token: socialAccessToken.trim(),
+      }, token);
+      setVerifyResult(res);
+      if (res.username && !socialHandle) {
+        setSocialHandle(`@${res.username}`);
+      }
+      setNotification({ type: "success", text: `Connection verified! Target account: @${res.username || res.id}` });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Meta token verification failed." });
+    } finally {
+      setVerifyingToken(false);
+    }
+  };
+
+  const handleExchangeToken = async () => {
+    if (!token || !effectiveAgencyId || !appId || !appSecret || !shortToken) {
+      setNotification({ type: "error", text: "Please enter App ID, App Secret, and Short-lived Token." });
+      return;
+    }
+    setExchangingToken(true);
+    try {
+      const res = await socialApi.exchangeToken(effectiveAgencyId, clientId, {
+        app_id: appId.trim(),
+        app_secret: appSecret.trim(),
+        short_lived_token: shortToken.trim(),
+      }, token);
+      setSocialAccessToken(res.access_token);
+      setShowTokenHelper(false);
+      setNotification({ type: "success", text: "60-day Long-Lived Token generated and populated successfully!" });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Token exchange failed." });
+    } finally {
+      setExchangingToken(false);
+    }
+  };
+
+  const handleConnectSocial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !effectiveAgencyId) return;
+    setConnectingSocial(true);
+    setNotification(null);
+    try {
+      await socialApi.connect(effectiveAgencyId, clientId, {
+        platform: socialPlatform,
+        account_name: socialAccountName.trim() || client?.business_name,
+        account_handle: socialHandle.trim() || undefined,
+        instagram_business_id: igBusinessId.trim() || undefined,
+        facebook_page_id: fbPageId.trim() || undefined,
+        access_token: socialAccessToken.trim(),
+      }, token);
+      setShowConnectModal(false);
+      setNotification({ type: "success", text: `${socialPlatform.toUpperCase()} account connected for ${client?.business_name}!` });
+      // Reload social accounts
+      const socList = await socialApi.list(effectiveAgencyId, clientId, token);
+      setSocialAccounts(socList || []);
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to connect social account." });
+    } finally {
+      setConnectingSocial(false);
+    }
+  };
+
+  const handleDeleteSocial = async (accountId: string) => {
+    if (!token || !effectiveAgencyId || !confirm("Disconnect this social account?")) return;
+    try {
+      await socialApi.delete(effectiveAgencyId, clientId, accountId, token);
+      setNotification({ type: "success", text: "Social account disconnected." });
+      const socList = await socialApi.list(effectiveAgencyId, clientId, token);
+      setSocialAccounts(socList || []);
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to disconnect account." });
+    }
+  };
 
   const handleSaveBrandProfile = async (confirmProfile = false) => {
     if (!token || !effectiveAgencyId) return;
@@ -494,6 +655,31 @@ function ClientWorkspaceContent() {
           >
             <UserCheck className="w-4 h-4" />
             <span>Client Reviewers ({reviewers.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("social")}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "social"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Social & Publishing ({socialAccounts.length})</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("reports");
+              fetchMonthlyReport();
+            }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "reports"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Delivery Report</span>
           </button>
         </div>
       </div>
@@ -894,6 +1080,454 @@ function ClientWorkspaceContent() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 5: SOCIAL ACCOUNTS & PUBLISHING */}
+      {activeTab === "social" && (
+        <div className="space-y-6">
+          <div className="bg-purple-50/70 border border-purple-200/70 rounded-2xl p-4 flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Share2 className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-purple-950">Multi-Client Social Publishing Integration</h4>
+                <p className="text-[12px] text-purple-800/90 mt-0.5 leading-relaxed">
+                  Connect Instagram Business and Facebook accounts strictly for <strong>{client?.business_name}</strong>.
+                  All credentials and access tokens are isolated per client. Approved deliverables can be published directly to Meta Graph API or logged with live links.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setSocialAccountName(client?.business_name || "");
+                setVerifyResult(null);
+                setShowConnectModal(true);
+              }}
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Connect Account</span>
+            </button>
+          </div>
+
+          {socialAccounts.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
+              <InstagramIcon className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-slate-800">No Social Accounts Connected</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+                Connect {client?.business_name}&apos;s Instagram Business Account or Facebook Page to enable automated 1-click publishing.
+              </p>
+              <button
+                onClick={() => {
+                  setSocialAccountName(client?.business_name || "");
+                  setVerifyResult(null);
+                  setShowConnectModal(true);
+                }}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Connect First Social Account</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {socialAccounts.map((account) => {
+                const isIg = account.platform === "instagram";
+                return (
+                  <div key={account.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${
+                            isIg ? "bg-gradient-to-tr from-purple-600 to-pink-500" : "bg-blue-600"
+                          }`}>
+                            {isIg ? <InstagramIcon className="w-4 h-4" /> : <FacebookIcon className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                              {account.account_handle || account.account_name || "Connected Profile"}
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            </h4>
+                            <p className="text-[11px] text-slate-400 capitalize">
+                              {account.platform} Business Account
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full uppercase">
+                          Active
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                        {account.instagram_business_id && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400">Instagram Business ID:</span>
+                            <span className="font-mono font-semibold text-slate-800">{account.instagram_business_id}</span>
+                          </div>
+                        )}
+                        {account.facebook_page_id && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400">Facebook Page ID:</span>
+                            <span className="font-mono font-semibold text-slate-800">{account.facebook_page_id}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Tenant Client:</span>
+                          <span className="font-semibold text-purple-700">{client?.business_name}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">
+                        Token securely stored
+                      </span>
+                      <button
+                        onClick={() => handleDeleteSocial(account.id)}
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 6: DELIVERY & MONTHLY PERFORMANCE REPORT */}
+      {activeTab === "reports" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-purple-600" />
+                Monthly Campaign Delivery Report
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Audit contract quota fulfillment and summarize published campaign assets for {client?.business_name}.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={reportMonth}
+                onChange={(e) => {
+                  const m = parseInt(e.target.value, 10);
+                  setReportMonth(m);
+                  fetchMonthlyReport(m, reportYear);
+                }}
+                className="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer focus:outline-none"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2026, m - 1, 1).toLocaleString("en-US", { month: "long" })}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={reportYear}
+                onChange={(e) => {
+                  const y = parseInt(e.target.value, 10);
+                  setReportYear(y);
+                  fetchMonthlyReport(reportMonth, y);
+                }}
+                className="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer focus:outline-none"
+              >
+                <option value={2026}>2026</option>
+                <option value={2025}>2025</option>
+              </select>
+
+              <button
+                onClick={() => fetchMonthlyReport()}
+                className="p-2 text-slate-600 hover:text-purple-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors"
+                title="Refresh Report"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-purple-600" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {loadingReport ? (
+            <div className="py-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center">
+              <RefreshCw className="w-6 h-6 animate-spin text-purple-600 mb-2" />
+              <span>Generating monthly performance audit...</span>
+            </div>
+          ) : monthlyReport ? (
+            <div className="space-y-6">
+              {/* 4 Metric Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contract Quota</span>
+                  <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                    {monthlyReport.deliverables_delivered} / {monthlyReport.total_scope_quota}
+                  </div>
+                  <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
+                    {monthlyReport.quota_fulfillment_rate}% fulfilled
+                  </span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Published Live</span>
+                  <div className="text-2xl font-extrabold text-purple-700 mt-2">
+                    {monthlyReport.deliverables_published}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
+                    With public permalinks
+                  </span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Impressions</span>
+                  <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                    {monthlyReport.total_views > 0 ? monthlyReport.total_views.toLocaleString("en-IN") : "—"}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
+                    {monthlyReport.total_likes.toLocaleString("en-IN")} total likes
+                  </span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Engagement Rate</span>
+                  <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+                    {monthlyReport.avg_engagement_rate}%
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
+                    Likes & comments ratio
+                  </span>
+                </div>
+              </div>
+
+              {/* Executive Summary Card */}
+              <div className="bg-gradient-to-r from-purple-50/80 to-indigo-50/80 border border-purple-200/70 p-6 rounded-2xl shadow-2xs">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <h4 className="text-xs font-extrabold text-purple-950 uppercase tracking-wider">
+                    Executive Delivery Wrap-Up
+                  </h4>
+                </div>
+                <p className="text-xs text-purple-900 leading-relaxed font-medium">
+                  {monthlyReport.executive_summary}
+                </p>
+              </div>
+
+              {/* Top Deliverables Table */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
+                <h4 className="text-sm font-bold text-slate-900 mb-4">Top Performing Content Assets</h4>
+                {monthlyReport.top_deliverables.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No deliverables published yet for this period.</p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {monthlyReport.top_deliverables.map((item) => (
+                      <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
+                          <p className="text-[11px] text-slate-400 capitalize">
+                            {item.deliverable_type} &bull; {item.platform}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0 text-xs">
+                          {item.views_count > 0 && (
+                            <span className="text-slate-600 font-semibold">{item.views_count.toLocaleString("en-IN")} views</span>
+                          )}
+                          {item.live_post_url ? (
+                            <a
+                              href={item.live_post_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-600 hover:text-purple-700 font-bold inline-flex items-center gap-1 bg-purple-50 px-2.5 py-1 rounded-lg"
+                            >
+                              View Live <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">Approved</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* CONNECT SOCIAL ACCOUNT MODAL */}
+      {showConnectModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Connect Social Account</h3>
+                <p className="text-xs text-slate-500">Configure Meta Graph API credentials for {client?.business_name}.</p>
+              </div>
+              <button onClick={() => setShowConnectModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConnectSocial} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Platform</label>
+                <select
+                  value={socialPlatform}
+                  onChange={(e) => setSocialPlatform(e.target.value as "instagram" | "facebook")}
+                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 cursor-pointer focus:outline-none"
+                >
+                  <option value="instagram">Instagram Professional / Business</option>
+                  <option value="facebook">Facebook Page</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Account Handle / Name</label>
+                <input
+                  type="text"
+                  value={socialHandle}
+                  onChange={(e) => setSocialHandle(e.target.value)}
+                  placeholder="@hotelshauryawada"
+                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                />
+              </div>
+
+              {socialPlatform === "instagram" ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Instagram Business Account ID *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={igBusinessId}
+                    onChange={(e) => setIgBusinessId(e.target.value)}
+                    placeholder="e.g. 17841400012345"
+                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Found in your Meta App Dashboard or Graph API Explorer.</p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Facebook Page ID *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={fbPageId}
+                    onChange={(e) => setFbPageId(e.target.value)}
+                    placeholder="e.g. 1052300012345"
+                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                  />
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-800">Access Token (User or Page) *</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTokenHelper(!showTokenHelper)}
+                    className="text-[11px] text-purple-600 hover:text-purple-700 font-bold"
+                  >
+                    {showTokenHelper ? "Hide Token Helper" : "Generate 60-Day Token?"}
+                  </button>
+                </div>
+                <textarea
+                  rows={3}
+                  required
+                  value={socialAccessToken}
+                  onChange={(e) => setSocialAccessToken(e.target.value)}
+                  placeholder="Paste Meta Access Token (EAAG...)"
+                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono resize-none"
+                />
+              </div>
+
+              {/* 60-Day Token Exchange Accordion */}
+              {showTokenHelper && (
+                <div className="p-3.5 rounded-xl bg-purple-50/80 border border-purple-200 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-purple-950">
+                    <Key className="w-3.5 h-3.5 text-purple-600" />
+                    <span>60-Day Long-Lived Token Exchange</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Meta App ID"
+                      value={appId}
+                      onChange={(e) => setAppId(e.target.value)}
+                      className="text-xs p-2 rounded-lg bg-white border border-purple-200"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Meta App Secret"
+                      value={appSecret}
+                      onChange={(e) => setAppSecret(e.target.value)}
+                      className="text-xs p-2 rounded-lg bg-white border border-purple-200"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Short-Lived User Token (from Graph API Explorer)"
+                    value={shortToken}
+                    onChange={(e) => setShortToken(e.target.value)}
+                    className="w-full text-xs p-2 rounded-lg bg-white border border-purple-200 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleExchangeToken}
+                    disabled={exchangingToken}
+                    className="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-colors"
+                  >
+                    {exchangingToken ? "Exchanging..." : "Exchange for 60-Day Token"}
+                  </button>
+                </div>
+              )}
+
+              {/* Verification Button */}
+              {socialPlatform === "instagram" && (
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={handleVerifySocial}
+                    disabled={verifyingToken}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200 transition-colors"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${verifyingToken ? "animate-spin" : ""}`} />
+                    <span>Test & Verify with Meta</span>
+                  </button>
+                  {verifyResult && (
+                    <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Verified @{verifyResult.username}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowConnectModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={connectingSocial}
+                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs"
+                >
+                  {connectingSocial ? "Saving..." : "Save Account"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

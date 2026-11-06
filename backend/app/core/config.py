@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # App
     APP_ENV: str = "development"
     FRONTEND_URL: str = "http://localhost:3000"
+    PUBLIC_BASE_URL: str = "http://localhost:8000"
+    META_GRAPH_API_VERSION: str = "v22.0"
 
 
 settings = Settings()

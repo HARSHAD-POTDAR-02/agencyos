@@ -56,6 +56,7 @@ class ApprovalsQueueItemOut(BaseModel):
     deliverable_title: str
     deliverable_type: str
     platform: str
+    publishing_platform: str | None = None
     status: DeliverableStatus
     client_id: uuid.UUID
     client_name: str
@@ -70,3 +71,8 @@ class ApprovalsQueueItemOut(BaseModel):
     last_comment: str | None = None
     last_comment_author: str | None = None
     last_comment_at: datetime | None = None
+    live_post_url: str | None = None
+    views_count: int | None = None
+    likes_count: int | None = None
+    comments_count: int | None = None
+    shares_count: int | None = None

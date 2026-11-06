@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -48,6 +48,14 @@ class Deliverable(Base):
         default=DeliverableStatus.not_started,
         nullable=False,
     )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    live_post_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    external_post_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    publishing_platform: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    views_count: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True)
+    likes_count: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True)
+    comments_count: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True)
+    shares_count: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -59,7 +67,9 @@ class Deliverable(Base):
     )
 
     # Relationships
-    campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="deliverables")  # noqa: F821
+    campaign: Mapped["Campaign"] = relationship(
+        "Campaign", back_populates="deliverables", lazy="selectin"
+    )  # noqa: F821
     scope_item: Mapped["ScopeItem | None"] = relationship("ScopeItem")  # noqa: F821
     tasks: Mapped[list["Task"]] = relationship(  # noqa: F821
         "Task", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
@@ -70,3 +80,13 @@ class Deliverable(Base):
     comments: Mapped[list["DeliverableComment"]] = relationship(  # noqa: F821
         "DeliverableComment", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
     )
+
+    @property
+    def client_id(self) -> uuid.UUID | None:
+        return self.campaign.client_id if self.campaign else None
+
+    @property
+    def client_name(self) -> str | None:
+        if self.campaign and self.campaign.client:
+            return self.campaign.client.name
+        return None
