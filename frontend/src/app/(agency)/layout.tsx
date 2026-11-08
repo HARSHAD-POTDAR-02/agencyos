@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -27,7 +27,9 @@ export default function AgencyLayout({
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden antialiased print:h-auto print:overflow-visible print:bg-white">
       <div className="print:hidden h-full flex flex-col">
-        <Sidebar />
+        <Suspense fallback={null}>
+          <Sidebar />
+        </Suspense>
       </div>
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
         <div className="print:hidden">

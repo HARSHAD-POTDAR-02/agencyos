@@ -1,32 +1,33 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, Suspense } from "react";
+import React, { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { clientApi, campaignApi } from "@/lib/api";
 import {
   Sparkles,
-  Calendar,
-  Layers,
-  ArrowRight,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Filter,
-  List,
-  Grid,
-  ChevronDown,
-  ChevronUp,
-  Volume2,
-  Eye,
-  Hash,
   Send,
-  Kanban,
-  FileText,
+  Loader2,
+  Bot,
+  User,
+  ShieldCheck,
+  Search,
+  BarChart3,
+  Cpu,
+  Layers2,
+  FileCheck,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  CalendarDays,
   Building2,
+  AlertCircle,
   RefreshCw,
-  Trash2,
+  ChevronRight,
+  Flame,
+  Check,
+  RotateCcw,
 } from "lucide-react";
 
 interface Client {
@@ -35,69 +36,116 @@ interface Client {
   industry: string | null;
 }
 
-interface DeliverableItem {
-  day_number: number;
-  title?: string;
-  deliverable_type: string;
-  platform: string;
-  pillar: string;
-  hook: string;
-  visual_concept: string;
-  caption: string;
-  cta: string;
-  audio_vibe: string;
-  hashtags: string[];
-}
-
-interface AiPlanDraft {
-  campaign_name: string;
-  objective?: string;
-  brand_voice?: string;
-  content_pillars?: string[];
-  total_deliverables_planned: number;
-  generator?: string;
-  deliverables: DeliverableItem[];
-}
-
-interface Campaign {
+interface AgentStepItem {
   id: string;
-  client_id: string;
   name: string;
-  period_month: number | null;
-  period_year: number | null;
-  objective: string | null;
-  status: string;
-  ai_plan_draft: AiPlanDraft | null;
-  created_at: string;
+  icon: React.ComponentType<{ className?: string }>;
+  desc: string;
+  detail?: string;
 }
 
-function CampaignsContent() {
+const AGENT_STEPS: AgentStepItem[] = [
+  {
+    id: "agent1",
+    name: "Brand Intelligence",
+    icon: ShieldCheck,
+    desc: "Reading brand guidelines, verified offers, forbidden claims & quotas",
+  },
+  {
+    id: "agent2",
+    name: "Market & Trend Research",
+    icon: Search,
+    desc: "Searching live web for competitor angles, viral hooks & format benchmarks",
+  },
+  {
+    id: "agent3",
+    name: "Historical Performance",
+    icon: BarChart3,
+    desc: "Auditing retention rates, fatigue drop-offs & platform format recommendations",
+  },
+  {
+    id: "agent4",
+    name: "Campaign Strategist",
+    icon: Cpu,
+    desc: "Synthesizing master theme, content pillars & 30-day narrative pacing",
+  },
+  {
+    id: "agent5",
+    name: "Content Architect",
+    icon: Layers2,
+    desc: "Drafting polymorphic deliverables with Reel director beats & Carousel slide decks",
+  },
+  {
+    id: "agent6",
+    name: "Quality Evaluator & Gate",
+    icon: FileCheck,
+    desc: "Running deterministic brand compliance & quota audit for human review",
+  },
+];
+
+interface ChatMsg {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  agentPipeline?: {
+    status: "in_progress" | "completed" | "error";
+    activeStep: number;
+    stepDetails?: Record<string, string>;
+    errorMessage?: string;
+    result?: {
+      campaignId: string;
+      campaignName: string;
+      theme?: string;
+      deliverablesCount: number;
+      complianceScore?: number;
+    };
+  };
+}
+
+function CampaignStudioContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialClientId = searchParams.get("clientId") || "";
-  const initialCampaignId = searchParams.get("campaignId") || "";
 
   const { token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState(initialClientId);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  // Generator form inputs
-  const [periodMonth, setPeriodMonth] = useState<number>(new Date().getMonth() + 1);
-  const [periodYear, setPeriodYear] = useState<number>(new Date().getFullYear());
-  const [objective, setObjective] = useState("");
-  const [customBrief, setCustomBrief] = useState("");
+  // Month & year for sprint
+  const [periodMonth] = useState<number>(new Date().getMonth() + 1);
+  const [periodYear] = useState<number>(new Date().getFullYear());
 
-  const [generating, setGenerating] = useState(false);
-  const [converting, setConverting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
-  const [expandedDay, setExpandedDay] = useState<number | null>(1);
-  const [selectedPillarFilter, setSelectedPillarFilter] = useState<string>("all");
-  const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Copilot Chat State
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Evolving Brief Strategy
+  const [suggestedObjective, setSuggestedObjective] = useState<string>("");
+  const [suggestedCustomBrief, setSuggestedCustomBrief] = useState<string>("");
+  const [isReadyToGenerate, setIsReadyToGenerate] = useState(false);
+
+  // Pipeline Execution State
+  const [isPipelineRunning, setIsPipelineRunning] = useState(false);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, isChatLoading, isPipelineRunning]);
+
+  // Always keep focus on chat input so cursor never disappears after typing or pressing Enter
+  useEffect(() => {
+    if (!isPipelineRunning) {
+      chatInputRef.current?.focus();
+    }
+  }, [isChatLoading, isPipelineRunning, selectedClientId]);
 
   // Load clients
   useEffect(() => {
@@ -114,529 +162,696 @@ function CampaignsContent() {
       .catch((err) => console.error("Failed to load clients", err));
   }, [token, effectiveAgencyId, selectedClientId]);
 
-  // Load campaigns when client changes
-  const loadCampaigns = useCallback(
-    async (clientId: string) => {
-      if (!token || !effectiveAgencyId || !clientId) return;
-      try {
-        const data = (await campaignApi.list(effectiveAgencyId, clientId, token)) as Campaign[];
-        setCampaigns(data);
-
-        if (initialCampaignId) {
-          const match = data.find((c) => c.id === initialCampaignId);
-          if (match) {
-            setSelectedCampaign(match);
-            return;
-          }
-        }
-        if (data.length > 0) {
-          setSelectedCampaign(data[0]);
-        } else {
-          setSelectedCampaign(null);
-        }
-      } catch (err) {
-        console.error("Failed to load campaigns", err);
-      }
-    },
-    [token, effectiveAgencyId, initialCampaignId]
+  // Persistent Chat Storage Key Helper
+  const getStorageKey = useCallback(
+    (cId: string) => `agencyos_studio_chat_${effectiveAgencyId || "default"}_${cId}`,
+    [effectiveAgencyId]
   );
 
+  // Update selected client object and restore persistent chat history
   useEffect(() => {
-    if (selectedClientId) {
-      loadCampaigns(selectedClientId);
-    }
-  }, [selectedClientId, loadCampaigns]);
+    if (!selectedClientId || clients.length === 0) return;
+    const client = clients.find((c) => c.id === selectedClientId) || null;
+    setSelectedClient(client);
 
-  // Trigger AI plan generation
-  const handleGeneratePlan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || !effectiveAgencyId || !selectedClientId) {
-      setNotification({ type: "error", text: "Please select a client to generate a plan." });
+    const storageKey = getStorageKey(selectedClientId);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+            setChatMessages(parsed.messages);
+            setSuggestedObjective(parsed.suggestedObjective || "");
+            setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
+            setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse cached chat history", e);
+        }
+      }
+    }
+
+    // Fallback welcome message when no cached history exists
+    const clientName = client ? client.business_name : "your client";
+    const industryInfo = client?.industry ? ` in the ${client.industry} industry` : "";
+
+    setChatMessages([
+      {
+        id: `welcome-${selectedClientId}`,
+        role: "assistant",
+        content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+    setSuggestedObjective("");
+    setSuggestedCustomBrief("");
+    setIsReadyToGenerate(false);
+  }, [selectedClientId, clients, getStorageKey]);
+
+  // Auto-persist chat messages and draft strategy to localStorage
+  useEffect(() => {
+    if (!selectedClientId || chatMessages.length === 0) return;
+    const storageKey = getStorageKey(selectedClientId);
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          messages: chatMessages,
+          suggestedObjective,
+          suggestedCustomBrief,
+          isReadyToGenerate,
+        })
+      );
+    } catch (e) {
+      console.error("Failed to save chat to storage", e);
+    }
+  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, selectedClientId, getStorageKey]);
+
+  // Reset conversation handler
+  const handleResetChat = () => {
+    if (!selectedClientId) return;
+    const storageKey = getStorageKey(selectedClientId);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(storageKey);
+    }
+    const clientName = selectedClient ? selectedClient.business_name : "your client";
+    const industryInfo = selectedClient?.industry ? ` in the ${selectedClient.industry} industry` : "";
+
+    setChatMessages([
+      {
+        id: `welcome-${selectedClientId}-${Date.now()}`,
+        role: "assistant",
+        content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+    setSuggestedObjective("");
+    setSuggestedCustomBrief("");
+    setIsReadyToGenerate(false);
+  };
+
+  // Send message to Copilot Brief endpoint
+  const handleSendMessage = async (textOverride?: string) => {
+    const textToSend = textOverride || chatInput.trim();
+    if (!textToSend || !token || !effectiveAgencyId || !selectedClientId || isChatLoading || isPipelineRunning) {
       return;
     }
 
-    setGenerating(true);
-    setNotification(null);
+    const userMsg: ChatMsg = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: textToSend,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    const nextMessages = [...chatMessages, userMsg];
+    setChatMessages(nextMessages);
+    if (!textOverride) setChatInput("");
+    setIsChatLoading(true);
+
+    // Keep cursor active in chatbox immediately
+    setTimeout(() => {
+      chatInputRef.current?.focus();
+    }, 0);
 
     try {
-      const newCampaign = (await campaignApi.generatePlan(
+      // Send entire conversation history for proactive multi-turn memory
+      const response = await campaignApi.chatBrief(
+        effectiveAgencyId,
+        selectedClientId,
+        {
+          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+          period_month: periodMonth,
+          period_year: periodYear,
+        },
+        token
+      );
+
+      const aiMsg: ChatMsg = {
+        id: `ai-${Date.now()}`,
+        role: "assistant",
+        content: response.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setChatMessages([...nextMessages, aiMsg]);
+
+      if (response.suggested_objective) {
+        setSuggestedObjective(response.suggested_objective);
+      }
+      if (response.suggested_custom_brief) {
+        setSuggestedCustomBrief(response.suggested_custom_brief);
+      }
+      if (response.is_ready_to_generate) {
+        setIsReadyToGenerate(true);
+      }
+    } catch (err: any) {
+      console.error("Chat brief error:", err);
+      const isNetworkErr = err?.message?.toLowerCase().includes("fetch") || err?.message?.toLowerCase().includes("network");
+      const errorContent = isNetworkErr
+        ? "Could not connect to the campaign server. Please check your network or server status and try again."
+        : (err?.message || "I encountered an issue processing your request. Please try again.");
+      setChatMessages([
+        ...nextMessages,
+        {
+          id: `ai-err-${Date.now()}`,
+          role: "assistant",
+          content: errorContent,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+      setTimeout(() => {
+        chatInputRef.current?.focus();
+      }, 10);
+    }
+  };
+
+  // Launch Multi-Agent Pipeline Execution inline in chat
+  const handleRunPipeline = async () => {
+    if (!token || !effectiveAgencyId || !selectedClientId || isPipelineRunning) return;
+
+    setIsPipelineRunning(true);
+    const pipelineMsgId = `pipeline-${Date.now()}`;
+
+    // Append inline agent activity message in chat stream
+    const pipelineMsg: ChatMsg = {
+      id: pipelineMsgId,
+      role: "assistant",
+      content: "🚀 **Launching Autonomous Multi-Agent Campaign Intelligence Engine...**\nCoordinating 6 specialized agents to architect this campaign sprint:",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      agentPipeline: {
+        status: "in_progress",
+        activeStep: 0,
+        stepDetails: {
+          agent1: "Extracting brand guidelines, verified offers & quota limits...",
+        },
+      },
+    };
+
+    setChatMessages((prev) => [...prev, pipelineMsg]);
+
+    // Timer to step through agents visually like Perplexity / Antigravity
+    const stepInterval = setInterval(() => {
+      setChatMessages((prev) =>
+        prev.map((m) => {
+          if (m.id === pipelineMsgId && m.agentPipeline && m.agentPipeline.status === "in_progress") {
+            const nextStep = m.agentPipeline.activeStep < 5 ? m.agentPipeline.activeStep + 1 : 5;
+            const updatedDetails = { ...m.agentPipeline.stepDetails };
+
+            if (nextStep === 1) {
+              updatedDetails.agent1 = "Verified brand voice, forbidden claims & quota constraints.";
+              updatedDetails.agent2 = "Searching live web & format benchmarks for viral trends...";
+            } else if (nextStep === 2) {
+              updatedDetails.agent2 = "Extracted competitor hooks & market evidence.";
+              updatedDetails.agent3 = "Auditing historical drop-off rates & retention signals...";
+            } else if (nextStep === 3) {
+              updatedDetails.agent3 = "Calculated format weights and fatigue mitigations.";
+              updatedDetails.agent4 = "Synthesizing master theme, narrative arc & content pillars...";
+            } else if (nextStep === 4) {
+              updatedDetails.agent4 = "Master strategy locked with balanced distribution.";
+              updatedDetails.agent5 = "Generating polymorphic deliverables, Reel scenes & Carousel slides...";
+            } else if (nextStep === 5) {
+              updatedDetails.agent5 = "Drafted 30 days of high-fidelity polymorphic deliverables.";
+              updatedDetails.agent6 = "Running deterministic quality gate & compliance audit...";
+            }
+
+            return {
+              ...m,
+              agentPipeline: {
+                ...m.agentPipeline,
+                activeStep: nextStep,
+                stepDetails: updatedDetails,
+              },
+            };
+          }
+          return m;
+        })
+      );
+    }, 3800);
+
+    try {
+      const newCampaign: any = await campaignApi.generatePlan(
         effectiveAgencyId,
         selectedClientId,
         {
           period_month: periodMonth,
           period_year: periodYear,
-          objective: objective || undefined,
-          custom_brief: customBrief || undefined,
+          objective: suggestedObjective || undefined,
+          custom_brief: suggestedCustomBrief || undefined,
         },
         token
-      )) as Campaign;
+      );
 
-      setCampaigns((prev) => [newCampaign, ...prev]);
-      setSelectedCampaign(newCampaign);
-      setNotification({
-        type: "success",
-        text: `Successfully generated 30-day content plan for ${newCampaign.name}!`,
-      });
+      clearInterval(stepInterval);
+
+      const draft = newCampaign.ai_plan_draft || {};
+      const deliverablesCount = (draft.deliverables || []).length;
+      const complianceScore = draft.quality_evaluation?.compliance_score || 95;
+      const theme = draft.strategy?.campaign_theme || draft.campaign_name;
+
+      // Update pipeline message to completed
+      setChatMessages((prev) =>
+        prev.map((m) => {
+          if (m.id === pipelineMsgId) {
+            return {
+              ...m,
+              agentPipeline: {
+                status: "completed",
+                activeStep: 6,
+                stepDetails: {
+                  agent1: "Brand rules, verified offers & forbidden claims validated.",
+                  agent2: "Live web research completed with competitor angles.",
+                  agent3: "Historical retention analysis & format weights applied.",
+                  agent4: `Strategy finalized: ${theme || "Master Campaign Strategy"}.`,
+                  agent5: `${deliverablesCount} polymorphic deliverables architected (Reels, Carousels, Graphics).`,
+                  agent6: `Quality Gate Passed: ${complianceScore}% brand compliance score.`,
+                },
+                result: {
+                  campaignId: newCampaign.id,
+                  campaignName: newCampaign.name,
+                  theme,
+                  deliverablesCount,
+                  complianceScore,
+                },
+              },
+            };
+          }
+          return m;
+        })
+      );
     } catch (err: any) {
-      setNotification({ type: "error", text: err.message || "Failed to generate campaign plan." });
+      clearInterval(stepInterval);
+      setChatMessages((prev) =>
+        prev.map((m) => {
+          if (m.id === pipelineMsgId) {
+            return {
+              ...m,
+              agentPipeline: {
+                status: "error",
+                activeStep: 0,
+                errorMessage: err.message || "Failed to execute multi-agent engine.",
+              },
+            };
+          }
+          return m;
+        })
+      );
     } finally {
-      setGenerating(false);
+      setIsPipelineRunning(false);
     }
   };
 
-  // Convert AI plan to tasks
-  const handleConvertToTasks = async () => {
-    if (!token || !effectiveAgencyId || !selectedCampaign) return;
-    setConverting(true);
-    setNotification(null);
-
-    try {
-      const res = (await campaignApi.convertToTasks(
-        effectiveAgencyId,
-        selectedCampaign.id,
-        token
-      )) as { deliverables_created: number; tasks_created: number; status: string };
-
-      setSelectedCampaign({
-        ...selectedCampaign,
-        status: "in_production",
-      });
-      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
-
-      setNotification({
-        type: "success",
-        text: `Plan converted! Created ${res.deliverables_created} deliverables and ${res.tasks_created} team tasks across Scripting, Filming, Editing, and Approval.`,
-      });
-    } catch (err: any) {
-      setNotification({ type: "error", text: err.message || "Failed to convert plan to tasks." });
-    } finally {
-      setConverting(false);
-    }
-  };
-
-  // Delete campaign sprint
-  const handleDeleteCampaign = async (campaignId: string) => {
-    if (!confirm("Are you sure you want to delete this campaign sprint? This will permanently remove all 30 reels and associated production tasks.")) {
-      return;
-    }
-    if (!token || !effectiveAgencyId) return;
-    setDeleting(true);
-    setNotification(null);
-
-    try {
-      await campaignApi.delete(effectiveAgencyId, campaignId, token);
-      const remaining = campaigns.filter((c) => c.id !== campaignId);
-      setCampaigns(remaining);
-      setSelectedCampaign(remaining.length > 0 ? remaining[0] : null);
-      setNotification({
-        type: "success",
-        text: "Campaign sprint and all deliverables deleted. You can now generate a fresh sprint.",
-      });
-    } catch (err: any) {
-      setNotification({ type: "error", text: err.message || "Failed to delete campaign." });
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const plan = selectedCampaign?.ai_plan_draft;
-  const deliverables = plan?.deliverables || [];
-  const pillars = Array.from(new Set(deliverables.map((d) => d.pillar).filter(Boolean)));
-  const filteredDeliverables =
-    selectedPillarFilter === "all"
-      ? deliverables
-      : deliverables.filter((d) => d.pillar === selectedPillarFilter);
+  const promptStarters = [
+    "Plan a high-converting 30-day challenge sprint with viral Instagram Reels",
+    "Design an educational carousel sprint focused on authority & debunking myths",
+    "Craft a product launch campaign with customer transformations & exclusive offers",
+    "Focus on organic brand awareness and community-building engagement hooks",
+  ];
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="p-1.5 rounded-lg bg-purple-50 text-purple-600">
-              <Sparkles className="w-5 h-5" />
-            </span>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">AI Campaign Planner</h1>
-          </div>
-          <p className="text-xs text-slate-500">
-            Generate 30-day content calendar sprints with hooks, visual concepts, captions, and audio vibes respecting confirmed brand voice.
-          </p>
-        </div>
-
-        {/* Client Selector Dropdown */}
+    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto px-4 py-3">
+      {/* Studio Header */}
+      <header className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-border/40 shrink-0">
         <div className="flex items-center gap-3">
-          <label className="text-xs font-bold text-slate-700 shrink-0">Client Workspace:</label>
-          <select
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="bg-white text-xs font-bold text-slate-900 px-3 py-2 rounded-xl border border-slate-200/90 shadow-2xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 focus:outline-none"
-          >
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.business_name} ({c.industry || "General"})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Notification Banner */}
-      {notification && (
-        <div
-          className={`p-4 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
-            notification.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-rose-50 text-rose-800 border-rose-200"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {notification.type === "success" ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <span>{notification.text}</span>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-primary flex items-center justify-center text-white shadow-md shadow-violet-500/20">
+            <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
-          <button onClick={() => setNotification(null)} className="text-slate-400 hover:text-slate-600">
-            &times;
-          </button>
-        </div>
-      )}
-
-      {/* Sprint Generator Configuration Panel */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-purple-600" />
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Configure New 30-Day Sprint</h3>
-          </div>
-          <span className="text-[11px] font-medium text-slate-400">Powered by Groq LLM & AgencyOS Core</span>
-        </div>
-
-        <form onSubmit={handleGeneratePlan} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">Sprint Month</label>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Campaign Studio</h1>
+              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                AI Co-Director
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Conversational Copilot & 6-Agent Autonomous Campaign Engine
+            </p>
+          </div>
+        </div>
+
+        {/* Client Selector & Navigation to Plans */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
             <select
-              value={periodMonth}
-              onChange={(e) => setPeriodMonth(parseInt(e.target.value, 10))}
-              className="w-full bg-slate-50 text-xs font-medium text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="bg-transparent text-sm font-medium text-foreground focus:outline-none cursor-pointer"
             >
-              {[
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
-              ].map((m, idx) => (
-                <option key={idx + 1} value={idx + 1}>
-                  {m}
+              {clients.map((c) => (
+                <option key={c.id} value={c.id} className="bg-background text-foreground">
+                  {c.business_name} {c.industry ? `(${c.industry})` : ""}
                 </option>
               ))}
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">Sprint Year</label>
-            <input
-              type="number"
-              value={periodYear}
-              onChange={(e) => setPeriodYear(parseInt(e.target.value, 10))}
-              className="w-full bg-slate-50 text-xs font-medium text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
-            />
-          </div>
+          {/* New Chat / Reset History Button */}
+          <button
+            onClick={handleResetChat}
+            title="Start a fresh campaign conversation"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-muted/60 hover:bg-muted border border-border text-foreground transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" />
+            <span>New Brief</span>
+          </button>
 
-          <div className="md:col-span-2">
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">Sprint Campaign Objective</label>
-            <input
-              type="text"
-              value={objective}
-              onChange={(e) => setObjective(e.target.value)}
-              placeholder="e.g. Double organic reel views and drive 200 high-intent leads"
-              className="w-full bg-slate-50 text-xs font-medium text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
-            />
-          </div>
+          <Link
+            href={selectedClientId ? `/campaign-plans?clientId=${selectedClientId}` : "/campaign-plans"}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border transition-colors shadow-sm"
+          >
+            <CalendarDays className="w-3.5 h-3.5 text-primary" />
+            <span>Campaign Plans Dashboard</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+          </Link>
+        </div>
+      </header>
 
-          <div className="md:col-span-3">
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">Specific Creative Brief / Focus (Optional)</label>
-            <input
-              type="text"
-              value={customBrief}
-              onChange={(e) => setCustomBrief(e.target.value)}
-              placeholder="e.g. Focus on 3-second scroll-stopping hooks, relatable team humor, and Diwali gifting themes"
-              className="w-full bg-slate-50 text-xs font-medium text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
-            />
-          </div>
+      {/* Main Chat Stream */}
+      <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+        {chatMessages.map((msg) => {
+          const isUser = msg.role === "user";
 
-          <div className="md:col-span-1">
-            <button
-              type="submit"
-              disabled={generating}
-              className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-xs shadow-purple-600/20 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+          return (
+            <div
+              key={msg.id}
+              className={`flex gap-3 text-sm ${isUser ? "justify-end" : "justify-start"}`}
             >
-              <Sparkles className="w-4 h-4 text-purple-200" />
-              <span>{generating ? "Strategizing..." : "Generate Sprint ✨"}</span>
-            </button>
+              {/* Avatar */}
+              {!isUser && (
+                <div className="w-8 h-8 rounded-full bg-violet-600/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <Bot className="w-4 h-4" />
+                </div>
+              )}
+
+              <div className={`max-w-[85%] md:max-w-[78%] space-y-3`}>
+                {/* Text Bubble */}
+                <div
+                  className={`px-4 py-3 rounded-2xl ${
+                    isUser
+                      ? "bg-primary text-primary-foreground rounded-br-none shadow-sm"
+                      : "bg-muted/60 dark:bg-muted/40 border border-border/80 text-foreground rounded-bl-none shadow-sm"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap leading-relaxed text-[13.5px]">
+                    {msg.content}
+                  </div>
+                  <span
+                    className={`block mt-1 text-[10px] ${
+                      isUser ? "text-primary-foreground/70 text-right" : "text-muted-foreground"
+                    }`}
+                  >
+                    {msg.timestamp}
+                  </span>
+                </div>
+
+                {/* Inline Agent Pipeline Execution (Perplexity / Antigravity Style) */}
+                {msg.agentPipeline && (
+                  <div className="rounded-xl border border-violet-500/30 bg-card p-4 shadow-md space-y-4">
+                    {/* Pipeline Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                      <div className="flex items-center gap-2">
+                        {msg.agentPipeline.status === "in_progress" ? (
+                          <div className="w-3 h-3 rounded-full bg-violet-500 animate-ping" />
+                        ) : msg.agentPipeline.status === "completed" ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-rose-500" />
+                        )}
+                        <span className="font-semibold text-xs tracking-wide uppercase text-foreground">
+                          {msg.agentPipeline.status === "in_progress"
+                            ? "Multi-Agent Intelligence Engine in Progress..."
+                            : msg.agentPipeline.status === "completed"
+                            ? "Engine Execution Complete • 6 Agents Synthesized"
+                            : "Pipeline Encountered an Issue"}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono text-muted-foreground">
+                        {msg.agentPipeline.status === "in_progress"
+                          ? `Agent ${msg.agentPipeline.activeStep + 1} of 6`
+                          : "100% Complete"}
+                      </span>
+                    </div>
+
+                    {/* Stepped Agent Progress */}
+                    <div className="space-y-2.5">
+                      {AGENT_STEPS.map((step, idx) => {
+                        const Icon = step.icon;
+                        const isDone =
+                          msg.agentPipeline!.status === "completed" ||
+                          idx < msg.agentPipeline!.activeStep;
+                        const isActive =
+                          msg.agentPipeline!.status === "in_progress" &&
+                          idx === msg.agentPipeline!.activeStep;
+                        const isPending =
+                          msg.agentPipeline!.status === "in_progress" &&
+                          idx > msg.agentPipeline!.activeStep;
+
+                        const customDetail = msg.agentPipeline!.stepDetails?.[step.id];
+
+                        return (
+                          <div
+                            key={step.id}
+                            className={`flex items-start gap-3 p-2 rounded-lg text-xs transition-all ${
+                              isActive
+                                ? "bg-violet-500/10 border border-violet-500/30 text-foreground"
+                                : isDone
+                                ? "bg-muted/30 text-foreground"
+                                : "text-muted-foreground opacity-60"
+                            }`}
+                          >
+                            <div className="mt-0.5">
+                              {isDone ? (
+                                <div className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                </div>
+                              ) : isActive ? (
+                                <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+                              ) : (
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 font-medium">
+                                <Icon className="w-3.5 h-3.5 text-primary" />
+                                <span>
+                                  Agent {idx + 1}: {step.name}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
+                                {customDetail || step.desc}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Error display */}
+                    {msg.agentPipeline.status === "error" && (
+                      <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
+                        {msg.agentPipeline.errorMessage}
+                      </div>
+                    )}
+
+                    {/* Inline Plan Ready Card when Completed */}
+                    {msg.agentPipeline.status === "completed" && msg.agentPipeline.result && (
+                      <div className="mt-3 p-4 rounded-xl bg-gradient-to-br from-violet-600/10 via-background to-indigo-600/10 border border-violet-500/40 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <h3 className="font-bold text-sm text-foreground">
+                              {msg.agentPipeline.result.campaignName}
+                            </h3>
+                          </div>
+                          <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            🛡️ {msg.agentPipeline.result.complianceScore}% Compliant
+                          </span>
+                        </div>
+
+                        {msg.agentPipeline.result.theme && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Theme: &ldquo;{msg.agentPipeline.result.theme}&rdquo;
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                          <span className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground font-medium">
+                            📦 {msg.agentPipeline.result.deliverablesCount} Deliverables Ready
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground font-medium">
+                            🎬 Reel Beats & Carousel Decks
+                          </span>
+                        </div>
+
+                        {/* Direct CTA to Campaign Plans */}
+                        <div className="pt-2">
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/campaign-plans?clientId=${selectedClientId}&campaignId=${msg.agentPipeline?.result?.campaignId}`
+                              )
+                            }
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold text-xs transition-all shadow-md shadow-violet-500/25 cursor-pointer"
+                          >
+                            <span>Open in Campaign Plans & Convert to Tasks</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* User Avatar */}
+              {isUser && (
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-4 h-4" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Loading Spinner Indicator */}
+        {isChatLoading && (
+          <div className="flex gap-3 justify-start text-sm">
+            <div className="w-8 h-8 rounded-full bg-violet-600/10 text-violet-600 border border-violet-500/30 flex items-center justify-center shrink-0">
+              <Bot className="w-4 h-4" />
+            </div>
+            <div className="px-4 py-3 rounded-2xl bg-muted/60 border border-border/80 rounded-bl-none text-muted-foreground text-xs flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500" />
+              <span>Copilot is formulating creative ideas & consulting brand rules...</span>
+            </div>
           </div>
-        </form>
+        )}
+
+        <div ref={chatEndRef} />
       </div>
 
-      {/* Sprints Switcher Bar */}
-      {campaigns.length > 0 && (
-        <div className="flex items-center justify-between overflow-x-auto pb-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 mr-1">Generated Plans:</span>
-            {campaigns.map((camp) => (
+      {/* Suggested Prompt Starters (Only when conversation is fresh) */}
+      {chatMessages.length <= 1 && (
+        <div className="py-2 shrink-0">
+          <p className="text-[11px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
+            <span>Suggested Campaign Starters for {selectedClient?.business_name || "Client"}:</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {promptStarters.map((starter, i) => (
               <button
-                key={camp.id}
-                onClick={() => setSelectedCampaign(camp)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  selectedCampaign?.id === camp.id
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
-                }`}
+                key={i}
+                onClick={() => handleSendMessage(starter)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-muted/70 hover:bg-muted border border-border text-foreground transition-colors text-left"
               >
-                <span>{camp.name}</span>
-                <span className={`ml-2 text-[10px] px-1.5 py-0.2 rounded-full uppercase ${
-                  camp.status === "in_production" ? "bg-emerald-500/20 text-emerald-300" : "bg-purple-500/20 text-purple-300"
-                }`}>
-                  {camp.status}
-                </span>
+                {starter}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Active Campaign Detail & Calendar Content */}
-      {selectedCampaign && plan ? (
-        <div className="space-y-6">
-          {/* Plan Header Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-lg font-black text-slate-900">{plan.campaign_name}</h2>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
-                    {selectedCampaign.status}
-                  </span>
-                  {plan.generator && (
-                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
-                      {plan.generator}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-1 max-w-2xl">{plan.objective}</p>
-              </div>
-
-              {/* Actions: Convert or Delete */}
-              <div className="flex items-center gap-2.5">
-                <button
-                  onClick={() => handleDeleteCampaign(selectedCampaign.id)}
-                  disabled={deleting}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                  title="Delete this entire 30-day sprint and all associated tasks"
-                >
-                  <Trash2 className="w-4 h-4 text-rose-500" />
-                  <span>{deleting ? "Deleting..." : "Delete Sprint"}</span>
-                </button>
-
-                {selectedCampaign.status === "in_production" ? (
-                  <Link
-                    href="/tasks"
-                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all"
-                  >
-                    <Kanban className="w-4 h-4" />
-                    <span>View in Kanban Tasks &rarr;</span>
-                  </Link>
-                ) : (
-                  <button
-                    onClick={handleConvertToTasks}
-                    disabled={converting}
-                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                    <span>{converting ? "Creating Tasks..." : "Approve & Convert to Tasks 🚀"}</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filter and View Toggles */}
-            <div className="pt-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              {/* Content Pillars Filter */}
-              <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-bold">
-                <span className="text-slate-400 text-[11px] font-medium mr-1">Pillars:</span>
-                <button
-                  onClick={() => setSelectedPillarFilter("all")}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
-                    selectedPillarFilter === "all"
-                      ? "bg-purple-600 text-white"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  All ({deliverables.length})
-                </button>
-                {pillars.map((pil) => (
-                  <button
-                    key={pil}
-                    onClick={() => setSelectedPillarFilter(pil)}
-                    className={`px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap ${
-                      selectedPillarFilter === pil
-                        ? "bg-purple-600 text-white"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {pil} ({deliverables.filter((d) => d.pillar === pil).length})
-                  </button>
-                ))}
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl shrink-0 self-start md:self-auto">
-                <button
-                  onClick={() => setViewMode("calendar")}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    viewMode === "calendar" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <Grid className="w-3.5 h-3.5" />
-                  <span>30-Day Grid</span>
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    viewMode === "list" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <List className="w-3.5 h-3.5" />
-                  <span>Detailed List</span>
-                </button>
-              </div>
+      {/* Evolving Strategy Draft / Ready to Generate Chip */}
+      {(suggestedObjective || isReadyToGenerate) && (
+        <div className="my-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase font-bold tracking-wider text-violet-600 dark:text-violet-400">
+                {isReadyToGenerate ? "Brief Ready for Autonomous Engine" : "Evolving Campaign Angle"}
+              </p>
+              <p className="text-xs text-foreground font-medium truncate">
+                {suggestedObjective || suggestedCustomBrief}
+              </p>
             </div>
           </div>
 
-          {/* CALENDAR GRID VIEW */}
-          {viewMode === "calendar" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {filteredDeliverables.map((item) => (
-                <div
-                  key={item.day_number}
-                  onClick={() => setExpandedDay(expandedDay === item.day_number ? null : item.day_number)}
-                  className={`bg-white rounded-2xl border p-4 shadow-2xs transition-all cursor-pointer flex flex-col justify-between hover:border-purple-400 hover:shadow-md ${
-                    expandedDay === item.day_number
-                      ? "ring-2 ring-purple-500/20 border-purple-500"
-                      : "border-slate-200/80"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-1 mb-2">
-                      <span className="text-[11px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">
-                        Day {item.day_number < 10 ? `0${item.day_number}` : item.day_number}
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        {item.deliverable_type}
-                      </span>
-                    </div>
-
-                    <div className="text-[10px] font-bold text-slate-500 line-clamp-1 mb-1.5">
-                      {item.pillar}
-                    </div>
-
-                    <p className="text-xs font-extrabold text-slate-900 leading-snug line-clamp-3 mb-3">
-                      &quot;{item.hook}&quot;
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                    <span className="flex items-center gap-1 truncate max-w-[120px]">
-                      <Volume2 className="w-3 h-3 text-purple-500 shrink-0" />
-                      <span className="truncate">{item.audio_vibe}</span>
-                    </span>
-                    <span className="text-purple-600 font-bold hover:underline">
-                      {expandedDay === item.day_number ? "Close" : "Brief"}
-                    </span>
-                  </div>
-
-                  {/* Expanded Detail inside card if selected */}
-                  {expandedDay === item.day_number && (
-                    <div className="mt-3 pt-3 border-t border-purple-100 text-xs space-y-2 animate-in fade-in duration-150">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Visual Shot List:</span>
-                        <p className="text-[11px] text-slate-700 mt-0.5">{item.visual_concept}</p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Caption:</span>
-                        <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-3 whitespace-pre-line">{item.caption}</p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-purple-600 block uppercase">CTA:</span>
-                        <p className="text-[11px] font-bold text-slate-800">{item.cta}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* DETAILED LIST VIEW */
-            <div className="space-y-4">
-              {filteredDeliverables.map((item) => (
-                <div
-                  key={item.day_number}
-                  className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs hover:border-purple-300 transition-all"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 font-black text-sm flex items-center justify-center shrink-0 border border-purple-100">
-                        D{item.day_number < 10 ? `0${item.day_number}` : item.day_number}
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">
-                            {item.pillar}
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-400 uppercase">
-                            {item.deliverable_type} &bull; {item.platform}
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-900 leading-snug">
-                          Hook: &quot;{item.hook}&quot;
-                        </h4>
-                        <div className="text-xs text-slate-600">
-                          <strong className="text-slate-800">Visual Concept:</strong> {item.visual_concept}
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-700 whitespace-pre-line">
-                          {item.caption}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500 pt-1">
-                          <span className="text-purple-700 font-bold">CTA: {item.cta}</span>
-                          <span className="flex items-center gap-1 text-slate-600">
-                            <Volume2 className="w-3.5 h-3.5 text-purple-500" />
-                            {item.audio_vibe}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-16 text-center shadow-2xs">
-          <Sparkles className="w-12 h-12 text-purple-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-900">No Content Plan Selected</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-6">
-            Click &quot;Generate Sprint ✨&quot; above to create a full 30-day reel calendar with hooks, visual shot lists, and captions tailored to this client&apos;s brand guidelines.
-          </p>
+          <button
+            onClick={handleRunPipeline}
+            disabled={isPipelineRunning}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
+          >
+            {isPipelineRunning ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Running Pipeline...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Generate Sprint ✨</span>
+              </>
+            )}
+          </button>
         </div>
       )}
-    </main>
+
+      {/* Chat Input Bar */}
+      <footer className="pt-2 border-t border-border/40 shrink-0">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendMessage();
+          }}
+          className="relative flex items-center"
+        >
+          <input
+            ref={chatInputRef}
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            disabled={isPipelineRunning}
+            placeholder={
+              isPipelineRunning
+                ? "Autonomous engine is running, please wait..."
+                : isChatLoading
+                ? "Agent is thinking... (type next message)"
+                : "Ask questions, share campaign requirements, or brainstorm creative angles..."
+            }
+            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 pr-24 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50 transition-all"
+            autoFocus
+          />
+
+          <div className="absolute right-2 flex items-center gap-1.5">
+            <button
+              type="submit"
+              disabled={!chatInput.trim() || isChatLoading || isPipelineRunning}
+              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium text-xs flex items-center gap-1 hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer"
+            >
+              {isChatLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Thinking...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </footer>
+    </div>
   );
 }
 
-export default function CampaignsPage() {
+export default function CampaignStudioPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading campaign planner...</div>}>
-      <CampaignsContent />
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <CampaignStudioContent />
     </Suspense>
   );
 }

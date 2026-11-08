@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from app.models.deliverable import DeliverableStatus
 from app.schemas.campaign import DeliverableOut
 from app.schemas.comment import CommentOut
+from app.schemas.task import TaskOut
 
 
 class ContentVersionOut(BaseModel):
@@ -15,6 +16,7 @@ class ContentVersionOut(BaseModel):
 
     id: uuid.UUID
     deliverable_id: uuid.UUID
+    task_id: uuid.UUID | None = None
     version_number: int
     storage_key: str
     file_name: str
@@ -32,6 +34,7 @@ class ContentVersionOut(BaseModel):
 
 
 class DeliverableDetailOut(DeliverableOut):
-    """Deliverable with its full version history and comments attached."""
+    """Deliverable with its full version history, tasks, and comments attached."""
     content_versions: list[ContentVersionOut] = []
+    tasks: list[TaskOut] = []
     comments: list[CommentOut] = []

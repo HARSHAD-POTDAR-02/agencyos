@@ -95,3 +95,23 @@ class ConvertToTasksResponse(BaseModel):
     tasks_created: int
     status: str
 
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatBriefRequest(BaseModel):
+    messages: list[ChatMessage]
+    period_month: int | None = None
+    period_year: int | None = None
+
+
+class ChatBriefResponse(BaseModel):
+    reply: str
+    suggested_objective: str | None = None
+    suggested_custom_brief: str | None = None
+    suggested_period_month: int | None = None
+    suggested_period_year: int | None = None
+    is_ready_to_generate: bool = False
+

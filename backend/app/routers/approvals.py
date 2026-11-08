@@ -97,12 +97,18 @@ async def submit_approval(
         deliverable.status = DeliverableStatus.changes_requested
         target_task_status = TaskStatus.changes_requested
 
-    # Update tasks
+    # Update tasks: only update the approval/review task to prevent premature completion of production tasks
     tasks_res = await db.execute(
         select(Task).where(Task.deliverable_id == deliverable.id)
     )
-    for t in tasks_res.scalars().all():
-        t.status = target_task_status
+    all_tasks = tasks_res.scalars().all()
+    review_tasks = [t for t in all_tasks if t.task_type in ("approval", "review")]
+    if review_tasks:
+        for t in review_tasks:
+            t.status = target_task_status
+    else:
+        for t in all_tasks:
+            t.status = target_task_status
 
     # Record feedback comment if present
     if payload.comment:

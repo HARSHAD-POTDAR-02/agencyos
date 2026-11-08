@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 
 class PublishDeliverableRequest(BaseModel):
     mode: Literal["automated", "manual"] = "automated"
-    platform: str = "instagram"  # "instagram", "facebook"
+    platform: str = "instagram"  # "instagram", "facebook", "both"
     live_post_url: str | None = None
     caption_override: str | None = None
     media_url_override: str | None = None
@@ -25,6 +25,7 @@ class PublishDeliverableResponse(BaseModel):
     published_at: datetime
     platform: str
     message: str
+    platform_results: dict[str, Any] | None = None
 
 
 class DeliverableMetricsUpdate(BaseModel):

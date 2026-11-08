@@ -91,6 +91,7 @@ async def publish_deliverable(
     success_message = "Deliverable marked as published successfully."
 
     # 3. Handle Automated Publishing via Meta Graph API
+    platform_results: dict[str, Any] = {}
     if payload.mode == "automated":
         if latest_version is None:
             raise HTTPException(
@@ -98,100 +99,217 @@ async def publish_deliverable(
                 detail="No content version/media asset exists for this deliverable to publish.",
             )
 
-        # Lookup client's social account
-        account_res = await db.execute(
-            select(ClientSocialAccount).where(
-                ClientSocialAccount.client_id == client.id,
-                ClientSocialAccount.platform == payload.platform,
-                ClientSocialAccount.is_active.is_(True),
-            )
-        )
-        social_account = account_res.scalar_one_or_none()
-
-        if social_account is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"No active {payload.platform} account connected for client '{client.business_name}'. "
-                    "Please connect social credentials in the client workspace or choose manual publishing."
-                ),
-            )
-
         # Build public media URL (supports direct public URL or tunnel base URL)
         media_url = payload.media_url_override or f"{settings.PUBLIC_BASE_URL}/uploads/{latest_version.storage_key}"
         caption = payload.caption_override or latest_version.caption or deliverable.title
 
-        try:
-            if payload.platform == "instagram":
-                if not social_account.instagram_business_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Instagram Business ID is missing from the connected social account.",
-                    )
+        # Check if local file exists on disk (avoids relying on external public URL fetch)
+        local_path = Path(settings.UPLOAD_DIR) / latest_version.storage_key
+        local_file_str = str(local_path) if local_path.is_file() and not payload.media_url_override else None
+        is_video = (latest_version.file_type or "").startswith("video/") or latest_version.storage_key.endswith(
+            (".mp4", ".mov")
+        )
 
-                is_video = (latest_version.file_type or "").startswith("video/") or latest_version.storage_key.endswith(
-                    (".mp4", ".mov")
+        if payload.platform in ("instagram", "facebook"):
+            # Lookup client's social account
+            account_res = await db.execute(
+                select(ClientSocialAccount).where(
+                    ClientSocialAccount.client_id == client.id,
+                    ClientSocialAccount.platform == payload.platform,
+                    ClientSocialAccount.is_active.is_(True),
                 )
-
-                if is_video:
-                    result = await publish_instagram_reel(
-                        access_token=social_account.access_token,
-                        instagram_business_id=social_account.instagram_business_id,
-                        video_url=media_url,
-                        caption=caption,
-                        share_to_feed=payload.share_to_feed,
-                    )
-                else:
-                    result = await publish_instagram_photo(
-                        access_token=social_account.access_token,
-                        instagram_business_id=social_account.instagram_business_id,
-                        image_url=media_url,
-                        caption=caption,
-                    )
-
-                live_url = result.get("permalink")
-                external_post_id = str(result.get("media_id"))
-                success_message = f"Successfully published to Instagram profile {social_account.account_handle or ''}!"
-
-            elif payload.platform == "facebook":
-                if not social_account.facebook_page_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Facebook Page ID is missing from the connected social account.",
-                    )
-
-                is_video = (latest_version.file_type or "").startswith("video/") or latest_version.storage_key.endswith(
-                    (".mp4", ".mov")
-                )
-
-                # Check if local file exists on disk (avoids relying on external public URL fetch)
-                local_path = Path(settings.UPLOAD_DIR) / latest_version.storage_key
-                local_file_str = str(local_path) if local_path.is_file() and not payload.media_url_override else None
-
-                result = await publish_facebook_page_post(
-                    access_token=social_account.access_token,
-                    page_id=social_account.facebook_page_id,
-                    media_url=media_url,
-                    caption=caption,
-                    is_video=is_video,
-                    local_file_path=local_file_str,
-                    file_name=latest_version.file_name,
-                    file_type=latest_version.file_type,
-                )
-                live_url = result.get("permalink")
-                external_post_id = str(result.get("post_id"))
-                success_message = "Successfully published to Facebook Page!"
-
-        except MetaPublishingError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Meta Publishing failed: {str(e)}",
             )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Unexpected error during automated publishing: {str(e)}",
+            social_account = account_res.scalar_one_or_none()
+
+            if social_account is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"No active {payload.platform} account connected for client '{client.business_name}'. "
+                        "Please connect social credentials in the client workspace or choose manual publishing."
+                    ),
+                )
+
+            try:
+                if payload.platform == "instagram":
+                    if not social_account.instagram_business_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Instagram Business ID is missing from the connected social account.",
+                        )
+
+                    if is_video:
+                        result = await publish_instagram_reel(
+                            access_token=social_account.access_token,
+                            instagram_business_id=social_account.instagram_business_id,
+                            video_url=media_url,
+                            caption=caption,
+                            share_to_feed=payload.share_to_feed,
+                            local_file_path=local_file_str,
+                            file_type=latest_version.file_type,
+                        )
+                    else:
+                        result = await publish_instagram_photo(
+                            access_token=social_account.access_token,
+                            instagram_business_id=social_account.instagram_business_id,
+                            image_url=media_url,
+                            caption=caption,
+                        )
+
+                    live_url = result.get("permalink")
+                    external_post_id = str(result.get("media_id"))
+                    success_message = f"Successfully published to Instagram profile {social_account.account_handle or ''}!"
+                    platform_results["instagram"] = {
+                        "success": True,
+                        "post_id": external_post_id,
+                        "permalink": live_url,
+                    }
+
+                elif payload.platform == "facebook":
+                    if not social_account.facebook_page_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Facebook Page ID is missing from the connected social account.",
+                        )
+
+                    result = await publish_facebook_page_post(
+                        access_token=social_account.access_token,
+                        page_id=social_account.facebook_page_id,
+                        media_url=media_url,
+                        caption=caption,
+                        is_video=is_video,
+                        local_file_path=local_file_str,
+                        file_name=latest_version.file_name,
+                        file_type=latest_version.file_type,
+                    )
+                    live_url = result.get("permalink")
+                    external_post_id = str(result.get("post_id"))
+                    success_message = "Successfully published to Facebook Page!"
+                    platform_results["facebook"] = {
+                        "success": True,
+                        "post_id": external_post_id,
+                        "permalink": live_url,
+                    }
+
+            except MetaPublishingError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Meta Publishing failed: {str(e)}",
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Unexpected error during automated publishing: {str(e)}",
+                )
+
+        elif payload.platform == "both":
+            # Dual-platform publishing: Instagram & Facebook
+            accounts_res = await db.execute(
+                select(ClientSocialAccount).where(
+                    ClientSocialAccount.client_id == client.id,
+                    ClientSocialAccount.is_active.is_(True),
+                )
             )
+            all_accounts = accounts_res.scalars().all()
+            ig_account = next((a for a in all_accounts if a.platform == "instagram" or a.instagram_business_id), None)
+            fb_account = next((a for a in all_accounts if a.platform == "facebook" or a.facebook_page_id), None)
+
+            if not ig_account and not fb_account:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"No connected social accounts found for client '{client.business_name}'.",
+                )
+
+            # 1. Instagram
+            if ig_account and ig_account.instagram_business_id:
+                try:
+                    if is_video:
+                        ig_result = await publish_instagram_reel(
+                            access_token=ig_account.access_token,
+                            instagram_business_id=ig_account.instagram_business_id,
+                            video_url=media_url,
+                            caption=caption,
+                            share_to_feed=payload.share_to_feed,
+                            local_file_path=local_file_str,
+                            file_type=latest_version.file_type,
+                        )
+                    else:
+                        ig_result = await publish_instagram_photo(
+                            access_token=ig_account.access_token,
+                            instagram_business_id=ig_account.instagram_business_id,
+                            image_url=media_url,
+                            caption=caption,
+                        )
+                    platform_results["instagram"] = {
+                        "success": True,
+                        "post_id": str(ig_result.get("media_id")),
+                        "permalink": ig_result.get("permalink"),
+                    }
+                except Exception as e:
+                    platform_results["instagram"] = {
+                        "success": False,
+                        "error": str(e),
+                    }
+            else:
+                platform_results["instagram"] = {
+                    "success": False,
+                    "error": "No connected Instagram Business account.",
+                }
+
+            # 2. Facebook
+            if fb_account and fb_account.facebook_page_id:
+                try:
+                    fb_result = await publish_facebook_page_post(
+                        access_token=fb_account.access_token,
+                        page_id=fb_account.facebook_page_id,
+                        media_url=media_url,
+                        caption=caption,
+                        is_video=is_video,
+                        local_file_path=local_file_str,
+                        file_name=latest_version.file_name,
+                        file_type=latest_version.file_type,
+                    )
+                    platform_results["facebook"] = {
+                        "success": True,
+                        "post_id": str(fb_result.get("post_id")),
+                        "permalink": fb_result.get("permalink"),
+                    }
+                except Exception as e:
+                    platform_results["facebook"] = {
+                        "success": False,
+                        "error": str(e),
+                    }
+            else:
+                platform_results["facebook"] = {
+                    "success": False,
+                    "error": "No connected Facebook Page.",
+                }
+
+            ig_ok = platform_results.get("instagram", {}).get("success", False)
+            fb_ok = platform_results.get("facebook", {}).get("success", False)
+
+            if ig_ok and fb_ok:
+                live_url = platform_results["instagram"].get("permalink") or platform_results["facebook"].get("permalink")
+                external_post_id = f"ig:{platform_results['instagram']['post_id']},fb:{platform_results['facebook']['post_id']}"
+                success_message = "Successfully published to both Instagram and Facebook Page!"
+            elif fb_ok and not ig_ok:
+                live_url = platform_results["facebook"].get("permalink")
+                external_post_id = str(platform_results["facebook"]["post_id"])
+                success_message = f"Published to Facebook Page successfully. (Instagram failed: {platform_results['instagram'].get('error')})"
+            elif ig_ok and not fb_ok:
+                live_url = platform_results["instagram"].get("permalink")
+                external_post_id = str(platform_results["instagram"]["post_id"])
+                success_message = f"Published to Instagram successfully. (Facebook failed: {platform_results['facebook'].get('error')})"
+            else:
+                # Both failed
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Publishing failed on both platforms. "
+                        f"Instagram: {platform_results['instagram'].get('error')}. "
+                        f"Facebook: {platform_results['facebook'].get('error')}."
+                    ),
+                )
 
     # 4. Update Deliverable Status and Publishing Metadata
     deliverable.status = DeliverableStatus.published
@@ -218,6 +336,7 @@ async def publish_deliverable(
         published_at=deliverable.published_at or now,
         platform=payload.platform,
         message=success_message,
+        platform_results=platform_results or None,
     )
 
 

@@ -184,30 +184,49 @@ async def publish_instagram_photo(
 async def publish_instagram_reel(
     access_token: str,
     instagram_business_id: str,
-    video_url: str,
+    video_url: str | None = None,
     caption: str = "",
     share_to_feed: bool = True,
     cover_url: str | None = None,
-    max_wait_seconds: int = 120,
+    local_file_path: str | None = None,
+    file_type: str | None = None,
+    max_wait_seconds: int = 180,
 ) -> dict[str, Any]:
     """
     Publish a Reel to Instagram.
-    Step 1: POST /{ig_user_id}/media (media_type=REELS, video_url, caption, share_to_feed=true)
+    Supports both direct resumable binary upload (avoids external fetch failures)
+    and public video_url fallback.
+    Step 1: POST /{ig_user_id}/media
+            - If local_file_path: upload_type=resumable, then POST binary to rupload.facebook.com
+            - Else: video_url
     Step 2: Poll GET /{creation_id}?fields=status_code until FINISHED
     Step 3: POST /{ig_user_id}/media_publish (creation_id)
     Step 4: GET /{media_id}?fields=permalink
     """
     version = _get_api_version()
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        # Step 1: Create Container
+    async with httpx.AsyncClient(timeout=180.0) as client:
         container_url = f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/media"
-        container_payload = {
-            "media_type": "REELS",
-            "video_url": video_url,
-            "caption": caption,
-            "share_to_feed": "true" if share_to_feed else "false",
-            "access_token": access_token,
-        }
+        use_resumable = bool(local_file_path and Path(local_file_path).is_file())
+
+        if use_resumable:
+            container_payload = {
+                "media_type": "REELS",
+                "upload_type": "resumable",
+                "caption": caption,
+                "share_to_feed": "true" if share_to_feed else "false",
+                "access_token": access_token,
+            }
+        elif video_url:
+            container_payload = {
+                "media_type": "REELS",
+                "video_url": video_url,
+                "caption": caption,
+                "share_to_feed": "true" if share_to_feed else "false",
+                "access_token": access_token,
+            }
+        else:
+            raise MetaPublishingError("Neither local video file nor public video URL provided for Instagram Reel.")
+
         if cover_url:
             container_payload["cover_url"] = cover_url
 
@@ -218,6 +237,36 @@ async def publish_instagram_reel(
             raise MetaPublishingError(f"Reel container creation failed: {err_msg}", data1.get("error"))
 
         creation_id = data1["id"]
+
+        # If using resumable upload, stream the binary content to Meta's rupload endpoint
+        if use_resumable and local_file_path:
+            upload_url = data1.get("uri") or f"https://rupload.facebook.com/ig-api-upload/{version}/{creation_id}"
+            file_path = Path(local_file_path)
+            file_size = file_path.stat().st_size
+
+            with open(file_path, "rb") as f:
+                video_bytes = f.read()
+
+            upload_headers = {
+                "Authorization": f"OAuth {access_token}",
+                "offset": "0",
+                "file_size": str(file_size),
+                "Content-Type": file_type or "application/octet-stream",
+            }
+            logger.info(f"Initiating direct resumable video upload ({file_size} bytes) to {upload_url}")
+            res_upload = await client.post(
+                upload_url,
+                headers=upload_headers,
+                content=video_bytes,
+                timeout=180.0,
+            )
+            if res_upload.status_code not in (200, 201, 204):
+                try:
+                    up_data = res_upload.json()
+                    up_err = up_data.get("error", {}).get("message", f"HTTP {res_upload.status_code}")
+                except Exception:
+                    up_err = f"HTTP {res_upload.status_code}: {res_upload.text[:200]}"
+                raise MetaPublishingError(f"Direct Instagram video binary upload failed: {up_err}")
 
         # Step 2: Poll for video processing status
         status_url = f"{GRAPH_API_BASE}/{version}/{creation_id}"

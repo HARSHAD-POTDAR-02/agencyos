@@ -438,7 +438,7 @@ function TasksContent() {
 
                         {t.deliverable_id && (
                           <Link
-                            href={`/deliverables/${t.deliverable_id}`}
+                            href={`/deliverables/${t.deliverable_id}?task_id=${t.id}&from=tasks`}
                             className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 hover:text-purple-700 hover:underline pt-0.5"
                           >
                             <Film className="w-3 h-3" />
@@ -494,7 +494,7 @@ function TasksContent() {
                       <span className="text-[11px] text-slate-400">ID: {t.id.slice(0, 8)}</span>
                       {t.deliverable_id && (
                         <Link
-                          href={`/deliverables/${t.deliverable_id}`}
+                          href={`/deliverables/${t.deliverable_id}?task_id=${t.id}&from=tasks`}
                           className="text-[11px] font-bold text-purple-600 hover:text-purple-700 hover:underline inline-flex items-center gap-1"
                         >
                           <Film className="w-2.5 h-2.5" /> Media &rarr;

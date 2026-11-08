@@ -10,9 +10,10 @@ Endpoints:
 """
 from __future__ import annotations
 
+from pathlib import Path
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +37,8 @@ router = APIRouter(tags=["deliverables"])
 class DeliverableStatusUpdate(BaseModel):
     status: DeliverableStatus
 
-ALLOWED_MIME_PREFIXES = ("video/", "image/", "application/")
+ALLOWED_MIME_PREFIXES = ("video/", "image/", "application/", "text/")
+ALLOWED_DOCUMENT_EXTENSIONS = (".pdf", ".docx", ".doc", ".txt", ".rtf", ".csv", ".json")
 MAX_FILE_SIZE_MB = 500
 
 
@@ -87,16 +89,20 @@ async def get_deliverable(
 async def list_versions(
     agency_id: uuid.UUID,
     deliverable_id: uuid.UUID,
+    task_id: uuid.UUID | None = Query(None),
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[ContentVersionOut]:
-    """List all content versions for a deliverable, ordered by version number."""
+    """List all content versions for a deliverable, optionally filtered by task."""
     await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
-    result = await db.execute(
+    query = (
         select(ContentVersion)
         .where(ContentVersion.deliverable_id == deliverable_id)
         .order_by(ContentVersion.version_number)
     )
+    if task_id is not None:
+        query = query.where(ContentVersion.task_id == task_id)
+    result = await db.execute(query)
     versions = result.scalars().all()
     return [ContentVersionOut.model_validate(v) for v in versions]
 
@@ -117,17 +123,44 @@ async def upload_version(
     file: UploadFile = File(...),
     caption: str | None = Form(None),
     notes: str | None = Form(None),
+    task_id: uuid.UUID | None = Form(None),
     membership: Membership = Depends(require_agency_member),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ContentVersionOut:
     """
     Upload a new content version for a deliverable.
-    Accepts video (.mp4, .mov) or image (.jpg, .png, .gif, .webp) files.
+    Accepts video (.mp4, .mov), image (.jpg, .png, .gif, .webp), or document (.pdf, .docx, .doc, .txt) files.
+    Optionally tags the asset to a specific production task (e.g. scripting, filming, editing).
     Automatically increments version_number.
     Also bumps deliverable status → in_production if still not_started.
     """
     await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+
+    # Validate file type
+    suffix = Path(file.filename or "").suffix.lower()
+    is_valid_type = (
+        not file.content_type
+        or any(file.content_type.startswith(prefix) for prefix in ALLOWED_MIME_PREFIXES)
+        or suffix in ALLOWED_DOCUMENT_EXTENSIONS
+    )
+    if not is_valid_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file format. Please upload a video, image, PDF, Word doc (.docx), or text (.txt) file.",
+        )
+
+    # Validate task if provided
+    if task_id is not None:
+        task = await db.get(Task, task_id)
+        if not task or task.deliverable_id != deliverable_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specified task does not belong to this deliverable.",
+            )
+        # Advance task status if currently in todo or backlog
+        if task.status in (TaskStatus.todo, TaskStatus.backlog):
+            task.status = TaskStatus.in_progress
 
     # Count existing versions to determine new version_number
     count_result = await db.execute(
@@ -141,6 +174,7 @@ async def upload_version(
     content_version = ContentVersion(
         id=uuid.uuid4(),
         deliverable_id=deliverable_id,
+        task_id=task_id,
         version_number=version_number,
         storage_key=storage_key,
         file_name=file.filename or "upload",
@@ -223,7 +257,7 @@ async def update_deliverable_status(
     deliverable = await _get_deliverable_or_404(deliverable_id, agency_id, db)
     deliverable.status = payload.status
 
-    # Synchronize linked tasks
+    # Synchronize linked tasks (preserve production stages when reviewing/approving)
     task_map = {
         DeliverableStatus.not_started: TaskStatus.todo,
         DeliverableStatus.in_production: TaskStatus.in_progress,
@@ -236,8 +270,23 @@ async def update_deliverable_status(
         tasks_res = await db.execute(
             select(Task).where(Task.deliverable_id == deliverable.id)
         )
-        for t in tasks_res.scalars().all():
-            t.status = task_map[deliverable.status]
+        tasks = tasks_res.scalars().all()
+        if deliverable.status in (
+            DeliverableStatus.internal_review,
+            DeliverableStatus.client_review,
+            DeliverableStatus.changes_requested,
+            DeliverableStatus.approved,
+        ):
+            review_tasks = [t for t in tasks if t.task_type in ("approval", "review")]
+            if review_tasks:
+                for t in review_tasks:
+                    t.status = task_map[deliverable.status]
+            else:
+                for t in tasks:
+                    t.status = task_map[deliverable.status]
+        else:
+            for t in tasks:
+                t.status = task_map[deliverable.status]
 
     await db.commit()
     await db.refresh(deliverable)

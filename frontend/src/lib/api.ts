@@ -167,6 +167,25 @@ export const campaignApi = {
   generatePlan: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients/${clientId}/campaigns/generate-plan`, { method: "POST", body: data, token }),
 
+  chatBrief: (
+    agencyId: string,
+    clientId: string,
+    data: { messages: Array<{ role: string; content: string }>; period_month?: number; period_year?: number },
+    token: string
+  ) =>
+    apiFetch<{
+      reply: string;
+      suggested_objective?: string;
+      suggested_custom_brief?: string;
+      suggested_period_month?: number;
+      suggested_period_year?: number;
+      is_ready_to_generate: boolean;
+    }>(`/agencies/${agencyId}/clients/${clientId}/campaigns/chat-brief`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
   convertToTasks: (agencyId: string, campaignId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`, { method: "POST", token }),
 
@@ -347,6 +366,7 @@ export interface PublishResult {
   published_at: string;
   platform: string;
   message: string;
+  platform_results?: Record<string, { success: boolean; post_id?: string; permalink?: string; error?: string }> | null;
 }
 
 export interface MonthlyReport {

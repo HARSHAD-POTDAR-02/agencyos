@@ -22,6 +22,12 @@ class ContentVersion(Base):
         nullable=False,
         index=True,
     )
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     storage_key: Mapped[str] = mapped_column(String(1024), nullable=False)
     file_name: Mapped[str] = mapped_column(String(512), nullable=False)
@@ -40,6 +46,9 @@ class ContentVersion(Base):
     # Relationships
     deliverable: Mapped["Deliverable"] = relationship(  # noqa: F821
         "Deliverable", back_populates="content_versions"
+    )
+    task: Mapped["Task | None"] = relationship(  # noqa: F821
+        "Task", back_populates="content_versions"
     )
     uploaded_by: Mapped["User"] = relationship("User")  # noqa: F821
     approval: Mapped["Approval | None"] = relationship(  # noqa: F821

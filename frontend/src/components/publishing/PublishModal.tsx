@@ -127,7 +127,8 @@ export default function PublishModal({
 
   const igAccount = accounts.find((a) => a.platform === "instagram" && a.is_active);
   const fbAccount = accounts.find((a) => a.platform === "facebook" && a.is_active);
-  const currentAccount = selectedPlatform === "facebook" ? fbAccount : igAccount;
+  const isBoth = selectedPlatform === "both";
+  const currentAccount = isBoth ? (igAccount || fbAccount) : (selectedPlatform === "facebook" ? fbAccount : igAccount);
   const isVideoOrReel = deliverableType.toLowerCase().includes("reel") || deliverableType.toLowerCase().includes("video");
 
   const handlePublish = async (e: React.FormEvent) => {
@@ -139,18 +140,20 @@ export default function PublishModal({
 
     try {
       if (mode === "automated") {
-        if (selectedPlatform === "facebook") {
+        if (selectedPlatform === "both") {
+          setPublishProgress("Publishing to Instagram and Facebook Page simultaneously...");
+        } else if (selectedPlatform === "facebook") {
           setPublishProgress(
             isVideoOrReel 
               ? "Step 1/2: Uploading video to Facebook Page..." 
               : "Step 1/2: Publishing post to Facebook Page..."
           );
         } else {
-          setPublishProgress("Step 1/3: Creating media container on Meta servers...");
-          await new Promise((r) => setTimeout(r, 600));
+          setPublishProgress("Step 1/3: Preparing media upload to Instagram...");
+          await new Promise((r) => setTimeout(r, 400));
 
           if (isVideoOrReel) {
-            setPublishProgress("Step 2/3: Polling Instagram Reel transcoding status...");
+            setPublishProgress("Step 2/3: Streaming video directly to Meta upload servers...");
           } else {
             setPublishProgress("Step 2/3: Verifying media container with Meta...");
           }
@@ -169,11 +172,23 @@ export default function PublishModal({
           token
         );
 
-        setPublishProgress(
-          selectedPlatform === "facebook"
-            ? "Step 2/2: Published successfully to Facebook Page!"
-            : "Step 3/3: Published successfully to Instagram!"
-        );
+        if (selectedPlatform === "both" && res.platform_results) {
+          const ig = res.platform_results.instagram;
+          const fb = res.platform_results.facebook;
+          if (ig?.success && fb?.success) {
+            setPublishProgress("Successfully published to both Instagram and Facebook Page!");
+          } else if (fb?.success && !ig?.success) {
+            alert(`Facebook: Published successfully!\nInstagram: Failed (${ig?.error || "Error"})\n\nThe deliverable is now marked as published.`);
+          } else if (ig?.success && !fb?.success) {
+            alert(`Instagram: Published successfully!\nFacebook: Failed (${fb?.error || "Error"})\n\nThe deliverable is now marked as published.`);
+          }
+        } else {
+          setPublishProgress(
+            selectedPlatform === "facebook"
+              ? "Step 2/2: Published successfully to Facebook Page!"
+              : "Step 3/3: Published successfully to Instagram!"
+          );
+        }
         onSuccess(res);
         onClose();
       } else {
@@ -216,7 +231,13 @@ export default function PublishModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2.5">
-            {selectedPlatform === "facebook" ? (
+            {selectedPlatform === "both" ? (
+              <div className="p-2 bg-gradient-to-tr from-purple-600 via-pink-600 to-blue-600 text-white rounded-xl shadow-xs shadow-purple-600/30 flex items-center gap-1">
+                <InstagramIcon className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold">+</span>
+                <FacebookIcon className="w-3.5 h-3.5" />
+              </div>
+            ) : selectedPlatform === "facebook" ? (
               <div className="p-2 bg-gradient-to-tr from-blue-700 to-sky-500 text-white rounded-xl shadow-xs shadow-blue-600/30">
                 <FacebookIcon className="w-4 h-4" />
               </div>
@@ -228,7 +249,13 @@ export default function PublishModal({
             <div>
               <h2 className="text-sm font-bold text-slate-900 tracking-tight">
                 {mode === "automated"
-                  ? `Publish to ${selectedPlatform === "facebook" ? "Facebook Page" : "Instagram"}`
+                  ? `Publish to ${
+                      selectedPlatform === "both"
+                        ? "Both Platforms (IG & FB)"
+                        : selectedPlatform === "facebook"
+                        ? "Facebook Page"
+                        : "Instagram"
+                    }`
                   : "Publish Deliverable"}
               </h2>
               <p className="text-[11px] text-slate-500 truncate max-w-[280px]">
@@ -288,31 +315,31 @@ export default function PublishModal({
               <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                 Target Platform
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 {/* Instagram Option */}
                 <button
                   type="button"
                   onClick={() => setSelectedPlatform("instagram")}
-                  className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-left flex flex-col items-start gap-1.5 transition-all cursor-pointer ${
                     selectedPlatform === "instagram"
                       ? "border-purple-500 bg-purple-50/60 ring-2 ring-purple-500/20 shadow-2xs"
                       : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                   }`}
                 >
-                  <div
-                    className={`p-1.5 rounded-lg text-white shrink-0 ${
-                      selectedPlatform === "instagram"
-                        ? "bg-gradient-to-tr from-purple-600 to-pink-500 shadow-xs shadow-purple-500/30"
-                        : "bg-slate-200 text-slate-600"
-                    }`}
-                  >
-                    <InstagramIcon className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                      <span>Instagram</span>
-                      {igAccount && <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />}
+                  <div className="flex items-center justify-between w-full">
+                    <div
+                      className={`p-1.5 rounded-lg text-white shrink-0 ${
+                        selectedPlatform === "instagram"
+                          ? "bg-gradient-to-tr from-purple-600 to-pink-500 shadow-xs shadow-purple-500/30"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      <InstagramIcon className="w-3.5 h-3.5" />
                     </div>
+                    {igAccount && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                  </div>
+                  <div className="min-w-0 w-full">
+                    <span className="text-xs font-bold text-slate-900 block truncate">Instagram</span>
                     <p className="text-[10px] text-slate-500 truncate mt-0.5">
                       {igAccount ? (igAccount.account_handle || "Connected") : "Not connected"}
                     </p>
@@ -323,28 +350,59 @@ export default function PublishModal({
                 <button
                   type="button"
                   onClick={() => setSelectedPlatform("facebook")}
-                  className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-left flex flex-col items-start gap-1.5 transition-all cursor-pointer ${
                     selectedPlatform === "facebook"
                       ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/20 shadow-2xs"
                       : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                   }`}
                 >
-                  <div
-                    className={`p-1.5 rounded-lg text-white shrink-0 ${
-                      selectedPlatform === "facebook"
-                        ? "bg-gradient-to-tr from-blue-600 to-sky-500 shadow-xs shadow-blue-500/30"
-                        : "bg-slate-200 text-slate-600"
-                    }`}
-                  >
-                    <FacebookIcon className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                      <span>Facebook</span>
-                      {fbAccount && <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />}
+                  <div className="flex items-center justify-between w-full">
+                    <div
+                      className={`p-1.5 rounded-lg text-white shrink-0 ${
+                        selectedPlatform === "facebook"
+                          ? "bg-gradient-to-tr from-blue-600 to-sky-500 shadow-xs shadow-blue-500/30"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      <FacebookIcon className="w-3.5 h-3.5" />
                     </div>
+                    {fbAccount && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                  </div>
+                  <div className="min-w-0 w-full">
+                    <span className="text-xs font-bold text-slate-900 block truncate">Facebook</span>
                     <p className="text-[10px] text-slate-500 truncate mt-0.5">
                       {fbAccount ? (fbAccount.account_name || "Connected") : "Not connected"}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Both Platforms Option */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlatform("both")}
+                  className={`p-2.5 rounded-xl border text-left flex flex-col items-start gap-1.5 transition-all cursor-pointer ${
+                    selectedPlatform === "both"
+                      ? "border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-500/20 shadow-2xs"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div
+                      className={`p-1.5 rounded-lg text-white shrink-0 flex items-center gap-0.5 ${
+                        selectedPlatform === "both"
+                          ? "bg-gradient-to-tr from-purple-600 via-pink-600 to-blue-600 shadow-xs shadow-indigo-500/30"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      <InstagramIcon className="w-3 h-3" />
+                      <FacebookIcon className="w-3 h-3" />
+                    </div>
+                    {igAccount && fbAccount && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                  </div>
+                  <div className="min-w-0 w-full">
+                    <span className="text-xs font-bold text-slate-900 block truncate">Both (IG + FB)</span>
+                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                      {igAccount && fbAccount ? "Both ready" : igAccount || fbAccount ? "1 connected" : "None"}
                     </p>
                   </div>
                 </button>
@@ -365,6 +423,69 @@ export default function PublishModal({
                   <div className="text-xs text-slate-400 flex items-center gap-2">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-600" />
                     <span>Checking connected client accounts...</span>
+                  </div>
+                ) : selectedPlatform === "both" ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Instagram subcard */}
+                      <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className="p-1 rounded-md bg-gradient-to-tr from-purple-600 to-pink-500 text-white">
+                              <InstagramIcon className="w-3 h-3" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-900">Instagram</span>
+                          </div>
+                          {igAccount ? (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Ready
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                              Missing
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-600 truncate font-medium">
+                          {igAccount ? (igAccount.account_handle || igAccount.account_name || "Connected") : "No account connected"}
+                        </p>
+                      </div>
+
+                      {/* Facebook subcard */}
+                      <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className="p-1 rounded-md bg-gradient-to-tr from-blue-600 to-sky-500 text-white">
+                              <FacebookIcon className="w-3 h-3" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-900">Facebook Page</span>
+                          </div>
+                          {fbAccount ? (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Ready
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                              Missing
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-600 truncate font-medium">
+                          {fbAccount ? (fbAccount.account_name || "Connected") : "No page connected"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(!igAccount || !fbAccount) && (
+                      <p className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                        <span>
+                          {igAccount && !fbAccount && "Facebook Page is not connected. The post will publish to Instagram only."}
+                          {!igAccount && fbAccount && "Instagram account is not connected. The post will publish to Facebook Page only."}
+                          {!igAccount && !fbAccount && "Neither account is connected. Connect them in the client workspace."}
+                        </span>
+                      </p>
+                    )}
                   </div>
                 ) : selectedPlatform === "instagram" ? (
                   igAccount ? (
@@ -564,7 +685,9 @@ export default function PublishModal({
               type="submit"
               disabled={isSubmitDisabled}
               className={`inline-flex items-center gap-2 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer ${
-                selectedPlatform === "facebook"
+                selectedPlatform === "both"
+                  ? "bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:opacity-90 shadow-indigo-600/30"
+                  : selectedPlatform === "facebook"
                   ? "bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 shadow-blue-600/30"
                   : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-600/30"
               }`}
@@ -572,7 +695,9 @@ export default function PublishModal({
               <Send className="w-3.5 h-3.5" />
               <span>
                 {mode === "automated"
-                  ? selectedPlatform === "facebook"
+                  ? selectedPlatform === "both"
+                    ? "Publish to Both Platforms"
+                    : selectedPlatform === "facebook"
                     ? "Publish to Facebook Page"
                     : "Publish to Instagram"
                   : "Save as Published"}

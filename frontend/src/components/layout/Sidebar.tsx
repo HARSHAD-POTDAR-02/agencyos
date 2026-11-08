@@ -94,10 +94,16 @@ export function Sidebar() {
       badge: null,
     },
     {
-      name: "Campaigns",
+      name: "Campaign Studio",
       href: "/campaigns",
-      icon: CalendarDays,
+      icon: Sparkles,
       badge: "AI",
+    },
+    {
+      name: "Campaign Plans",
+      href: "/campaign-plans",
+      icon: CalendarDays,
+      badge: null,
     },
     {
       name: "Tasks",

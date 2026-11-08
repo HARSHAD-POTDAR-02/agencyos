@@ -73,3 +73,6 @@ class Task(Base):
     # Relationships
     deliverable: Mapped["Deliverable"] = relationship("Deliverable", back_populates="tasks")  # noqa: F821
     assignee: Mapped["User | None"] = relationship("User")  # noqa: F821
+    content_versions: Mapped[list["ContentVersion"]] = relationship(  # noqa: F821
+        "ContentVersion", back_populates="task"
+    )

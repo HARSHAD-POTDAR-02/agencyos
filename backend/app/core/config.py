@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -20,8 +20,29 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    # AI
+    # AI & Centralized LLM Configuration
     GROQ_API_KEY: str = ""
+    GROQ_API_KEY_2: str = ""
+    TAVILY_API_KEY: str = ""
+    BRAVE_SEARCH_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
+    LLM_PROVIDER: str = "groq"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    FALLBACK_MODEL: str = "openai/gpt-oss-20b"
+    EXPERIMENTAL_MODEL: str = "openai/gpt-oss-20b"
+    LLM_TEMPERATURE: float = 0.2
+    LLM_MAX_TOKENS: int = 2500
+    LLM_TIMEOUT_SECONDS: int = 60
+
+    @property
+    def groq_api_keys(self) -> list[str]:
+        """Returns all configured Groq API keys as an active pool."""
+        keys = []
+        if self.GROQ_API_KEY:
+            keys.append(self.GROQ_API_KEY.strip())
+        if self.GROQ_API_KEY_2:
+            keys.append(self.GROQ_API_KEY_2.strip())
+        return keys or [""]
 
     # File storage
     S3_ENDPOINT: str = "http://localhost:9000"

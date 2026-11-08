@@ -377,13 +377,18 @@ async def submit_portal_decision(
         deliverable.status = DeliverableStatus.changes_requested
         target_task_status = TaskStatus.changes_requested
 
-    # Update any linked tasks
+    # Update any linked tasks: only update the approval/review task so earlier stages aren't prematurely approved
     tasks_res = await db.execute(
         select(Task).where(Task.deliverable_id == deliverable_id)
     )
     tasks = tasks_res.scalars().all()
-    for t in tasks:
-        t.status = target_task_status
+    review_tasks = [t for t in tasks if t.task_type in ("approval", "review")]
+    if review_tasks:
+        for t in review_tasks:
+            t.status = target_task_status
+    else:
+        for t in tasks:
+            t.status = target_task_status
 
     # 3. Log comment if feedback was supplied
     if payload.comment:

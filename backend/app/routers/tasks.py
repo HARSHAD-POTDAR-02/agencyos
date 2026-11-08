@@ -50,6 +50,7 @@ async def list_agency_tasks(
     task_status: TaskStatus | None = Query(None, alias="status"),
     assignee_id: uuid.UUID | None = Query(None),
     client_id: uuid.UUID | None = Query(None),
+    deliverable_id: uuid.UUID | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=500),
     _: Membership = Depends(require_agency_member),
@@ -60,6 +61,7 @@ async def list_agency_tasks(
     - status
     - assignee_id
     - client_id (filters by client's campaigns/deliverables)
+    - deliverable_id
     """
     query = (
         select(Task)
@@ -74,6 +76,8 @@ async def list_agency_tasks(
         query = query.where(Task.assignee_id == assignee_id)
     if client_id is not None:
         query = query.where(Campaign.client_id == client_id)
+    if deliverable_id is not None:
+        query = query.where(Task.deliverable_id == deliverable_id)
 
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)

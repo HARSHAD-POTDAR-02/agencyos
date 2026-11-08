@@ -15,6 +15,8 @@ import {
   AlertCircle,
   FileVideo,
   FileImage,
+  FileText,
+  Download,
   Trash2,
   ExternalLink,
   ShieldCheck,
@@ -46,9 +48,19 @@ interface Comment {
   created_at: string;
 }
 
+interface TaskItem {
+  id: string;
+  deliverable_id: string;
+  title: string;
+  task_type: string | null;
+  status: string;
+  priority: string;
+}
+
 interface ContentVersion {
   id: string;
   deliverable_id: string;
+  task_id?: string | null;
   version_number: number;
   storage_key: string;
   file_name: string;
@@ -91,6 +103,7 @@ interface DeliverableDetail {
   created_at: string;
   updated_at: string;
   content_versions: ContentVersion[];
+  tasks?: TaskItem[];
   comments?: Comment[];
 }
 
@@ -132,16 +145,19 @@ function DeliverableDetailContent() {
 
   const fromParam = searchParams.get("from");
   const tabParam = searchParams.get("tab");
+  const taskIdParam = searchParams.get("task_id");
 
   const [deliverable, setDeliverable] = useState<DeliverableDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Selected version for preview (defaults to latest)
+  // Selected stage/task filter & version for preview
+  const [selectedTaskId, setSelectedTaskId] = useState<string | "all">(taskIdParam || "all");
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Upload modal / form state
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTaskId, setUploadTaskId] = useState<string>(taskIdParam || "none");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
@@ -171,6 +187,7 @@ function DeliverableDetailContent() {
   const [syncingMetrics, setSyncingMetrics] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDeliverable = useCallback(async () => {
     if (!activeAgencyId || !token || !id) return;
@@ -261,13 +278,30 @@ function DeliverableDetailContent() {
     fetchDeliverable();
   }, [fetchDeliverable]);
 
+  useEffect(() => {
+    if (taskIdParam) {
+      setSelectedTaskId(taskIdParam);
+      setUploadTaskId(taskIdParam);
+    }
+  }, [taskIdParam]);
+
+  // Production Stage / Task Scoping
+  const tasksList = deliverable?.tasks || [];
+  const activeTask = tasksList.find((t) => t.id === selectedTaskId);
+
+  const filteredVersions = deliverable
+    ? selectedTaskId === "all"
+      ? deliverable.content_versions
+      : deliverable.content_versions.filter((v) => v.task_id === selectedTaskId)
+    : [];
+
   const latestVersion =
-    deliverable?.content_versions && deliverable.content_versions.length > 0
-      ? deliverable.content_versions[deliverable.content_versions.length - 1]
+    filteredVersions.length > 0
+      ? filteredVersions[filteredVersions.length - 1]
       : null;
 
   const currentPreviewVersion =
-    deliverable?.content_versions.find((v) => v.id === selectedVersionId) || latestVersion;
+    filteredVersions.find((v) => v.id === selectedVersionId) || latestVersion;
 
   const handleUploadVersion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +314,9 @@ function DeliverableDetailContent() {
       formData.append("file", uploadFile);
       if (uploadCaption.trim()) formData.append("caption", uploadCaption.trim());
       if (uploadNotes.trim()) formData.append("notes", uploadNotes.trim());
+      if (uploadTaskId && uploadTaskId !== "none") {
+        formData.append("task_id", uploadTaskId);
+      }
 
       const newVersion = (await deliverableApi.uploadVersion(
         activeAgencyId,
@@ -335,6 +372,7 @@ function DeliverableDetailContent() {
       alert(err instanceof Error ? err.message : "Failed to post comment");
     } finally {
       setSubmittingComment(false);
+      setTimeout(() => commentInputRef.current?.focus(), 10);
     }
   };
 
@@ -533,10 +571,30 @@ function DeliverableDetailContent() {
     );
   }
 
+  const previewFileName = currentPreviewVersion?.file_name?.toLowerCase() || "";
+  const previewFileType = currentPreviewVersion?.file_type?.toLowerCase() || "";
+
   const isVideo =
-    currentPreviewVersion?.file_type?.startsWith("video/") ||
-    currentPreviewVersion?.file_name.endsWith(".mp4") ||
-    currentPreviewVersion?.file_name.endsWith(".mov");
+    previewFileType.startsWith("video/") ||
+    previewFileName.endsWith(".mp4") ||
+    previewFileName.endsWith(".mov") ||
+    previewFileName.endsWith(".webm");
+
+  const isPdf =
+    previewFileType === "application/pdf" ||
+    previewFileName.endsWith(".pdf");
+
+  const isDoc =
+    previewFileType.includes("word") ||
+    previewFileType.includes("officedocument") ||
+    previewFileName.endsWith(".docx") ||
+    previewFileName.endsWith(".doc");
+
+  const isTxt =
+    previewFileType.startsWith("text/") ||
+    previewFileName.endsWith(".txt");
+
+  const isDocument = isPdf || isDoc || isTxt;
 
   const mediaUrl = currentPreviewVersion
     ? `${API_BASE}/uploads/${currentPreviewVersion.storage_key}`
@@ -611,7 +669,10 @@ function DeliverableDetailContent() {
 
           {/* Upload Button */}
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => {
+              setUploadTaskId(selectedTaskId !== "all" ? selectedTaskId : "none");
+              setShowUploadModal(true);
+            }}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -789,6 +850,83 @@ function DeliverableDetailContent() {
         </div>
       )}
 
+      {/* Production Stage & Task Isolation Switcher */}
+      {tasksList.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-purple-600" />
+              <span>Production Stage &amp; Task Media Scoping</span>
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Each task has its own isolated assets so stages don&apos;t mix
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {/* All Deliverable Versions */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTaskId("all");
+                if (deliverable.content_versions.length > 0) {
+                  setSelectedVersionId(deliverable.content_versions[deliverable.content_versions.length - 1].id);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                selectedTaskId === "all"
+                  ? "bg-purple-600 text-white shadow-2xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+              }`}
+            >
+              <span>All Versions</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  selectedTaskId === "all" ? "bg-purple-700 text-white" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {deliverable.content_versions.length}
+              </span>
+            </button>
+
+            {/* Per-Task Stage Tabs */}
+            {tasksList.map((t) => {
+              const count = deliverable.content_versions.filter((v) => v.task_id === t.id).length;
+              const isSelected = selectedTaskId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTaskId(t.id);
+                    const taskVers = deliverable.content_versions.filter((v) => v.task_id === t.id);
+                    if (taskVers.length > 0) {
+                      setSelectedVersionId(taskVers[taskVers.length - 1].id);
+                    } else {
+                      setSelectedVersionId(null);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? "bg-purple-600 text-white shadow-2xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+                  }`}
+                >
+                  <span className="truncate max-w-[170px]">{t.title.split("(")[0].trim()}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      isSelected ? "bg-purple-700 text-white" : "bg-slate-200 text-slate-700"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 2-Column Main Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (8 cols): Media Player + Caption & Notes */}
@@ -806,6 +944,11 @@ function DeliverableDetailContent() {
                     {currentPreviewVersion.id === latestVersion?.id && " (Latest)"}
                   </span>
                 )}
+                {activeTask && (
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    Stage: {activeTask.title.split("(")[0].trim()}
+                  </span>
+                )}
               </div>
 
               {mediaUrl && (
@@ -820,9 +963,9 @@ function DeliverableDetailContent() {
               )}
             </div>
 
-            {/* Actual Player or Empty State */}
+            {/* Actual Player, Document Viewer, Image, or Empty State */}
             {currentPreviewVersion && mediaUrl ? (
-              <div className="relative rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[380px] max-h-[520px]">
+              <div className="relative rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[380px] max-h-[560px]">
                 {isVideo ? (
                   <video
                     key={currentPreviewVersion.id}
@@ -831,6 +974,70 @@ function DeliverableDetailContent() {
                     playsInline
                     className="w-full max-h-[500px] object-contain rounded-xl"
                   />
+                ) : isPdf ? (
+                  <div className="w-full h-[520px] bg-slate-900 rounded-xl overflow-hidden flex flex-col">
+                    <div className="bg-slate-800/90 px-4 py-2 flex items-center justify-between text-xs text-slate-200 border-b border-slate-700/80">
+                      <span className="font-semibold truncate flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-purple-400" />
+                        {currentPreviewVersion.file_name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={mediaUrl}
+                          download={currentPreviewVersion.file_name}
+                          className="text-[11px] bg-white/10 hover:bg-white/20 text-slate-200 font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                        >
+                          <Download className="w-3 h-3" /> Download
+                        </a>
+                        <a
+                          href={mediaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] bg-purple-600 hover:bg-purple-500 text-white font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Open in New Tab
+                        </a>
+                      </div>
+                    </div>
+                    <iframe
+                      src={mediaUrl}
+                      className="w-full flex-1 bg-white border-0"
+                      title={currentPreviewVersion.file_name}
+                    />
+                  </div>
+                ) : isDoc || isTxt ? (
+                  <div className="w-full min-h-[380px] p-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-950/30 rounded-xl flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shadow-inner">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div className="max-w-md space-y-1">
+                      <h4 className="text-sm font-bold text-white tracking-wide truncate">
+                        {currentPreviewVersion.file_name}
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {isTxt ? "Plain Text Script / Notes" : "Word Document (.docx) Script"} &bull; {formatBytes(currentPreviewVersion.file_size_bytes)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <a
+                        href={mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open Document</span>
+                      </a>
+                      <a
+                        href={mediaUrl}
+                        download={currentPreviewVersion.file_name}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download</span>
+                      </a>
+                    </div>
+                  </div>
                 ) : (
                   <img
                     key={currentPreviewVersion.id}
@@ -843,18 +1050,31 @@ function DeliverableDetailContent() {
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center space-y-3 bg-slate-50/50">
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
-                  <FileVideo className="w-6 h-6" />
+                  <Upload className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">No media uploaded yet</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {activeTask
+                    ? `No assets uploaded for "${activeTask.title.split("(")[0].trim()}"`
+                    : "No assets uploaded yet"}
+                </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Upload your video edit (v1) or creative asset to initiate the internal review pipeline.
+                  {activeTask
+                    ? `This task has no files attached. Upload a script (.txt/.docx/.pdf) or media asset for the ${activeTask.task_type || "task"} stage.`
+                    : "Upload your video cut, script, or creative asset to initiate the review pipeline."}
                 </p>
                 <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
+                  onClick={() => {
+                    setUploadTaskId(selectedTaskId !== "all" ? selectedTaskId : "none");
+                    setShowUploadModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>Upload v1 Draft</span>
+                  <span>
+                    {activeTask
+                      ? `Upload File for ${activeTask.title.split("(")[0].trim()}`
+                      : "Upload v1 Draft"}
+                  </span>
                 </button>
               </div>
             )}
@@ -1019,6 +1239,7 @@ function DeliverableDetailContent() {
             {/* Post comment */}
             <form onSubmit={handlePostComment} className="pt-2 border-t border-slate-100 flex gap-2">
               <input
+                ref={commentInputRef}
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
@@ -1122,20 +1343,23 @@ function DeliverableDetailContent() {
                 </h3>
               </div>
               <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {deliverable.content_versions.length}
+                {filteredVersions.length}
               </span>
             </div>
 
-            {deliverable.content_versions.length === 0 ? (
+            {filteredVersions.length === 0 ? (
               <div className="text-center py-6 text-xs text-slate-400">
-                No versions uploaded yet.
+                {activeTask
+                  ? `No versions uploaded for "${activeTask.title.split("(")[0].trim()}" yet.`
+                  : "No versions uploaded yet."}
               </div>
             ) : (
               <div className="space-y-3">
                 {/* Render versions in reverse order: latest on top */}
-                {[...deliverable.content_versions].reverse().map((v) => {
+                {[...filteredVersions].reverse().map((v) => {
                   const isSelected = v.id === currentPreviewVersion?.id;
                   const isLatest = v.id === latestVersion?.id;
+                  const taskObj = tasksList.find((t) => t.id === v.task_id);
                   return (
                     <div
                       key={v.id}
@@ -1183,8 +1407,29 @@ function DeliverableDetailContent() {
                         </div>
                       </div>
 
-                      <div className="text-[11px] font-semibold text-slate-700 truncate">
-                        {v.file_name}
+                      <div className="text-[11px] font-semibold text-slate-700 truncate flex items-center gap-1.5">
+                        {v.file_name?.match(/\.(pdf|docx|doc|txt)$/i) || v.file_type?.startsWith("text/") || v.file_type?.includes("word") || v.file_type?.includes("pdf") ? (
+                          <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        ) : v.file_name?.match(/\.(mp4|mov|webm)$/i) || v.file_type?.startsWith("video/") ? (
+                          <Film className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        ) : (
+                          <FileImage className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        )}
+                        <span className="truncate">{v.file_name}</span>
+                      </div>
+
+                      {/* Task association badge */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {v.task_id ? (
+                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <Layers className="w-2.5 h-2.5 text-indigo-500" />
+                            <span>{taskObj ? taskObj.title.split("(")[0].trim() : "Task Asset"}</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                            Deliverable Asset
+                          </span>
+                        )}
                       </div>
 
                       {v.notes && (
@@ -1237,15 +1482,37 @@ function DeliverableDetailContent() {
             )}
 
             <form onSubmit={handleUploadVersion} className="space-y-4">
+              {/* Task Scope Selector */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Attach to Stage / Task (optional)
+                </label>
+                <select
+                  value={uploadTaskId}
+                  onChange={(e) => setUploadTaskId(e.target.value)}
+                  className="w-full text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 cursor-pointer"
+                >
+                  <option value="none">Deliverable Master Asset (General)</option>
+                  {tasksList.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title} ({t.task_type || "task"})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Tagging a specific task isolates this media to that stage so other tasks won&apos;t share it.
+                </p>
+              </div>
+
               {/* File Dropzone / Picker */}
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Select Reel File or Creative Asset *
+                  Select Reel File, Script, or Creative Asset *
                 </label>
                 <input
                   type="file"
                   ref={fileInputRef}
-                  accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp"
+                  accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,.pdf,.docx,.doc,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
                       setUploadFile(e.target.files[0]);
@@ -1263,7 +1530,13 @@ function DeliverableDetailContent() {
                 >
                   {uploadFile ? (
                     <div className="space-y-1">
-                      <FileVideo className="w-6 h-6 text-purple-600 mx-auto" />
+                      {uploadFile.name.match(/\.(pdf|docx|doc|txt)$/i) || uploadFile.type.startsWith("text/") || uploadFile.type.includes("pdf") || uploadFile.type.includes("word") ? (
+                        <FileText className="w-6 h-6 text-purple-600 mx-auto" />
+                      ) : uploadFile.type.startsWith("image/") || uploadFile.name.match(/\.(png|jpe?g|webp|gif)$/i) ? (
+                        <FileImage className="w-6 h-6 text-purple-600 mx-auto" />
+                      ) : (
+                        <FileVideo className="w-6 h-6 text-purple-600 mx-auto" />
+                      )}
                       <p className="text-xs font-bold text-slate-900">{uploadFile.name}</p>
                       <p className="text-[11px] text-slate-500">{formatBytes(uploadFile.size)}</p>
                       <span className="text-[10px] text-purple-600 font-semibold underline block pt-1">
@@ -1274,10 +1547,10 @@ function DeliverableDetailContent() {
                     <div className="space-y-1">
                       <Upload className="w-6 h-6 text-slate-400 mx-auto" />
                       <p className="text-xs font-bold text-slate-700">
-                        Click to browse or drag video here
+                        Click to browse or drop file here
                       </p>
                       <p className="text-[11px] text-slate-400">
-                        Supports MP4, MOV, WEBM, PNG, JPG (up to 500MB)
+                        Supports MP4, MOV, WEBM, PNG, JPG, PDF, DOCX, TXT (up to 500MB)
                       </p>
                     </div>
                   )}
