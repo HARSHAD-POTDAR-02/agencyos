@@ -3,8 +3,8 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -19,11 +19,15 @@ from app.schemas.agency import (
     ActivityItem,
     AgencyBadgeCountsOut,
     AgencyCreate,
+    AgencyNotificationItem,
+    AgencyNotificationsOut,
     AgencyOut,
+    AgencySearchOut,
     DashboardStatsOut,
     DeadlineItem,
     InviteMemberRequest,
     MembershipOut,
+    SearchResultItem,
 )
 from app.services.auth_service import create_agency_with_owner
 
@@ -407,5 +411,305 @@ async def get_agency_dashboard_stats(
         active_contracts_count=active_contracts_count,
         recent_activity=recent_activity,
         upcoming_deadlines=upcoming_deadlines,
+    )
+
+
+@router.get("/{agency_id}/search", response_model=AgencySearchOut)
+async def search_agency_resources(
+    agency_id: uuid.UUID,
+    q: str = Query("", max_length=100),
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> AgencySearchOut:
+    """
+    Search across clients, deliverables, campaigns, and tasks for an agency.
+    """
+    term = q.strip().lower()
+    results: list[SearchResultItem] = []
+
+    if not term:
+        # Return recent/active items as quick shortcuts
+        # Top 3 clients
+        c_res = await db.execute(
+            select(Client)
+            .where(Client.agency_id == agency_id)
+            .order_by(Client.created_at.desc())
+            .limit(3)
+        )
+        for c in c_res.scalars().all():
+            results.append(
+                SearchResultItem(
+                    id=c.id,
+                    category="client",
+                    title=c.business_name,
+                    subtitle=f"{c.industry or 'General Industry'} • {c.location or 'Workspace'}",
+                    url=f"/clients/{c.id}",
+                    badge=c.status.value.title(),
+                )
+            )
+
+        # Top 3 active deliverables
+        d_res = await db.execute(
+            select(Deliverable, Client.business_name)
+            .join(Campaign, Deliverable.campaign_id == Campaign.id)
+            .join(Client, Campaign.client_id == Client.id)
+            .where(Client.agency_id == agency_id)
+            .order_by(Deliverable.updated_at.desc())
+            .limit(3)
+        )
+        for d, c_name in d_res.all():
+            results.append(
+                SearchResultItem(
+                    id=d.id,
+                    category="deliverable",
+                    title=d.title,
+                    subtitle=f"{c_name.strip()} • {d.deliverable_type.replace('_', ' ').title()}",
+                    url=f"/deliverables/{d.id}",
+                    badge=d.status.value.replace("_", " ").title(),
+                )
+            )
+
+        # Top 2 campaigns
+        cam_res = await db.execute(
+            select(Campaign, Client.business_name)
+            .join(Client, Campaign.client_id == Client.id)
+            .where(Client.agency_id == agency_id)
+            .order_by(Campaign.created_at.desc())
+            .limit(2)
+        )
+        for cam, c_name in cam_res.all():
+            results.append(
+                SearchResultItem(
+                    id=cam.id,
+                    category="campaign",
+                    title=cam.name,
+                    subtitle=f"{c_name.strip()} • {cam.period_month}/{cam.period_year or ''}",
+                    url=f"/campaigns?clientId={cam.client_id}&campaignId={cam.id}",
+                    badge="Campaign",
+                )
+            )
+        return AgencySearchOut(query="", results=results)
+
+    pattern = f"%{term}%"
+
+    # 1. Search clients
+    c_res = await db.execute(
+        select(Client)
+        .where(
+            Client.agency_id == agency_id,
+            or_(
+                Client.business_name.ilike(pattern),
+                Client.industry.ilike(pattern),
+                Client.location.ilike(pattern),
+            ),
+        )
+        .limit(5)
+    )
+    for c in c_res.scalars().all():
+        results.append(
+            SearchResultItem(
+                id=c.id,
+                category="client",
+                title=c.business_name,
+                subtitle=f"{c.industry or 'Client Workspace'} • {c.location or ''}".strip(" •"),
+                url=f"/clients/{c.id}",
+                badge=c.status.value.title(),
+            )
+        )
+
+    # 2. Search deliverables
+    d_res = await db.execute(
+        select(Deliverable, Client.business_name)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Client.agency_id == agency_id,
+            or_(
+                Deliverable.title.ilike(pattern),
+                Deliverable.deliverable_type.ilike(pattern),
+                Deliverable.platform.ilike(pattern),
+            ),
+        )
+        .limit(6)
+    )
+    for d, c_name in d_res.all():
+        results.append(
+            SearchResultItem(
+                id=d.id,
+                category="deliverable",
+                title=d.title,
+                subtitle=f"{c_name.strip()} • {d.deliverable_type.replace('_', ' ').title()} on {d.platform.title()}",
+                url=f"/deliverables/{d.id}",
+                badge=d.status.value.replace("_", " ").title(),
+            )
+        )
+
+    # 3. Search campaigns
+    cam_res = await db.execute(
+        select(Campaign, Client.business_name)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Client.agency_id == agency_id,
+            or_(
+                Campaign.name.ilike(pattern),
+                Campaign.objective.ilike(pattern),
+            ),
+        )
+        .limit(4)
+    )
+    for cam, c_name in cam_res.all():
+        results.append(
+            SearchResultItem(
+                id=cam.id,
+                category="campaign",
+                title=cam.name,
+                subtitle=f"{c_name.strip()} • {cam.objective or 'Campaign Sprint'}",
+                url=f"/campaigns?clientId={cam.client_id}&campaignId={cam.id}",
+                badge="Campaign",
+            )
+        )
+
+    # 4. Search tasks
+    t_res = await db.execute(
+        select(Task, Client.business_name)
+        .join(Deliverable, Task.deliverable_id == Deliverable.id)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Client.agency_id == agency_id,
+            or_(
+                Task.title.ilike(pattern),
+                Task.task_type.ilike(pattern),
+            ),
+        )
+        .limit(4)
+    )
+    for t, c_name in t_res.all():
+        results.append(
+            SearchResultItem(
+                id=t.id,
+                category="task",
+                title=t.title,
+                subtitle=f"{c_name.strip()} • {t.priority.value.title()} Priority",
+                url=f"/tasks",
+                badge=t.status.value.replace("_", " ").title(),
+            )
+        )
+
+    return AgencySearchOut(query=q, results=results)
+
+
+@router.get("/{agency_id}/notifications", response_model=AgencyNotificationsOut)
+async def get_agency_notifications(
+    agency_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> AgencyNotificationsOut:
+    """
+    Get live actionable notifications for the agency (approvals, publishing, urgent tasks, new workspaces).
+    """
+    notifications: list[AgencyNotificationItem] = []
+
+    # 1. Pending approvals & reviews
+    pending_res = await db.execute(
+        select(Deliverable, Client.business_name)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Client.agency_id == agency_id,
+            Deliverable.status.in_([
+                DeliverableStatus.client_review,
+                DeliverableStatus.internal_review,
+                DeliverableStatus.changes_requested,
+                DeliverableStatus.approved,
+            ]),
+        )
+        .order_by(Deliverable.updated_at.desc())
+        .limit(5)
+    )
+    for d, c_name in pending_res.all():
+        if d.status == DeliverableStatus.approved:
+            title = f"{c_name.strip()}: Content Approved"
+            desc = f'"{d.title}" is approved and ready to be published live.'
+            is_urgent = False
+        elif d.status == DeliverableStatus.changes_requested:
+            title = f"{c_name.strip()}: Changes Requested"
+            desc = f'Feedback received on "{d.title}". Needs creator revision.'
+            is_urgent = True
+        else:
+            title = f"{c_name.strip()}: Review Pending"
+            desc = f'"{d.title}" is waiting in the review queue for sign-off.'
+            is_urgent = False
+
+        notifications.append(
+            AgencyNotificationItem(
+                id=f"deliv-{d.id}",
+                category="approval",
+                title=title,
+                description=desc,
+                timestamp=d.updated_at or d.created_at,
+                url=f"/deliverables/{d.id}",
+                is_urgent=is_urgent,
+            )
+        )
+
+    # 2. Recently published deliverables
+    pub_res = await db.execute(
+        select(Deliverable, Client.business_name)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Client.agency_id == agency_id,
+            Deliverable.status == DeliverableStatus.published,
+        )
+        .order_by(Deliverable.published_at.desc())
+        .limit(4)
+    )
+    for d, c_name in pub_res.all():
+        notifications.append(
+            AgencyNotificationItem(
+                id=f"pub-{d.id}",
+                category="publish",
+                title=f"{c_name.strip()}: Published Live 🚀",
+                description=f'"{d.title}" was posted to {d.publishing_platform or d.platform}.',
+                timestamp=d.published_at or d.updated_at or d.created_at,
+                url=f"/deliverables/{d.id}",
+                is_urgent=False,
+            )
+        )
+
+    # 3. High priority / urgent tasks pending
+    urgent_tasks = await db.execute(
+        select(Task, Client.business_name)
+        .join(Deliverable, Task.deliverable_id == Deliverable.id)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Client.agency_id == agency_id,
+            Task.priority.in_([TaskPriority.urgent, TaskPriority.high]),
+            Task.status.notin_([TaskStatus.done, TaskStatus.approved]),
+        )
+        .order_by(Task.updated_at.desc())
+        .limit(3)
+    )
+    for t, c_name in urgent_tasks.all():
+        notifications.append(
+            AgencyNotificationItem(
+                id=f"task-{t.id}",
+                category="task",
+                title=f"{c_name.strip()}: Urgent Task",
+                description=f'"{t.title}" is flagged as {t.priority.value.upper()}.',
+                timestamp=t.updated_at or t.created_at,
+                url=f"/tasks",
+                is_urgent=True,
+            )
+        )
+
+    # Sort notifications descending by timestamp
+    notifications.sort(key=lambda x: x.timestamp, reverse=True)
+
+    return AgencyNotificationsOut(
+        unread_count=len(notifications),
+        notifications=notifications,
     )
 

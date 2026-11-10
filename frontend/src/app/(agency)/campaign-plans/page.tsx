@@ -439,7 +439,7 @@ function CampaignPlansContent() {
 
                   {quality && (
                     <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                      🛡️ {quality.compliance_score}% Brand Compliant
+                      🛡️ {quality.compliance_score <= 1 ? Math.round(quality.compliance_score * 100) : Math.round(quality.compliance_score)}% Brand Compliant
                     </span>
                   )}
                 </div>

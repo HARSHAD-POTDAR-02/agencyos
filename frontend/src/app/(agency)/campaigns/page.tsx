@@ -141,6 +141,17 @@ function CampaignStudioContent() {
     }
   };
 
+  // Sync date range when month/year searchParams or period change is provided
+  useEffect(() => {
+    const m = parseInt(searchParams.get("month") || "");
+    const y = parseInt(searchParams.get("year") || "");
+    if (m && y) {
+      const paddedMonth = m.toString().padStart(2, "0");
+      const lastDay = new Date(y, m, 0).getDate();
+      handleDateChange(`${y}-${paddedMonth}-01`, `${y}-${paddedMonth}-${lastDay}`);
+    }
+  }, [searchParams]);
+
   // Copilot Chat State
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -465,7 +476,13 @@ function CampaignStudioContent() {
 
       const draft = newCampaign.ai_plan_draft || {};
       const deliverablesCount = (draft.deliverables || []).length;
-      const complianceScore = draft.quality_evaluation?.compliance_score || 95;
+      const rawScore = draft.quality_evaluation?.compliance_score;
+      const complianceScore =
+        typeof rawScore === "number"
+          ? rawScore <= 1
+            ? Math.round(rawScore * 100)
+            : Math.round(rawScore)
+          : 95;
       const theme = draft.strategy?.campaign_theme || draft.campaign_name;
 
       // Update pipeline message to completed
@@ -778,7 +795,10 @@ function CampaignStudioContent() {
                             </h3>
                           </div>
                           <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            🛡️ {msg.agentPipeline.result.complianceScore}% Compliant
+                            🛡️ {(() => {
+                              const s = msg.agentPipeline.result.complianceScore ?? 95;
+                              return s <= 1 ? Math.round(s * 100) : Math.round(s);
+                            })()}% Compliant
                           </span>
                         </div>
 

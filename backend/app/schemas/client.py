@@ -32,6 +32,20 @@ class ClientUpdate(BaseModel):
     status: ClientStatus | None = None
 
 
+class ClientScopeProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    contracts_count: int = 0
+    monthly_scope_text: str = "No active contract"
+    total_contracted: int = 0
+    total_completed: int = 0
+    total_published: int = 0
+    total_approved: int = 0
+    total_in_progress: int = 0
+    total_planned: int = 0
+    progress_percent: int = 0
+
+
 class ClientOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,6 +62,7 @@ class ClientOut(BaseModel):
     status: ClientStatus
     created_at: datetime
     updated_at: datetime
+    scope_progress: ClientScopeProgress | None = None
 
 
 class ClientListItem(BaseModel):

@@ -73,6 +73,26 @@ function ReportsContent() {
     parseInt(searchParams.get("year") || "") || currentYear
   );
 
+  // Sync when searchParams change or custom period event is fired
+  useEffect(() => {
+    const m = parseInt(searchParams.get("month") || "");
+    const y = parseInt(searchParams.get("year") || "");
+    if (m && !isNaN(m)) setSelectedMonth(m);
+    if (y && !isNaN(y)) setSelectedYear(y);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handlePeriodChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ month: number; year: number }>;
+      if (customEvent.detail) {
+        setSelectedMonth(customEvent.detail.month);
+        setSelectedYear(customEvent.detail.year);
+      }
+    };
+    window.addEventListener("agencyos:period-change", handlePeriodChange);
+    return () => window.removeEventListener("agencyos:period-change", handlePeriodChange);
+  }, []);
+
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);

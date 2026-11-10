@@ -173,3 +173,37 @@ async def test_overage_detected(
             db=db,
         )
     assert overage is True, "Expected overage=True when 11 deliverables exceed quota of 10"
+
+
+@pytest.mark.asyncio
+async def test_client_dynamic_scope_progress(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+):
+    """
+    Test that GET /agencies/{agency_id}/clients returns dynamic scope_progress
+    reflecting contracts and deliverables.
+    """
+    _, agency = agency_a_data
+    client_id, _, _ = await _seed_quota_scenario(
+        agency_id=agency.id,
+        deliverable_type="reel",
+        platform="instagram",
+        monthly_quantity=60,
+        num_deliverables=5,
+        period_month=11,
+        period_year=2026,
+    )
+
+    # Fetch clients list
+    res = await agency_a_client.get(f"/agencies/{agency.id}/clients")
+    assert res.status_code == 200
+    clients = res.json()
+    client = next(c for c in clients if c["id"] == str(client_id))
+    assert client["scope_progress"] is not None
+    sp = client["scope_progress"]
+    assert sp["contracts_count"] == 1
+    assert sp["total_contracted"] == 60
+    assert "60 Reels / month" in sp["monthly_scope_text"]
+    assert sp["total_planned"] == 5
+

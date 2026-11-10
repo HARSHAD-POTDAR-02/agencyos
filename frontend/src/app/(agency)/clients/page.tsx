@@ -21,6 +21,18 @@ import {
   Trash2
 } from "lucide-react";
 
+interface ClientScopeProgress {
+  contracts_count: number;
+  monthly_scope_text: string;
+  total_contracted: number;
+  total_completed: number;
+  total_published: number;
+  total_approved: number;
+  total_in_progress: number;
+  total_planned: number;
+  progress_percent: number;
+}
+
 interface Client {
   id: string;
   agency_id: string;
@@ -33,6 +45,7 @@ interface Client {
   contact_phone: string | null;
   status: "active" | "onboarding" | "paused" | "offboarded";
   created_at: string;
+  scope_progress?: ClientScopeProgress | null;
 }
 
 export default function ClientsPage() {
@@ -303,19 +316,60 @@ export default function ClientsPage() {
                   {getStatusBadge(client.status)}
                 </div>
 
-                {/* Scope Quota Snapshot */}
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mb-4 space-y-1.5">
+                {/* Dynamic Scope Quota Snapshot */}
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mb-4 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-slate-500 font-medium">Monthly Scope</span>
-                    <span className="font-bold text-slate-800">30 Reels / month</span>
+                    <span className="font-bold text-slate-800">
+                      {client.scope_progress?.monthly_scope_text || "No active scope"}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Delivery Progress</span>
-                    <span className="text-purple-600 font-bold">18 / 30 Done</span>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">Delivery Progress</span>
+                    <span className="text-purple-600 font-bold">
+                      {client.scope_progress && client.scope_progress.total_contracted > 0 ? (
+                        <>
+                          {client.scope_progress.total_completed} / {client.scope_progress.total_contracted} Done
+                          {client.scope_progress.total_published > 0 && (
+                            <span className="text-slate-400 font-normal ml-1">
+                              ({client.scope_progress.total_published} posted)
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-slate-400 font-medium">0 / 0 Done</span>
+                      )}
+                    </span>
                   </div>
                   <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-purple-600 h-1.5 rounded-full w-[60%]" />
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        (client.scope_progress?.progress_percent || 0) >= 100
+                          ? "bg-emerald-500"
+                          : (client.scope_progress?.progress_percent || 0) > 0
+                          ? "bg-purple-600"
+                          : "bg-slate-300"
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.max(
+                            (client.scope_progress?.progress_percent || 0) > 0 ? 4 : 0,
+                            client.scope_progress?.progress_percent || 0
+                          )
+                        )}%`,
+                      }}
+                    />
                   </div>
+                  {client.scope_progress && client.scope_progress.contracts_count > 0 && (
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 font-medium">
+                      <span>
+                        {client.scope_progress.contracts_count} Active Retainer
+                        {client.scope_progress.contracts_count === 1 ? "" : "s"}
+                      </span>
+                      <span>{client.scope_progress.progress_percent}% Delivered</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Metadata List */}

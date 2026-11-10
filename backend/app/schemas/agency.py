@@ -102,3 +102,35 @@ class DashboardStatsOut(BaseModel):
     # Upcoming Deadlines
     upcoming_deadlines: list[DeadlineItem]
 
+
+# ── Global Search & Notifications ──
+
+class SearchResultItem(BaseModel):
+    id: uuid.UUID
+    category: str  # "client", "deliverable", "campaign", "task"
+    title: str
+    subtitle: str
+    url: str
+    badge: str | None = None
+
+
+class AgencySearchOut(BaseModel):
+    query: str
+    results: list[SearchResultItem]
+
+
+class AgencyNotificationItem(BaseModel):
+    id: str
+    category: str  # "approval", "publish", "task", "client"
+    title: str
+    description: str
+    timestamp: datetime
+    url: str
+    is_urgent: bool = False
+
+
+class AgencyNotificationsOut(BaseModel):
+    unread_count: int
+    notifications: list[AgencyNotificationItem]
+
+

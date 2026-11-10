@@ -115,7 +115,42 @@ export const agencyApi = {
 
   dashboardStats: (agencyId: string, token: string) =>
     apiFetch<DashboardStats>(`/agencies/${agencyId}/dashboard-stats`, { token }),
+
+  search: (agencyId: string, q: string, token: string) =>
+    apiFetch<SearchResponse>(`/agencies/${agencyId}/search?q=${encodeURIComponent(q)}`, { token }),
+
+  notifications: (agencyId: string, token: string) =>
+    apiFetch<NotificationsResponse>(`/agencies/${agencyId}/notifications`, { token }),
 };
+
+export interface SearchItem {
+  id: string;
+  category: "client" | "deliverable" | "campaign" | "task";
+  title: string;
+  subtitle: string;
+  url: string;
+  badge?: string | null;
+}
+
+export interface SearchResponse {
+  query: string;
+  results: SearchItem[];
+}
+
+export interface NotificationItem {
+  id: string;
+  category: "approval" | "publish" | "task" | "client";
+  title: string;
+  description: string;
+  timestamp: string;
+  url: string;
+  is_urgent?: boolean;
+}
+
+export interface NotificationsResponse {
+  unread_count: number;
+  notifications: NotificationItem[];
+}
 
 /* ── Client endpoints ── */
 export const clientApi = {

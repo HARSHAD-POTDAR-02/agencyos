@@ -30,7 +30,7 @@ from app.schemas.contract import (
     ContractCreate,
     ContractOut,
 )
-from app.services.quota_service import get_monthly_quota_summary
+from app.services.quota_service import get_monthly_quota_summary, get_clients_scope_progress
 from app.services.tenant_service import get_client_for_agency
 
 router = APIRouter(prefix="/agencies/{agency_id}/clients", tags=["clients"])
@@ -63,7 +63,7 @@ async def list_clients(
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[ClientOut]:
-    """List all clients for the agency (paginated)."""
+    """List all clients for the agency (paginated) with dynamic monthly scope & delivery progress."""
     result = await db.execute(
         select(Client)
         .where(Client.agency_id == agency_id)
@@ -71,7 +71,15 @@ async def list_clients(
         .limit(limit)
     )
     clients = result.scalars().all()
-    return [ClientOut.model_validate(c) for c in clients]
+    client_ids = [c.id for c in clients]
+    scope_map = await get_clients_scope_progress(client_ids, db)
+
+    out: list[ClientOut] = []
+    for c in clients:
+        c_dict = ClientOut.model_validate(c).model_dump()
+        c_dict["scope_progress"] = scope_map.get(c.id)
+        out.append(ClientOut(**c_dict))
+    return out
 
 
 @router.get("/{client_id}", response_model=ClientOut)
@@ -81,9 +89,12 @@ async def get_client(
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> ClientOut:
-    """Retrieve a single client, enforcing tenant isolation."""
+    """Retrieve a single client, enforcing tenant isolation, with dynamic monthly scope."""
     client = await get_client_for_agency(client_id, agency_id, db)
-    return ClientOut.model_validate(client)
+    scope_map = await get_clients_scope_progress([client.id], db)
+    c_dict = ClientOut.model_validate(client).model_dump()
+    c_dict["scope_progress"] = scope_map.get(client.id)
+    return ClientOut(**c_dict)
 
 
 @router.patch("/{client_id}", response_model=ClientOut)
@@ -101,7 +112,10 @@ async def update_client(
         setattr(client, field, value)
     await db.commit()
     await db.refresh(client)
-    return ClientOut.model_validate(client)
+    scope_map = await get_clients_scope_progress([client.id], db)
+    c_dict = ClientOut.model_validate(client).model_dump()
+    c_dict["scope_progress"] = scope_map.get(client.id)
+    return ClientOut(**c_dict)
 
 
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)

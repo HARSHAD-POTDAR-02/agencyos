@@ -117,3 +117,29 @@ async def test_delete_client_success(
     get_res = await agency_a_client.get(f"/agencies/{agency_a.id}/clients/{client.id}")
     assert get_res.status_code == 404
 
+
+@pytest.mark.asyncio
+async def test_agency_search_and_notifications(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+):
+    """
+    Agency A can search its resources and fetch notifications.
+    """
+    _, agency_a = agency_a_data
+    client = await _seed_client(agency_a.id, "Shaurya Spices")
+
+    # Search with match
+    search_res = await agency_a_client.get(f"/agencies/{agency_a.id}/search?q=Shaurya")
+    assert search_res.status_code == 200
+    search_data = search_res.json()
+    assert any("Shaurya" in r["title"] for r in search_data["results"])
+
+    # Notifications
+    notif_res = await agency_a_client.get(f"/agencies/{agency_a.id}/notifications")
+    assert notif_res.status_code == 200
+    notif_data = notif_res.json()
+    assert "notifications" in notif_data
+    assert "unread_count" in notif_data
+
+
