@@ -478,9 +478,16 @@ You guide the discovery process smoothly and signal when the strategy is solidif
         "role_persona": """You are the Market & Trend Research Specialist for AgencyOS.
 Your domain is competitive intelligence, algorithmic velocity, viral social trends, and platform cultural moments (Instagram, TikTok, LinkedIn, YouTube Shorts).
 You analyze what hooks are currently arresting attention, what visual formats are algorithmically favored, and where whitespace exists against industry competitors.""",
-        "action_guidance": """- Provide high-voltage viral hook suggestions, audio pairing archetypes, and competitor gap opportunities.
-- Identify current social media trends, meme formats, or cultural hooks relevant to the client's industry.
-- Offer 2-3 specific hook templates (e.g. 'Stop doing [common mistake]', 'The 3-second test', 'What nobody tells you about [industry topic]').
+        "action_guidance": """- Strict Zero-Fabrication & Factual Truth Directive: NEVER invent, hallucinate, or fabricate real-world business names, competitor names, customer reviews, ratings, or addresses.
+- If live search data provides verified competitor names and market findings, analyze them directly.
+- If the user asks about hyper-local competitors in a specific neighborhood or town and the live search data does not contain verified local directory listings for that specific area:
+  * Clearly state that verified local directory listings for that specific micro-area are not in the current search data.
+  * Invite the user to name 2-3 local competitors they see in their market so you can analyze their angles.
+  * Pivot immediately to dissecting high-performing category hooks, algorithmic format strategies, and content whitespace relevant to their industry.
+- NEVER provide fabricated or 'hypothetical' business names disguised as real competitors.
+- Never use robotic AI disclaimers or apologies; speak with executive strategic confidence.
+- Provide high-voltage hook suggestions, audio pairing archetypes, and competitor gap opportunities grounded in real platform data.
+- Offer 2-3 specific hook templates suited to the client's industry (e.g. 'Stop doing [common mistake]', 'The 3-second test', 'What nobody tells you about [topic]').
 - Populate `suggested_objective` and `suggested_custom_brief` with trend-backed strategic positioning.""",
     },
     "brand_intelligence": {
@@ -571,7 +578,26 @@ async def chat_brief_endpoint(
     target_agent_id = payload.agent_id if (payload.agent_id and payload.agent_id in AGENT_SPECS) else "director"
     agent_spec = AGENT_SPECS[target_agent_id]
 
-    # 2. Fetch brand profile if available
+    # 2. Extract conversation history & user texts early (preventing any forward reference errors)
+    curr_dt = date.today()
+    ref_year = payload.period_year or curr_dt.year
+    ref_month = payload.period_month or curr_dt.month
+
+    user_texts = [m.content for m in payload.messages if m.role == "user"]
+    combined_user_text = " ".join(user_texts)
+    latest_user_text = user_texts[-1] if user_texts else ""
+    has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
+
+    formatted_convo_parts = []
+    for m in payload.messages:
+        if m.role == "user":
+            formatted_convo_parts.append(f"USER: {m.content}")
+        else:
+            sender_name = m.agent_name or AGENT_SPECS.get(m.agent_id or "director", {}).get("name", "Campaign Director")
+            formatted_convo_parts.append(f"{sender_name.upper()}: {m.content}")
+    formatted_convo = "\n".join(formatted_convo_parts)
+
+    # 3. Fetch brand profile if available & extract dynamic brand attributes
     bp_result = await db.execute(
         select(BrandProfile)
         .where(BrandProfile.client_id == client_id)
@@ -584,8 +610,12 @@ async def chat_brief_endpoint(
     prohibited = brand_profile.prohibited_claims if brand_profile and brand_profile.prohibited_claims else []
     approved_phrases = brand_profile.approved_phrases if brand_profile and brand_profile.approved_phrases else []
     target_aud = brand_profile.target_audience if brand_profile and brand_profile.target_audience else {}
+    brand_goals = brand_profile.goals if brand_profile and brand_profile.goals else {}
 
-    # 3. Dynamic Specialized Context (e.g. historical stats if Performance Analyst, live web research if Market Research)
+    # Completely dynamic location retrieval from database without hardcoding
+    client_location = client.location or (target_aud.get("location") if isinstance(target_aud, dict) else None) or (target_aud.get("city") if isinstance(target_aud, dict) else None)
+
+    # 4. Dynamic Specialized Context (e.g. historical stats if Performance Analyst, live web research if Market Research)
     perf_context_str = ""
     if target_agent_id == "historical_performance":
         try:
@@ -612,42 +642,38 @@ async def chat_brief_endpoint(
             logger.warning(f"Could not load performance stats for chat brief: {ex}")
 
     market_context_str = ""
-    if target_agent_id == "market_research":
+    if target_agent_id == "market_research" or any(kw in latest_user_text.lower() for kw in ["competitor", "trend", "market", "viral", "hook"]):
         try:
             from app.campaign_intelligence.tools.research_tools import gather_market_evidence
-            latest_user_text = user_texts[-1] if user_texts else ""
-            search_focus = f"{client.business_name} {client.industry or 'Business'} {latest_user_text}".strip()
+            search_parts = [client.business_name, client.industry or ""]
+            if client_location:
+                search_parts.append(client_location)
+            if latest_user_text:
+                search_parts.append(latest_user_text[:120])
+            search_focus = " ".join(p for p in search_parts if p).strip()
+
+            target_aud_list = []
+            if isinstance(target_aud, list):
+                target_aud_list = [str(x) for x in target_aud]
+            elif isinstance(target_aud, dict):
+                target_aud_list = [f"{k}: {v}" for k, v in target_aud.items() if isinstance(v, (str, int))]
+            elif isinstance(target_aud, str):
+                target_aud_list = [target_aud]
+
             evidence_list = await gather_market_evidence(
                 industry=client.industry or "General Business",
-                target_audience=target_aud if isinstance(target_aud, list) else [],
+                target_audience=target_aud_list,
                 platforms=["instagram", "facebook"],
                 custom_brief=search_focus,
+                location=client_location,
             )
             if evidence_list:
                 lines = ["LIVE EXTERNAL MARKET RESEARCH & PLATFORM BENCHMARKS (Real API & Search Data):"]
                 for ev in evidence_list[:6]:
-                    lines.append(f"- [{ev.publisher}] {ev.source_title}: {ev.key_takeaway}")
+                    lines.append(f"- [{ev.publisher}] {ev.source_title}: {ev.key_takeaway or ev.excerpt[:160]}")
                 market_context_str = "\n".join(lines)
         except Exception as ex:
-            logger.warning(f"Could not load live market research for chat brief: {ex}")
-
-    # 4. Format message history preserving all agents' messages in the unified collaborative memory
-    curr_dt = date.today()
-    ref_year = payload.period_year or curr_dt.year
-    ref_month = payload.period_month or curr_dt.month
-
-    user_texts = [m.content for m in payload.messages if m.role == "user"]
-    combined_user_text = " ".join(user_texts)
-    has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
-
-    formatted_convo_parts = []
-    for m in payload.messages:
-        if m.role == "user":
-            formatted_convo_parts.append(f"USER: {m.content}")
-        else:
-            sender_name = m.agent_name or AGENT_SPECS.get(m.agent_id or "director", {}).get("name", "Campaign Director")
-            formatted_convo_parts.append(f"{sender_name.upper()}: {m.content}")
-    formatted_convo = "\n".join(formatted_convo_parts)
+            logger.warning(f"Could not load live market research for chat brief: {ex}", exc_info=True)
 
     prompt = f"""{agent_spec['role_persona']}
 
@@ -655,14 +681,17 @@ Current System Calendar & Reference Year:
 - Today's Reference Date: {curr_dt.isoformat()}
 - Active Sprint Year: {ref_year} (Reference Month: {ref_month})
 
-Client Context:
+Client Context (Dynamic from Brand Profile & Client Record):
 - Client Business: {client.business_name}
-- Industry: {client.industry or 'General Business'}
-- Brand Voice: {brand_voice}
+- Industry / Niche: {client.industry or 'General Business'}
+- Geographic Location / Target Market: {client_location or 'Not specified'}
+- Website / Digital Presence: {client.website or 'Not specified'}
+- Brand Voice & Tone: {brand_voice}
 - Established Content Pillars: {', '.join(pillars) if pillars else 'None specified'}
-- Target Audience Context: {target_aud if target_aud else 'General target audience'}
-- Approved Phrases / Offers: {approved_phrases if approved_phrases else 'Standard brand offers'}
-- Prohibited Claims / Topics: {prohibited if prohibited else 'No specific prohibitions'}
+- Target Audience Profile: {target_aud if target_aud else 'General target audience'}
+- Approved Phrases / Key Offers: {approved_phrases if approved_phrases else 'Standard brand offers'}
+- Prohibited Claims / Guardrails: {prohibited if prohibited else 'No specific prohibitions'}
+- Strategic Goals: {brand_goals if brand_goals else 'Not specified'}
 
 {perf_context_str}
 {market_context_str}
@@ -685,6 +714,15 @@ CRITICAL SYSTEM RULES:
    - Set `is_ready_to_generate = True` ONLY when the user explicitly tells you to proceed/generate (e.g., 'let's generate', 'create it', 'looks good go ahead', 'run it'), OR when the strategy is completely locked. In exploratory turns, keep `is_ready_to_generate = False`.
 4. STRICT LANGUAGE POLICY - ENGLISH EXCLUSIVELY:
    - You MUST communicate, think, and respond ONLY in the English language. All scripts, hooks, suggestions, and brief drafts MUST ALWAYS BE 100% IN ENGLISH.
+5. ZERO-FABRICATION & STRICT FACTUAL TRUTH:
+   - NEVER invent, hallucinate, or fabricate real-world business names, competitor names, customer reviews, ratings, addresses, or prices.
+   - Ground your analysis strictly in the Client Context and the Live Market Research & Search Data provided above.
+   - If the user asks for hyper-local competitors in a specific local neighborhood or area and verified directory listings are not present in your search data:
+     * Be honest, direct, and professional: state clearly that verified directory listings for that specific micro-area are not in the current search data.
+     * Ask the user to share the names of 2-3 local competitors they encounter so you can dissect their positioning.
+     * Pivot immediately to dissecting high-performing category hooks, algorithmic format strategies, and content whitespace relevant to their industry.
+   - NEVER provide 'hypothetical examples based on naming conventions' presented as real businesses.
+   - NEVER use robotic AI disclaimers or apologies ('I do not have access to real-time directories, the names I provided were hypothetical...'). Communicate with executive strategic authority and focus on high-impact marketing strategy.
 """
 
     try:
@@ -777,6 +815,7 @@ CRITICAL SYSTEM RULES:
                     f"Conversation so far:\n{formatted_convo}\n\n"
                     f"{market_context_str}\n\n"
                     f"User's request: '{latest_msg}'\n\n"
+                    f"Strict Rule: NEVER fabricate or invent fake business names, competitor names, or addresses. If verified local directory data is not in the search evidence, state that directly, invite the user to share 2-3 local competitors, and focus on verified platform algorithms, category hooks, and content whitespace.\n"
                     f"Respond directly, thoroughly, and helpfully in English in 2-4 paragraphs with concrete hooks, analysis, and recommendations. Do not output JSON."
                 )
                 raw_res = await raw_llm.ainvoke([HumanMessage(content=recovery_prompt)])

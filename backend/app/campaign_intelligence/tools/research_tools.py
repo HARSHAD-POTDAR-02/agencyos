@@ -343,10 +343,11 @@ async def gather_market_evidence(
     target_audience: list[str],
     platforms: list[str],
     custom_brief: str | None = None,
+    location: str | None = None,
 ) -> list[ResearchEvidence]:
     """
     Orchestrate multi-source research evidence gathering:
-    1. Industry overview & technological landscape queries via cascading search
+    1. Industry overview & dynamic market landscape queries via cascading search
     2. Competitor / market dynamics queries via cascading search
     3. Target platform format benchmarks
     Deduplicates citations by source_url and ensures valid evidence.
@@ -361,16 +362,27 @@ async def gather_market_evidence(
             evidence_list.append(ev)
             urls_seen.add(ev.source_url)
 
-    # 2. Formulate targeted search queries
-    queries: list[str] = [
-        f"{industry} market trends technology 2026",
-        f"{industry} competitor landscape challenges",
-    ]
-    if target_audience:
-        queries.append(f"{target_audience[0]} {industry} operational pain points")
+    # 2. Formulate targeted search queries dynamically
+    queries: list[str] = []
 
-    # 3. Execute cascading search queries concurrently
-    tasks = [execute_query_with_fallbacks(q, max_results=4) for q in queries]
+    # Priority 1: User or campaign focus query if supplied
+    if custom_brief and custom_brief.strip():
+        queries.append(custom_brief.strip()[:140])
+
+    # Priority 2: Geographic & localized competitor query if location is provided
+    if location and location.strip() and location.strip().lower() != "not specified":
+        queries.append(f"{industry} businesses competitors in {location.strip()} marketing social media")
+
+    # Priority 3: Industry viral trends and competitor positioning
+    clean_industry = industry.strip() if industry and industry.strip() else "Business"
+    queries.append(f"{clean_industry} social media viral trends hooks 2026")
+    queries.append(f"{clean_industry} competitor positioning content whitespace")
+
+    if target_audience and len(target_audience) > 0 and isinstance(target_audience[0], str):
+        queries.append(f"{target_audience[0]} {clean_industry} customer expectations")
+
+    # 3. Execute cascading search queries concurrently (limit to top 4 queries max)
+    tasks = [execute_query_with_fallbacks(q, max_results=3) for q in queries[:4]]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     for res in results:

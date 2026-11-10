@@ -406,6 +406,38 @@ async def test_chat_brief_specialist_agents(
     assert len(d2["reply"]) > 0
 
 
+@pytest.mark.asyncio
+async def test_chat_brief_market_research_dynamic_location(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+) -> None:
+    """Verifies that Market Researcher dynamically queries with client location from db and succeeds."""
+    _, agency_a = agency_a_data
+
+    create_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients",
+        json={"business_name": "Nordic Bakery", "industry": "Bakery", "location": "Oslo, Norway"},
+    )
+    client_id = create_res.json()["id"]
+
+    res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients/{client_id}/campaigns/chat-brief",
+        json={
+            "agent_id": "market_research",
+            "messages": [
+                {"role": "user", "content": "Analyze competitors and viral hooks for sourdough pastries."}
+            ],
+            "period_month": 11,
+            "period_year": 2026,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["agent_id"] == "market_research"
+    assert len(data["reply"]) > 0
+    assert "reply" in data
+
+
 def test_extract_date_range_from_text_utility() -> None:
     """Verifies that extract_date_range_from_text parses various date range formats reliably."""
     from app.campaign_intelligence.tools.date_utils import extract_date_range_from_text
