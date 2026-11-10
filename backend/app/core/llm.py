@@ -267,12 +267,15 @@ async def invoke_structured_llm(
                 or "request too large" in err_str
             )
             next_model = _get_next_cascade_model(current_model)
-            if is_quota_or_tpm and next_model:
-                logger.warning(
-                    f"Model '{current_model}' reached quota/TPM limit ({e}). "
-                    f"Instantly failing over to cascade model: '{next_model}'"
-                )
-                current_model = next_model
+            if is_quota_or_tpm:
+                if len(available_keys) > 1:
+                    current_key = await key_pool.get_active_key()
+                if next_model:
+                    logger.warning(
+                        f"Model '{current_model}' reached quota/TPM limit ({e}). "
+                        f"Instantly failing over to cascade model: '{next_model}'"
+                    )
+                    current_model = next_model
                 continue
 
             # 2. Key-level Rate Limit (RPM) failover

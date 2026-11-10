@@ -588,8 +588,18 @@ async def chat_brief_endpoint(
     latest_user_text = user_texts[-1] if user_texts else ""
     has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
 
-    formatted_convo_parts = []
-    for m in payload.messages:
+    # Bounded sliding window to keep total prompt tokens safely within model ITPM limits (< 2,500 tokens)
+    # Preserves the initial request (scope origin) + the latest 8 messages
+    if len(payload.messages) > 9:
+        windowed_messages = [payload.messages[0]] + payload.messages[-8:]
+        omitted_count = len(payload.messages) - 9
+        history_prefix = f"[{omitted_count} earlier conversation turns retained in strategy summary above]\n"
+    else:
+        windowed_messages = payload.messages
+        history_prefix = ""
+
+    formatted_convo_parts = [history_prefix] if history_prefix else []
+    for m in windowed_messages:
         if m.role == "user":
             formatted_convo_parts.append(f"USER: {m.content}")
         else:
@@ -809,7 +819,9 @@ CRITICAL SYSTEM RULES:
             latest_msg = user_texts[-1]
             try:
                 from langchain_core.messages import HumanMessage
-                raw_llm = get_llm(temperature=0.7, model=settings.GROQ_MODEL, max_tokens=1000)
+                from app.core.llm import key_pool
+                rec_key = await key_pool.get_active_key()
+                raw_llm = get_llm(temperature=0.7, model=settings.GROQ_MODEL, max_tokens=1000, api_key=rec_key)
                 recovery_prompt = (
                     f"You are the {agent_spec['name']} ({agent_spec['title']}) for {client.business_name} ({client.industry or 'Business'}).\n"
                     f"Conversation so far:\n{formatted_convo}\n\n"
