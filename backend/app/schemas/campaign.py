@@ -103,10 +103,13 @@ class ConvertToTasksResponse(BaseModel):
 class ChatMessage(BaseModel):
     role: str
     content: str
+    agent_id: str | None = None
+    agent_name: str | None = None
 
 
 class ChatBriefRequest(BaseModel):
     messages: list[ChatMessage]
+    agent_id: str | None = "director"
     period_month: int | None = None
     period_year: int | None = None
     start_date: str | None = None
@@ -115,6 +118,8 @@ class ChatBriefRequest(BaseModel):
 
 class ChatBriefResponse(BaseModel):
     reply: str
+    agent_id: str = "director"
+    agent_name: str = "Campaign Director"
     suggested_objective: str | None = None
     suggested_custom_brief: str | None = None
     suggested_deliverable_preferences: list[str] | None = None

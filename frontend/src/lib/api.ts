@@ -209,7 +209,8 @@ export const campaignApi = {
     agencyId: string,
     clientId: string,
     data: {
-      messages: Array<{ role: string; content: string }>;
+      messages: Array<{ role: string; content: string; agent_id?: string; agent_name?: string }>;
+      agent_id?: string;
       period_month?: number;
       period_year?: number;
       start_date?: string;
@@ -219,6 +220,8 @@ export const campaignApi = {
   ) =>
     apiFetch<{
       reply: string;
+      agent_id?: string;
+      agent_name?: string;
       suggested_objective?: string;
       suggested_custom_brief?: string;
       suggested_deliverable_preferences?: string[];

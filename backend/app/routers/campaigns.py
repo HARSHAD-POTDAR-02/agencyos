@@ -450,6 +450,104 @@ class ChatBriefLLMOutput(BaseModel):
     is_ready_to_generate: bool = False
 
 
+AGENT_SPECS: dict[str, dict[str, Any]] = {
+    "director": {
+        "id": "director",
+        "name": "Campaign Director",
+        "title": "Co-Director Sprint Orchestrator",
+        "badge_color": "violet",
+        "role_persona": """You are the AgencyOS Campaign Director Copilot, an elite creative director and campaign strategist assisting an agency team to design their next social media campaign sprint.
+Your primary role is to orchestrate the entire campaign vision: defining core objectives, timeline constraints, deliverable counts, and overall narrative arcs.
+You guide the discovery process smoothly and signal when the strategy is solidified for autonomous execution.""",
+        "action_guidance": """- Multi-turn Memory & Direct Creative Fulfillment: Act as an engaging creative director. Actively reference previous answers.
+- If the user asks for specific content ideas or formats (e.g. 'give me 3 reel ideas', '3 reels please'):
+  * DIRECTLY PROVIDE AND NUMBER THE EXACT IDEAS IN YOUR CONVERSATIONAL REPLY (e.g. Concept 1, Concept 2, Concept 3 with visual hook, audio vibe, narrative beat).
+  * Respect their exact requested format (Reel vs Carousel vs Static).
+  * Populate `suggested_deliverable_preferences` and set `suggested_duration_days` accordingly.
+- Proactively suggest 1-2 sharp creative angles suited for the brand voice.""",
+    },
+    "market_research": {
+        "id": "market_research",
+        "name": "Market & Trend Researcher",
+        "title": "Live Trends & Viral Hooks Specialist",
+        "badge_color": "sky",
+        "role_persona": """You are the Market & Trend Research Specialist for AgencyOS.
+Your domain is competitive intelligence, algorithmic velocity, viral social trends, and platform cultural moments (Instagram, TikTok, LinkedIn, YouTube Shorts).
+You analyze what hooks are currently arresting attention, what visual formats are algorithmically favored, and where whitespace exists against industry competitors.""",
+        "action_guidance": """- Provide high-voltage viral hook suggestions, audio pairing archetypes, and competitor gap opportunities.
+- Identify current social media trends, meme formats, or cultural hooks relevant to the client's industry.
+- Offer 2-3 specific hook templates (e.g. 'Stop doing [common mistake]', 'The 3-second test', 'What nobody tells you about [industry topic]').
+- Populate `suggested_objective` and `suggested_custom_brief` with trend-backed strategic positioning.""",
+    },
+    "brand_intelligence": {
+        "id": "brand_intelligence",
+        "name": "Brand Identity Specialist",
+        "title": "Brand Voice & Positioning Guardian",
+        "badge_color": "emerald",
+        "role_persona": """You are the Brand Identity & Voice Guardian for AgencyOS.
+Your domain is brand positioning, authentic tone of voice, audience demographic and psychographic personas, content pillars, verified brand offers, and strict adherence to brand boundaries (prohibited claims, forbidden words).
+You ensure every idea sounds authentically like the brand and builds long-term equity rather than cheap gimmickry.""",
+        "action_guidance": """- Help the user clarify, refine, or audit their brand voice, tone nuances, and core content pillars.
+- Review ideas against approved offers, value propositions, and prohibited claims.
+- If the user is discussing who they want to target, craft a vivid ideal customer persona (ICP) profile with pain points and aspirations.
+- Keep `suggested_custom_brief` updated with refined brand guardrails and pillars.""",
+    },
+    "historical_performance": {
+        "id": "historical_performance",
+        "name": "Performance Analyst",
+        "title": "Historical Analytics & Retention Specialist",
+        "badge_color": "amber",
+        "role_persona": """You are the Historical Performance & Analytics Specialist for AgencyOS.
+Your domain is data-backed creative optimization: analyzing past published deliverable engagement, retention drop-off signals, audience fatigue, and winning hook structures.
+You base your recommendations on empirical performance principles: maximizing saves, shares, average watch time, and click-through rates.""",
+        "action_guidance": """- Review the client's past post performance statistics (or industry benchmarks if cold start).
+- Explain which formats (Reels vs Carousels vs Single Images) generate the highest retention or saves for this niche.
+- Warn against audience fatigue if certain topics or angles have been over-indexed.
+- Recommend an optimal format ratio (e.g. 50% Reels for reach, 30% Carousels for saves/authority, 20% Stories/Graphics for direct action).""",
+    },
+    "content_architect": {
+        "id": "content_architect",
+        "name": "Scriptwriter & Architect",
+        "title": "Video Scripts & Content Storyboard Architect",
+        "badge_color": "purple",
+        "role_persona": """You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
+Your domain is execution-level creative production: scene-by-scene video shoot concepts, timestamped reel beats, B-roll framing cues, lighting and camera movement directions, on-screen text overlays, voiceover scripts, audio vibe recommendations, and slide-by-slide carousel copy.""",
+        "action_guidance": """- When the user asks for video concepts, shoot ideas, or scripts:
+  * PROVIDE FULL, PRODUCTION-READY SCENE-BY-SCENE SCRIPTS with exact timestamped beats:
+    - 0:00 - 0:03 [The Arrest / Hook]: Visual framing, on-screen text, audio cue.
+    - 0:03 - 0:10 [Tension / Problem]: Creator movement, b-roll angle, spoken line.
+    - 0:10 - 0:22 [The Payoff / Value]: Proof, demo, screen share, or visual transformation.
+    - 0:22 - 0:30 [Call to Action]: Clean off-ramp, caption prompt, comment keyword trigger.
+- When asked for carousel ideas: provide slide 1 (arresting cover), slides 2-6 (high-density value nuggets), slide 7 (save/share CTA).
+- Set `suggested_deliverable_preferences` to the requested formats.""",
+    },
+    "campaign_strategist": {
+        "id": "campaign_strategist",
+        "name": "Creative Director",
+        "title": "Campaign Strategy & Narrative Architect",
+        "badge_color": "indigo",
+        "role_persona": """You are the Campaign Strategist & Master Creative Director for AgencyOS.
+Your domain is macro campaign architecture: multi-week narrative pacing, emotional story arcs, promotional timing, hype-building teasers, launch climaxes, and conversion funnels.""",
+        "action_guidance": """- Help the user structure a multi-stage campaign sprint (e.g. Phase 1: Problem Awareness & Agitation -> Phase 2: Solution & Case Studies -> Phase 3: The Limited Offer / Launch).
+- Define the master campaign hook/slogan and thematic metaphor.
+- Map out the distribution cadence across days or weeks.
+- Ensure `suggested_objective` captures the singular campaign mission and `suggested_custom_brief` defines the strategic phases.""",
+    },
+    "quality_evaluator": {
+        "id": "quality_evaluator",
+        "name": "Quality & Compliance Critic",
+        "title": "Content Quality & Compliance Critic",
+        "badge_color": "rose",
+        "role_persona": """You are the Quality Evaluator & Compliance Critic for AgencyOS.
+Your domain is rigorous pre-flight content auditing: spotting weak or cliché hooks, detecting retention drop-offs, identifying unsubstantiated or prohibited claims, verifying brand guideline conformance, and polishing rough concepts into elite-tier assets.""",
+        "action_guidance": """- Audit the user's concepts or previous agent outputs with constructive, razor-sharp critique.
+- Score hook strength from 1 to 10 and suggest a punchier, higher-retention opening line.
+- Flag any forbidden words, exaggerated guarantees, or compliance risks.
+- Ensure the brief is tightened to 100% brand alignment before running the autonomous engine.""",
+    },
+}
+
+
 @router.post(
     "/agencies/{agency_id}/clients/{client_id}/campaigns/chat-brief",
     response_model=ChatBriefResponse,
@@ -462,10 +560,14 @@ async def chat_brief_endpoint(
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> ChatBriefResponse:
-    """Conversational intake copilot helping users formulate and refine their campaign brief."""
+    """Conversational intake copilot and specialist agents helping users formulate and refine their campaign brief."""
     client = await get_client_for_agency(client_id, agency_id, db)
 
-    # 1. Fetch brand profile if available
+    # 1. Resolve active agent profile
+    target_agent_id = payload.agent_id if (payload.agent_id and payload.agent_id in AGENT_SPECS) else "director"
+    agent_spec = AGENT_SPECS[target_agent_id]
+
+    # 2. Fetch brand profile if available
     bp_result = await db.execute(
         select(BrandProfile)
         .where(BrandProfile.client_id == client_id)
@@ -475,8 +577,37 @@ async def chat_brief_endpoint(
 
     brand_voice = brand_profile.brand_voice if brand_profile and brand_profile.brand_voice else "Professional and authentic"
     pillars = brand_profile.content_pillars if brand_profile and brand_profile.content_pillars else []
+    prohibited = brand_profile.prohibited_claims if brand_profile and brand_profile.prohibited_claims else []
+    approved_phrases = brand_profile.approved_phrases if brand_profile and brand_profile.approved_phrases else []
+    target_aud = brand_profile.target_audience if brand_profile and brand_profile.target_audience else {}
 
-    # 2. Format message history and extract calendar reference context
+    # 3. Dynamic Specialized Context (e.g. historical stats if Performance Analyst)
+    perf_context_str = ""
+    if target_agent_id == "historical_performance":
+        try:
+            from app.campaign_intelligence.tools.performance_tools import (
+                get_client_published_deliverables,
+                calculate_format_performance_metrics,
+            )
+            published = await get_client_published_deliverables(client_id, agency_id, db, limit=20)
+            metrics = calculate_format_performance_metrics(published)
+            if metrics:
+                lines = ["Client Published Content Analytics (Real Historical Performance):"]
+                for m in metrics:
+                    lines.append(
+                        f"- Format: {m.format.upper()} | Posts: {m.total_published} | "
+                        f"Avg Views: {m.avg_views:.0f} | Avg Engagement: {m.avg_engagement_rate:.2f}% | "
+                        f"Top Angles: {', '.join(m.top_performing_angles[:3]) if m.top_performing_angles else 'None recorded'}"
+                    )
+                perf_context_str = "\n".join(lines)
+            elif published:
+                perf_context_str = f"Client has {len(published)} published posts recorded in AgencyOS. Engagement tracking is syncing."
+            else:
+                perf_context_str = "Cold Start Client: No past deliverables published in AgencyOS yet. Recommend industry benchmark mix (e.g. 50% Reels, 30% Carousels, 20% Static)."
+        except Exception as ex:
+            logger.warning(f"Could not load performance stats for chat brief: {ex}")
+
+    # 4. Format message history preserving all agents' messages in the unified collaborative memory
     curr_dt = date.today()
     ref_year = payload.period_year or curr_dt.year
     ref_month = payload.period_month or curr_dt.month
@@ -485,9 +616,16 @@ async def chat_brief_endpoint(
     combined_user_text = " ".join(user_texts)
     has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
 
-    formatted_convo = "\n".join([f"{m.role.upper()}: {m.content}" for m in payload.messages])
+    formatted_convo_parts = []
+    for m in payload.messages:
+        if m.role == "user":
+            formatted_convo_parts.append(f"USER: {m.content}")
+        else:
+            sender_name = m.agent_name or AGENT_SPECS.get(m.agent_id or "director", {}).get("name", "Campaign Director")
+            formatted_convo_parts.append(f"{sender_name.upper()}: {m.content}")
+    formatted_convo = "\n".join(formatted_convo_parts)
 
-    prompt = f"""You are the AgencyOS Campaign Director Copilot, an elite creative director and campaign strategist assisting an agency team to design their next social media campaign sprint.
+    prompt = f"""{agent_spec['role_persona']}
 
 Current System Calendar & Reference Year:
 - Today's Reference Date: {curr_dt.isoformat()}
@@ -498,42 +636,30 @@ Client Context:
 - Industry: {client.industry or 'General Business'}
 - Brand Voice: {brand_voice}
 - Established Content Pillars: {', '.join(pillars) if pillars else 'None specified'}
+- Target Audience Context: {target_aud if target_aud else 'General target audience'}
+- Approved Phrases / Offers: {approved_phrases if approved_phrases else 'Standard brand offers'}
+- Prohibited Claims / Topics: {prohibited if prohibited else 'No specific prohibitions'}
 
-CONVERSATION HISTORY (Most recent messages at the bottom):
+{perf_context_str}
+
+UNIFIED MULTI-AGENT COLLABORATIVE MEMORY:
+All specialist agents and the Campaign Director share this exact same conversation thread. You must maintain complete awareness of everything discussed with previous agents or the user in this history:
 {formatted_convo}
 
-YOUR BEHAVIOR & INTERVIEWING RULES:
-1. Multi-turn Memory & Direct Creative Fulfillment:
-   - Act as an engaging, proactive creative director and partner.
-   - Actively reference and synthesize the user's previous answers in this conversation history.
-   - If the user asks for specific content ideas or formats (e.g. "give me 3 reel ideas", "3 reels please", "suggest 3 hooks for our Diwali campaign"):
-     * YOU MUST DIRECTLY PROVIDE AND NUMBER THE EXACT IDEAS IN YOUR CONVERSATIONAL REPLY! (e.g. Concept 1, Concept 2, Concept 3 with compelling visual hooks, audio vibe, and storyline).
-     * DO NOT just ask questions back without providing the ideas they specifically asked for!
-     * Respect their exact requested format (if they asked for Reels, give ONLY Reels; if Carousels, give Carousels).
-     * Populate `suggested_deliverable_preferences` with their requested formats (e.g. ["reel"]).
-     * If they asked for a specific number of ideas/deliverables (e.g. "3 reel ideas"), set `suggested_duration_days = 3` so the subsequent campaign matches their requested count.
-     * Follow up with 1 concise question to see if they'd like to refine any of the hooks before generating.
-   - If the user provides a brief or general idea (e.g. "I want to do a summer fitness challenge" or "launch our new SaaS feature"), validate their idea enthusiastically and ask 1 to 2 smart, strategic follow-up questions to drill down on:
-     a) Target sub-audience or demographic persona
-     b) Core offer, hook, discount, or unique value proposition
-     c) Tone or format preferences (e.g. high-energy Reels, educational carousels, founder-led b-roll)
-2. Collaborative Brainstorming:
-   - Proactively suggest 1-2 sharp creative angles or content hooks suited for {client.business_name}'s brand voice ({brand_voice}).
-3. Timeline & Date Range Intelligence:
+YOUR SPECIALIST AGENT ROLE & ACTION GUIDANCE:
+{agent_spec['action_guidance']}
+
+CRITICAL SYSTEM RULES:
+1. Timeline & Date Range Intelligence:
    - Current Year Context: The active year is {ref_year}. If the user mentions dates without an explicit year (e.g. 'from 8th nov to 11th nov', 'nov 8 - 11', 'next 3 days', 'Nov 10-14'), you MUST ALWAYS assume and use the year {ref_year} (e.g. {ref_year}-11-08 to {ref_year}-11-11). NEVER default to past years such as 2024 or 2025 unless the user explicitly specified that past year.
    - Calculate and populate `suggested_start_date` (YYYY-MM-DD), `suggested_end_date` (YYYY-MM-DD), `suggested_duration_days` (total calendar days in sprint), and matching `suggested_period_month`/`suggested_period_year`.
-   - In your reply, confirm the exact sprint timeline and duration using year {ref_year} (e.g. "Got it! Planning a 4-day sprint from November 8 to November 11...").
-4. Readiness Determination (`is_ready_to_generate`):
-   - Set `is_ready_to_generate = True` ONLY when:
-     * The user explicitly tells you to proceed/generate (e.g., "let's generate", "create it", "looks good go ahead", "run it"), OR
-     * The conversation has covered the core objective, target audience/offer, and key direction in sufficient depth.
-   - In all early conversational discovery turns, keep `is_ready_to_generate = False`.
-5. Structured Outputs:
-   - Always synthesize the evolving strategy into `suggested_objective` (1 crisp sentence) and `suggested_custom_brief` (2-3 sentences capturing audience, themes, and guardrails) based on everything discussed so far.
-   - Keep your conversational reply punchy, insightful, and natural (2-4 sentences plus your proactive questions).
-6. STRICT LANGUAGE POLICY - ENGLISH EXCLUSIVELY:
-   - You MUST communicate, think, and respond ONLY in the English language.
-   - Even if the user communicates or prompts in another language, your response, questions, suggested angles, and brief drafts MUST ALWAYS BE WRITTEN 100% IN ENGLISH. Never output in any language other than English.
+2. Structured Memory Preservation:
+   - Always synthesize the evolving strategy into `suggested_objective` (1 crisp sentence) and `suggested_custom_brief` (2-3 sentences capturing audience, themes, and guardrails) reflecting everything agreed upon across the entire chat.
+   - Even when providing specialist answers (e.g. video scripts or market trends), retain or refine the brief fields so the user can seamlessly transition between specialist deep-dives and full campaign sprint generation!
+3. Readiness Determination (`is_ready_to_generate`):
+   - Set `is_ready_to_generate = True` ONLY when the user explicitly tells you to proceed/generate (e.g., 'let's generate', 'create it', 'looks good go ahead', 'run it'), OR when the strategy is completely locked. In exploratory turns, keep `is_ready_to_generate = False`.
+4. STRICT LANGUAGE POLICY - ENGLISH EXCLUSIVELY:
+   - You MUST communicate, think, and respond ONLY in the English language. All scripts, hooks, suggestions, and brief drafts MUST ALWAYS BE 100% IN ENGLISH.
 """
 
     try:
@@ -585,6 +711,8 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
 
         return ChatBriefResponse(
             reply=reply_text,
+            agent_id=target_agent_id,
+            agent_name=agent_spec["name"],
             suggested_objective=output.suggested_objective,
             suggested_custom_brief=output.suggested_custom_brief,
             suggested_deliverable_preferences=final_deliverable_prefs,
@@ -613,8 +741,23 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
 
         timeline_ack = f" for the {dur_days}-day sprint ({start_date_str} to {end_date_str})" if (start_date_str and end_date_str) else ""
 
+        fallback_reply = (
+            f"Hello! I am your {agent_spec['name']}. I'm here to assist with {client.business_name}'s campaign{timeline_ack}! "
+            "How can I help you today?"
+        )
+        if target_agent_id == "market_research":
+            fallback_reply = f"Hello! As your Market & Trend Researcher for {client.business_name}, I can identify trending hooks, competitor whitespace, and algorithm-favored formats. What specific trend or theme would you like to investigate?"
+        elif target_agent_id == "brand_intelligence":
+            fallback_reply = f"Hello! As your Brand Identity Specialist for {client.business_name}, I'm here to ensure our messaging is on-voice and our audience personas are sharp. Would you like to review brand pillars or refine our voice guidelines?"
+        elif target_agent_id == "historical_performance":
+            fallback_reply = f"Hello! As your Performance Analyst, I track engagement data, fatigue signals, and winning format distributions. What performance questions or format mix would you like to explore?"
+        elif target_agent_id == "content_architect":
+            fallback_reply = f"Hello! As your Scriptwriter & Content Architect, I build scene-by-scene shoot concepts, timestamped Reel beats, and carousel slide decks for {client.business_name}. Tell me what video or carousel topic you'd like me to script!"
+
         return ChatBriefResponse(
-            reply=f"I'm ready to help you plan {client.business_name}'s campaign{timeline_ack}! What is the primary objective or theme you have in mind for this sprint?",
+            reply=fallback_reply,
+            agent_id=target_agent_id,
+            agent_name=agent_spec["name"],
             suggested_period_month=p_month,
             suggested_period_year=p_year,
             suggested_start_date=start_date_str,

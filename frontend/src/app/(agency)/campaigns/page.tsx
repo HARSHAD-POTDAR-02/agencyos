@@ -23,11 +23,12 @@ import {
   CalendarDays,
   Building2,
   AlertCircle,
-  RefreshCw,
   ChevronRight,
   Flame,
   Check,
   RotateCcw,
+  MessagesSquare,
+  Compass,
 } from "lucide-react";
 
 interface Client {
@@ -83,11 +84,164 @@ const AGENT_STEPS: AgentStepItem[] = [
   },
 ];
 
+export interface SpecialistAgent {
+  id: string;
+  name: string;
+  shortName: string;
+  roleTitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  badgeBg: string;
+  badgeText: string;
+  borderColor: string;
+  avatarBg: string;
+  description: string;
+  starters: string[];
+}
+
+export const SPECIALIST_AGENTS: SpecialistAgent[] = [
+  {
+    id: "director",
+    name: "Campaign Director",
+    shortName: "Director",
+    roleTitle: "Sprint Orchestrator & Creative Director",
+    icon: Sparkles,
+    color: "violet",
+    badgeBg: "bg-violet-500/15",
+    badgeText: "text-violet-600 dark:text-violet-400",
+    borderColor: "border-violet-500/30",
+    avatarBg: "bg-violet-600/10 text-violet-600 dark:text-violet-400 border-violet-500/30",
+    description: "Guides end-to-end sprint discovery, timeline planning, deliverable counts, and sprint generation.",
+    starters: [
+      "Create a 4-day campaign sprint from 8th Nov to 11th Nov with daily content",
+      "Plan a high-converting 30-day challenge sprint with viral Instagram Reels",
+      "Design an educational carousel sprint focused on authority & debunking myths",
+      "Craft a product launch campaign with customer transformations & exclusive offers",
+    ],
+  },
+  {
+    id: "market_research",
+    name: "Market & Trend Researcher",
+    shortName: "Market Trends",
+    roleTitle: "Viral Hooks & Algorithmic Trends",
+    icon: Search,
+    color: "sky",
+    badgeBg: "bg-sky-500/15",
+    badgeText: "text-sky-600 dark:text-sky-400",
+    borderColor: "border-sky-500/30",
+    avatarBg: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30",
+    description: "Identifies live market trends, competitor whitespace, viral hook archetypes, and algorithm dynamics.",
+    starters: [
+      "What are the top viral hooks for our industry right now?",
+      "Suggest 3 high-arrest hooks for our upcoming seasonal promotion",
+      "What competitor whitespace or angle gaps can we exploit?",
+      "Which trending audio or meme archetypes fit our brand?",
+    ],
+  },
+  {
+    id: "brand_intelligence",
+    name: "Brand Identity Specialist",
+    shortName: "Brand Identity",
+    roleTitle: "Voice, Guidelines & Content Pillars",
+    icon: ShieldCheck,
+    color: "emerald",
+    badgeBg: "bg-emerald-500/15",
+    badgeText: "text-emerald-600 dark:text-emerald-400",
+    borderColor: "border-emerald-500/30",
+    avatarBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+    description: "Defines brand voice guidelines, content pillars, audience personas, and guards against prohibited claims.",
+    starters: [
+      "Audit our brand voice and suggest 3 high-authority content pillars",
+      "Craft a detailed Ideal Customer Persona (ICP) with pain points & desires",
+      "How do we frame our verified offer without sounding overly salesy?",
+      "Review our prohibited claims to ensure strict brand compliance",
+    ],
+  },
+  {
+    id: "historical_performance",
+    name: "Performance Analyst",
+    shortName: "Performance",
+    roleTitle: "Retention Analytics & Format Mix",
+    icon: BarChart3,
+    color: "amber",
+    badgeBg: "bg-amber-500/15",
+    badgeText: "text-amber-600 dark:text-amber-400",
+    borderColor: "border-amber-500/30",
+    avatarBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+    description: "Analyzes historical engagement stats, retention drop-off signals, and recommends format distribution.",
+    starters: [
+      "Analyze our past post performance and recommend optimal format ratio",
+      "Which content angles drive the highest saves and shares?",
+      "Are there any audience fatigue signals in our recent deliverables?",
+      "What retention tactics should we use to boost average watch time?",
+    ],
+  },
+  {
+    id: "content_architect",
+    name: "Scriptwriter & Architect",
+    shortName: "Video Scripts",
+    roleTitle: "Scene-by-Scene Concepts & Shoot Storyboards",
+    icon: Layers2,
+    color: "purple",
+    badgeBg: "bg-purple-500/15",
+    badgeText: "text-purple-600 dark:text-purple-400",
+    borderColor: "border-purple-500/30",
+    avatarBg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
+    description: "Drafts timestamped Reel scripts (0:00-0:03 hook, beats, B-roll cues) and slide-by-slide Carousel decks.",
+    starters: [
+      "Write a 15-second Reel script with timestamped beats & B-roll directions",
+      "Give me 3 scene-by-scene video shoot concepts for our product",
+      "Draft a 7-slide educational carousel with high-retention slides",
+      "Give me 3 viral reel concepts with camera movement & voiceover lines",
+    ],
+  },
+  {
+    id: "campaign_strategist",
+    name: "Creative Director",
+    shortName: "Strategist",
+    roleTitle: "Master Themes & Narrative Pacing",
+    icon: Cpu,
+    color: "indigo",
+    badgeBg: "bg-indigo-500/15",
+    badgeText: "text-indigo-600 dark:text-indigo-400",
+    borderColor: "border-indigo-500/30",
+    avatarBg: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
+    description: "Architects multi-week narrative arcs, master campaign themes, and cross-platform conversion funnels.",
+    starters: [
+      "Structure a 3-phase narrative arc (Problem -> Solution -> Launch)",
+      "What is a powerful master theme & campaign slogan for our brand?",
+      "How should we pace content distribution over a 30-day period?",
+      "Design a conversion funnel moving cold viewers to DM leads",
+    ],
+  },
+  {
+    id: "quality_evaluator",
+    name: "Quality & Compliance Critic",
+    shortName: "Quality Critic",
+    roleTitle: "Pre-Flight Audit & Hook Critique",
+    icon: FileCheck,
+    color: "rose",
+    badgeBg: "bg-rose-500/15",
+    badgeText: "text-rose-600 dark:text-rose-400",
+    borderColor: "border-rose-500/30",
+    avatarBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
+    description: "Audits hooks for retention strength, eliminates clichés, and checks claims against compliance guidelines.",
+    starters: [
+      "Audit our campaign concepts for weak hooks, clichés, or fluff",
+      "Check our copy against prohibited or risky marketing claims",
+      "Score our 3-second hook strength and suggest punchier openings",
+      "How can we tighten our call-to-actions to maximize conversion?",
+    ],
+  },
+];
+
 interface ChatMsg {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  agent_id?: string;
+  agent_name?: string;
   agentPipeline?: {
     status: "in_progress" | "completed" | "error";
     activeStep: number;
@@ -114,6 +268,11 @@ function CampaignStudioContent() {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState(initialClientId);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  // Workflow vs Specialist Mode State
+  const [studioMode, setStudioMode] = useState<"workflow" | "specialists">("workflow");
+  const [activeSpecialistId, setActiveSpecialistId] = useState<string>("market_research");
+  const [chatFilter, setChatFilter] = useState<"all" | "active">("all");
 
   // Date range and timeline state
   const [startDate, setStartDate] = useState<string>("");
@@ -172,14 +331,14 @@ function CampaignStudioContent() {
   // Auto-scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, isChatLoading, isPipelineRunning]);
+  }, [chatMessages, isChatLoading, isPipelineRunning, chatFilter]);
 
   // Always keep focus on chat input so cursor never disappears after typing or pressing Enter
   useEffect(() => {
     if (!isPipelineRunning) {
       chatInputRef.current?.focus();
     }
-  }, [isChatLoading, isPipelineRunning, selectedClientId]);
+  }, [isChatLoading, isPipelineRunning, selectedClientId, studioMode, activeSpecialistId]);
 
   // Load clients
   useEffect(() => {
@@ -224,6 +383,8 @@ function CampaignStudioContent() {
             if (parsed.durationDays) setDurationDays(parsed.durationDays);
             if (parsed.periodMonth) setPeriodMonth(parsed.periodMonth);
             if (parsed.periodYear) setPeriodYear(parsed.periodYear);
+            if (parsed.studioMode) setStudioMode(parsed.studioMode);
+            if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
             return;
           }
         } catch (e) {
@@ -242,6 +403,8 @@ function CampaignStudioContent() {
         role: "assistant",
         content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        agent_id: "director",
+        agent_name: "Campaign Director",
       },
     ]);
     setSuggestedObjective("");
@@ -267,12 +430,14 @@ function CampaignStudioContent() {
           durationDays,
           periodMonth,
           periodYear,
+          studioMode,
+          activeSpecialistId,
         })
       );
     } catch (e) {
       console.error("Failed to save chat to storage", e);
     }
-  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, selectedClientId, getStorageKey]);
+  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, selectedClientId, getStorageKey]);
 
   // Reset conversation handler
   const handleResetChat = () => {
@@ -290,6 +455,8 @@ function CampaignStudioContent() {
         role: "assistant",
         content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        agent_id: "director",
+        agent_name: "Campaign Director",
       },
     ]);
     setSuggestedObjective("");
@@ -301,7 +468,11 @@ function CampaignStudioContent() {
     setDurationDays(null);
   };
 
-  // Send message to Copilot Brief endpoint
+  // Current active agent specification
+  const currentAgentId = studioMode === "workflow" ? "director" : activeSpecialistId;
+  const currentAgent = SPECIALIST_AGENTS.find((a) => a.id === currentAgentId) || SPECIALIST_AGENTS[0];
+
+  // Send message to Copilot Brief endpoint with universal shared context
   const handleSendMessage = async (textOverride?: string) => {
     const textToSend = textOverride || chatInput.trim();
     if (!textToSend || !token || !effectiveAgencyId || !selectedClientId || isChatLoading || isPipelineRunning) {
@@ -313,6 +484,8 @@ function CampaignStudioContent() {
       role: "user",
       content: textToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      agent_id: currentAgentId,
+      agent_name: "You",
     };
 
     const nextMessages = [...chatMessages, userMsg];
@@ -326,12 +499,18 @@ function CampaignStudioContent() {
     }, 0);
 
     try {
-      // Send entire conversation history for proactive multi-turn memory
+      // Send entire conversation history for unified multi-agent collaborative memory
       const response = await campaignApi.chatBrief(
         effectiveAgencyId,
         selectedClientId,
         {
-          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+          messages: nextMessages.map((m) => ({
+            role: m.role,
+            content: m.content,
+            agent_id: m.agent_id,
+            agent_name: m.agent_name,
+          })),
+          agent_id: currentAgentId,
           period_month: periodMonth,
           period_year: periodYear,
           start_date: startDate || undefined,
@@ -345,6 +524,8 @@ function CampaignStudioContent() {
         role: "assistant",
         content: response.reply,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        agent_id: response.agent_id || currentAgentId,
+        agent_name: response.agent_name || currentAgent.name,
       };
 
       setChatMessages([...nextMessages, aiMsg]);
@@ -389,6 +570,8 @@ function CampaignStudioContent() {
           role: "assistant",
           content: errorContent,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          agent_id: currentAgentId,
+          agent_name: currentAgent.name,
         },
       ]);
     } finally {
@@ -412,6 +595,8 @@ function CampaignStudioContent() {
       role: "assistant",
       content: "🚀 **Launching Autonomous Multi-Agent Campaign Intelligence Engine...**\nCoordinating 6 specialized agents to architect this campaign sprint:",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      agent_id: "director",
+      agent_name: "Multi-Agent Engine",
       agentPipeline: {
         status: "in_progress",
         activeStep: 0,
@@ -423,7 +608,7 @@ function CampaignStudioContent() {
 
     setChatMessages((prev) => [...prev, pipelineMsg]);
 
-    // Timer to step through agents visually like Perplexity / Antigravity
+    // Timer to step through agents visually
     const stepInterval = setInterval(() => {
       setChatMessages((prev) =>
         prev.map((m) => {
@@ -444,7 +629,7 @@ function CampaignStudioContent() {
               updatedDetails.agent4 = "Master strategy locked with balanced distribution.";
               updatedDetails.agent5 = "Generating polymorphic deliverables, Reel scenes & Carousel slides...";
             } else if (nextStep === 5) {
-              updatedDetails.agent5 = "Drafted 30 days of high-fidelity polymorphic deliverables.";
+              updatedDetails.agent5 = "Drafted high-fidelity polymorphic deliverables.";
               updatedDetails.agent6 = "Running deterministic quality gate & compliance audit...";
             }
 
@@ -544,13 +729,13 @@ function CampaignStudioContent() {
     }
   };
 
-  const promptStarters = [
-    "Create a 4-day campaign sprint from 8th Nov to 11th Nov with daily content",
-    "Plan a high-converting 30-day challenge sprint with viral Instagram Reels",
-    "Design an educational carousel sprint focused on authority & debunking myths",
-    "Craft a product launch campaign with customer transformations & exclusive offers",
-    "Focus on organic brand awareness and community-building engagement hooks",
-  ];
+  // Messages to display according to the selected view filter
+  const displayedMessages = chatMessages.filter((msg) => {
+    if (chatFilter === "all") return true;
+    // Show messages tagged with the active agent, user messages sent to this agent, or system pipeline cards
+    if (msg.agentPipeline) return true;
+    return msg.agent_id === currentAgentId || !msg.agent_id;
+  });
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto px-4 py-3">
@@ -564,11 +749,11 @@ function CampaignStudioContent() {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight text-foreground">Campaign Studio</h1>
               <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                AI Co-Director
+                AI Co-Director & Multi-Agent Network
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Conversational Copilot & 6-Agent Autonomous Campaign Engine
+              Universal Shared Memory • Seamless Handoff Between Specialist Deep-Dives and Sprint Generation
             </p>
           </div>
         </div>
@@ -605,82 +790,225 @@ function CampaignStudioContent() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border transition-colors shadow-sm"
           >
             <CalendarDays className="w-3.5 h-3.5 text-primary" />
-            <span>Campaign Plans Dashboard</span>
+            <span>Campaign Plans</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground" />
           </Link>
         </div>
       </header>
 
-      {/* Campaign Timeline & Date Range Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-card border border-border/80 shadow-2xs shrink-0 mt-2">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-violet-500" />
-          <span className="text-xs font-bold text-foreground">Campaign Timeline:</span>
+      {/* Main Mode Toggle Bar: Campaign Workflow vs Specialist Agents */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 shrink-0">
+        <div className="flex items-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/30 rounded-xl border border-border shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setStudioMode("workflow")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              studioMode === "workflow"
+                ? "bg-violet-600 text-white shadow-sm shadow-violet-500/20"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Campaign Workflow</span>
+            <span className="text-[10px] opacity-80 font-normal hidden sm:inline">(Co-Director Sprint)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStudioMode("specialists")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              studioMode === "specialists"
+                ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>Specialist Agents</span>
+            <span className="text-[10px] opacity-80 font-normal hidden sm:inline">(Individual Deep-Dive)</span>
+          </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
-            <span className="text-[11px] font-semibold text-muted-foreground">Start:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => handleDateChange(e.target.value, endDate)}
-              className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
-            <span className="text-[11px] font-semibold text-muted-foreground">End:</span>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate || undefined}
-              onChange={(e) => handleDateChange(startDate, e.target.value)}
-              className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
-            />
-          </div>
-
-          {durationDays && durationDays > 0 ? (
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 flex items-center gap-1">
-              <span>{durationDays} Days Sprint</span>
-            </span>
-          ) : (
-            <span className="text-[11px] text-muted-foreground italic hidden sm:inline">
-              Select date range or say &ldquo;from 8th Nov to 11th Nov&rdquo; in chat
-            </span>
-          )}
-
-          {startDate && endDate && (
-            <button
-              type="button"
-              onClick={() => handleDateChange("", "")}
-              title="Clear date range"
-              className="text-[11px] text-muted-foreground hover:text-foreground font-semibold underline cursor-pointer"
-            >
-              Clear
-            </button>
-          )}
+        {/* Stream Filter Toggle: Unified Memory vs Active Specialist */}
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border text-xs">
+          <MessagesSquare className="w-3.5 h-3.5 text-muted-foreground ml-1.5 mr-0.5" />
+          <button
+            type="button"
+            onClick={() => setChatFilter("all")}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+              chatFilter === "all"
+                ? "bg-background text-foreground font-bold shadow-2xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Unified Stream ({chatMessages.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setChatFilter("active")}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+              chatFilter === "active"
+                ? "bg-background text-foreground font-bold shadow-2xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Focus: {currentAgent.shortName}
+          </button>
         </div>
       </div>
 
+      {/* Specialist Agent Selector Carousel / Chips (When in Specialist Mode) */}
+      {studioMode === "specialists" && (
+        <div className="mt-2.5 p-2 rounded-xl bg-card border border-border shadow-2xs shrink-0">
+          <div className="flex items-center justify-between gap-2 mb-2 px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5 text-primary" />
+              <span>Choose Specialist to Brainstorm With:</span>
+            </span>
+            <span className="text-[11px] text-muted-foreground italic hidden sm:inline">
+              All messages & insights are retained in your campaign brief
+            </span>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => {
+              const Icon = agent.icon;
+              const isSelected = activeSpecialistId === agent.id;
+              return (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => setActiveSpecialistId(agent.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all cursor-pointer border ${
+                    isSelected
+                      ? `${agent.badgeBg} ${agent.badgeText} ${agent.borderColor} shadow-xs ring-1 ring-primary/20 font-bold`
+                      : "bg-muted/40 hover:bg-muted text-foreground border-border"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <div className="text-left">
+                    <div className="leading-tight">{agent.name}</div>
+                    <div className="text-[10px] text-muted-foreground font-normal">{agent.roleTitle}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Active Specialist Banner */}
+      {studioMode === "specialists" && (
+        <div
+          className={`mt-2 p-2.5 rounded-xl border ${currentAgent.badgeBg} ${currentAgent.borderColor} bg-card/70 flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 text-xs shadow-2xs`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${currentAgent.avatarBg}`}>
+              <currentAgent.icon className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-foreground text-sm">{currentAgent.name}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${currentAgent.badgeBg} ${currentAgent.badgeText} ${currentAgent.borderColor}`}>
+                  {currentAgent.roleTitle}
+                </span>
+              </div>
+              <p className="text-muted-foreground text-[11px] truncate mt-0.5">{currentAgent.description}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Campaign Timeline & Date Range Bar (Always visible in Workflow mode, or toggleable) */}
+      {studioMode === "workflow" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-card border border-border/80 shadow-2xs shrink-0 mt-2">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-violet-500" />
+            <span className="text-xs font-bold text-foreground">Sprint Timeline:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
+              <span className="text-[11px] font-semibold text-muted-foreground">Start:</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => handleDateChange(e.target.value, endDate)}
+                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
+              <span className="text-[11px] font-semibold text-muted-foreground">End:</span>
+              <input
+                type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(e) => handleDateChange(startDate, e.target.value)}
+                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+              />
+            </div>
+
+            {durationDays && durationDays > 0 ? (
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 flex items-center gap-1">
+                <span>{durationDays} Days Sprint</span>
+              </span>
+            ) : (
+              <span className="text-[11px] text-muted-foreground italic hidden sm:inline">
+                Select dates or state in chat (e.g. &ldquo;from 8th Nov to 11th Nov&rdquo;)
+              </span>
+            )}
+
+            {startDate && endDate && (
+              <button
+                type="button"
+                onClick={() => handleDateChange("", "")}
+                title="Clear date range"
+                className="text-[11px] text-muted-foreground hover:text-foreground font-semibold underline cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Chat Stream */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
-        {chatMessages.map((msg) => {
+      <div className="flex-1 overflow-y-auto py-3 space-y-3.5 pr-1">
+        {displayedMessages.map((msg) => {
           const isUser = msg.role === "user";
+          const msgAgentId = msg.agent_id || "director";
+          const agentInfo = SPECIALIST_AGENTS.find((a) => a.id === msgAgentId) || SPECIALIST_AGENTS[0];
+          const AgentIcon = agentInfo.icon;
 
           return (
             <div
               key={msg.id}
-              className={`flex gap-3 text-sm ${isUser ? "justify-end" : "justify-start"}`}
+              className={`flex gap-2.5 text-sm ${isUser ? "justify-end" : "justify-start"}`}
             >
-              {/* Avatar */}
+              {/* Agent Avatar */}
               {!isUser && (
-                <div className="w-8 h-8 rounded-full bg-violet-600/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <Bot className="w-4 h-4" />
+                <div
+                  className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-2xs ${agentInfo.avatarBg}`}
+                  title={`${agentInfo.name} (${agentInfo.roleTitle})`}
+                >
+                  <AgentIcon className="w-4 h-4" />
                 </div>
               )}
 
-              <div className={`max-w-[85%] md:max-w-[78%] space-y-3`}>
+              <div className="max-w-[85%] md:max-w-[80%] space-y-2">
+                {/* Agent Badge & Name Tag (Assistant messages) */}
+                {!isUser && (
+                  <div className="flex items-center gap-1.5 pl-1">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${agentInfo.badgeBg} ${agentInfo.badgeText} ${agentInfo.borderColor} flex items-center gap-1`}
+                    >
+                      <AgentIcon className="w-3 h-3" />
+                      <span>{msg.agent_name || agentInfo.name}</span>
+                    </span>
+                    <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                      {agentInfo.roleTitle}
+                    </span>
+                  </div>
+                )}
+
                 {/* Text Bubble */}
                 <div
                   className={`px-4 py-3 rounded-2xl ${
@@ -701,7 +1029,7 @@ function CampaignStudioContent() {
                   </span>
                 </div>
 
-                {/* Inline Agent Pipeline Execution (Perplexity / Antigravity Style) */}
+                {/* Inline Agent Pipeline Execution Card */}
                 {msg.agentPipeline && (
                   <div className="rounded-xl border border-violet-500/30 bg-card p-4 shadow-md space-y-4">
                     {/* Pipeline Header */}
@@ -739,9 +1067,6 @@ function CampaignStudioContent() {
                         const isActive =
                           msg.agentPipeline!.status === "in_progress" &&
                           idx === msg.agentPipeline!.activeStep;
-                        const isPending =
-                          msg.agentPipeline!.status === "in_progress" &&
-                          idx > msg.agentPipeline!.activeStep;
 
                         const customDetail = msg.agentPipeline!.stepDetails?.[step.id];
 
@@ -856,13 +1181,13 @@ function CampaignStudioContent() {
 
         {/* Loading Spinner Indicator */}
         {isChatLoading && (
-          <div className="flex gap-3 justify-start text-sm">
-            <div className="w-8 h-8 rounded-full bg-violet-600/10 text-violet-600 border border-violet-500/30 flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4" />
+          <div className="flex gap-2.5 justify-start text-sm">
+            <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${currentAgent.avatarBg}`}>
+              <currentAgent.icon className="w-4 h-4" />
             </div>
             <div className="px-4 py-3 rounded-2xl bg-muted/60 border border-border/80 rounded-bl-none text-muted-foreground text-xs flex items-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500" />
-              <span>Copilot is formulating creative ideas & consulting brand rules...</span>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+              <span>{currentAgent.name} is formulating ideas & consulting brand rules...</span>
             </div>
           </div>
         )}
@@ -870,35 +1195,39 @@ function CampaignStudioContent() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Suggested Prompt Starters (Only when conversation is fresh) */}
-      {chatMessages.length <= 1 && (
-        <div className="py-2 shrink-0">
-          <p className="text-[11px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+      {/* Dynamic Suggested Prompt Starters (Tailored to active agent) */}
+      <div className="py-1.5 shrink-0">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
             <Flame className="w-3.5 h-3.5 text-amber-500" />
-            <span>Suggested Campaign Starters for {selectedClient?.business_name || "Client"}:</span>
+            <span>
+              {studioMode === "workflow"
+                ? `Suggested Sprint Prompts for ${selectedClient?.business_name || "Client"}:`
+                : `Suggested Questions for ${currentAgent.name}:`}
+            </span>
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {promptStarters.map((starter, i) => (
-              <button
-                key={i}
-                onClick={() => handleSendMessage(starter)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-muted/70 hover:bg-muted border border-border text-foreground transition-colors text-left"
-              >
-                {starter}
-              </button>
-            ))}
-          </div>
         </div>
-      )}
+        <div className="flex flex-wrap gap-1.5">
+          {currentAgent.starters.map((starter, i) => (
+            <button
+              key={i}
+              onClick={() => handleSendMessage(starter)}
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-muted/60 hover:bg-muted border border-border text-foreground transition-colors text-left cursor-pointer"
+            >
+              {starter}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Evolving Strategy Draft / Ready to Generate Chip */}
+      {/* Evolving Strategy Draft / Universal Ready to Generate Bar */}
       {(suggestedObjective || isReadyToGenerate) && (
         <div className="my-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
             <div className="min-w-0">
               <p className="text-[11px] uppercase font-bold tracking-wider text-violet-600 dark:text-violet-400">
-                {isReadyToGenerate ? "Brief Ready for Autonomous Engine" : "Evolving Campaign Angle"}
+                {isReadyToGenerate ? "Brief Ready for Autonomous Engine" : "Evolving Campaign Strategy (Shared Across Studio)"}
                 {startDate && endDate && durationDays ? ` • ${durationDays} Days (${startDate} to ${endDate})` : ""}
               </p>
               <p className="text-xs text-foreground font-medium truncate">
@@ -946,8 +1275,10 @@ function CampaignStudioContent() {
               isPipelineRunning
                 ? "Autonomous engine is running, please wait..."
                 : isChatLoading
-                ? "Agent is thinking... (type next message)"
-                : "Ask questions, share campaign requirements, or brainstorm creative angles..."
+                ? `${currentAgent.name} is thinking... (type next message)`
+                : studioMode === "workflow"
+                ? "Ask Campaign Director questions, set sprint timeline, or brainstorm..."
+                : `Chat directly with ${currentAgent.name} (${currentAgent.roleTitle})...`
             }
             className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 pr-24 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50 transition-all"
             autoFocus

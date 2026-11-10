@@ -349,6 +349,61 @@ async def test_chat_brief_endpoint(
     data = chat_res.json()
     assert "reply" in data
     assert len(data["reply"]) > 0
+    assert data["agent_id"] == "director"
+    assert data["agent_name"] == "Campaign Director"
+
+
+@pytest.mark.asyncio
+async def test_chat_brief_specialist_agents(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+) -> None:
+    """Verifies that individual specialist agents respond with their correct personas and IDs."""
+    _, agency_a = agency_a_data
+
+    create_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients",
+        json={"business_name": "Specialist Test Client", "industry": "E-Commerce"},
+    )
+    client_id = create_res.json()["id"]
+
+    # 1. Chat with Market & Trend Researcher
+    res1 = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients/{client_id}/campaigns/chat-brief",
+        json={
+            "agent_id": "market_research",
+            "messages": [
+                {"role": "user", "content": "What viral hooks are working for Black Friday this season?"}
+            ],
+            "period_month": 11,
+            "period_year": 2026,
+        },
+    )
+    assert res1.status_code == 200
+    d1 = res1.json()
+    assert d1["agent_id"] == "market_research"
+    assert d1["agent_name"] == "Market & Trend Researcher"
+    assert len(d1["reply"]) > 0
+
+    # 2. Seamlessly continue conversation with Content Architect (shared multi-agent memory)
+    res2 = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients/{client_id}/campaigns/chat-brief",
+        json={
+            "agent_id": "content_architect",
+            "messages": [
+                {"role": "user", "content": "What viral hooks are working for Black Friday this season?", "agent_id": "market_research", "agent_name": "Market & Trend Researcher"},
+                {"role": "assistant", "content": d1["reply"], "agent_id": "market_research", "agent_name": "Market & Trend Researcher"},
+                {"role": "user", "content": "Write a 15-second Reel script based on those hooks with timestamped scenes."}
+            ],
+            "period_month": 11,
+            "period_year": 2026,
+        },
+    )
+    assert res2.status_code == 200
+    d2 = res2.json()
+    assert d2["agent_id"] == "content_architect"
+    assert d2["agent_name"] == "Scriptwriter & Architect"
+    assert len(d2["reply"]) > 0
 
 
 def test_extract_date_range_from_text_utility() -> None:
