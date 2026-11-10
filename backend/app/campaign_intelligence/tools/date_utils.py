@@ -185,3 +185,57 @@ def sanitize_date_year(date_str: str | None, target_year: int, allow_past_year: 
         pass
     return date_str
 
+
+def extract_format_and_count_from_text(text: str) -> tuple[list[str] | None, int | None]:
+    """
+    Extracts explicit deliverable format preferences (e.g. ['reel']) and requested deliverable count
+    from user prompt or brief text.
+    Handles phrases like:
+    - 'give me 3 reel ideas' -> (['reel'], 3)
+    - '3 reel s' -> (['reel'], 3)
+    - 'need 5 carousels' -> (['carousel'], 5)
+    - 'reels and carousels' -> (['reel', 'carousel'], None)
+    """
+    if not text:
+        return None, None
+
+    t = text.lower()
+
+    # 1. Check for explicit count + format (e.g. "3 reel ideas", "3 reels", "3 reel s", "5 carousels")
+    count_match = re.search(
+        r"\b(?:give me|generate|create|plan|need|want|show me|for)?\s*(\d{1,2})\s+(reel|carousel|static|video|post)s?\s*(?:ideas|concepts|posts|deliverables)?\b",
+        t,
+        re.IGNORECASE,
+    )
+    extracted_count: int | None = None
+    if count_match:
+        try:
+            cnt = int(count_match.group(1))
+            if 1 <= cnt <= 60:
+                extracted_count = cnt
+        except ValueError:
+            pass
+
+    # 2. Check for explicit format mentions
+    wants_reels = bool(re.search(r"\b(reel|reels|reel\s+s|short[- ]?form video|short[- ]?form videos)\b", t))
+    wants_carousels = bool(re.search(r"\b(carousel|carousels|multi[- ]?slide|slide deck)\b", t))
+    wants_static = bool(re.search(r"\b(static|single[- ]?image|photo post|infographic)\b", t))
+
+    formats: list[str] = []
+    if wants_reels and not wants_carousels and not wants_static:
+        formats = ["reel"]
+    elif wants_carousels and not wants_reels and not wants_static:
+        formats = ["carousel"]
+    elif wants_static and not wants_reels and not wants_carousels:
+        formats = ["static"]
+    else:
+        if wants_reels:
+            formats.append("reel")
+        if wants_carousels:
+            formats.append("carousel")
+        if wants_static:
+            formats.append("static")
+
+    return (formats if formats else None, extracted_count)
+
+

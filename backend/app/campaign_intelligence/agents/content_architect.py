@@ -18,6 +18,7 @@ from app.campaign_intelligence.schemas.deliverables import (
 )
 from app.campaign_intelligence.schemas.strategy import CampaignStrategy
 from app.campaign_intelligence.schemas.trace import AgentTelemetry
+from app.campaign_intelligence.tools.date_utils import extract_format_and_count_from_text
 from app.core.config import settings
 from app.core.llm import invoke_structured_llm
 
@@ -61,26 +62,45 @@ class ContentArchitectAgent:
         """
         Generate the production-ready deliverable plans.
         """
-        # 1. Determine target deliverable quotas
+        # 1. Determine target deliverable quotas & format preferences
         quotas: list[ContractQuota] = []
         if brand_context and brand_context.contract_quotas:
             quotas = brand_context.contract_quotas
 
+        inferred_fmts, inferred_cnt = extract_format_and_count_from_text(
+            f"{brief.custom_brief or ''} {brief.objective or ''}"
+        )
+        active_formats = [f.lower() for f in (inferred_fmts or brief.deliverable_preferences or [])]
+
         is_date_bounded = bool(brief.start_date and brief.end_date and brief.duration_days)
-        sprint_days = brief.duration_days or 1
+        explicit_count_requested = bool(inferred_cnt or (brief.duration_days and is_date_bounded))
+        sprint_days = brief.duration_days or inferred_cnt or 1
+
+        # Formats cycle: strictly prioritize user format preferences if specified
+        if active_formats:
+            formats_cycle = active_formats
+        elif brand_context and brand_context.contract_quotas:
+            formats_cycle = [q.deliverable_type.lower() for q in brand_context.contract_quotas]
+        else:
+            formats_cycle = ["reel", "carousel", "static"]
+
+        # Platforms cycle
+        if brief.platforms:
+            platforms_cycle = [p.lower() for p in brief.platforms]
+        else:
+            platforms_cycle = ["instagram", "facebook"]
 
         target_specs: list[str] = []
         total_quota_count = 0
 
-        # If this is a specific date-bounded sprint (e.g. 3 days: 8th to 10th Nov),
-        # ensure we plan exactly 1 distinct deliverable per calendar day of the sprint!
-        if is_date_bounded:
+        # Branch A: Specific date-bounded sprint OR explicit count requested (e.g. "give me 3 reel ideas")
+        if is_date_bounded or explicit_count_requested:
             total_quota_count = sprint_days
-            formats_cycle = ["reel", "carousel", "static"]
-            platforms_cycle = ["instagram", "facebook", "instagram"]
             day_schedule_lines: list[str] = []
+            curr_date = datetime.now(timezone.utc).date()
+            start_base = brief.start_date or curr_date
             for d_idx in range(sprint_days):
-                d_date = brief.start_date + timedelta(days=d_idx)
+                d_date = start_base + timedelta(days=d_idx)
                 d_num = d_idx + 1
                 d_format = formats_cycle[d_idx % len(formats_cycle)]
                 d_platform = platforms_cycle[d_idx % len(platforms_cycle)]
@@ -89,21 +109,22 @@ class ContentArchitectAgent:
                     f"  * Day {d_num} ({d_date.strftime('%a, %b %d, %Y')}): 1x {d_format.upper()} with planned_day={d_num}, scheduled_date='{d_date.isoformat()}'"
                 )
 
+            end_base = brief.end_date or (start_base + timedelta(days=sprint_days - 1))
             timeline_instruction = (
-                f"\n### MANDATORY DAILY SPRINT SCHEDULE ({sprint_days} DAYS: {brief.start_date.isoformat()} TO {brief.end_date.isoformat()}):\n"
+                f"\n### MANDATORY DAILY SPRINT SCHEDULE ({sprint_days} DAYS: {start_base.isoformat()} TO {end_base.isoformat()}):\n"
                 f"You MUST architect distinct deliverables distributed across EVERY DAY of this sprint.\n"
                 f"Schedule:\n" + "\n".join(day_schedule_lines) + "\n"
                 f"CRITICAL: You MUST output EXACTLY {sprint_days} deliverable plans in the `deliverables` list (one deliverable per day for Day 1 through Day {sprint_days}).\n"
             )
-            pacing_instruction = f"Generate EXACTLY {total_quota_count} deliverable plans mapped sequentially across Day 1 to Day {sprint_days} ({brief.start_date} to {brief.end_date}). Every calendar day in the sprint must have its own deliverable!"
+            pacing_instruction = f"Generate EXACTLY {total_quota_count} deliverable plans mapped sequentially across Day 1 to Day {sprint_days} ({start_base} to {end_base}). Every calendar day in the sprint must have its own deliverable!"
         elif quotas:
             for q in quotas:
                 target_specs.append(f"- {q.monthly_quantity}x {q.deliverable_type.upper()} on {q.platform.upper()}")
                 total_quota_count += q.monthly_quantity
             timeline_instruction = ""
             pacing_instruction = f"Generate all {total_quota_count} deliverable plans spread across Weeks 1 to 4 with sequential planned_day numbers."
-        elif brief.deliverable_preferences:
-            for pref in brief.deliverable_preferences:
+        elif active_formats:
+            for pref in active_formats:
                 target_specs.append(f"- 2x {pref.upper()} across target platforms")
                 total_quota_count += 2
             timeline_instruction = ""
@@ -207,18 +228,20 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
         # 7. Deterministic Sprint Completeness Guarantee:
         # If the LLM returned fewer deliverables than sprint_days (e.g. LLM generated 1 item for a 3-day sprint),
         # automatically synthesize high-fidelity deliverable plans for all missing days so every day has its own card!
-        if is_date_bounded and brief.start_date and len(deliverables) < sprint_days:
+        if (is_date_bounded or sprint_days > 1 or active_formats) and len(deliverables) < sprint_days:
             covered_days = {d.planned_day for d in deliverables if d.planned_day}
+            curr_date = datetime.now(timezone.utc).date()
+            start_base = brief.start_date or curr_date
             for day_idx in range(1, sprint_days + 1):
                 if day_idx not in covered_days:
-                    calc_dt = brief.start_date + timedelta(days=day_idx - 1)
+                    calc_dt = start_base + timedelta(days=day_idx - 1)
                     angle_idx = (day_idx - 1) % len(strategy.strategic_angles) if strategy.strategic_angles else 0
                     pillar_idx = (day_idx - 1) % len(strategy.messaging_pillars) if strategy.messaging_pillars else 0
                     angle = strategy.strategic_angles[angle_idx] if strategy.strategic_angles else None
                     pillar = strategy.messaging_pillars[pillar_idx] if strategy.messaging_pillars else None
 
-                    d_type = "reel" if day_idx % 2 == 1 else "carousel"
-                    p_name = "instagram"
+                    d_type = formats_cycle[(day_idx - 1) % len(formats_cycle)]
+                    p_name = platforms_cycle[(day_idx - 1) % len(platforms_cycle)]
                     angle_name = angle.angle_name if angle else f"Day {day_idx} Showcase"
                     pillar_name = pillar.pillar_name if pillar else (angle.aligned_content_pillar if angle else "Brand Experience")
                     core_msg = pillar.core_message if pillar else strategy.campaign_theme

@@ -5,14 +5,15 @@ import {
   Send, 
   CheckCircle2, 
   AlertCircle, 
-  ExternalLink, 
   Sparkles, 
   RefreshCw, 
   Link2,
-  Clock
+  Clock,
+  Calendar,
+  Check
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { socialApi, publishingApi, SocialAccount, PublishResult } from "@/lib/api";
+import { socialApi, publishingApi, SocialAccount, PublishResult, ScheduleResponse } from "@/lib/api";
 
 function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -32,6 +33,23 @@ function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function formatLocalDateTime(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function parseLocalDateTime(dtStr: string): Date {
+  const [datePart, timePart] = dtStr.split("T");
+  if (!datePart || !timePart) return new Date(dtStr);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = timePart.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
 interface PublishModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,7 +60,10 @@ interface PublishModalProps {
   caption?: string | null;
   clientId: string;
   clientName: string;
-  onSuccess: (result: PublishResult) => void;
+  onSuccess: (result: PublishResult | ScheduleResponse | any) => void;
+  initialIntent?: "publish" | "schedule";
+  currentScheduledAt?: string | null;
+  isRescheduling?: boolean;
 }
 
 export default function PublishModal({
@@ -56,9 +77,17 @@ export default function PublishModal({
   clientId,
   clientName,
   onSuccess,
+  initialIntent = "publish",
+  currentScheduledAt = null,
+  isRescheduling = false,
 }: PublishModalProps) {
   const { token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+
+  // Intent: Publish Now vs. Schedule for Later
+  const [actionIntent, setActionIntent] = useState<"publish" | "schedule">(
+    isRescheduling ? "schedule" : initialIntent
+  );
 
   const [mode, setMode] = useState<"automated" | "manual">("automated");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
@@ -72,15 +101,43 @@ export default function PublishModal({
   const [publishProgress, setPublishProgress] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
+  // Scheduling state
+  const userTimezone = typeof Intl !== "undefined" && Intl.DateTimeFormat
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : "UTC";
+
+  // Default to 10 hours from now (the user's scenario) or current scheduled time
+  const [scheduledDateTime, setScheduledDateTime] = useState<string>(() => {
+    if (currentScheduledAt) {
+      try {
+        return formatLocalDateTime(new Date(currentScheduledAt));
+      } catch {
+        // fallback
+      }
+    }
+    const defaultDate = new Date(Date.now() + 10 * 3600 * 1000);
+    return formatLocalDateTime(defaultDate);
+  });
+
   useEffect(() => {
     if (caption) setCaptionText(caption);
   }, [caption]);
+
+  useEffect(() => {
+    if (isRescheduling) {
+      setActionIntent("schedule");
+    } else if (initialIntent) {
+      setActionIntent(initialIntent);
+    }
+  }, [initialIntent, isRescheduling, isOpen]);
 
   // Sync selectedPlatform with deliverable's platform prop if valid
   useEffect(() => {
     if (platform) {
       const p = platform.toLowerCase();
-      if (p.includes("facebook") || p === "fb") {
+      if (p === "both" || p === "all") {
+        setSelectedPlatform("both");
+      } else if (p.includes("facebook") || p === "fb") {
         setSelectedPlatform("facebook");
       } else if (p.includes("instagram") || p === "ig") {
         setSelectedPlatform("instagram");
@@ -100,7 +157,10 @@ export default function PublishModal({
           const hasFb = data.some((a) => a.platform === "facebook" && a.is_active);
 
           const p = (platform || "").toLowerCase();
-          if (p.includes("facebook") && hasFb) {
+          if (p === "both" && hasIg && hasFb) {
+            setSelectedPlatform("both");
+            setMode("automated");
+          } else if (p.includes("facebook") && hasFb) {
             setSelectedPlatform("facebook");
             setMode("automated");
           } else if (p.includes("instagram") && hasIg) {
@@ -131,7 +191,85 @@ export default function PublishModal({
   const currentAccount = isBoth ? (igAccount || fbAccount) : (selectedPlatform === "facebook" ? fbAccount : igAccount);
   const isVideoOrReel = deliverableType.toLowerCase().includes("reel") || deliverableType.toLowerCase().includes("video");
 
-  const handlePublish = async (e: React.FormEvent) => {
+  // Calculate live countdown text & AM/PM detection
+  let countdownText = "";
+  let isPastTime = false;
+  let amPmSuggestion: string | null = null;
+  let targetPMString: string | null = null;
+
+  try {
+    const target = parseLocalDateTime(scheduledDateTime);
+    const now = new Date();
+    const diffMs = target.getTime() - now.getTime();
+
+    const formattedTarget = target.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    if (diffMs < 60000) {
+      isPastTime = true;
+      if (diffMs <= 0) {
+        // Check if user chose AM instead of PM
+        const targetPM = new Date(target.getTime() + 12 * 3600 * 1000);
+        if (targetPM.getTime() - now.getTime() >= 60000 && target.getHours() < 12) {
+          amPmSuggestion = targetPM.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
+          targetPMString = formatLocalDateTime(targetPM);
+          countdownText = `Selected time (${formattedTarget}) has already passed. Did you mean ${amPmSuggestion}?`;
+        } else {
+          countdownText = `Selected time (${formattedTarget}) is in the past. Must be at least 1 minute in the future.`;
+        }
+      } else {
+        const secs = Math.ceil(diffMs / 1000);
+        countdownText = `Selected time is in ${secs}s. Must be at least 1 minute in the future.`;
+      }
+    } else {
+      if (diffMs < 3600 * 1000) {
+        const diffMinutes = Math.floor(diffMs / (60 * 1000));
+        const diffSeconds = Math.floor((diffMs % (60 * 1000)) / 1000);
+        countdownText = `Will publish on ${formattedTarget} (in ${diffMinutes}m ${diffSeconds}s) [${userTimezone}]`;
+      } else {
+        const diffHours = Math.floor(diffMs / (3600 * 1000));
+        const diffMinutes = Math.floor((diffMs % (3600 * 1000)) / (60 * 1000));
+        countdownText = `Will publish on ${formattedTarget} (in ${diffHours}h ${diffMinutes}m) [${userTimezone}]`;
+      }
+    }
+  } catch {
+    countdownText = "";
+  }
+
+  // Quick preset helper
+  const applyPreset = (preset: "2m" | "5m" | "15m" | "1h" | "2h" | "10h" | "tomorrow9am" | "tomorrow6pm") => {
+    const now = new Date();
+    let target = new Date();
+    if (preset === "2m") {
+      target = new Date(now.getTime() + 2 * 60 * 1000);
+    } else if (preset === "5m") {
+      target = new Date(now.getTime() + 5 * 60 * 1000);
+    } else if (preset === "15m") {
+      target = new Date(now.getTime() + 15 * 60 * 1000);
+    } else if (preset === "1h") {
+      target = new Date(now.getTime() + 3600 * 1000);
+    } else if (preset === "2h") {
+      target = new Date(now.getTime() + 2 * 3600 * 1000);
+    } else if (preset === "10h") {
+      target = new Date(now.getTime() + 10 * 3600 * 1000);
+    } else if (preset === "tomorrow9am") {
+      target.setDate(target.getDate() + 1);
+      target.setHours(9, 0, 0, 0);
+    } else if (preset === "tomorrow6pm") {
+      target.setDate(target.getDate() + 1);
+      target.setHours(18, 0, 0, 0);
+    }
+    setScheduledDateTime(formatLocalDateTime(target));
+    setError(null);
+  };
+
+  const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !effectiveAgencyId) return;
 
@@ -139,6 +277,49 @@ export default function PublishModal({
     setPublishing(true);
 
     try {
+      // 1. SCHEDULE FOR LATER
+      if (actionIntent === "schedule") {
+        const targetDate = parseLocalDateTime(scheduledDateTime);
+        if (isNaN(targetDate.getTime()) || targetDate.getTime() <= Date.now() + 60000) {
+          setError("Scheduled time must be at least 1 minute in the future.");
+          setPublishing(false);
+          return;
+        }
+
+        setPublishProgress("Setting up automated publication schedule...");
+
+        if (isRescheduling) {
+          const res = await publishingApi.reschedule(
+            effectiveAgencyId,
+            deliverableId,
+            {
+              new_scheduled_at: targetDate.toISOString(),
+              scheduled_timezone: userTimezone,
+            },
+            token
+          );
+          onSuccess(res);
+          onClose();
+        } else {
+          const res = await publishingApi.schedule(
+            effectiveAgencyId,
+            deliverableId,
+            {
+              scheduled_at: targetDate.toISOString(),
+              scheduled_timezone: userTimezone,
+              platform: selectedPlatform,
+              caption_override: captionText.trim() || undefined,
+              share_to_feed: shareToFeed,
+            },
+            token
+          );
+          onSuccess(res);
+          onClose();
+        }
+        return;
+      }
+
+      // 2. IMMEDIATE PUBLISH (AUTOMATED OR MANUAL)
       if (mode === "automated") {
         if (selectedPlatform === "both") {
           setPublishProgress("Publishing to Instagram and Facebook Page simultaneously...");
@@ -213,7 +394,7 @@ export default function PublishModal({
       }
     } catch (err: any) {
       console.error("Publishing error:", err);
-      setError(err?.message || "Failed to publish deliverable.");
+      setError(err?.message || "Failed to process request.");
     } finally {
       setPublishing(false);
       setPublishProgress("");
@@ -222,16 +403,21 @@ export default function PublishModal({
 
   const isSubmitDisabled =
     publishing ||
-    (mode === "automated" && !currentAccount) ||
-    (mode === "manual" && !manualUrl.trim());
+    (actionIntent === "schedule" && (isPastTime || !currentAccount)) ||
+    (actionIntent === "publish" && mode === "automated" && !currentAccount) ||
+    (actionIntent === "publish" && mode === "manual" && !manualUrl.trim());
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2.5">
-            {selectedPlatform === "both" ? (
+            {actionIntent === "schedule" ? (
+              <div className="p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-xl shadow-xs shadow-indigo-600/30">
+                <Clock className="w-4 h-4" />
+              </div>
+            ) : selectedPlatform === "both" ? (
               <div className="p-2 bg-gradient-to-tr from-purple-600 via-pink-600 to-blue-600 text-white rounded-xl shadow-xs shadow-purple-600/30 flex items-center gap-1">
                 <InstagramIcon className="w-3.5 h-3.5" />
                 <span className="text-[10px] font-bold">+</span>
@@ -248,7 +434,11 @@ export default function PublishModal({
             )}
             <div>
               <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                {mode === "automated"
+                {actionIntent === "schedule"
+                  ? isRescheduling
+                    ? "Reschedule Content"
+                    : "Schedule for Later"
+                  : mode === "automated"
                   ? `Publish to ${
                       selectedPlatform === "both"
                         ? "Both Platforms (IG & FB)"
@@ -266,14 +456,46 @@ export default function PublishModal({
           <button
             onClick={onClose}
             disabled={publishing}
-            className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1 rounded-lg hover:bg-slate-100"
+            className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
             &times;
           </button>
         </div>
 
+        {/* Action Intent Switcher (Publish Now vs. Schedule for Later) */}
+        {!isRescheduling && (
+          <div className="px-6 pt-4 pb-0">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActionIntent("publish")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  actionIntent === "publish"
+                    ? "bg-white text-purple-700 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Send className="w-3.5 h-3.5 text-purple-600" />
+                <span>Publish Now</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActionIntent("schedule")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  actionIntent === "schedule"
+                    ? "bg-white text-indigo-700 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Schedule for Later</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Body */}
-        <form onSubmit={handlePublish} className="p-6 space-y-5 overflow-y-auto flex-1">
+        <form onSubmit={handleAction} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -281,36 +503,144 @@ export default function PublishModal({
             </div>
           )}
 
-          {/* Mode Switcher */}
-          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setMode("automated")}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                mode === "automated"
-                  ? "bg-white text-purple-700 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-              <span>Direct Meta API</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("manual")}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                mode === "manual"
-                  ? "bg-white text-purple-700 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Link2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Manual Tracking</span>
-            </button>
-          </div>
+          {/* SCHEDULE MODE SPECIFIC CONTROLS */}
+          {actionIntent === "schedule" && (
+            <div className="space-y-3.5 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Scheduled Publication Time</span>
+                </label>
+                <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                  {userTimezone}
+                </span>
+              </div>
 
-          {/* Platform Selector in Automated Mode */}
-          {mode === "automated" && (
+              {/* Quick Presets */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Quick Presets
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("2m")}
+                    className="py-1.5 px-2 text-center text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-lg shadow-2xs transition-all cursor-pointer"
+                  >
+                    ⚡ +2 Min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("5m")}
+                    className="py-1.5 px-2 text-center text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 rounded-lg shadow-2xs transition-all cursor-pointer"
+                  >
+                    ⚡ +5 Min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("15m")}
+                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                  >
+                    +15 Min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("1h")}
+                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                  >
+                    +1 Hour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("10h")}
+                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                  >
+                    +10 Hours
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset("tomorrow9am")}
+                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                  >
+                    Tmrw 9 AM
+                  </button>
+                </div>
+              </div>
+
+              {/* Exact Datetime Input */}
+              <div className="space-y-1">
+                <input
+                  type="datetime-local"
+                  required
+                  value={scheduledDateTime}
+                  onChange={(e) => {
+                    setScheduledDateTime(e.target.value);
+                    setError(null);
+                  }}
+                  className="w-full text-xs font-bold text-slate-800 p-2.5 rounded-xl border border-indigo-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Dynamic countdown, timezone confirmation, and AM/PM switch suggestion banner */}
+              {countdownText && (
+                <div className={`p-2.5 rounded-xl text-[11px] font-semibold flex items-center justify-between gap-2 ${
+                  isPastTime
+                    ? "bg-rose-100 text-rose-800 border border-rose-200"
+                    : "bg-indigo-100/80 text-indigo-900 border border-indigo-200"
+                }`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Clock className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                    <span className="truncate">{countdownText}</span>
+                  </div>
+                  {isPastTime && amPmSuggestion && targetPMString && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScheduledDateTime(targetPMString!);
+                        setError(null);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-2xs transition-colors shrink-0 cursor-pointer"
+                    >
+                      Switch to {amPmSuggestion}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mode Switcher (only in Publish Now mode) */}
+          {actionIntent === "publish" && (
+            <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setMode("automated")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  mode === "automated"
+                    ? "bg-white text-purple-700 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                <span>Direct Meta API</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("manual")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  mode === "manual"
+                    ? "bg-white text-purple-700 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Link2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>Manual Tracking</span>
+              </button>
+            </div>
+          )}
+
+          {/* Platform Selector (Automated or Schedule mode) */}
+          {(actionIntent === "schedule" || mode === "automated") && (
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                 Target Platform
@@ -410,10 +740,9 @@ export default function PublishModal({
             </div>
           )}
 
-          {/* Automated Mode Details */}
-          {mode === "automated" && (
+          {/* Connected Profile Details */}
+          {(actionIntent === "schedule" || mode === "automated") && (
             <div className="space-y-4">
-              {/* Target Profile Verification */}
               <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70">
                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                   Connected Profile ({clientName})
@@ -427,7 +756,6 @@ export default function PublishModal({
                 ) : selectedPlatform === "both" ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {/* Instagram subcard */}
                       <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -451,7 +779,6 @@ export default function PublishModal({
                         </p>
                       </div>
 
-                      {/* Facebook subcard */}
                       <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -480,8 +807,8 @@ export default function PublishModal({
                       <p className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
                         <span>
-                          {igAccount && !fbAccount && "Facebook Page is not connected. The post will publish to Instagram only."}
-                          {!igAccount && fbAccount && "Instagram account is not connected. The post will publish to Facebook Page only."}
+                          {igAccount && !fbAccount && "Facebook Page is not connected. This will post to Instagram only."}
+                          {!igAccount && fbAccount && "Instagram account is not connected. This will post to Facebook Page only."}
                           {!igAccount && !fbAccount && "Neither account is connected. Connect them in the client workspace."}
                         </span>
                       </p>
@@ -516,9 +843,6 @@ export default function PublishModal({
                           No Instagram Business account connected for <strong>{clientName}</strong>.
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        Select <strong>Facebook</strong> above, switch to <strong>Manual Tracking</strong>, or add Instagram credentials in the client workspace.
-                      </p>
                     </div>
                   )
                 ) : (
@@ -534,7 +858,7 @@ export default function PublishModal({
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                           </div>
                           <div className="text-[10px] text-slate-400">
-                            Page ID: {fbAccount.facebook_page_id} &bull; Connected {fbAccount.account_handle ? `(${fbAccount.account_handle})` : ""}
+                            Page ID: {fbAccount.facebook_page_id} &bull; Connected
                           </div>
                         </div>
                       </div>
@@ -550,9 +874,6 @@ export default function PublishModal({
                           No Facebook Page connected for <strong>{clientName}</strong>.
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        Select <strong>Instagram</strong> above, switch to <strong>Manual Tracking</strong>, or connect Facebook Page credentials in the client workspace.
-                      </p>
                     </div>
                   )
                 )}
@@ -565,51 +886,27 @@ export default function PublishModal({
                     {selectedPlatform === "facebook" ? "Facebook Post Message / Caption" : "Approved Caption & Tags"}
                   </span>
                   <span className="text-[10px] font-normal text-slate-400">
-                    {selectedPlatform === "facebook" ? "Sent to Facebook Page" : "Sent to Instagram"}
+                    Snapshotted for scheduled execution
                   </span>
                 </label>
                 <textarea
                   value={captionText}
                   onChange={(e) => setCaptionText(e.target.value)}
                   rows={4}
-                  placeholder={
-                    selectedPlatform === "facebook"
-                      ? "Enter message for your Facebook Page post..."
-                      : "Enter caption with #hashtags..."
-                  }
-                  className="w-full text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 resize-none"
+                  placeholder="Enter caption with #hashtags..."
+                  className="w-full text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
                 />
-              </div>
-
-              {/* Public Media URL Override (for local dev or external CDNs) */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-slate-700">
-                    Public Media URL (Optional Override)
-                  </label>
-                  <span className="text-[10px] text-slate-400">Public HTTPS link</span>
-                </div>
-                <input
-                  type="url"
-                  value={mediaUrlOverride}
-                  onChange={(e) => setMediaUrlOverride(e.target.value)}
-                  placeholder="Defaults to uploaded file (or paste any public HTTPS video/image link)"
-                  className="w-full text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
-                />
-                <p className="text-[10px] text-slate-400">
-                  Meta servers require a public link. In local development with a tunnel, this defaults to the media file automatically.
-                </p>
               </div>
 
               {/* Instagram specific options */}
-              {selectedPlatform === "instagram" && isVideoOrReel && (
+              {(selectedPlatform === "instagram" || selectedPlatform === "both") && isVideoOrReel && (
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="share_to_feed"
                     checked={shareToFeed}
                     onChange={(e) => setShareToFeed(e.target.checked)}
-                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300 cursor-pointer"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
                   />
                   <label htmlFor="share_to_feed" className="text-xs font-medium text-slate-700 cursor-pointer">
                     Share Reel to main Profile Grid (recommended)
@@ -619,8 +916,8 @@ export default function PublishModal({
             </div>
           )}
 
-          {/* Manual Mode Details */}
-          {mode === "manual" && (
+          {/* Manual Mode Details (Only in publish now mode) */}
+          {actionIntent === "publish" && mode === "manual" && (
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Platform</label>
@@ -643,31 +940,18 @@ export default function PublishModal({
                   required
                   value={manualUrl}
                   onChange={(e) => setManualUrl(e.target.value)}
-                  placeholder={
-                    selectedPlatform === "facebook"
-                      ? "https://www.facebook.com/..."
-                      : "https://www.instagram.com/reel/..."
-                  }
+                  placeholder="https://www.instagram.com/p/..."
                   className="w-full text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                 />
-                <p className="text-[10px] text-slate-400">
-                  Paste the public link from the social platform after publishing.
-                </p>
               </div>
             </div>
           )}
 
           {/* Progress Banner */}
           {publishing && (
-            <div className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs font-semibold ${
-              selectedPlatform === "facebook"
-                ? "bg-blue-50 border-blue-200 text-blue-800"
-                : "bg-purple-50 border-purple-200 text-purple-800"
-            }`}>
-              <RefreshCw className={`w-4 h-4 animate-spin shrink-0 ${
-                selectedPlatform === "facebook" ? "text-blue-600" : "text-purple-600"
-              }`} />
-              <span>{publishProgress || "Publishing to social network..."}</span>
+            <div className="p-3.5 rounded-xl border bg-indigo-50 border-indigo-200 text-indigo-800 flex items-center gap-2.5 text-xs font-semibold">
+              <RefreshCw className="w-4 h-4 animate-spin shrink-0 text-indigo-600" />
+              <span>{publishProgress || "Processing..."}</span>
             </div>
           )}
 
@@ -685,23 +969,34 @@ export default function PublishModal({
               type="submit"
               disabled={isSubmitDisabled}
               className={`inline-flex items-center gap-2 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer ${
-                selectedPlatform === "both"
+                actionIntent === "schedule"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-600/30"
+                  : selectedPlatform === "both"
                   ? "bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:opacity-90 shadow-indigo-600/30"
                   : selectedPlatform === "facebook"
                   ? "bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 shadow-blue-600/30"
                   : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-600/30"
               }`}
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>
-                {mode === "automated"
-                  ? selectedPlatform === "both"
-                    ? "Publish to Both Platforms"
-                    : selectedPlatform === "facebook"
-                    ? "Publish to Facebook Page"
-                    : "Publish to Instagram"
-                  : "Save as Published"}
-              </span>
+              {actionIntent === "schedule" ? (
+                <>
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{isRescheduling ? "Update Schedule" : "Schedule Post"}</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>
+                    {mode === "automated"
+                      ? selectedPlatform === "both"
+                        ? "Publish to Both Platforms"
+                        : selectedPlatform === "facebook"
+                        ? "Publish to Facebook Page"
+                        : "Publish to Instagram"
+                      : "Save as Published"}
+                  </span>
+                </>
+              )}
             </button>
           </div>
         </form>

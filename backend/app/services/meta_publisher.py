@@ -108,6 +108,76 @@ async def exchange_long_lived_token(
         return data
 
 
+def ensure_instagram_compatible_image(
+    local_file_path: str | None,
+    storage_key: str | None,
+) -> tuple[str | None, str | None]:
+    """
+    Instagram Graph API strictly requires JPEG format in sRGB color space
+    with an aspect ratio between 4:5 (0.8) and 1.91:1.
+    If the image is a PNG, WebP, or non-JPEG, convert it to a compliant JPEG
+    and pad aspect ratio if needed, storing it alongside the original asset.
+    Returns: (new_local_file_path, new_storage_key)
+    """
+    if not local_file_path or not Path(local_file_path).is_file():
+        return local_file_path, storage_key
+
+    file_path = Path(local_file_path)
+    suffix = file_path.suffix.lower()
+
+    if suffix in (".mp4", ".mov", ".m4v", ".avi"):
+        return local_file_path, storage_key
+
+    try:
+        from PIL import Image
+
+        with Image.open(file_path) as img:
+            needs_conversion = suffix not in (".jpg", ".jpeg")
+            ratio = img.width / max(1, img.height)
+            needs_ratio_adjust = ratio < 0.79 or ratio > 1.92
+
+            if not needs_conversion and not needs_ratio_adjust:
+                return local_file_path, storage_key
+
+            jpeg_name = f"{file_path.stem}_ig.jpg"
+            jpeg_path = file_path.parent / jpeg_name
+            jpeg_storage_key = None
+            if storage_key:
+                parent_key = str(Path(storage_key).parent).replace("\\", "/")
+                jpeg_storage_key = f"{parent_key}/{jpeg_name}" if parent_key != "." else jpeg_name
+
+            # 1. Color mode & transparency conversion (white background for transparency)
+            if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+                rgb_img = Image.new("RGB", img.size, (255, 255, 255))
+                mask = img.split()[-1] if img.mode in ("RGBA", "LA") else img.convert("RGBA").split()[-1]
+                rgb_img.paste(img.convert("RGBA"), mask=mask)
+            else:
+                rgb_img = img.convert("RGB")
+
+            # 2. Aspect ratio adjustment (pad if outside 4:5 to 1.91:1)
+            if ratio < 0.8:
+                # Too tall (e.g. 9:16 portrait): pad width to 4:5
+                target_w = int(rgb_img.height * 0.8)
+                new_canvas = Image.new("RGB", (target_w, rgb_img.height), (255, 255, 255))
+                offset_x = (target_w - rgb_img.width) // 2
+                new_canvas.paste(rgb_img, (offset_x, 0))
+                rgb_img = new_canvas
+            elif ratio > 1.91:
+                # Too wide: pad height to 1.91:1
+                target_h = int(rgb_img.width / 1.91)
+                new_canvas = Image.new("RGB", (rgb_img.width, target_h), (255, 255, 255))
+                offset_y = (target_h - rgb_img.height) // 2
+                new_canvas.paste(rgb_img, (0, offset_y))
+                rgb_img = new_canvas
+
+            rgb_img.save(jpeg_path, "JPEG", quality=95, optimize=True)
+            logger.info(f"Converted/adjusted asset '{file_path.name}' to Instagram-compliant JPEG: '{jpeg_name}'")
+            return str(jpeg_path), (jpeg_storage_key or storage_key)
+    except Exception as e:
+        logger.warning(f"Error checking/converting image for Instagram: {e}")
+        return local_file_path, storage_key
+
+
 async def publish_instagram_photo(
     access_token: str,
     instagram_business_id: str,

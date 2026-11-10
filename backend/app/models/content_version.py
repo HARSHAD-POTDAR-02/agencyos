@@ -54,3 +54,6 @@ class ContentVersion(Base):
     approval: Mapped["Approval | None"] = relationship(  # noqa: F821
         "Approval", back_populates="content_version", uselist=False
     )
+    publication_jobs: Mapped[list["PublicationJob"]] = relationship(  # noqa: F821
+        "PublicationJob", back_populates="content_version"
+    )

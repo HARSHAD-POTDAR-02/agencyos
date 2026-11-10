@@ -160,6 +160,7 @@ function CampaignStudioContent() {
   // Evolving Brief Strategy
   const [suggestedObjective, setSuggestedObjective] = useState<string>("");
   const [suggestedCustomBrief, setSuggestedCustomBrief] = useState<string>("");
+  const [deliverablePreferences, setDeliverablePreferences] = useState<string[]>([]);
   const [isReadyToGenerate, setIsReadyToGenerate] = useState(false);
 
   // Pipeline Execution State
@@ -245,6 +246,7 @@ function CampaignStudioContent() {
     ]);
     setSuggestedObjective("");
     setSuggestedCustomBrief("");
+    setDeliverablePreferences([]);
     setIsReadyToGenerate(false);
   }, [selectedClientId, clients, getStorageKey]);
 
@@ -292,6 +294,7 @@ function CampaignStudioContent() {
     ]);
     setSuggestedObjective("");
     setSuggestedCustomBrief("");
+    setDeliverablePreferences([]);
     setIsReadyToGenerate(false);
     setStartDate("");
     setEndDate("");
@@ -351,6 +354,9 @@ function CampaignStudioContent() {
       }
       if (response.suggested_custom_brief) {
         setSuggestedCustomBrief(response.suggested_custom_brief);
+      }
+      if (response.suggested_deliverable_preferences && response.suggested_deliverable_preferences.length > 0) {
+        setDeliverablePreferences(response.suggested_deliverable_preferences);
       }
       if (response.suggested_start_date) {
         setStartDate(response.suggested_start_date);
@@ -468,6 +474,7 @@ function CampaignStudioContent() {
           duration_days: durationDays || undefined,
           objective: suggestedObjective || undefined,
           custom_brief: suggestedCustomBrief || undefined,
+          deliverable_preferences: deliverablePreferences.length > 0 ? deliverablePreferences : undefined,
         },
         token
       );

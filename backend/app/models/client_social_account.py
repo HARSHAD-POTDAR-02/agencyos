@@ -42,3 +42,6 @@ class ClientSocialAccount(Base):
 
     # Relationships
     client: Mapped["Client"] = relationship("Client", back_populates="social_accounts")  # noqa: F821
+    publication_jobs: Mapped[list["PublicationJob"]] = relationship(  # noqa: F821
+        "PublicationJob", back_populates="social_account"
+    )

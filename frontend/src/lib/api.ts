@@ -221,6 +221,7 @@ export const campaignApi = {
       reply: string;
       suggested_objective?: string;
       suggested_custom_brief?: string;
+      suggested_deliverable_preferences?: string[];
       suggested_period_month?: number;
       suggested_period_year?: number;
       suggested_start_date?: string;
@@ -416,6 +417,43 @@ export interface PublishResult {
   platform_results?: Record<string, { success: boolean; post_id?: string; permalink?: string; error?: string }> | null;
 }
 
+export interface ScheduledJobOut {
+  id: string;
+  platform: string;
+  status: string;
+  scheduled_at: string;
+  scheduled_timezone: string;
+  next_attempt_at: string;
+  attempts_count: number;
+  last_error_message?: string | null;
+}
+
+export interface ScheduleResponse {
+  success: boolean;
+  deliverable_id: string;
+  status: string;
+  scheduled_at: string;
+  scheduled_timezone: string;
+  jobs: ScheduledJobOut[];
+  message: string;
+}
+
+export interface ScheduledDeliverableItem {
+  deliverable_id: string;
+  campaign_id: string;
+  client_id: string;
+  client_name: string;
+  title: string;
+  deliverable_type: string;
+  platform: string;
+  status: string;
+  scheduled_at: string;
+  scheduled_timezone: string;
+  seconds_remaining: number;
+  jobs: ScheduledJobOut[];
+  thumbnail_url?: string | null;
+}
+
 export interface MonthlyReport {
   client_id: string;
   client_name: string;
@@ -511,5 +549,54 @@ export const publishingApi = {
     if (year) params.append("year", year.toString());
     const qs = params.toString() ? `?${params.toString()}` : "";
     return apiFetch<MonthlyReport>(`/agencies/${agencyId}/clients/${clientId}/reports/monthly${qs}`, { token });
+  },
+
+  schedule: (
+    agencyId: string,
+    deliverableId: string,
+    data: {
+      scheduled_at: string;
+      scheduled_timezone?: string;
+      platform?: string;
+      caption_override?: string;
+      share_to_feed?: boolean;
+    },
+    token: string
+  ) =>
+    apiFetch<ScheduleResponse>(`/agencies/${agencyId}/deliverables/${deliverableId}/schedule`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  reschedule: (
+    agencyId: string,
+    deliverableId: string,
+    data: {
+      new_scheduled_at: string;
+      scheduled_timezone?: string;
+    },
+    token: string
+  ) =>
+    apiFetch<ScheduleResponse>(`/agencies/${agencyId}/deliverables/${deliverableId}/reschedule`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  cancelSchedule: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch<{ success: boolean; status: string; message: string }>(
+      `/agencies/${agencyId}/deliverables/${deliverableId}/cancel-schedule`,
+      {
+        method: "POST",
+        token,
+      }
+    ),
+
+  listScheduled: (agencyId: string, token: string, clientId?: string) => {
+    const qs = clientId ? `?client_id=${clientId}` : "";
+    return apiFetch<ScheduledDeliverableItem[]>(`/agencies/${agencyId}/scheduled-deliverables${qs}`, {
+      token,
+    });
   },
 };

@@ -59,7 +59,12 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string;
   internal_review:  { label: "Internal Review",        badge: "bg-blue-50 text-blue-700 border-blue-200",      dot: "bg-blue-500",   icon: FileCheck2 },
   changes_requested:{ label: "Changes Requested",      badge: "bg-rose-50 text-rose-700 border-rose-200",      dot: "bg-rose-500",   icon: AlertCircle },
   approved:         { label: "Approved",               badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", icon: CheckCircle2 },
+  scheduled:        { label: "Scheduled",              badge: "bg-indigo-50 text-indigo-700 border-indigo-200", dot: "bg-indigo-500", icon: Clock },
+  publishing:       { label: "Publishing...",          badge: "bg-sky-50 text-sky-700 border-sky-200",         dot: "bg-sky-500",    icon: RefreshCw },
+  partially_published: { label: "Partially Published", badge: "bg-amber-50 text-amber-700 border-amber-200",   dot: "bg-amber-500",  icon: AlertCircle },
   published:        { label: "Published Live",         badge: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500", icon: Send },
+  needs_reconnection: { label: "Auth Needed",          badge: "bg-rose-50 text-rose-700 border-rose-200",      dot: "bg-rose-500",   icon: AlertCircle },
+  ambiguous:        { label: "Reconciling",            badge: "bg-amber-50 text-amber-700 border-amber-200",   dot: "bg-amber-500",  icon: AlertCircle },
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -92,13 +97,13 @@ function ApprovalsContent() {
   const { token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab") as "all" | "client_review" | "changes_requested" | "approved" | "published" | null;
+  const tabParam = searchParams.get("tab") as "all" | "client_review" | "changes_requested" | "approved" | "scheduled" | "published" | null;
 
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "client_review" | "changes_requested" | "approved" | "published">(() => {
-    if (tabParam && ["all", "client_review", "changes_requested", "approved", "published"].includes(tabParam)) {
+  const [filter, setFilter] = useState<"all" | "client_review" | "changes_requested" | "approved" | "scheduled" | "published">(() => {
+    if (tabParam && ["all", "client_review", "changes_requested", "approved", "scheduled", "published"].includes(tabParam)) {
       return tabParam;
     }
     return "all";
@@ -110,12 +115,12 @@ function ApprovalsContent() {
   const [publishingItem, setPublishingItem] = useState<QueueItem | null>(null);
 
   useEffect(() => {
-    if (tabParam && ["all", "client_review", "changes_requested", "approved", "published"].includes(tabParam)) {
+    if (tabParam && ["all", "client_review", "changes_requested", "approved", "scheduled", "published"].includes(tabParam)) {
       setFilter(tabParam);
     }
   }, [tabParam]);
 
-  const handleTabChange = (newTab: "all" | "client_review" | "changes_requested" | "approved" | "published") => {
+  const handleTabChange = (newTab: "all" | "client_review" | "changes_requested" | "approved" | "scheduled" | "published") => {
     setFilter(newTab);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -208,6 +213,7 @@ function ApprovalsContent() {
     client_review: items.filter((i) => i.status === "client_review").length,
     changes_requested: items.filter((i) => i.status === "changes_requested").length,
     approved: items.filter((i) => i.status === "approved").length,
+    scheduled: items.filter((i) => i.status === "scheduled" || i.status === "publishing").length,
     published: items.filter((i) => i.status === "published").length,
   };
 
@@ -307,6 +313,15 @@ function ApprovalsContent() {
           Ready to Publish ({counts.approved})
         </button>
         <button
+          onClick={() => handleTabChange("scheduled")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            filter === "scheduled" ? "bg-white text-indigo-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-indigo-500" />
+          Scheduled ({counts.scheduled})
+        </button>
+        <button
           onClick={() => handleTabChange("published")}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             filter === "published" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
@@ -384,7 +399,7 @@ function ApprovalsContent() {
                     </div>
 
                     {/* Published Performance Metrics */}
-                    {item.status === "published" && (
+                    {(item.status === "published" || item.status === "partially_published") && (
                       <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-slate-100 text-[11px] font-semibold text-slate-600">
                         <span className="flex items-center gap-1 text-slate-600 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
                           <Eye className="w-3 h-3 text-slate-400" />
@@ -422,6 +437,16 @@ function ApprovalsContent() {
 
                   {/* Actions */}
                   <div className="shrink-0 flex items-center gap-2">
+                    {item.status === "scheduled" && (
+                      <Link
+                        href={`/deliverables/${item.deliverable_id}`}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg shadow-2xs transition-all cursor-pointer"
+                      >
+                        <Clock className="w-3 h-3 text-indigo-600" />
+                        <span>Manage Schedule</span>
+                      </Link>
+                    )}
+
                     {item.status === "approved" && (
                       <button
                         onClick={() => setPublishingItem(item)}
@@ -432,7 +457,7 @@ function ApprovalsContent() {
                       </button>
                     )}
 
-                    {item.status === "published" && (
+                    {(item.status === "published" || item.status === "partially_published") && (
                       <>
                         <button
                           onClick={() => handleSyncMetrics(item)}

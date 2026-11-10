@@ -90,8 +90,16 @@ interface DeliverableDetail {
     | "client_review"
     | "changes_requested"
     | "approved"
+    | "scheduled"
+    | "publishing"
+    | "partially_published"
     | "published"
+    | "failed"
+    | "needs_reconnection"
+    | "ambiguous"
     | "cancelled";
+  scheduled_at?: string | null;
+  scheduled_timezone?: string | null;
   published_at?: string | null;
   live_post_url?: string | null;
   external_post_id?: string | null;
@@ -175,8 +183,29 @@ function DeliverableDetailContent() {
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  // Publishing state
+  // Publishing & Scheduling state
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishModalIntent, setPublishModalIntent] = useState<"publish" | "schedule">("publish");
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [cancellingSchedule, setCancellingSchedule] = useState(false);
+
+  const handleCancelSchedule = async () => {
+    if (!effectiveAgencyId || !token || !id || !deliverable) return;
+    const ok = window.confirm(
+      `Cancel the scheduled publication for "${deliverable.title}"? The deliverable will return to Approved status.`
+    );
+    if (!ok) return;
+    try {
+      setCancellingSchedule(true);
+      await publishingApi.cancelSchedule(effectiveAgencyId, id, token);
+      await fetchDeliverable();
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to cancel scheduled publication");
+    } finally {
+      setCancellingSchedule(false);
+    }
+  };
 
   // Metrics update modal state
   const [showMetricsModal, setShowMetricsModal] = useState(false);
@@ -628,19 +657,76 @@ function DeliverableDetailContent() {
               <option value="client_review">Client Review</option>
               <option value="changes_requested">Changes Requested</option>
               <option value="approved">Approved</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="publishing">Publishing...</option>
+              <option value="partially_published">Partially Published</option>
               <option value="published">Published</option>
+              <option value="needs_reconnection">Needs Reconnection</option>
+              <option value="ambiguous">Reconciling</option>
             </select>
           </div>
 
-          {/* Publish Button (when approved) */}
+          {/* Action buttons based on status */}
           {deliverable.status === "approved" && (
-            <button
-              onClick={() => setShowPublishModal(true)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Publish Live</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setPublishModalIntent("schedule");
+                  setIsRescheduling(false);
+                  setShowPublishModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs shadow-indigo-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Schedule Post</span>
+              </button>
+              <button
+                onClick={() => {
+                  setPublishModalIntent("publish");
+                  setIsRescheduling(false);
+                  setShowPublishModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Publish Live</span>
+              </button>
+            </div>
+          )}
+
+          {deliverable.status === "scheduled" && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setPublishModalIntent("schedule");
+                  setIsRescheduling(true);
+                  setShowPublishModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
+              >
+                <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Reschedule</span>
+              </button>
+              <button
+                onClick={() => {
+                  setPublishModalIntent("publish");
+                  setIsRescheduling(false);
+                  setShowPublishModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Publish Now</span>
+              </button>
+              <button
+                onClick={handleCancelSchedule}
+                disabled={cancellingSchedule}
+                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
+              >
+                <Undo2 className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+                <span>{cancellingSchedule ? "Cancelling..." : "Cancel"}</span>
+              </button>
+            </div>
           )}
 
           {/* View Live Post (when published) */}
@@ -656,8 +742,8 @@ function DeliverableDetailContent() {
             </a>
           )}
 
-          {/* Unpublish Button (when published) */}
-          {deliverable.status === "published" && (
+          {/* Unpublish Button (when published or partially published) */}
+          {(deliverable.status === "published" || deliverable.status === "partially_published") && (
             <button
               onClick={handleUnpublish}
               title="Remove from Published Live"
@@ -726,8 +812,8 @@ function DeliverableDetailContent() {
         <div>{getStatusBadge(deliverable.status)}</div>
       </div>
 
-      {/* Live Publishing & Performance Banner (when published) */}
-      {deliverable.status === "published" && (
+      {/* Live Publishing & Performance Banner (when published or partially published) */}
+      {(deliverable.status === "published" || deliverable.status === "partially_published") && (
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-2xl p-5 shadow-lg border border-indigo-500/30 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
             <div className="flex items-center gap-3">
@@ -736,9 +822,9 @@ function DeliverableDetailContent() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-                    Published Live
+                  <span className={`text-xs font-black uppercase tracking-wider ${deliverable.status === "partially_published" ? "text-amber-400" : "text-emerald-400"} flex items-center gap-1.5`}>
+                    <span className={`w-2 h-2 rounded-full ${deliverable.status === "partially_published" ? "bg-amber-400" : "bg-emerald-400 animate-ping"} inline-block`} />
+                    {deliverable.status === "partially_published" ? "Partially Published Live" : "Published Live"}
                   </span>
                   <span className="text-xs text-slate-500">&bull;</span>
                   <span className="text-xs text-indigo-200 capitalize font-medium">
@@ -1310,7 +1396,7 @@ function DeliverableDetailContent() {
               </button>
             </div>
 
-            {/* If approved, show Publish to Social trigger */}
+            {/* If approved, show Publish and Schedule triggers */}
             {deliverable.status === "approved" && (
               <div className="pt-3 border-t border-purple-200/60 space-y-2">
                 <div className="flex items-center gap-1.5 text-emerald-800 text-xs font-bold">
@@ -1318,16 +1404,81 @@ function DeliverableDetailContent() {
                   <span>Approved & Ready for Delivery</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-tight">
-                  This deliverable has passed review. Publish directly to client Instagram/Facebook or record a manual live URL.
+                  This deliverable has passed review. Publish now or set an automated schedule.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowPublishModal(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Publish to Social Accounts</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublishModalIntent("schedule");
+                      setIsRescheduling(false);
+                      setShowPublishModal(true);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Schedule</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublishModalIntent("publish");
+                      setIsRescheduling(false);
+                      setShowPublishModal(true);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Publish Now</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* If scheduled, show active schedule details card */}
+            {deliverable.status === "scheduled" && (
+              <div className="pt-3 border-t border-indigo-200/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-indigo-900 text-xs font-bold">
+                    <Clock className="w-4 h-4 text-indigo-600" />
+                    <span>Scheduled for Publication</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                    Queued
+                  </span>
+                </div>
+                <div className="p-2.5 bg-indigo-50/70 rounded-xl border border-indigo-100 text-xs text-indigo-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>{deliverable.scheduled_at ? formatDate(deliverable.scheduled_at) : "Target time set"}</span>
+                  </div>
+                  <div className="text-[10px] text-indigo-600/80">
+                    Timezone: {deliverable.scheduled_timezone || "UTC"}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublishModalIntent("schedule");
+                      setIsRescheduling(true);
+                      setShowPublishModal(true);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2.5 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Reschedule</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelSchedule}
+                    disabled={cancellingSchedule}
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    <Undo2 className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+                    <span>Cancel</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1709,11 +1860,14 @@ function DeliverableDetailContent() {
         </div>
       )}
 
-      {/* Publish Modal */}
+      {/* Publish & Schedule Modal */}
       {showPublishModal && deliverable && (
         <PublishModal
           isOpen={showPublishModal}
-          onClose={() => setShowPublishModal(false)}
+          onClose={() => {
+            setShowPublishModal(false);
+            setIsRescheduling(false);
+          }}
           deliverableId={deliverable.id}
           deliverableTitle={deliverable.title}
           deliverableType={deliverable.deliverable_type}
@@ -1721,8 +1875,12 @@ function DeliverableDetailContent() {
           caption={currentPreviewVersion?.caption || undefined}
           clientId={deliverable.client_id || ""}
           clientName={deliverable.client_name || "Client Account"}
-          onSuccess={() => {
-            fetchDeliverable();
+          initialIntent={publishModalIntent}
+          currentScheduledAt={deliverable.scheduled_at}
+          isRescheduling={isRescheduling}
+          onSuccess={async () => {
+            await fetchDeliverable();
+            window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
           }}
         />
       )}

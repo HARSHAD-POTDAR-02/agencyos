@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+from typing import Any
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -19,13 +23,21 @@ from app.models.contract import Contract, ContractStatus, ScopeItem
 from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import Membership
+from app.models.publication_job import JobStatus, PublicationJob, PublicationAttempt
 from app.schemas.publishing import (
     DeliverableMetricsUpdate,
     MonthlyReportOut,
     PublishDeliverableRequest,
     PublishDeliverableResponse,
     TopDeliverableItem,
+    ScheduleDeliverableRequest,
+    RescheduleDeliverableRequest,
+    ScheduleDeliverableResponse,
+    ScheduledJobOut,
+    ScheduledDeliverableItem,
 )
+from app.services.lease_manager import reconcile_deliverable_status
+from app.services.scheduler_coordinator import global_wakeup_signal
 from app.services.meta_publisher import (
     MetaPublishingError,
     MetaPostNotFoundError,
@@ -34,6 +46,7 @@ from app.services.meta_publisher import (
     publish_instagram_reel,
     sync_facebook_metrics,
     sync_instagram_metrics,
+    ensure_instagram_compatible_image,
 )
 from app.services.tenant_service import (
     assert_deliverable_belongs_to_agency,
@@ -149,6 +162,13 @@ async def publish_deliverable(
                             file_type=latest_version.file_type,
                         )
                     else:
+                        # Ensure photo is converted to Instagram-compliant JPEG in sRGB
+                        ig_local_path, ig_storage_key = ensure_instagram_compatible_image(
+                            local_file_str, latest_version.storage_key
+                        )
+                        if ig_storage_key and not payload.media_url_override:
+                            media_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/uploads/{ig_storage_key.lstrip('/')}"
+
                         result = await publish_instagram_photo(
                             access_token=social_account.access_token,
                             instagram_business_id=social_account.instagram_business_id,
@@ -385,7 +405,7 @@ async def sync_deliverable_metrics(
     """
     deliverable = await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
 
-    if deliverable.status != DeliverableStatus.published or not deliverable.external_post_id:
+    if deliverable.status not in (DeliverableStatus.published, DeliverableStatus.partially_published) or not deliverable.external_post_id:
         return {
             "deliverable_id": deliverable.id,
             "views_count": deliverable.views_count or 0,
@@ -576,6 +596,13 @@ async def unpublish_deliverable(
     deliverable.comments_count = 0
     deliverable.shares_count = 0
 
+    # Cancel any associated publication jobs
+    await db.execute(
+        update(PublicationJob)
+        .where(PublicationJob.deliverable_id == deliverable.id)
+        .values(status=JobStatus.cancelled)
+    )
+
     await db.commit()
     await db.refresh(deliverable)
 
@@ -727,3 +754,408 @@ async def get_client_monthly_delivery_report(
         top_deliverables=top_deliverables,
         executive_summary=executive_summary,
     )
+
+
+# ---------------------------------------------------------------------------
+# Content Scheduling Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/deliverables/{deliverable_id}/schedule",
+    response_model=ScheduleDeliverableResponse,
+)
+async def schedule_deliverable(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    payload: ScheduleDeliverableRequest,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ScheduleDeliverableResponse:
+    """
+    Schedules an approved deliverable for automated publication at a future UTC timestamp.
+    Enforces content version snapshot integrity and platform-specific publication jobs.
+    """
+    deliverable = await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+
+    # 1. Guardrail: Deliverable must be approved or already scheduled
+    allowed_statuses = (
+        DeliverableStatus.approved,
+        DeliverableStatus.scheduled,
+        DeliverableStatus.partially_published,
+        DeliverableStatus.changes_requested,
+    )
+    if deliverable.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Cannot schedule deliverable with status '{deliverable.status.value}'. "
+                "Only client-approved deliverables can be scheduled for publication."
+            ),
+        )
+
+    # 2. Time validation: Target scheduled_at must be in the future
+    now = datetime.now(timezone.utc)
+    sched_at = payload.scheduled_at
+    if sched_at.tzinfo is None:
+        sched_at = sched_at.replace(tzinfo=timezone.utc)
+
+    if sched_at <= now + timedelta(seconds=10):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Scheduled publication time must be in the future (at least 15 seconds ahead).",
+        )
+
+    # 3. Find Campaign, Client, and Latest Content Version
+    campaign_res = await db.execute(select(Campaign).where(Campaign.id == deliverable.campaign_id))
+    campaign = campaign_res.scalar_one()
+    client_res = await db.execute(select(Client).where(Client.id == campaign.client_id))
+    client = client_res.scalar_one()
+
+    versions_res = await db.execute(
+        select(ContentVersion)
+        .where(ContentVersion.deliverable_id == deliverable.id)
+        .order_by(ContentVersion.version_number.desc())
+    )
+    latest_version = versions_res.scalars().first()
+    if latest_version is None or not latest_version.storage_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot schedule deliverable without an uploaded and approved media asset.",
+        )
+
+    # 4. Resolve Target Social Accounts
+    accounts_res = await db.execute(
+        select(ClientSocialAccount)
+        .where(ClientSocialAccount.client_id == client.id, ClientSocialAccount.is_active == True)
+    )
+    social_accounts = list(accounts_res.scalars().all())
+
+    target_platforms: list[str] = []
+    p = payload.platform.lower()
+    if p in ("instagram", "ig"):
+        target_platforms = ["instagram"]
+    elif p in ("facebook", "fb"):
+        target_platforms = ["facebook"]
+    elif p in ("both", "all"):
+        target_platforms = ["instagram", "facebook"]
+    else:
+        target_platforms = ["instagram"]
+
+    platform_account_map: dict[str, ClientSocialAccount] = {}
+    for plat in target_platforms:
+        matched = next((a for a in social_accounts if a.platform == plat), None)
+        if not matched:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Client '{client.business_name}' does not have an active connected {plat.title()} account.",
+            )
+        platform_account_map[plat] = matched
+
+    # 5. Cancel any prior scheduled/pending/failed jobs for this deliverable
+    await db.execute(
+        update(PublicationJob)
+        .where(
+            PublicationJob.deliverable_id == deliverable.id,
+            PublicationJob.status.in_([
+                JobStatus.scheduled,
+                JobStatus.pending,
+                JobStatus.failed,
+                JobStatus.needs_reconnection,
+            ]),
+        )
+        .values(status=JobStatus.cancelled)
+    )
+
+    # 6. Create PublicationJob for each target platform with stable operation identity
+    operation_id = uuid.uuid4()
+    created_jobs: list[PublicationJob] = []
+
+    for plat in target_platforms:
+        acc = platform_account_map[plat]
+        job = PublicationJob(
+            deliverable_id=deliverable.id,
+            content_version_id=latest_version.id,
+            client_social_account_id=acc.id,
+            platform=plat,
+            publication_operation_id=operation_id,
+            status=JobStatus.scheduled,
+            scheduled_at=sched_at,
+            scheduled_timezone=payload.scheduled_timezone or "UTC",
+            next_attempt_at=sched_at,
+            caption_snapshot=payload.caption_override or latest_version.caption or deliverable.title,
+            media_url_snapshot=f"{settings.PUBLIC_BASE_URL.rstrip('/')}/uploads/{latest_version.storage_key.lstrip('/')}",
+            share_to_feed=payload.share_to_feed,
+            max_attempts=3,
+        )
+        db.add(job)
+        created_jobs.append(job)
+
+    # 7. Update parent Deliverable
+    deliverable.status = DeliverableStatus.scheduled
+    deliverable.scheduled_at = sched_at
+    deliverable.scheduled_timezone = payload.scheduled_timezone or "UTC"
+
+    await db.commit()
+
+    # 8. Notify scheduler advisory signal (after transaction commits)
+    try:
+        await global_wakeup_signal.notify(deliverable.id)
+    except Exception as e:
+        logger.warning(f"Failed to dispatch scheduler wakeup signal: {e}")
+
+    job_outs = [
+        ScheduledJobOut(
+            id=j.id,
+            platform=j.platform,
+            status=j.status.value,
+            scheduled_at=j.scheduled_at,
+            scheduled_timezone=j.scheduled_timezone,
+            next_attempt_at=j.next_attempt_at,
+            attempts_count=j.attempts_count or 0,
+            last_error_message=j.last_error_message,
+        )
+        for j in created_jobs
+    ]
+
+    return ScheduleDeliverableResponse(
+        success=True,
+        deliverable_id=deliverable.id,
+        status=deliverable.status.value,
+        scheduled_at=deliverable.scheduled_at,
+        scheduled_timezone=deliverable.scheduled_timezone or "UTC",
+        jobs=job_outs,
+        message=f"Deliverable scheduled successfully for {len(created_jobs)} platform(s).",
+    )
+
+
+@router.post(
+    "/deliverables/{deliverable_id}/reschedule",
+    response_model=ScheduleDeliverableResponse,
+)
+async def reschedule_deliverable(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    payload: RescheduleDeliverableRequest,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ScheduleDeliverableResponse:
+    """
+    Reschedules an existing scheduled deliverable to a new target time.
+    """
+    deliverable = await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+    now = datetime.now(timezone.utc)
+    new_sched = payload.new_scheduled_at
+    if new_sched.tzinfo is None:
+        new_sched = new_sched.replace(tzinfo=timezone.utc)
+
+    if new_sched <= now + timedelta(seconds=10):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New scheduled time must be in the future (at least 1 minute ahead).",
+        )
+
+    jobs_res = await db.execute(
+        select(PublicationJob).where(
+            PublicationJob.deliverable_id == deliverable.id,
+            PublicationJob.status.in_([JobStatus.scheduled, JobStatus.needs_reconnection, JobStatus.failed]),
+        )
+    )
+    jobs = list(jobs_res.scalars().all())
+    if not jobs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No scheduled publication jobs found to reschedule.",
+        )
+
+    for j in jobs:
+        j.scheduled_at = new_sched
+        j.next_attempt_at = new_sched
+        j.status = JobStatus.scheduled
+        if payload.scheduled_timezone:
+            j.scheduled_timezone = payload.scheduled_timezone
+        j.claim_token = None
+        j.claimed_by = None
+
+    deliverable.status = DeliverableStatus.scheduled
+    deliverable.scheduled_at = new_sched
+    if payload.scheduled_timezone:
+        deliverable.scheduled_timezone = payload.scheduled_timezone
+
+    await db.commit()
+
+    try:
+        await global_wakeup_signal.notify(deliverable.id)
+    except Exception as e:
+        logger.warning(f"Failed to dispatch scheduler wakeup signal: {e}")
+
+    job_outs = [
+        ScheduledJobOut(
+            id=j.id,
+            platform=j.platform,
+            status=j.status.value,
+            scheduled_at=j.scheduled_at,
+            scheduled_timezone=j.scheduled_timezone,
+            next_attempt_at=j.next_attempt_at,
+            attempts_count=j.attempts_count or 0,
+            last_error_message=j.last_error_message,
+        )
+        for j in jobs
+    ]
+
+    return ScheduleDeliverableResponse(
+        success=True,
+        deliverable_id=deliverable.id,
+        status=deliverable.status.value,
+        scheduled_at=deliverable.scheduled_at,
+        scheduled_timezone=deliverable.scheduled_timezone or "UTC",
+        jobs=job_outs,
+        message="Deliverable rescheduled successfully.",
+    )
+
+
+@router.post(
+    "/deliverables/{deliverable_id}/cancel-schedule",
+)
+async def cancel_schedule_deliverable(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Cancels scheduled publication jobs.
+    If a job is actively publishing, flags cancellation_pending.
+    Otherwise sets cancelled and returns deliverable to approved.
+    """
+    deliverable = await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+
+    jobs_res = await db.execute(
+        select(PublicationJob).where(
+            PublicationJob.deliverable_id == deliverable.id,
+            PublicationJob.status.in_([JobStatus.scheduled, JobStatus.publishing, JobStatus.needs_reconnection]),
+        )
+    )
+    jobs = list(jobs_res.scalars().all())
+    if not jobs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active scheduled jobs to cancel for this deliverable.",
+        )
+
+    has_publishing = False
+    for j in jobs:
+        if j.status == JobStatus.publishing:
+            has_publishing = True
+            j.status = JobStatus.cancellation_pending
+        else:
+            j.status = JobStatus.cancelled
+
+    if not has_publishing:
+        deliverable.status = DeliverableStatus.approved
+        deliverable.scheduled_at = None
+
+    await db.commit()
+
+    if has_publishing:
+        return {
+            "success": True,
+            "status": "cancellation_pending",
+            "message": "Cancellation requested: waiting for in-flight publishing worker to acknowledge.",
+        }
+
+    return {
+        "success": True,
+        "status": "approved",
+        "message": "Scheduled publication cancelled. Deliverable returned to approved state.",
+    }
+
+
+@router.get(
+    "/scheduled-deliverables",
+    response_model=list[ScheduledDeliverableItem],
+)
+async def list_scheduled_deliverables(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID | None = Query(None),
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[ScheduledDeliverableItem]:
+    """
+    Lists all scheduled deliverables across the agency (or filtered by client),
+    sorted by target scheduled time ascending.
+    """
+    now = datetime.now(timezone.utc)
+    query = (
+        select(Deliverable, Client.id, Client.business_name, ContentVersion.storage_key)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .outerjoin(ContentVersion, ContentVersion.deliverable_id == Deliverable.id)
+        .where(
+            Client.agency_id == agency_id,
+            Deliverable.status.in_([
+                DeliverableStatus.scheduled,
+                DeliverableStatus.publishing,
+                DeliverableStatus.needs_reconnection,
+                DeliverableStatus.ambiguous,
+            ]),
+        )
+    )
+    if client_id:
+        query = query.where(Client.id == client_id)
+
+    query = query.order_by(Deliverable.scheduled_at.asc().nullslast())
+    rows = (await db.execute(query)).all()
+
+    seen: set[uuid.UUID] = set()
+    items: list[ScheduledDeliverableItem] = []
+
+    for deliv, c_id, c_name, thumb in rows:
+        if deliv.id in seen:
+            continue
+        seen.add(deliv.id)
+
+        jobs_res = await db.execute(
+            select(PublicationJob).where(PublicationJob.deliverable_id == deliv.id)
+        )
+        jobs = list(jobs_res.scalars().all())
+
+        sched_at = deliv.scheduled_at or now
+        if sched_at.tzinfo is None:
+            sched_at = sched_at.replace(tzinfo=timezone.utc)
+
+        secs = max(0.0, (sched_at - now).total_seconds())
+
+        job_outs = [
+            ScheduledJobOut(
+                id=j.id,
+                platform=j.platform,
+                status=j.status.value,
+                scheduled_at=j.scheduled_at,
+                scheduled_timezone=j.scheduled_timezone,
+                next_attempt_at=j.next_attempt_at,
+                attempts_count=j.attempts_count or 0,
+                last_error_message=j.last_error_message,
+            )
+            for j in jobs
+        ]
+
+        items.append(
+            ScheduledDeliverableItem(
+                deliverable_id=deliv.id,
+                campaign_id=deliv.campaign_id,
+                client_id=c_id,
+                client_name=c_name,
+                title=deliv.title,
+                deliverable_type=deliv.deliverable_type,
+                platform=deliv.platform,
+                status=deliv.status.value,
+                scheduled_at=sched_at,
+                scheduled_timezone=deliv.scheduled_timezone or "UTC",
+                seconds_remaining=secs,
+                jobs=job_outs,
+                thumbnail_url=thumb,
+            )
+        )
+
+    return items
+

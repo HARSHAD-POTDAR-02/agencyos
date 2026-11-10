@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -8,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.core.database import async_engine, Base
+from app.core.database import async_engine, Base, AsyncSessionLocal
+from app.services.scheduler_coordinator import run_scheduler_worker
 from app.routers import (
     agencies,
     approvals,
@@ -34,7 +36,23 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
     # Ensure upload directory exists
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+
+    # Start background scheduler worker
+    scheduler_stop_event = asyncio.Event()
+    scheduler_task = asyncio.create_task(
+        run_scheduler_worker(AsyncSessionLocal, stop_event=scheduler_stop_event)
+    )
+
     yield
+
+    # Stop scheduler background worker on shutdown
+    scheduler_stop_event.set()
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except (asyncio.CancelledError, Exception):
+        pass
+
     # Dispose the engine on shutdown
     await async_engine.dispose()
 

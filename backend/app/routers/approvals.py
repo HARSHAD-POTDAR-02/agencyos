@@ -142,7 +142,12 @@ async def get_approvals_queue(
         DeliverableStatus.internal_review,
         DeliverableStatus.changes_requested,
         DeliverableStatus.approved,
+        DeliverableStatus.scheduled,
+        DeliverableStatus.publishing,
+        DeliverableStatus.partially_published,
         DeliverableStatus.published,
+        DeliverableStatus.needs_reconnection,
+        DeliverableStatus.ambiguous,
     ]
 
     result = await db.execute(

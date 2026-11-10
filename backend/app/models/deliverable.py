@@ -18,7 +18,13 @@ class DeliverableStatus(str, enum.Enum):
     client_review = "client_review"
     changes_requested = "changes_requested"
     approved = "approved"
+    scheduled = "scheduled"
+    publishing = "publishing"
+    partially_published = "partially_published"
     published = "published"
+    failed = "failed"
+    needs_reconnection = "needs_reconnection"
+    ambiguous = "ambiguous"
     cancelled = "cancelled"
 
 
@@ -49,6 +55,8 @@ class Deliverable(Base):
         nullable=False,
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    scheduled_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
     live_post_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     external_post_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     publishing_platform: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -79,6 +87,9 @@ class Deliverable(Base):
     )
     comments: Mapped[list["DeliverableComment"]] = relationship(  # noqa: F821
         "DeliverableComment", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
+    )
+    publication_jobs: Mapped[list["PublicationJob"]] = relationship(  # noqa: F821
+        "PublicationJob", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
     )
 
     @property

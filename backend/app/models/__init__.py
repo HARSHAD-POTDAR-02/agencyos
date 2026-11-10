@@ -16,3 +16,9 @@ from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.client_reviewer import ClientReviewer  # noqa: F401
 from app.models.comment import DeliverableComment  # noqa: F401
 from app.models.client_social_account import ClientSocialAccount  # noqa: F401
+from app.models.publication_job import (  # noqa: F401
+    PublicationJob,
+    PublicationAttempt,
+    JobStatus,
+    AttemptStatus,
+)

@@ -15,7 +15,11 @@ from app.campaign_intelligence.schemas.campaign import CampaignBrief
 from app.campaign_intelligence.schemas.deliverables import DeliverablePlan
 from app.campaign_intelligence.schemas.quality import QualityEvaluation
 from app.campaign_intelligence.schemas.strategy import CampaignStrategy
-from app.campaign_intelligence.tools.date_utils import extract_date_range_from_text, sanitize_date_year
+from app.campaign_intelligence.tools.date_utils import (
+    extract_date_range_from_text,
+    extract_format_and_count_from_text,
+    sanitize_date_year,
+)
 from app.core.database import get_db
 from app.core.llm import invoke_structured_llm
 from app.dependencies import require_agency_member
@@ -212,18 +216,27 @@ async def generate_plan_endpoint(
     period_m = start_dt.month if start_dt else payload.period_month
     period_y = start_dt.year if start_dt else default_year
 
+    # Extract format preferences and count from brief/objective if not explicitly provided
+    detected_prefs, detected_count = extract_format_and_count_from_text(
+        f"{payload.custom_brief or ''} {payload.objective or ''}"
+    )
+    final_prefs = payload.deliverable_preferences or detected_prefs
+    if detected_count and not duration_days:
+        duration_days = detected_count
+
     brief = CampaignBrief(
         campaign_id=campaign_id,
         client_id=client_id,
         agency_id=agency_id,
         name=f"{client.business_name} - {period_m}/{period_y} Plan",
-        objective=payload.objective,
+        objective=payload.objective or f"Deliver {duration_days or 3} high-impact social media deliverables",
         period_month=period_m,
         period_year=period_y,
         start_date=start_dt,
         end_date=end_dt,
         duration_days=duration_days,
-        custom_instructions=payload.custom_brief,
+        custom_brief=payload.custom_brief,
+        deliverable_preferences=final_prefs or [],
     )
 
     # 2. Build initial StateGraph state
@@ -428,6 +441,7 @@ class ChatBriefLLMOutput(BaseModel):
     reply: str
     suggested_objective: str | None = None
     suggested_custom_brief: str | None = None
+    suggested_deliverable_preferences: list[str] | None = None
     suggested_period_month: int | None = None
     suggested_period_year: int | None = None
     suggested_start_date: str | None = None
@@ -489,9 +503,16 @@ CONVERSATION HISTORY (Most recent messages at the bottom):
 {formatted_convo}
 
 YOUR BEHAVIOR & INTERVIEWING RULES:
-1. Multi-turn Memory & Proactivity:
-   - Act as an engaging, proactive creative partner, NOT a robotic one-way walkie-talkie.
+1. Multi-turn Memory & Direct Creative Fulfillment:
+   - Act as an engaging, proactive creative director and partner.
    - Actively reference and synthesize the user's previous answers in this conversation history.
+   - If the user asks for specific content ideas or formats (e.g. "give me 3 reel ideas", "3 reels please", "suggest 3 hooks for our Diwali campaign"):
+     * YOU MUST DIRECTLY PROVIDE AND NUMBER THE EXACT IDEAS IN YOUR CONVERSATIONAL REPLY! (e.g. Concept 1, Concept 2, Concept 3 with compelling visual hooks, audio vibe, and storyline).
+     * DO NOT just ask questions back without providing the ideas they specifically asked for!
+     * Respect their exact requested format (if they asked for Reels, give ONLY Reels; if Carousels, give Carousels).
+     * Populate `suggested_deliverable_preferences` with their requested formats (e.g. ["reel"]).
+     * If they asked for a specific number of ideas/deliverables (e.g. "3 reel ideas"), set `suggested_duration_days = 3` so the subsequent campaign matches their requested count.
+     * Follow up with 1 concise question to see if they'd like to refine any of the hooks before generating.
    - If the user provides a brief or general idea (e.g. "I want to do a summer fitness challenge" or "launch our new SaaS feature"), validate their idea enthusiastically and ask 1 to 2 smart, strategic follow-up questions to drill down on:
      a) Target sub-audience or demographic persona
      b) Core offer, hook, discount, or unique value proposition
@@ -524,6 +545,7 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
         )
 
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
 
         # Deterministic extraction takes precedence when user provided an explicit date range
         if extracted:
@@ -537,7 +559,7 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
             raw_end = output.suggested_end_date or payload.end_date
             final_start_date = sanitize_date_year(raw_start, target_year=ref_year, allow_past_year=has_explicit_year)
             final_end_date = sanitize_date_year(raw_end, target_year=ref_year, allow_past_year=has_explicit_year)
-            final_duration_days = output.suggested_duration_days
+            final_duration_days = output.suggested_duration_days or extracted_cnt
             final_month = output.suggested_period_month or (payload.period_month or ref_month)
             raw_year = output.suggested_period_year or payload.period_year or ref_year
             final_year = raw_year if (has_explicit_year or raw_year >= ref_year) else ref_year
@@ -550,6 +572,13 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
             except Exception:
                 pass
 
+        if not final_duration_days and extracted_cnt:
+            final_duration_days = extracted_cnt
+
+        final_deliverable_prefs = (
+            extracted_fmts or output.suggested_deliverable_preferences or None
+        )
+
         reply_text = output.reply
         if not has_explicit_year and ref_year >= 2026:
             reply_text = re.sub(r"\b202[0-5]\b", str(ref_year), reply_text)
@@ -558,6 +587,7 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
             reply=reply_text,
             suggested_objective=output.suggested_objective,
             suggested_custom_brief=output.suggested_custom_brief,
+            suggested_deliverable_preferences=final_deliverable_prefs,
             suggested_period_month=final_month,
             suggested_period_year=final_year,
             suggested_start_date=final_start_date,
@@ -567,6 +597,7 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
         )
     except Exception:
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
         if extracted:
             start_date_str = extracted.start_date.isoformat()
             end_date_str = extracted.end_date.isoformat()
@@ -576,7 +607,7 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
         else:
             start_date_str = sanitize_date_year(payload.start_date, target_year=ref_year, allow_past_year=has_explicit_year)
             end_date_str = sanitize_date_year(payload.end_date, target_year=ref_year, allow_past_year=has_explicit_year)
-            dur_days = None
+            dur_days = extracted_cnt
             p_month = payload.period_month or ref_month
             p_year = payload.period_year or ref_year
 
@@ -589,6 +620,7 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
             suggested_start_date=start_date_str,
             suggested_end_date=end_date_str,
             suggested_duration_days=dur_days,
+            suggested_deliverable_preferences=extracted_fmts,
             is_ready_to_generate=False,
         )
 

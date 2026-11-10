@@ -90,6 +90,7 @@ class GeneratePlanRequest(BaseModel):
     duration_days: int | None = None
     objective: str | None = None
     custom_brief: str | None = None
+    deliverable_preferences: list[str] | None = None
 
 
 class ConvertToTasksResponse(BaseModel):
@@ -116,6 +117,7 @@ class ChatBriefResponse(BaseModel):
     reply: str
     suggested_objective: str | None = None
     suggested_custom_brief: str | None = None
+    suggested_deliverable_preferences: list[str] | None = None
     suggested_period_month: int | None = None
     suggested_period_year: int | None = None
     suggested_start_date: str | None = None
