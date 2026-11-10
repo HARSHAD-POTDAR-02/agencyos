@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import re
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -14,6 +15,7 @@ from app.campaign_intelligence.schemas.campaign import CampaignBrief
 from app.campaign_intelligence.schemas.deliverables import DeliverablePlan
 from app.campaign_intelligence.schemas.quality import QualityEvaluation
 from app.campaign_intelligence.schemas.strategy import CampaignStrategy
+from app.campaign_intelligence.tools.date_utils import extract_date_range_from_text, sanitize_date_year
 from app.core.database import get_db
 from app.core.llm import invoke_structured_llm
 from app.dependencies import require_agency_member
@@ -164,16 +166,63 @@ async def generate_plan_endpoint(
     """Generate an AI-powered campaign plan for a client using the Campaign Intelligence multi-agent engine."""
     client = await get_client_for_agency(client_id, agency_id, db)
 
-    # 1. Construct CampaignBrief
+    # 1. Resolve timeline and construct CampaignBrief
     campaign_id = uuid.uuid4()
+    curr_dt = date.today()
+    default_year = payload.period_year or curr_dt.year
+    start_dt: date | None = None
+    end_dt: date | None = None
+    duration_days: int | None = payload.duration_days
+
+    if payload.start_date:
+        try:
+            start_dt = datetime.strptime(payload.start_date, "%Y-%m-%d").date()
+        except Exception:
+            pass
+    if payload.end_date:
+        try:
+            end_dt = datetime.strptime(payload.end_date, "%Y-%m-%d").date()
+        except Exception:
+            pass
+
+    # Fallback to date range extractor if dates were typed in custom_brief or objective
+    if not start_dt:
+        text_to_scan = f"{payload.custom_brief or ''} {payload.objective or ''}"
+        extracted = extract_date_range_from_text(text_to_scan, default_year=default_year)
+        if extracted:
+            start_dt = extracted.start_date
+            end_dt = extracted.end_date
+            duration_days = extracted.duration_days
+
+    # Sanitize accidental cutoff year if passed from legacy payload
+    if start_dt and start_dt.year < curr_dt.year and default_year >= curr_dt.year:
+        try:
+            start_dt = start_dt.replace(year=default_year)
+        except ValueError:
+            pass
+    if end_dt and end_dt.year < curr_dt.year and default_year >= curr_dt.year:
+        try:
+            end_dt = end_dt.replace(year=default_year)
+        except ValueError:
+            pass
+
+    if start_dt and end_dt and not duration_days:
+        duration_days = (end_dt - start_dt).days + 1
+
+    period_m = start_dt.month if start_dt else payload.period_month
+    period_y = start_dt.year if start_dt else default_year
+
     brief = CampaignBrief(
         campaign_id=campaign_id,
         client_id=client_id,
         agency_id=agency_id,
-        name=f"{client.business_name} - {payload.period_month}/{payload.period_year} Plan",
+        name=f"{client.business_name} - {period_m}/{period_y} Plan",
         objective=payload.objective,
-        period_month=payload.period_month,
-        period_year=payload.period_year,
+        period_month=period_m,
+        period_year=period_y,
+        start_date=start_dt,
+        end_date=end_dt,
+        duration_days=duration_days,
         custom_instructions=payload.custom_brief,
     )
 
@@ -249,8 +298,28 @@ async def generate_plan_endpoint(
         elif not visual_desc:
             visual_desc = dp.strategic_angle
 
+        # Map day number and scheduled calendar date
+        day_num = dp.planned_day or (idx + 1)
+        sched_date = dp.scheduled_date
+        date_lbl = dp.date_label
+
+        if not sched_date and start_dt:
+            sprint_len = duration_days or 1
+            day_offset = (day_num - 1) if (day_num <= sprint_len) else (idx % sprint_len)
+            calc_dt = start_dt + timedelta(days=day_offset)
+            sched_date = calc_dt.isoformat()
+            day_num = day_offset + 1
+
+        if not date_lbl and sched_date:
+            try:
+                date_lbl = datetime.strptime(sched_date, "%Y-%m-%d").strftime("%a, %b %d, %Y")
+            except Exception:
+                date_lbl = sched_date
+
         deliverables_formatted.append({
-            "day_number": idx + 1,
+            "day_number": day_num,
+            "scheduled_date": sched_date,
+            "date_label": date_lbl,
             "title": dp.title,
             "deliverable_type": dp.deliverable_type,
             "platform": dp.platform,
@@ -278,8 +347,11 @@ async def generate_plan_endpoint(
         "campaign_name": (
             f"{client.business_name} - {strategy.campaign_theme}"
             if strategy and strategy.campaign_theme
-            else f"{client.business_name} - {payload.period_month}/{payload.period_year} Plan"
+            else f"{client.business_name} - {period_m}/{period_y} Plan"
         ),
+        "start_date": start_dt.isoformat() if start_dt else None,
+        "end_date": end_dt.isoformat() if end_dt else None,
+        "duration_days": duration_days,
         "objective": strategy.primary_objective if strategy and strategy.primary_objective else payload.objective,
         "brand_voice": brand_voice_str,
         "content_pillars": [p.pillar_name for p in strategy.messaging_pillars] if strategy and strategy.messaging_pillars else [],
@@ -358,6 +430,9 @@ class ChatBriefLLMOutput(BaseModel):
     suggested_custom_brief: str | None = None
     suggested_period_month: int | None = None
     suggested_period_year: int | None = None
+    suggested_start_date: str | None = None
+    suggested_end_date: str | None = None
+    suggested_duration_days: int | None = None
     is_ready_to_generate: bool = False
 
 
@@ -387,10 +462,22 @@ async def chat_brief_endpoint(
     brand_voice = brand_profile.brand_voice if brand_profile and brand_profile.brand_voice else "Professional and authentic"
     pillars = brand_profile.content_pillars if brand_profile and brand_profile.content_pillars else []
 
-    # 2. Format message history
+    # 2. Format message history and extract calendar reference context
+    curr_dt = date.today()
+    ref_year = payload.period_year or curr_dt.year
+    ref_month = payload.period_month or curr_dt.month
+
+    user_texts = [m.content for m in payload.messages if m.role == "user"]
+    combined_user_text = " ".join(user_texts)
+    has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
+
     formatted_convo = "\n".join([f"{m.role.upper()}: {m.content}" for m in payload.messages])
 
-    prompt = f"""You are the AgencyOS Campaign Director Copilot, an elite creative director and campaign strategist assisting an agency team to design their next monthly social media campaign sprint.
+    prompt = f"""You are the AgencyOS Campaign Director Copilot, an elite creative director and campaign strategist assisting an agency team to design their next social media campaign sprint.
+
+Current System Calendar & Reference Year:
+- Today's Reference Date: {curr_dt.isoformat()}
+- Active Sprint Year: {ref_year} (Reference Month: {ref_month})
 
 Client Context:
 - Client Business: {client.business_name}
@@ -405,23 +492,27 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
 1. Multi-turn Memory & Proactivity:
    - Act as an engaging, proactive creative partner, NOT a robotic one-way walkie-talkie.
    - Actively reference and synthesize the user's previous answers in this conversation history.
-   - If the user provides a brief or general idea (e.g. "I want to do a summer fitness challenge" or "launch our new SaaS feature"), DO NOT immediately jump to generation. Instead, validate their idea enthusiastically and ask 1 to 2 smart, strategic follow-up questions to drill down on:
+   - If the user provides a brief or general idea (e.g. "I want to do a summer fitness challenge" or "launch our new SaaS feature"), validate their idea enthusiastically and ask 1 to 2 smart, strategic follow-up questions to drill down on:
      a) Target sub-audience or demographic persona
      b) Core offer, hook, discount, or unique value proposition
      c) Tone or format preferences (e.g. high-energy Reels, educational carousels, founder-led b-roll)
 2. Collaborative Brainstorming:
    - Proactively suggest 1-2 sharp creative angles or content hooks suited for {client.business_name}'s brand voice ({brand_voice}).
-3. Readiness Determination (`is_ready_to_generate`):
+3. Timeline & Date Range Intelligence:
+   - Current Year Context: The active year is {ref_year}. If the user mentions dates without an explicit year (e.g. 'from 8th nov to 11th nov', 'nov 8 - 11', 'next 3 days', 'Nov 10-14'), you MUST ALWAYS assume and use the year {ref_year} (e.g. {ref_year}-11-08 to {ref_year}-11-11). NEVER default to past years such as 2024 or 2025 unless the user explicitly specified that past year.
+   - Calculate and populate `suggested_start_date` (YYYY-MM-DD), `suggested_end_date` (YYYY-MM-DD), `suggested_duration_days` (total calendar days in sprint), and matching `suggested_period_month`/`suggested_period_year`.
+   - In your reply, confirm the exact sprint timeline and duration using year {ref_year} (e.g. "Got it! Planning a 4-day sprint from November 8 to November 11...").
+4. Readiness Determination (`is_ready_to_generate`):
    - Set `is_ready_to_generate = True` ONLY when:
      * The user explicitly tells you to proceed/generate (e.g., "let's generate", "create it", "looks good go ahead", "run it"), OR
      * The conversation has covered the core objective, target audience/offer, and key direction in sufficient depth.
    - In all early conversational discovery turns, keep `is_ready_to_generate = False`.
-4. Structured Outputs:
+5. Structured Outputs:
    - Always synthesize the evolving strategy into `suggested_objective` (1 crisp sentence) and `suggested_custom_brief` (2-3 sentences capturing audience, themes, and guardrails) based on everything discussed so far.
    - Keep your conversational reply punchy, insightful, and natural (2-4 sentences plus your proactive questions).
-5. STRICT LANGUAGE POLICY - ENGLISH EXCLUSIVELY:
+6. STRICT LANGUAGE POLICY - ENGLISH EXCLUSIVELY:
    - You MUST communicate, think, and respond ONLY in the English language.
-   - Even if the user communicates or prompts in another language (such as Hindi, Hinglish, Spanish, French, German, etc.), you must understand their intent, but your response, questions, suggested angles, and brief drafts MUST ALWAYS BE WRITTEN 100% IN ENGLISH. Never output in any language other than English.
+   - Even if the user communicates or prompts in another language, your response, questions, suggested angles, and brief drafts MUST ALWAYS BE WRITTEN 100% IN ENGLISH. Never output in any language other than English.
 """
 
     try:
@@ -431,19 +522,73 @@ YOUR BEHAVIOR & INTERVIEWING RULES:
             temperature=0.7,
             model="openai/gpt-oss-20b",
         )
+
+        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+
+        # Deterministic extraction takes precedence when user provided an explicit date range
+        if extracted:
+            final_start_date = extracted.start_date.isoformat()
+            final_end_date = extracted.end_date.isoformat()
+            final_duration_days = extracted.duration_days
+            final_month = extracted.period_month
+            final_year = extracted.period_year
+        else:
+            raw_start = output.suggested_start_date or payload.start_date
+            raw_end = output.suggested_end_date or payload.end_date
+            final_start_date = sanitize_date_year(raw_start, target_year=ref_year, allow_past_year=has_explicit_year)
+            final_end_date = sanitize_date_year(raw_end, target_year=ref_year, allow_past_year=has_explicit_year)
+            final_duration_days = output.suggested_duration_days
+            final_month = output.suggested_period_month or (payload.period_month or ref_month)
+            raw_year = output.suggested_period_year or payload.period_year or ref_year
+            final_year = raw_year if (has_explicit_year or raw_year >= ref_year) else ref_year
+
+        if final_start_date and final_end_date and not final_duration_days:
+            try:
+                s_dt = datetime.strptime(final_start_date, "%Y-%m-%d").date()
+                e_dt = datetime.strptime(final_end_date, "%Y-%m-%d").date()
+                final_duration_days = (e_dt - s_dt).days + 1
+            except Exception:
+                pass
+
+        reply_text = output.reply
+        if not has_explicit_year and ref_year >= 2026:
+            reply_text = re.sub(r"\b202[0-5]\b", str(ref_year), reply_text)
+
         return ChatBriefResponse(
-            reply=output.reply,
+            reply=reply_text,
             suggested_objective=output.suggested_objective,
             suggested_custom_brief=output.suggested_custom_brief,
-            suggested_period_month=payload.period_month or date.today().month,
-            suggested_period_year=payload.period_year or date.today().year,
+            suggested_period_month=final_month,
+            suggested_period_year=final_year,
+            suggested_start_date=final_start_date,
+            suggested_end_date=final_end_date,
+            suggested_duration_days=final_duration_days,
             is_ready_to_generate=output.is_ready_to_generate,
         )
     except Exception:
+        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        if extracted:
+            start_date_str = extracted.start_date.isoformat()
+            end_date_str = extracted.end_date.isoformat()
+            dur_days = extracted.duration_days
+            p_month = extracted.period_month
+            p_year = extracted.period_year
+        else:
+            start_date_str = sanitize_date_year(payload.start_date, target_year=ref_year, allow_past_year=has_explicit_year)
+            end_date_str = sanitize_date_year(payload.end_date, target_year=ref_year, allow_past_year=has_explicit_year)
+            dur_days = None
+            p_month = payload.period_month or ref_month
+            p_year = payload.period_year or ref_year
+
+        timeline_ack = f" for the {dur_days}-day sprint ({start_date_str} to {end_date_str})" if (start_date_str and end_date_str) else ""
+
         return ChatBriefResponse(
-            reply=f"I'm ready to help you plan {client.business_name}'s campaign! What is the primary objective or theme you have in mind for this sprint?",
-            suggested_period_month=payload.period_month or date.today().month,
-            suggested_period_year=payload.period_year or date.today().year,
+            reply=f"I'm ready to help you plan {client.business_name}'s campaign{timeline_ack}! What is the primary objective or theme you have in mind for this sprint?",
+            suggested_period_month=p_month,
+            suggested_period_year=p_year,
+            suggested_start_date=start_date_str,
+            suggested_end_date=end_date_str,
+            suggested_duration_days=dur_days,
             is_ready_to_generate=False,
         )
 
@@ -474,13 +619,21 @@ async def convert_campaign_to_tasks(
 
     for item in deliverables_data:
         dtype = (item.get("deliverable_type") or "reel").lower()
-        # Create Deliverable
+        planned_dt: date | None = None
+        if item.get("scheduled_date"):
+            try:
+                planned_dt = datetime.strptime(item["scheduled_date"], "%Y-%m-%d").date()
+            except Exception:
+                pass
+
+        # Create Deliverable with explicit planned_date
         deliv = Deliverable(
             id=uuid.uuid4(),
             campaign_id=campaign.id,
             title=item.get("title") or f"Day {item.get('day_number', 1)}: {item.get('hook', 'Deliverable')[:50]}",
             deliverable_type=dtype,
             platform=item.get("platform", "instagram"),
+            planned_date=planned_dt,
             status=DeliverableStatus.not_started,
         )
         db.add(deliv)
@@ -522,6 +675,7 @@ async def convert_campaign_to_tasks(
                 task_type=stage_type,
                 status=stage_status,
                 priority=stage_priority,
+                due_date=planned_dt,
             )
             db.add(t)
             tasks_created += 1

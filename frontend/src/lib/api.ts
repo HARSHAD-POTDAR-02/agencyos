@@ -131,6 +131,9 @@ export const clientApi = {
   update: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients/${clientId}`, { method: "PATCH", body: data, token }),
 
+  delete: (agencyId: string, clientId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/clients/${clientId}`, { method: "DELETE", token }),
+
   quota: (agencyId: string, clientId: string, month: number, year: number, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients/${clientId}/quota?period_month=${month}&period_year=${year}`, { token }),
 };
@@ -170,7 +173,13 @@ export const campaignApi = {
   chatBrief: (
     agencyId: string,
     clientId: string,
-    data: { messages: Array<{ role: string; content: string }>; period_month?: number; period_year?: number },
+    data: {
+      messages: Array<{ role: string; content: string }>;
+      period_month?: number;
+      period_year?: number;
+      start_date?: string;
+      end_date?: string;
+    },
     token: string
   ) =>
     apiFetch<{
@@ -179,6 +188,9 @@ export const campaignApi = {
       suggested_custom_brief?: string;
       suggested_period_month?: number;
       suggested_period_year?: number;
+      suggested_start_date?: string;
+      suggested_end_date?: string;
+      suggested_duration_days?: number;
       is_ready_to_generate: boolean;
     }>(`/agencies/${agencyId}/clients/${clientId}/campaigns/chat-brief`, {
       method: "POST",

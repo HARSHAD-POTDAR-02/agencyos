@@ -15,6 +15,9 @@ class CampaignBrief(BaseModel):
     agency_id: uuid.UUID
     period_month: int = Field(ge=1, le=12, description="Target campaign month (1-12)")
     period_year: int = Field(ge=2020, le=2100, description="Target campaign year")
+    start_date: date | None = Field(default=None, description="Campaign sprint start date")
+    end_date: date | None = Field(default=None, description="Campaign sprint end date")
+    duration_days: int | None = Field(default=None, ge=1, le=365, description="Length of campaign sprint in days")
     objective: str = Field(min_length=3, description="Core business or marketing objective")
     custom_brief: str | None = Field(default=None, description="Detailed brief or instructions")
     target_audience: list[str] = Field(default_factory=list, description="Target demographics/personas")

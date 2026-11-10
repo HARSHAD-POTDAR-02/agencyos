@@ -85,6 +85,9 @@ class QuotaSummaryOut(BaseModel):
 class GeneratePlanRequest(BaseModel):
     period_month: int = 11
     period_year: int = 2026
+    start_date: str | None = None  # Format: YYYY-MM-DD
+    end_date: str | None = None    # Format: YYYY-MM-DD
+    duration_days: int | None = None
     objective: str | None = None
     custom_brief: str | None = None
 
@@ -105,6 +108,8 @@ class ChatBriefRequest(BaseModel):
     messages: list[ChatMessage]
     period_month: int | None = None
     period_year: int | None = None
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 class ChatBriefResponse(BaseModel):
@@ -113,5 +118,8 @@ class ChatBriefResponse(BaseModel):
     suggested_custom_brief: str | None = None
     suggested_period_month: int | None = None
     suggested_period_year: int | None = None
+    suggested_start_date: str | None = None
+    suggested_end_date: str | None = None
+    suggested_duration_days: int | None = None
     is_ready_to_generate: bool = False
 

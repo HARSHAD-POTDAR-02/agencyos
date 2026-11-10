@@ -141,7 +141,8 @@ function DeliverableDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { activeAgencyId, token } = useAuth();
+  const { activeAgencyId, token, agencies } = useAuth();
+  const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
   const fromParam = searchParams.get("from");
   const tabParam = searchParams.get("tab");
@@ -190,11 +191,11 @@ function DeliverableDetailContent() {
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDeliverable = useCallback(async () => {
-    if (!activeAgencyId || !token || !id) return;
+    if (!effectiveAgencyId || !token || !id) return;
     try {
       setLoading(true);
       setError(null);
-      const res = (await deliverableApi.get(activeAgencyId, id, token)) as DeliverableDetail;
+      const res = (await deliverableApi.get(effectiveAgencyId, id, token)) as DeliverableDetail;
       // Sort versions ascending
       res.content_versions.sort((a, b) => a.version_number - b.version_number);
       setDeliverable(res);
@@ -207,7 +208,7 @@ function DeliverableDetailContent() {
       // If published with external Meta ID, auto-sync latest metrics in background
       if (res.status === "published" && res.external_post_id) {
         publishingApi
-          .syncMetrics(activeAgencyId, id, token)
+          .syncMetrics(effectiveAgencyId, id, token)
           .then((synced) => {
             setDeliverable((prev) =>
               prev
@@ -228,13 +229,13 @@ function DeliverableDetailContent() {
     } finally {
       setLoading(false);
     }
-  }, [activeAgencyId, token, id]);
+  }, [effectiveAgencyId, token, id]);
 
   const handleSyncLiveMetrics = async () => {
-    if (!activeAgencyId || !token || !id) return;
+    if (!effectiveAgencyId || !token || !id) return;
     try {
       setSyncingMetrics(true);
-      const synced = await publishingApi.syncMetrics(activeAgencyId, id, token);
+      const synced = await publishingApi.syncMetrics(effectiveAgencyId, id, token);
       if (synced.post_deleted) {
         alert("This post was deleted on Meta (Facebook/Instagram). It has been removed from Published Live and returned to Ready to Publish.");
         await fetchDeliverable();
@@ -260,13 +261,13 @@ function DeliverableDetailContent() {
   };
 
   const handleUnpublish = async () => {
-    if (!activeAgencyId || !token || !id || !deliverable) return;
+    if (!effectiveAgencyId || !token || !id || !deliverable) return;
     const ok = window.confirm(
       `Remove "${deliverable.title}" from Published Live? This deliverable will be moved back to Ready to Publish.`
     );
     if (!ok) return;
     try {
-      await publishingApi.unpublish(activeAgencyId, id, token);
+      await publishingApi.unpublish(effectiveAgencyId, id, token);
       await fetchDeliverable();
       window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
     } catch (err: unknown) {
@@ -305,7 +306,7 @@ function DeliverableDetailContent() {
 
   const handleUploadVersion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeAgencyId || !token || !id || !uploadFile) return;
+    if (!effectiveAgencyId || !token || !id || !uploadFile) return;
 
     try {
       setUploading(true);
@@ -319,7 +320,7 @@ function DeliverableDetailContent() {
       }
 
       const newVersion = (await deliverableApi.uploadVersion(
-        activeAgencyId,
+        effectiveAgencyId,
         id,
         formData,
         token
@@ -342,9 +343,9 @@ function DeliverableDetailContent() {
   };
 
   const handleUpdateStatus = async (newStatus: string) => {
-    if (!activeAgencyId || !token || !id) return;
+    if (!effectiveAgencyId || !token || !id) return;
     try {
-      await deliverableApi.updateStatus(activeAgencyId, id, newStatus, token);
+      await deliverableApi.updateStatus(effectiveAgencyId, id, newStatus, token);
       await fetchDeliverable();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to update status");
@@ -353,11 +354,11 @@ function DeliverableDetailContent() {
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeAgencyId || !token || !id || !newComment.trim()) return;
+    if (!effectiveAgencyId || !token || !id || !newComment.trim()) return;
     try {
       setSubmittingComment(true);
       await deliverableApi.postComment(
-        activeAgencyId,
+        effectiveAgencyId,
         id,
         {
           message: newComment.trim(),
@@ -377,11 +378,11 @@ function DeliverableDetailContent() {
   };
 
   const handleSubmitApproval = async (decision: "approved" | "changes_requested") => {
-    if (!activeAgencyId || !token || !currentPreviewVersion) return;
+    if (!effectiveAgencyId || !token || !currentPreviewVersion) return;
     try {
       setSubmittingReview(true);
       await approvalApi.submit(
-        activeAgencyId,
+        effectiveAgencyId,
         currentPreviewVersion.id,
         { decision, comment: reviewComment.trim() || undefined },
         token
@@ -390,7 +391,7 @@ function DeliverableDetailContent() {
       // Also update deliverable status
       const nextDeliverableStatus =
         decision === "approved" ? "approved" : "changes_requested";
-      await deliverableApi.updateStatus(activeAgencyId, id, nextDeliverableStatus, token);
+      await deliverableApi.updateStatus(effectiveAgencyId, id, nextDeliverableStatus, token);
 
       setReviewComment("");
       await fetchDeliverable();
@@ -402,10 +403,10 @@ function DeliverableDetailContent() {
   };
 
   const handleDeleteVersion = async (versionId: string) => {
-    if (!activeAgencyId || !token || !id) return;
+    if (!effectiveAgencyId || !token || !id) return;
     if (!confirm("Are you sure you want to delete this version?")) return;
     try {
-      await deliverableApi.deleteVersion(activeAgencyId, id, versionId, token);
+      await deliverableApi.deleteVersion(effectiveAgencyId, id, versionId, token);
       await fetchDeliverable();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to delete version");
@@ -422,11 +423,11 @@ function DeliverableDetailContent() {
 
   const handleSaveMetrics = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeAgencyId || !token || !id) return;
+    if (!effectiveAgencyId || !token || !id) return;
     try {
       setSavingMetrics(true);
       await publishingApi.updateMetrics(
-        activeAgencyId,
+        effectiveAgencyId,
         id,
         {
           views_count: Number(metricsViews),

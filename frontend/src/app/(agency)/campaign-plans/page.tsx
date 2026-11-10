@@ -66,6 +66,8 @@ interface CarouselSlideItem {
 
 interface DeliverableItem {
   day_number: number;
+  scheduled_date?: string;
+  date_label?: string;
   title?: string;
   deliverable_type: string;
   platform: string;
@@ -126,6 +128,9 @@ interface PerformanceSummary {
 
 interface AiPlanDraft {
   campaign_name: string;
+  start_date?: string;
+  end_date?: string;
+  duration_days?: number;
   objective?: string;
   brand_voice?: string;
   content_pillars?: string[];
@@ -446,6 +451,12 @@ function CampaignPlansContent() {
                     )}
                   </p>
                 )}
+                {draft?.start_date && draft?.end_date && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-violet-600 dark:text-violet-400 font-bold">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span>Sprint Timeline: {draft.start_date} to {draft.end_date} ({draft.duration_days || deliverables.length} Days)</span>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -662,8 +673,15 @@ function CampaignPlansContent() {
                     {/* Card Header */}
                     <div>
                       <div className="flex items-center justify-between gap-1 pb-2 border-b border-border/40">
-                        <span className="font-bold text-foreground text-xs">Day {item.day_number}</span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-foreground text-xs">Day {item.day_number}</span>
+                          {item.date_label && (
+                            <span className="text-[10px] text-violet-600 dark:text-violet-400 font-semibold truncate">
+                              {item.date_label}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
                               isReel
@@ -781,7 +799,7 @@ function CampaignPlansContent() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border/40">
                       <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
+                        <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
                           D{item.day_number}
                         </span>
                         <div>
@@ -793,7 +811,16 @@ function CampaignPlansContent() {
                               {item.platform} • {item.deliverable_type}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">Pillar: {item.pillar}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            {item.date_label && (
+                              <span className="font-semibold text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                                <CalendarDays className="w-3 h-3" />
+                                {item.date_label}
+                              </span>
+                            )}
+                            {item.date_label && <span>•</span>}
+                            <span>Pillar: {item.pillar}</span>
+                          </div>
                         </div>
                       </div>
 

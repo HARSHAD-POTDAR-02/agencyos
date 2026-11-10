@@ -395,50 +395,108 @@ async def sync_deliverable_metrics(
             "message": "Deliverable has no external Meta post ID to sync.",
         }
 
-    # Find client's social account token
+    # Find client's active social accounts (Instagram and/or Facebook)
     campaign_res = await db.execute(select(Campaign).where(Campaign.id == deliverable.campaign_id))
     campaign = campaign_res.scalar_one()
 
-    account_res = await db.execute(
+    accounts_res = await db.execute(
         select(ClientSocialAccount).where(
             ClientSocialAccount.client_id == campaign.client_id,
-            ClientSocialAccount.platform == (deliverable.publishing_platform or "instagram"),
             ClientSocialAccount.is_active.is_(True),
         )
     )
-    social_account = account_res.scalar_one_or_none()
-
-    if not social_account:
-        fallback_res = await db.execute(
-            select(ClientSocialAccount).where(
-                ClientSocialAccount.client_id == campaign.client_id,
-                ClientSocialAccount.is_active.is_(True),
-            )
-        )
-        social_account = fallback_res.scalar_one_or_none()
-
-    if not social_account:
+    all_accounts = list(accounts_res.scalars().all())
+    if not all_accounts:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No connected social account found to fetch live metrics from Meta.",
         )
 
-    # Sync from Meta
-    try:
-        if (deliverable.publishing_platform or "").lower() == "facebook":
-            synced = await sync_facebook_metrics(
-                access_token=social_account.access_token,
-                post_id=deliverable.external_post_id,
-                page_id=social_account.facebook_page_id,
-            )
+    ig_account = next((a for a in all_accounts if a.platform == "instagram"), None)
+    fb_account = next((a for a in all_accounts if a.platform == "facebook"), None)
+
+    # Parse external post ID(s)
+    raw_ext_id = (deliverable.external_post_id or "").strip()
+    ig_post_id: str | None = None
+    fb_post_id: str | None = None
+
+    if "ig:" in raw_ext_id or "fb:" in raw_ext_id:
+        for part in raw_ext_id.split(","):
+            part = part.strip()
+            if part.startswith("ig:"):
+                ig_post_id = part.replace("ig:", "").strip()
+            elif part.startswith("fb:"):
+                fb_post_id = part.replace("fb:", "").strip()
+    elif (deliverable.publishing_platform or "").lower() == "facebook":
+        fb_post_id = raw_ext_id
+    elif (deliverable.publishing_platform or "").lower() == "instagram":
+        ig_post_id = raw_ext_id
+    else:
+        # If unspecified platform, attempt matching against available connected accounts
+        if ig_account:
+            ig_post_id = raw_ext_id
+        elif fb_account:
+            fb_post_id = raw_ext_id
+
+    tot_likes = 0
+    tot_comments = 0
+    tot_views = 0
+    tot_shares = 0
+    synced_any = False
+    ig_deleted = False
+    fb_deleted = False
+
+    # Sync Instagram metrics if present
+    if ig_post_id:
+        if ig_account:
+            try:
+                ig_metrics = await sync_instagram_metrics(
+                    access_token=ig_account.access_token,
+                    media_id=ig_post_id,
+                )
+                tot_likes += ig_metrics.get("likes_count", 0)
+                tot_comments += ig_metrics.get("comments_count", 0)
+                tot_views += ig_metrics.get("views_count", 0)
+                tot_shares += ig_metrics.get("shares_count", 0)
+                synced_any = True
+            except MetaPostNotFoundError:
+                ig_deleted = True
+            except Exception as e:
+                logger.warning(f"Error fetching Instagram live metrics for {ig_post_id}: {e}")
         else:
-            synced = await sync_instagram_metrics(
-                access_token=social_account.access_token,
-                media_id=deliverable.external_post_id,
-            )
-    except MetaPostNotFoundError:
-        # Post was deleted on Meta (Facebook or Instagram)!
-        # Revert deliverable back to approved so it is removed from Published Live.
+            logger.warning(f"No active Instagram account connected to sync post {ig_post_id}")
+
+    # Sync Facebook metrics if present
+    if fb_post_id:
+        if fb_account:
+            try:
+                fb_metrics = await sync_facebook_metrics(
+                    access_token=fb_account.access_token,
+                    post_id=fb_post_id,
+                    page_id=fb_account.facebook_page_id,
+                )
+                tot_likes += fb_metrics.get("likes_count", 0)
+                tot_comments += fb_metrics.get("comments_count", 0)
+                tot_views += fb_metrics.get("views_count", 0)
+                tot_shares += fb_metrics.get("shares_count", 0)
+                synced_any = True
+            except MetaPostNotFoundError:
+                fb_deleted = True
+            except Exception as e:
+                logger.warning(f"Error fetching Facebook live metrics for {fb_post_id}: {e}")
+        else:
+            logger.warning(f"No active Facebook account connected to sync post {fb_post_id}")
+
+    # Determine if post was deleted on all target platforms
+    is_deleted = False
+    if ig_post_id and fb_post_id:
+        is_deleted = ig_deleted and fb_deleted
+    elif ig_post_id:
+        is_deleted = ig_deleted
+    elif fb_post_id:
+        is_deleted = fb_deleted
+
+    if is_deleted:
         deliverable.status = DeliverableStatus.approved
         deliverable.published_at = None
         deliverable.live_post_url = None
@@ -463,23 +521,36 @@ async def sync_deliverable_metrics(
             "message": "This post was deleted on Facebook/Instagram. It has been removed from Published Live and returned to Ready to Publish.",
         }
 
-    deliverable.likes_count = synced.get("likes_count", deliverable.likes_count or 0)
-    deliverable.comments_count = synced.get("comments_count", deliverable.comments_count or 0)
-    deliverable.views_count = synced.get("views_count", deliverable.views_count or 0)
-    deliverable.shares_count = synced.get("shares_count", deliverable.shares_count or 0)
+    if synced_any:
+        deliverable.likes_count = tot_likes
+        deliverable.comments_count = tot_comments
+        deliverable.views_count = tot_views
+        deliverable.shares_count = tot_shares
 
-    await db.commit()
-    await db.refresh(deliverable)
+        await db.commit()
+        await db.refresh(deliverable)
 
+        return {
+            "deliverable_id": deliverable.id,
+            "views_count": deliverable.views_count,
+            "likes_count": deliverable.likes_count,
+            "comments_count": deliverable.comments_count,
+            "shares_count": deliverable.shares_count,
+            "synced": True,
+            "post_deleted": False,
+            "message": f"Successfully synced live metrics from Meta: {deliverable.likes_count} likes, {deliverable.views_count} views, {deliverable.comments_count} comments.",
+        }
+
+    # If neither call succeeded (e.g. invalid test IDs or temporary network issues), return latest cached without error
     return {
         "deliverable_id": deliverable.id,
-        "views_count": deliverable.views_count,
-        "likes_count": deliverable.likes_count,
-        "comments_count": deliverable.comments_count,
-        "shares_count": deliverable.shares_count,
-        "synced": True,
+        "views_count": deliverable.views_count or 0,
+        "likes_count": deliverable.likes_count or 0,
+        "comments_count": deliverable.comments_count or 0,
+        "shares_count": deliverable.shares_count or 0,
+        "synced": False,
         "post_deleted": False,
-        "message": f"Successfully synced live metrics from Meta: {deliverable.likes_count} likes, {deliverable.views_count} views, {deliverable.comments_count} comments.",
+        "message": "Could not reach Meta Graph API right now; showing latest recorded numbers.",
     }
 
 

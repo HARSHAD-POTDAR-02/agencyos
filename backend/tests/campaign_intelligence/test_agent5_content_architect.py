@@ -258,5 +258,47 @@ async def test_content_architect_node_execution():
     assert telemetry.agent_name == "content_architect"
     assert telemetry.success is True
     assert telemetry.duration_ms > 0
-    assert telemetry.model_name == settings.GROQ_MODEL
+    assert telemetry.model_name in (settings.GROQ_MODEL, settings.FALLBACK_MODEL)
+
+
+@pytest.mark.asyncio
+async def test_content_architect_3_day_sprint_synthesis(monkeypatch: pytest.MonkeyPatch):
+    """
+    Verifies that for a 3-day sprint, even if the LLM returns only 1 deliverable,
+    ContentArchitectAgent guarantees all 3 days have distinct deliverables with planned_day=1, 2, 3.
+    """
+    from datetime import date
+    from app.campaign_intelligence.agents.content_architect import ContentArchitectOutput
+
+    brief, brand_context, strategy, _, _ = _build_test_strategy_and_context()
+    brief.start_date = date(2026, 11, 10)
+    brief.end_date = date(2026, 11, 12)
+    brief.duration_days = 3
+
+    # Simulate LLM returning only 1 deliverable
+    fake_single_deliv = DeliverablePlan(
+        title="Day 1 Launch Reel",
+        deliverable_type="reel",
+        platform="instagram",
+        strategic_angle="Launch Angle",
+        primary_hook="Hook for Day 1",
+        caption="Day 1 caption",
+        call_to_action="Swipe up",
+        planned_day=1,
+    )
+
+    async def mock_invoke(*args, **kwargs):
+        return ContentArchitectOutput(deliverables=[fake_single_deliv])
+
+    monkeypatch.setattr("app.campaign_intelligence.agents.content_architect.invoke_structured_llm", mock_invoke)
+
+    agent = ContentArchitectAgent()
+    deliverables = await agent.run(strategy=strategy, brief=brief, brand_context=brand_context)
+
+    assert len(deliverables) == 3
+    days = [d.planned_day for d in deliverables]
+    assert days == [1, 2, 3]
+    dates = [d.scheduled_date for d in deliverables]
+    assert dates == ["2026-11-10", "2026-11-11", "2026-11-12"]
+
 

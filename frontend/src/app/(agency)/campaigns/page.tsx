@@ -115,9 +115,31 @@ function CampaignStudioContent() {
   const [selectedClientId, setSelectedClientId] = useState(initialClientId);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  // Month & year for sprint
-  const [periodMonth] = useState<number>(new Date().getMonth() + 1);
-  const [periodYear] = useState<number>(new Date().getFullYear());
+  // Date range and timeline state
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [durationDays, setDurationDays] = useState<number | null>(null);
+  const [periodMonth, setPeriodMonth] = useState<number>(new Date().getMonth() + 1);
+  const [periodYear, setPeriodYear] = useState<number>(new Date().getFullYear());
+
+  const handleDateChange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+    if (start && end) {
+      const s = new Date(start);
+      const e = new Date(end);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e >= s) {
+        const days = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        setDurationDays(days);
+        setPeriodMonth(s.getMonth() + 1);
+        setPeriodYear(s.getFullYear());
+      } else {
+        setDurationDays(null);
+      }
+    } else {
+      setDurationDays(null);
+    }
+  };
 
   // Copilot Chat State
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
@@ -185,6 +207,11 @@ function CampaignStudioContent() {
             setSuggestedObjective(parsed.suggestedObjective || "");
             setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
             setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
+            if (parsed.startDate) setStartDate(parsed.startDate);
+            if (parsed.endDate) setEndDate(parsed.endDate);
+            if (parsed.durationDays) setDurationDays(parsed.durationDays);
+            if (parsed.periodMonth) setPeriodMonth(parsed.periodMonth);
+            if (parsed.periodYear) setPeriodYear(parsed.periodYear);
             return;
           }
         } catch (e) {
@@ -222,12 +249,17 @@ function CampaignStudioContent() {
           suggestedObjective,
           suggestedCustomBrief,
           isReadyToGenerate,
+          startDate,
+          endDate,
+          durationDays,
+          periodMonth,
+          periodYear,
         })
       );
     } catch (e) {
       console.error("Failed to save chat to storage", e);
     }
-  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, selectedClientId, getStorageKey]);
+  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, selectedClientId, getStorageKey]);
 
   // Reset conversation handler
   const handleResetChat = () => {
@@ -250,6 +282,9 @@ function CampaignStudioContent() {
     setSuggestedObjective("");
     setSuggestedCustomBrief("");
     setIsReadyToGenerate(false);
+    setStartDate("");
+    setEndDate("");
+    setDurationDays(null);
   };
 
   // Send message to Copilot Brief endpoint
@@ -285,6 +320,8 @@ function CampaignStudioContent() {
           messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
           period_month: periodMonth,
           period_year: periodYear,
+          start_date: startDate || undefined,
+          end_date: endDate || undefined,
         },
         token
       );
@@ -303,6 +340,21 @@ function CampaignStudioContent() {
       }
       if (response.suggested_custom_brief) {
         setSuggestedCustomBrief(response.suggested_custom_brief);
+      }
+      if (response.suggested_start_date) {
+        setStartDate(response.suggested_start_date);
+      }
+      if (response.suggested_end_date) {
+        setEndDate(response.suggested_end_date);
+      }
+      if (response.suggested_duration_days) {
+        setDurationDays(response.suggested_duration_days);
+      }
+      if (response.suggested_period_month) {
+        setPeriodMonth(response.suggested_period_month);
+      }
+      if (response.suggested_period_year) {
+        setPeriodYear(response.suggested_period_year);
       }
       if (response.is_ready_to_generate) {
         setIsReadyToGenerate(true);
@@ -400,6 +452,9 @@ function CampaignStudioContent() {
         {
           period_month: periodMonth,
           period_year: periodYear,
+          start_date: startDate || undefined,
+          end_date: endDate || undefined,
+          duration_days: durationDays || undefined,
           objective: suggestedObjective || undefined,
           custom_brief: suggestedCustomBrief || undefined,
         },
@@ -466,6 +521,7 @@ function CampaignStudioContent() {
   };
 
   const promptStarters = [
+    "Create a 4-day campaign sprint from 8th Nov to 11th Nov with daily content",
     "Plan a high-converting 30-day challenge sprint with viral Instagram Reels",
     "Design an educational carousel sprint focused on authority & debunking myths",
     "Craft a product launch campaign with customer transformations & exclusive offers",
@@ -530,6 +586,58 @@ function CampaignStudioContent() {
           </Link>
         </div>
       </header>
+
+      {/* Campaign Timeline & Date Range Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-card border border-border/80 shadow-2xs shrink-0 mt-2">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-violet-500" />
+          <span className="text-xs font-bold text-foreground">Campaign Timeline:</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
+            <span className="text-[11px] font-semibold text-muted-foreground">Start:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => handleDateChange(e.target.value, endDate)}
+              className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
+            <span className="text-[11px] font-semibold text-muted-foreground">End:</span>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => handleDateChange(startDate, e.target.value)}
+              className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+            />
+          </div>
+
+          {durationDays && durationDays > 0 ? (
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 flex items-center gap-1">
+              <span>{durationDays} Days Sprint</span>
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted-foreground italic hidden sm:inline">
+              Select date range or say &ldquo;from 8th Nov to 11th Nov&rdquo; in chat
+            </span>
+          )}
+
+          {startDate && endDate && (
+            <button
+              type="button"
+              onClick={() => handleDateChange("", "")}
+              title="Clear date range"
+              className="text-[11px] text-muted-foreground hover:text-foreground font-semibold underline cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Main Chat Stream */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
@@ -764,6 +872,7 @@ function CampaignStudioContent() {
             <div className="min-w-0">
               <p className="text-[11px] uppercase font-bold tracking-wider text-violet-600 dark:text-violet-400">
                 {isReadyToGenerate ? "Brief Ready for Autonomous Engine" : "Evolving Campaign Angle"}
+                {startDate && endDate && durationDays ? ` • ${durationDays} Days (${startDate} to ${endDate})` : ""}
               </p>
               <p className="text-xs text-foreground font-medium truncate">
                 {suggestedObjective || suggestedCustomBrief}

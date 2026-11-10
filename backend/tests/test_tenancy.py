@@ -96,3 +96,24 @@ async def test_client_not_found_in_wrong_agency(
     )
     # tenant_service raises 403 when agency_id mismatches
     assert response.status_code in (403, 404), response.text
+
+
+@pytest.mark.asyncio
+async def test_delete_client_success(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+):
+    """
+    Agency A can delete its own client, removing it from subsequent listings.
+    """
+    _, agency_a = agency_a_data
+    client = await _seed_client(agency_a.id, "Client To Delete")
+
+    # Delete client
+    del_res = await agency_a_client.delete(f"/agencies/{agency_a.id}/clients/{client.id}")
+    assert del_res.status_code == 204
+
+    # Verify 404
+    get_res = await agency_a_client.get(f"/agencies/{agency_a.id}/clients/{client.id}")
+    assert get_res.status_code == 404
+

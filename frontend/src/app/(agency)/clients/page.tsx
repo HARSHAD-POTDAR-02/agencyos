@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Sparkles,
   FileText,
-  CalendarCheck
+  CalendarCheck,
+  Trash2
 } from "lucide-react";
 
 interface Client {
@@ -43,6 +44,8 @@ export default function ClientsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [businessName, setBusinessName] = useState("");
@@ -122,12 +125,33 @@ export default function ClientsPage() {
     }
   };
 
+  const handleDeleteClient = async () => {
+    if (!clientToDelete || !effectiveAgencyId || !token) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await clientApi.delete(effectiveAgencyId, clientToDelete.id, token);
+      setClients((prev) => prev.filter((c) => c.id !== clientToDelete.id));
+      setClientToDelete(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to delete client");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const activeClientsCount = clients.filter((c) => c.status !== "offboarded").length;
+  const offboardedClientsCount = clients.filter((c) => c.status === "offboarded").length;
+
   const filteredClients = clients.filter((client) => {
     const matchesSearch = 
       client.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (client.industry && client.industry.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (client.location && client.location.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all"
+        ? client.status !== "offboarded"
+        : client.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -167,7 +191,7 @@ export default function ClientsPage() {
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Client Workspaces</h1>
             <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-              {clients.length} Retainers
+              {statusFilter === "offboarded" ? `${offboardedClientsCount} Offboarded` : `${activeClientsCount} Active Retainers`}
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -206,17 +230,24 @@ export default function ClientsPage() {
 
         {/* Status Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-bold">
-          {["all", "active", "onboarding", "paused"].map((tab) => (
+          {["all", "active", "onboarding", "paused", "offboarded"].map((tab) => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-xl capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-xl capitalize transition-all inline-flex items-center gap-1.5 ${
                 statusFilter === tab
                   ? "bg-purple-600 text-white shadow-2xs"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
               }`}
             >
-              {tab}
+              <span>{tab === "all" ? "All Active" : tab}</span>
+              {tab === "offboarded" && offboardedClientsCount > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  statusFilter === "offboarded" ? "bg-purple-800 text-purple-200" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {offboardedClientsCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -312,13 +343,22 @@ export default function ClientsPage() {
 
               {/* Action Buttons */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <Link
-                  href={`/campaigns?clientId=${client.id}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-800 py-1"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>AI Plan</span>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/campaigns?clientId=${client.id}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-800 py-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>AI Plan</span>
+                  </Link>
+                  <button
+                    onClick={() => setClientToDelete(client)}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title={`Delete ${client.business_name} permanently`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <Link
                   href={`/clients/${client.id}`}
                   className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-purple-700 py-1"
@@ -457,6 +497,39 @@ export default function ClientsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {clientToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-100 scale-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 ring-8 ring-rose-50/50">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-1">
+              Permanently Delete Client?
+            </h3>
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-slate-800">{clientToDelete.business_name}</span>? This will permanently remove all their brand profiles, campaigns, deliverables, reviewer portal accounts, and contracts.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                onClick={() => setClientToDelete(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteClient}
+                disabled={deleting}
+                className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Yes, Delete Client"}
+              </button>
+            </div>
           </div>
         </div>
       )}

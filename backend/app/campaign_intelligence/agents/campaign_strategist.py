@@ -137,6 +137,15 @@ class CampaignStrategistAgent:
 
         # 4. Construct Strategic Prompt
         target_platforms = brief.platforms or ["linkedin", "instagram"]
+        timeline_info = f"Month {brief.period_month}, {brief.period_year}"
+        if brief.start_date and brief.end_date:
+            timeline_info = f"Specific Sprint: {brief.start_date.strftime('%B %d, %Y')} to {brief.end_date.strftime('%B %d, %Y')} ({brief.duration_days} days total)"
+
+        if brief.start_date and brief.end_date and brief.duration_days:
+            pacing_instruction = f"Daily phasing across the {brief.duration_days}-day sprint ({brief.start_date} to {brief.end_date}) detailing sequential daily narrative progression from Day 1 to Day {brief.duration_days}."
+        else:
+            pacing_instruction = f"Weekly phasing across Month {brief.period_month} (e.g. Week 1: Problem Awareness, Week 2: Technical Breakdown, Week 3: Proof & Benchmark, Week 4: Conversion)."
+
         prompt = f"""You are the Campaign Strategist Agent for AgencyOS.
 Synthesize the internal brand reality, external market research, and historical campaign track record to formulate a comprehensive, high-converting social media campaign strategy.
 
@@ -154,7 +163,7 @@ Synthesize the internal brand reality, external market research, and historical 
 - Custom Brief Notes: {brief.custom_brief or 'None'}
 - Target Platforms: {', '.join(target_platforms)}
 - Target Formats: {', '.join(brief.deliverable_preferences) if brief.deliverable_preferences else 'Any'}
-- Campaign Period: Month {brief.period_month}, {brief.period_year}
+- Campaign Timeline: {timeline_info}
 - Budget: {f"${brief.budget:,.2f}" if brief.budget else "Unspecified / Retainer Scope"}
 
 ### YOUR TASK
@@ -170,7 +179,7 @@ Formulate a master Campaign Strategy strictly conforming to the JSON schema:
    - supporting_evidence: Specific facts, market trends, or historical data justifying this angle
 5. messaging_pillars: 3 foundational message pillars, each with a core message, clear call to action, and target emotions.
 6. platform_distribution_strategy: Explicit strategic role for each platform in {', '.join(target_platforms)} (e.g. LinkedIn for high-dwell technical teardowns; Instagram for visual proof).
-7. pacing_and_cadence: Weekly phasing across Month {brief.period_month} (e.g. Week 1: Problem Awareness, Week 2: Technical Breakdown, Week 3: Proof & Benchmark, Week 4: Conversion).
+7. pacing_and_cadence: {pacing_instruction}
 8. success_benchmarks: Target engagement rate, save rates, or lead indicators based on historical baselines or platform benchmarks.
 9. assumptions_and_risks: Key strategic risks (fatigue, competitor saturation) and mitigation steps.
 10. STRICT LANGUAGE REQUIREMENT: All strategy components, pillar descriptions, themes, and angles MUST be written exclusively in English.

@@ -2,16 +2,23 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member
+from app.models.approval import Approval
 from app.models.brand_profile import BrandProfile
+from app.models.campaign import Campaign
 from app.models.client import Client
+from app.models.comment import DeliverableComment
+from app.models.content_version import ContentVersion
 from app.models.contract import Contract, ScopeItem
+from app.models.deliverable import Deliverable
 from app.models.client_reviewer import ClientReviewer
+from app.models.client_social_account import ClientSocialAccount
+from app.models.task import Task
 from app.models.user import Membership, RoleEnum, User
 from app.core.security import hash_password
 from app.schemas.campaign import QuotaSummaryOut
@@ -95,6 +102,51 @@ async def update_client(
     await db.commit()
     await db.refresh(client)
     return ClientOut.model_validate(client)
+
+
+@router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_client(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Delete a client workspace and cascade delete all their campaigns, contracts, and deliverables."""
+    client = await get_client_for_agency(client_id, agency_id, db)
+
+    # 1. Cascade delete all deliverables, tasks, comments, approvals, content versions for client's campaigns
+    campaign_res = await db.execute(select(Campaign.id).where(Campaign.client_id == client_id))
+    campaign_ids = list(campaign_res.scalars().all())
+    if campaign_ids:
+        deliv_res = await db.execute(select(Deliverable.id).where(Deliverable.campaign_id.in_(campaign_ids)))
+        deliv_ids = list(deliv_res.scalars().all())
+        if deliv_ids:
+            cv_res = await db.execute(select(ContentVersion.id).where(ContentVersion.deliverable_id.in_(deliv_ids)))
+            cv_ids = list(cv_res.scalars().all())
+            if cv_ids:
+                await db.execute(delete(Approval).where(Approval.content_version_id.in_(cv_ids)))
+            await db.execute(delete(DeliverableComment).where(DeliverableComment.deliverable_id.in_(deliv_ids)))
+            await db.execute(delete(ContentVersion).where(ContentVersion.deliverable_id.in_(deliv_ids)))
+            await db.execute(delete(Task).where(Task.deliverable_id.in_(deliv_ids)))
+            await db.execute(delete(Deliverable).where(Deliverable.id.in_(deliv_ids)))
+        await db.execute(delete(Campaign).where(Campaign.id.in_(campaign_ids)))
+
+    # 2. Cascade delete contracts and scope items
+    contract_res = await db.execute(select(Contract.id).where(Contract.client_id == client_id))
+    contract_ids = list(contract_res.scalars().all())
+    if contract_ids:
+        await db.execute(delete(ScopeItem).where(ScopeItem.contract_id.in_(contract_ids)))
+        await db.execute(delete(Contract).where(Contract.id.in_(contract_ids)))
+
+    # 3. Cascade delete brand profiles, reviewers, social accounts
+    await db.execute(delete(BrandProfile).where(BrandProfile.client_id == client_id))
+    await db.execute(delete(ClientReviewer).where(ClientReviewer.client_id == client_id))
+    await db.execute(delete(ClientSocialAccount).where(ClientSocialAccount.client_id == client_id))
+
+    # 4. Delete the client
+    await db.delete(client)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{client_id}/quota", response_model=list[QuotaSummaryOut])

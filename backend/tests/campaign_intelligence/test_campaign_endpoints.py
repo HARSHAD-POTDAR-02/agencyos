@@ -350,3 +350,245 @@ async def test_chat_brief_endpoint(
     assert "reply" in data
     assert len(data["reply"]) > 0
 
+
+def test_extract_date_range_from_text_utility() -> None:
+    """Verifies that extract_date_range_from_text parses various date range formats reliably."""
+    from app.campaign_intelligence.tools.date_utils import extract_date_range_from_text
+
+    # User phrasing 1: "from 8th nov to 11th nov"
+    r1 = extract_date_range_from_text("i want to create a campign from 8th nov to 11th nov", 2026)
+    assert r1 is not None
+    assert r1.start_date.isoformat() == "2026-11-08"
+    assert r1.end_date.isoformat() == "2026-11-11"
+    assert r1.duration_days == 4
+    assert r1.period_month == 11
+    assert r1.period_year == 2026
+
+    # User phrasing 2: typo "8th nnov to 11th nov"
+    r2 = extract_date_range_from_text("from 8th nnov to 11th nov", 2026)
+    assert r2 is not None
+    assert r2.start_date.isoformat() == "2026-11-08"
+    assert r2.end_date.isoformat() == "2026-11-11"
+    assert r2.duration_days == 4
+
+    # User phrasing 3: "nov 8 to 11"
+    r3 = extract_date_range_from_text("create sprint for nov 8 to 11", 2026)
+    assert r3 is not None
+    assert r3.start_date.isoformat() == "2026-11-08"
+    assert r3.end_date.isoformat() == "2026-11-11"
+    assert r3.duration_days == 4
+
+    # User phrasing 4: "8th to 11th november"
+    r4 = extract_date_range_from_text("8th to 11th november 2026", 2026)
+    assert r4 is not None
+    assert r4.start_date.isoformat() == "2026-11-08"
+    assert r4.end_date.isoformat() == "2026-11-11"
+    assert r4.duration_days == 4
+
+
+@pytest.mark.asyncio
+async def test_chat_brief_date_range_recognition(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+) -> None:
+    """Verifies that the chat-brief copilot recognizes date ranges like 'from 8th nov to 11th nov'."""
+    _, agency_a = agency_a_data
+
+    create_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients",
+        json={"business_name": "Date Sprint Client", "industry": "Retail"},
+    )
+    client_id = create_res.json()["id"]
+
+    chat_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients/{client_id}/campaigns/chat-brief",
+        json={
+            "messages": [
+                {"role": "user", "content": "I want to create a campaign from 8th nov to 11th nov for Diwali deals"}
+            ],
+            "period_month": 11,
+            "period_year": 2026,
+        },
+    )
+    assert chat_res.status_code == 200
+    data = chat_res.json()
+    assert data["suggested_start_date"] == "2026-11-08"
+    assert data["suggested_end_date"] == "2026-11-11"
+    assert data["suggested_duration_days"] == 4
+
+
+@pytest.mark.asyncio
+async def test_chat_brief_llm_2024_year_sanitization(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verifies that if the LLM defaults to 2024 (knowledge cutoff), the endpoint sanitizes to 2026."""
+    from app.routers.campaigns import ChatBriefLLMOutput
+
+    fake_llm_output = ChatBriefLLMOutput(
+        reply="Great! We will run a 4-day sprint from November 8, 2024 to November 11, 2024.",
+        suggested_objective="Drive holiday sales",
+        suggested_custom_brief="Target young professionals",
+        suggested_period_month=11,
+        suggested_period_year=2024,
+        suggested_start_date="2024-11-08",
+        suggested_end_date="2024-11-11",
+        suggested_duration_days=4,
+        is_ready_to_generate=False,
+    )
+
+    async def mock_invoke(*args, **kwargs):
+        return fake_llm_output
+
+    monkeypatch.setattr("app.routers.campaigns.invoke_structured_llm", mock_invoke)
+
+    _, agency_a = agency_a_data
+    create_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients",
+        json={"business_name": "Sanitization Client", "industry": "SaaS"},
+    )
+    client_id = create_res.json()["id"]
+
+    chat_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients/{client_id}/campaigns/chat-brief",
+        json={
+            "messages": [
+                {"role": "user", "content": "I want to create a campaign from 8th nov to 11th nov"}
+            ],
+            "period_month": 11,
+            "period_year": 2026,
+        },
+    )
+    assert chat_res.status_code == 200
+    data = chat_res.json()
+    assert data["suggested_start_date"] == "2026-11-08"
+    assert data["suggested_end_date"] == "2026-11-11"
+    assert data["suggested_period_year"] == 2026
+    assert "2024" not in data["reply"]
+    assert "2026" in data["reply"]
+
+
+@pytest.mark.asyncio
+async def test_generate_plan_multi_day_sprint_distribution(
+    agency_a_client: AsyncClient,
+    agency_a_data: tuple[User, Agency],
+) -> None:
+    """
+    Verifies that when generating a campaign sprint from 8th Nov to 11th Nov (4 days),
+    deliverables are created across Day 1, Day 2, Day 3, and Day 4 with scheduled dates,
+    and converting to tasks assigns planned_date and due_date accurately.
+    """
+    _, agency_a = agency_a_data
+
+    create_res = await agency_a_client.post(
+        f"/agencies/{agency_a.id}/clients",
+        json={"business_name": "Multi-Day Restaurant Client", "industry": "Food & Beverage"},
+    )
+    client_id = create_res.json()["id"]
+
+    # Mock the pipeline so we don't hit external LLM rate limits in CI
+    mock_plans = [
+        DeliverablePlan(
+            deliverable_id=uuid.uuid4(),
+            title="Day 1 Launch Reel",
+            deliverable_type="reel",
+            platform="instagram",
+            planned_day=1,
+            scheduled_date="2026-11-08",
+            primary_hook="Secret spice recipe revealed",
+            caption="Day 1 special deal",
+        ),
+        DeliverablePlan(
+            deliverable_id=uuid.uuid4(),
+            title="Day 2 Behind The Scenes Reel",
+            deliverable_type="reel",
+            platform="instagram",
+            planned_day=2,
+            scheduled_date="2026-11-09",
+            primary_hook="How we make 500 thalis every day",
+            caption="Day 2 behind the scenes",
+        ),
+        DeliverablePlan(
+            deliverable_id=uuid.uuid4(),
+            title="Day 3 Carousel",
+            deliverable_type="carousel",
+            platform="instagram",
+            planned_day=3,
+            scheduled_date="2026-11-10",
+            primary_hook="Top 5 dishes you must try",
+            caption="Day 3 carousel guide",
+        ),
+        DeliverablePlan(
+            deliverable_id=uuid.uuid4(),
+            title="Day 4 Offer Close Reel",
+            deliverable_type="reel",
+            platform="instagram",
+            planned_day=4,
+            scheduled_date="2026-11-11",
+            primary_hook="Last chance to claim the weekend offer",
+            caption="Day 4 offer closing tonight",
+        ),
+    ]
+
+    with patch(
+        "app.routers.campaigns.run_campaign_pipeline",
+        new=AsyncMock(return_value={
+            "strategy": CampaignStrategy(
+                campaign_theme="Diwali Special Weekend",
+                primary_objective="Drive weekend footfall",
+                target_audience_definition="Foodies in Pune",
+                pacing_and_cadence="Daily sequential campaign across 4 days from Nov 8 to Nov 11",
+            ),
+            "deliverable_plans": mock_plans,
+            "quality_evaluation": None,
+            "brand_context": None,
+            "errors": [],
+        }),
+    ):
+        gen_res = await agency_a_client.post(
+            f"/agencies/{agency_a.id}/clients/{client_id}/campaigns/generate-plan",
+            json={
+                "start_date": "2026-11-08",
+                "end_date": "2026-11-11",
+                "duration_days": 4,
+                "objective": "Diwali Weekend Feast Footfall",
+                "custom_brief": "Create a 4-day sprint from 8th nov to 11th nov",
+            },
+        )
+        assert gen_res.status_code == 201
+        camp_data = gen_res.json()
+        campaign_id = camp_data["id"]
+        draft = camp_data["ai_plan_draft"]
+
+        assert draft["start_date"] == "2026-11-08"
+        assert draft["end_date"] == "2026-11-11"
+        assert draft["duration_days"] == 4
+
+        delivs = draft["deliverables"]
+        assert len(delivs) == 4
+        # Verify Day 1 through Day 4 are explicitly distinct
+        assert [d["day_number"] for d in delivs] == [1, 2, 3, 4]
+        assert delivs[0]["scheduled_date"] == "2026-11-08"
+        assert delivs[1]["scheduled_date"] == "2026-11-09"
+        assert delivs[2]["scheduled_date"] == "2026-11-10"
+        assert delivs[3]["scheduled_date"] == "2026-11-11"
+
+        # Convert to tasks and verify planned_date and task due_date
+        conv_res = await agency_a_client.post(
+            f"/agencies/{agency_a.id}/campaigns/{campaign_id}/convert-to-tasks"
+        )
+        assert conv_res.status_code == 200
+        assert conv_res.json()["deliverables_created"] == 4
+
+    # Query tasks list for the agency to verify due_date was populated on created tasks
+    tasks_res = await agency_a_client.get(f"/agencies/{agency_a.id}/tasks")
+    assert tasks_res.status_code == 200
+    tasks = tasks_res.json()
+    assert len(tasks) > 0
+    due_dates = [t["due_date"] for t in tasks if t.get("due_date")]
+    assert "2026-11-08" in due_dates
+    assert "2026-11-09" in due_dates
+    assert "2026-11-10" in due_dates
+    assert "2026-11-11" in due_dates
+
