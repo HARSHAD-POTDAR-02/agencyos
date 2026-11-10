@@ -60,10 +60,35 @@ class GroqKeyPool:
 key_pool = GroqKeyPool()
 
 
+def _repair_truncated_json(raw: str) -> str:
+    """Repair truncated JSON strings caused by token cutoff."""
+    text = raw.strip()
+    in_string = False
+    escape = False
+    for char in text:
+        if char == "\\" and not escape:
+            escape = True
+            continue
+        if char == '"' and not escape:
+            in_string = not in_string
+        escape = False
+
+    repaired = text
+    if in_string:
+        repaired += '"'
+
+    open_braces = repaired.count("{") - repaired.count("}")
+    open_brackets = repaired.count("[") - repaired.count("]")
+
+    repaired += "]" * max(0, open_brackets)
+    repaired += "}" * max(0, open_braces)
+    return repaired
+
+
 def extract_json_from_llm(raw_text: str) -> dict[str, Any] | list[Any]:
     """
     Resilient JSON extractor that parses JSON from LLM responses even if
-    wrapped in markdown code blocks, conversational preambles, or postscripts.
+    wrapped in markdown code blocks, conversational preambles, or truncated.
     """
     text = raw_text.strip()
 
@@ -74,7 +99,10 @@ def extract_json_from_llm(raw_text: str) -> dict[str, Any] | list[Any]:
         try:
             return json.loads(extracted)
         except json.JSONDecodeError:
-            pass  # Fall through to brace matching
+            try:
+                return json.loads(_repair_truncated_json(extracted))
+            except json.JSONDecodeError:
+                pass  # Fall through to brace matching
 
     # 2. Match the outermost JSON object { ... } or array [ ... ]
     first_brace = text.find("{")
@@ -98,10 +126,19 @@ def extract_json_from_llm(raw_text: str) -> dict[str, Any] | list[Any]:
             return json.loads(candidate)
         except json.JSONDecodeError:
             cleaned = re.sub(r",\s*([}\]])", r"\1", candidate)
-            return json.loads(cleaned)
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError:
+                try:
+                    return json.loads(_repair_truncated_json(candidate))
+                except json.JSONDecodeError:
+                    pass
 
-    # 3. Direct parse attempt
-    return json.loads(text)
+    # 3. Direct parse attempt with repair
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return json.loads(_repair_truncated_json(text))
 
 
 def _is_transient_error(exc: Exception) -> bool:

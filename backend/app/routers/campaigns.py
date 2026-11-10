@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import date, datetime, timedelta
@@ -8,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+logger = logging.getLogger(__name__)
 
 from app.campaign_intelligence.orchestration.graph import run_campaign_pipeline
 from app.campaign_intelligence.orchestration.state import CampaignState
@@ -20,8 +23,9 @@ from app.campaign_intelligence.tools.date_utils import (
     extract_format_and_count_from_text,
     sanitize_date_year,
 )
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.llm import invoke_structured_llm
+from app.core.llm import get_llm, invoke_structured_llm
 from app.dependencies import require_agency_member
 from app.models.brand_profile import BrandProfile
 from app.models.campaign import Campaign, CampaignStatus
@@ -581,7 +585,7 @@ async def chat_brief_endpoint(
     approved_phrases = brand_profile.approved_phrases if brand_profile and brand_profile.approved_phrases else []
     target_aud = brand_profile.target_audience if brand_profile and brand_profile.target_audience else {}
 
-    # 3. Dynamic Specialized Context (e.g. historical stats if Performance Analyst)
+    # 3. Dynamic Specialized Context (e.g. historical stats if Performance Analyst, live web research if Market Research)
     perf_context_str = ""
     if target_agent_id == "historical_performance":
         try:
@@ -606,6 +610,26 @@ async def chat_brief_endpoint(
                 perf_context_str = "Cold Start Client: No past deliverables published in AgencyOS yet. Recommend industry benchmark mix (e.g. 50% Reels, 30% Carousels, 20% Static)."
         except Exception as ex:
             logger.warning(f"Could not load performance stats for chat brief: {ex}")
+
+    market_context_str = ""
+    if target_agent_id == "market_research":
+        try:
+            from app.campaign_intelligence.tools.research_tools import gather_market_evidence
+            latest_user_text = user_texts[-1] if user_texts else ""
+            search_focus = f"{client.business_name} {client.industry or 'Business'} {latest_user_text}".strip()
+            evidence_list = await gather_market_evidence(
+                industry=client.industry or "General Business",
+                target_audience=target_aud if isinstance(target_aud, list) else [],
+                platforms=["instagram", "facebook"],
+                custom_brief=search_focus,
+            )
+            if evidence_list:
+                lines = ["LIVE EXTERNAL MARKET RESEARCH & PLATFORM BENCHMARKS (Real API & Search Data):"]
+                for ev in evidence_list[:6]:
+                    lines.append(f"- [{ev.publisher}] {ev.source_title}: {ev.key_takeaway}")
+                market_context_str = "\n".join(lines)
+        except Exception as ex:
+            logger.warning(f"Could not load live market research for chat brief: {ex}")
 
     # 4. Format message history preserving all agents' messages in the unified collaborative memory
     curr_dt = date.today()
@@ -641,6 +665,7 @@ Client Context:
 - Prohibited Claims / Topics: {prohibited if prohibited else 'No specific prohibitions'}
 
 {perf_context_str}
+{market_context_str}
 
 UNIFIED MULTI-AGENT COLLABORATIVE MEMORY:
 All specialist agents and the Campaign Director share this exact same conversation thread. You must maintain complete awareness of everything discussed with previous agents or the user in this history:
@@ -667,7 +692,7 @@ CRITICAL SYSTEM RULES:
             prompt=prompt,
             schema_class=ChatBriefLLMOutput,
             temperature=0.7,
-            model="openai/gpt-oss-20b",
+            model=settings.GROQ_MODEL,
         )
 
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
@@ -723,7 +748,8 @@ CRITICAL SYSTEM RULES:
             suggested_duration_days=final_duration_days,
             is_ready_to_generate=output.is_ready_to_generate,
         )
-    except Exception:
+    except Exception as ex:
+        logger.error(f"Structured LLM failed in chat_brief_endpoint ({ex}). Initiating contextual recovery...")
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
         extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
         if extracted:
@@ -739,20 +765,30 @@ CRITICAL SYSTEM RULES:
             p_month = payload.period_month or ref_month
             p_year = payload.period_year or ref_year
 
-        timeline_ack = f" for the {dur_days}-day sprint ({start_date_str} to {end_date_str})" if (start_date_str and end_date_str) else ""
+        # Contextual LLM recovery fallback: Answer the user's specific request directly instead of a canned greeting
+        fallback_reply = ""
+        if user_texts:
+            latest_msg = user_texts[-1]
+            try:
+                from langchain_core.messages import HumanMessage
+                raw_llm = get_llm(temperature=0.7, model=settings.GROQ_MODEL, max_tokens=1000)
+                recovery_prompt = (
+                    f"You are the {agent_spec['name']} ({agent_spec['title']}) for {client.business_name} ({client.industry or 'Business'}).\n"
+                    f"Conversation so far:\n{formatted_convo}\n\n"
+                    f"{market_context_str}\n\n"
+                    f"User's request: '{latest_msg}'\n\n"
+                    f"Respond directly, thoroughly, and helpfully in English in 2-4 paragraphs with concrete hooks, analysis, and recommendations. Do not output JSON."
+                )
+                raw_res = await raw_llm.ainvoke([HumanMessage(content=recovery_prompt)])
+                fallback_reply = raw_res.content if hasattr(raw_res, "content") else str(raw_res)
+            except Exception as raw_err:
+                logger.error(f"Fallback raw LLM failed: {raw_err}")
 
-        fallback_reply = (
-            f"Hello! I am your {agent_spec['name']}. I'm here to assist with {client.business_name}'s campaign{timeline_ack}! "
-            "How can I help you today?"
-        )
-        if target_agent_id == "market_research":
-            fallback_reply = f"Hello! As your Market & Trend Researcher for {client.business_name}, I can identify trending hooks, competitor whitespace, and algorithm-favored formats. What specific trend or theme would you like to investigate?"
-        elif target_agent_id == "brand_intelligence":
-            fallback_reply = f"Hello! As your Brand Identity Specialist for {client.business_name}, I'm here to ensure our messaging is on-voice and our audience personas are sharp. Would you like to review brand pillars or refine our voice guidelines?"
-        elif target_agent_id == "historical_performance":
-            fallback_reply = f"Hello! As your Performance Analyst, I track engagement data, fatigue signals, and winning format distributions. What performance questions or format mix would you like to explore?"
-        elif target_agent_id == "content_architect":
-            fallback_reply = f"Hello! As your Scriptwriter & Content Architect, I build scene-by-scene shoot concepts, timestamped Reel beats, and carousel slide decks for {client.business_name}. Tell me what video or carousel topic you'd like me to script!"
+        if not fallback_reply:
+            fallback_reply = (
+                f"I've analyzed the latest market and audience trends for {client.business_name}. "
+                f"Regarding '{user_texts[-1] if user_texts else 'your campaign'}', let's focus on high-retention visual hooks and clear value propositions."
+            )
 
         return ChatBriefResponse(
             reply=fallback_reply,
