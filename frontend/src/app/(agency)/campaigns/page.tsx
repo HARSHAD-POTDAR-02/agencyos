@@ -114,9 +114,9 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
     description: "Guides end-to-end sprint discovery, timeline planning, deliverable counts, and sprint generation.",
     starters: [
       "Create a 4-day campaign sprint from 8th Nov to 11th Nov with daily content",
-      "Plan a high-converting 30-day challenge sprint with viral Instagram Reels",
+      "Plan a 30-day challenge sprint with viral Instagram Reels",
       "Design an educational carousel sprint focused on authority & debunking myths",
-      "Craft a product launch campaign with customer transformations & exclusive offers",
+      "Craft a product launch campaign with exclusive offers",
     ],
   },
   {
@@ -153,7 +153,7 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
     starters: [
       "Audit our brand voice and suggest 3 high-authority content pillars",
       "Craft a detailed Ideal Customer Persona (ICP) with pain points & desires",
-      "How do we frame our verified offer without sounding overly salesy?",
+      "How do we frame our verified offer without sounding salesy?",
       "Review our prohibited claims to ensure strict brand compliance",
     ],
   },
@@ -333,7 +333,7 @@ function CampaignStudioContent() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isChatLoading, isPipelineRunning, chatFilter]);
 
-  // Always keep focus on chat input so cursor never disappears after typing or pressing Enter
+  // Always keep focus on chat input
   useEffect(() => {
     if (!isPipelineRunning) {
       chatInputRef.current?.focus();
@@ -493,13 +493,11 @@ function CampaignStudioContent() {
     if (!textOverride) setChatInput("");
     setIsChatLoading(true);
 
-    // Keep cursor active in chatbox immediately
     setTimeout(() => {
       chatInputRef.current?.focus();
     }, 0);
 
     try {
-      // Send entire conversation history for unified multi-agent collaborative memory
       const response = await campaignApi.chatBrief(
         effectiveAgencyId,
         selectedClientId,
@@ -589,7 +587,6 @@ function CampaignStudioContent() {
     setIsPipelineRunning(true);
     const pipelineMsgId = `pipeline-${Date.now()}`;
 
-    // Append inline agent activity message in chat stream
     const pipelineMsg: ChatMsg = {
       id: pipelineMsgId,
       role: "assistant",
@@ -608,7 +605,6 @@ function CampaignStudioContent() {
 
     setChatMessages((prev) => [...prev, pipelineMsg]);
 
-    // Timer to step through agents visually
     const stepInterval = setInterval(() => {
       setChatMessages((prev) =>
         prev.map((m) => {
@@ -677,7 +673,6 @@ function CampaignStudioContent() {
           : 95;
       const theme = draft.strategy?.campaign_theme || draft.campaign_name;
 
-      // Update pipeline message to completed
       setChatMessages((prev) =>
         prev.map((m) => {
           if (m.id === pipelineMsgId) {
@@ -732,245 +727,177 @@ function CampaignStudioContent() {
   // Messages to display according to the selected view filter
   const displayedMessages = chatMessages.filter((msg) => {
     if (chatFilter === "all") return true;
-    // Show messages tagged with the active agent, user messages sent to this agent, or system pipeline cards
     if (msg.agentPipeline) return true;
     return msg.agent_id === currentAgentId || !msg.agent_id;
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto px-4 py-3">
-      {/* Studio Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-border/40 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-primary flex items-center justify-center text-white shadow-md shadow-violet-500/20">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Campaign Studio</h1>
-              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                AI Co-Director & Multi-Agent Network
-              </span>
+    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto px-4 py-2">
+      {/* ── 1. Consolidated Sleek Header (Single row: Title + Client + Mode + Utilities) ── */}
+      <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-border/40 shrink-0">
+        {/* Left: Studio Title & Client Dropdown */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-2xs">
+              <Sparkles className="w-4 h-4" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Universal Shared Memory • Seamless Handoff Between Specialist Deep-Dives and Sprint Generation
-            </p>
+            <span className="text-sm font-bold tracking-tight text-foreground hidden sm:inline">
+              Campaign Studio
+            </span>
           </div>
-        </div>
 
-        {/* Client Selector & Navigation to Plans */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
-            <Building2 className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
+            <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="bg-transparent text-sm font-medium text-foreground focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer max-w-[150px] sm:max-w-[210px] truncate"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id} className="bg-background text-foreground">
-                  {c.business_name} {c.industry ? `(${c.industry})` : ""}
+                  {c.business_name}
                 </option>
               ))}
             </select>
           </div>
+        </div>
 
-          {/* New Chat / Reset History Button */}
+        {/* Center: Clean Segmented Mode Toggle */}
+        <div className="flex items-center p-0.5 bg-muted/60 dark:bg-muted/30 rounded-lg border border-border shadow-2xs">
           <button
-            onClick={handleResetChat}
-            title="Start a fresh campaign conversation"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-muted/60 hover:bg-muted border border-border text-foreground transition-colors cursor-pointer"
+            type="button"
+            onClick={() => setStudioMode("workflow")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              studioMode === "workflow"
+                ? "bg-violet-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>New Brief</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Workflow</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStudioMode("specialists")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              studioMode === "specialists"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>Specialists</span>
+          </button>
+        </div>
+
+        {/* Right: Quick Tools (Filter, Reset, Plans) */}
+        <div className="flex items-center gap-2">
+          {/* Stream Filter Toggle */}
+          <button
+            type="button"
+            onClick={() => setChatFilter((prev) => (prev === "all" ? "active" : "all"))}
+            title={chatFilter === "all" ? "Filter to active agent only" : "Show all agents"}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg bg-muted/50 hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <MessagesSquare className="w-3 h-3 text-primary" />
+            <span className="font-medium text-[11px]">
+              {chatFilter === "all" ? `All (${chatMessages.length})` : currentAgent.shortName}
+            </span>
           </button>
 
+          {/* Reset Conversation */}
+          <button
+            onClick={handleResetChat}
+            title="Start fresh conversation"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[11px]">Reset</span>
+          </button>
+
+          {/* Campaign Plans Dashboard */}
           <Link
             href={selectedClientId ? `/campaign-plans?clientId=${selectedClientId}` : "/campaign-plans"}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border transition-colors shadow-sm"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border transition-colors shadow-2xs"
           >
             <CalendarDays className="w-3.5 h-3.5 text-primary" />
-            <span>Campaign Plans</span>
+            <span className="hidden md:inline text-[11px]">Plans</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground" />
           </Link>
         </div>
       </header>
 
-      {/* Main Mode Toggle Bar: Campaign Workflow vs Specialist Agents */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 shrink-0">
-        <div className="flex items-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/30 rounded-xl border border-border shadow-2xs">
-          <button
-            type="button"
-            onClick={() => setStudioMode("workflow")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              studioMode === "workflow"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-500/20"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Campaign Workflow</span>
-            <span className="text-[10px] opacity-80 font-normal hidden sm:inline">(Co-Director Sprint)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setStudioMode("specialists")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              studioMode === "specialists"
-                ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Bot className="w-3.5 h-3.5" />
-            <span>Specialist Agents</span>
-            <span className="text-[10px] opacity-80 font-normal hidden sm:inline">(Individual Deep-Dive)</span>
-          </button>
+      {/* ── 2. Slim Context / Agent Strip (Only ~32px, no giant banners pushing the screen) ── */}
+      {studioMode === "specialists" ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1.5 border-b border-border/30 shrink-0 scrollbar-none">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground shrink-0 mr-1 flex items-center gap-1">
+            <Compass className="w-3 h-3 text-primary" />
+            <span className="hidden sm:inline">Specialist:</span>
+          </span>
+          {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => {
+            const Icon = agent.icon;
+            const isSelected = activeSpecialistId === agent.id;
+            return (
+              <button
+                key={agent.id}
+                type="button"
+                onClick={() => setActiveSpecialistId(agent.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer border ${
+                  isSelected
+                    ? `${agent.badgeBg} ${agent.badgeText} ${agent.borderColor} shadow-2xs ring-1 ring-primary/20 font-bold`
+                    : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{agent.shortName}</span>
+              </button>
+            );
+          })}
         </div>
-
-        {/* Stream Filter Toggle: Unified Memory vs Active Specialist */}
-        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border text-xs">
-          <MessagesSquare className="w-3.5 h-3.5 text-muted-foreground ml-1.5 mr-0.5" />
-          <button
-            type="button"
-            onClick={() => setChatFilter("all")}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-              chatFilter === "all"
-                ? "bg-background text-foreground font-bold shadow-2xs border border-border/80"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Unified Stream ({chatMessages.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setChatFilter("active")}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-              chatFilter === "active"
-                ? "bg-background text-foreground font-bold shadow-2xs border border-border/80"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Focus: {currentAgent.shortName}
-          </button>
-        </div>
-      </div>
-
-      {/* Specialist Agent Selector Carousel / Chips (When in Specialist Mode) */}
-      {studioMode === "specialists" && (
-        <div className="mt-2.5 p-2 rounded-xl bg-card border border-border shadow-2xs shrink-0">
-          <div className="flex items-center justify-between gap-2 mb-2 px-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Compass className="w-3.5 h-3.5 text-primary" />
-              <span>Choose Specialist to Brainstorm With:</span>
-            </span>
-            <span className="text-[11px] text-muted-foreground italic hidden sm:inline">
-              All messages & insights are retained in your campaign brief
-            </span>
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-            {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => {
-              const Icon = agent.icon;
-              const isSelected = activeSpecialistId === agent.id;
-              return (
-                <button
-                  key={agent.id}
-                  type="button"
-                  onClick={() => setActiveSpecialistId(agent.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all cursor-pointer border ${
-                    isSelected
-                      ? `${agent.badgeBg} ${agent.badgeText} ${agent.borderColor} shadow-xs ring-1 ring-primary/20 font-bold`
-                      : "bg-muted/40 hover:bg-muted text-foreground border-border"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <div className="text-left">
-                    <div className="leading-tight">{agent.name}</div>
-                    <div className="text-[10px] text-muted-foreground font-normal">{agent.roleTitle}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Active Specialist Banner */}
-      {studioMode === "specialists" && (
-        <div
-          className={`mt-2 p-2.5 rounded-xl border ${currentAgent.badgeBg} ${currentAgent.borderColor} bg-card/70 flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 text-xs shadow-2xs`}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${currentAgent.avatarBg}`}>
-              <currentAgent.icon className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-foreground text-sm">{currentAgent.name}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${currentAgent.badgeBg} ${currentAgent.badgeText} ${currentAgent.borderColor}`}>
-                  {currentAgent.roleTitle}
-                </span>
-              </div>
-              <p className="text-muted-foreground text-[11px] truncate mt-0.5">{currentAgent.description}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Campaign Timeline & Date Range Bar (Always visible in Workflow mode, or toggleable) */}
-      {studioMode === "workflow" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-card border border-border/80 shadow-2xs shrink-0 mt-2">
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 border-b border-border/30 shrink-0 text-xs">
           <div className="flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-violet-500" />
-            <span className="text-xs font-bold text-foreground">Sprint Timeline:</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
-              <span className="text-[11px] font-semibold text-muted-foreground">Start:</span>
+            <CalendarDays className="w-3.5 h-3.5 text-violet-500" />
+            <span className="text-[11px] font-semibold text-muted-foreground">Sprint Timeline:</span>
+            <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md border border-border/60">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => handleDateChange(e.target.value, endDate)}
-                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+                className="bg-transparent text-[11px] font-medium text-foreground focus:outline-none cursor-pointer"
               />
-            </div>
-
-            <div className="flex items-center gap-1.5 bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
-              <span className="text-[11px] font-semibold text-muted-foreground">End:</span>
+              <span className="text-muted-foreground text-[10px]">→</span>
               <input
                 type="date"
                 value={endDate}
                 min={startDate || undefined}
                 onChange={(e) => handleDateChange(startDate, e.target.value)}
-                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+                className="bg-transparent text-[11px] font-medium text-foreground focus:outline-none cursor-pointer"
               />
             </div>
-
             {durationDays && durationDays > 0 ? (
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 flex items-center gap-1">
-                <span>{durationDays} Days Sprint</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                {durationDays} Days
               </span>
             ) : (
-              <span className="text-[11px] text-muted-foreground italic hidden sm:inline">
-                Select dates or state in chat (e.g. &ldquo;from 8th Nov to 11th Nov&rdquo;)
+              <span className="text-[10px] text-muted-foreground italic hidden sm:inline">
+                or state in chat (e.g. &ldquo;from 8th Nov to 11th Nov&rdquo;)
               </span>
             )}
-
-            {startDate && endDate && (
-              <button
-                type="button"
-                onClick={() => handleDateChange("", "")}
-                title="Clear date range"
-                className="text-[11px] text-muted-foreground hover:text-foreground font-semibold underline cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
           </div>
+          {startDate && endDate && (
+            <button
+              type="button"
+              onClick={() => handleDateChange("", "")}
+              className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
         </div>
       )}
 
-      {/* Main Chat Stream */}
+      {/* ── 3. Main Chat Stream (Now gets 70%+ of screen space!) ── */}
       <div className="flex-1 overflow-y-auto py-3 space-y-3.5 pr-1">
         {displayedMessages.map((msg) => {
           const isUser = msg.role === "user";
@@ -986,14 +913,14 @@ function CampaignStudioContent() {
               {/* Agent Avatar */}
               {!isUser && (
                 <div
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-2xs ${agentInfo.avatarBg}`}
+                  className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-2xs ${agentInfo.avatarBg}`}
                   title={`${agentInfo.name} (${agentInfo.roleTitle})`}
                 >
-                  <AgentIcon className="w-4 h-4" />
+                  <AgentIcon className="w-3.5 h-3.5" />
                 </div>
               )}
 
-              <div className="max-w-[85%] md:max-w-[80%] space-y-2">
+              <div className="max-w-[88%] md:max-w-[82%] space-y-1.5">
                 {/* Agent Badge & Name Tag (Assistant messages) */}
                 {!isUser && (
                   <div className="flex items-center gap-1.5 pl-1">
@@ -1011,7 +938,7 @@ function CampaignStudioContent() {
 
                 {/* Text Bubble */}
                 <div
-                  className={`px-4 py-3 rounded-2xl ${
+                  className={`px-4 py-2.5 rounded-2xl ${
                     isUser
                       ? "bg-primary text-primary-foreground rounded-br-none shadow-sm"
                       : "bg-muted/60 dark:bg-muted/40 border border-border/80 text-foreground rounded-bl-none shadow-sm"
@@ -1031,34 +958,34 @@ function CampaignStudioContent() {
 
                 {/* Inline Agent Pipeline Execution Card */}
                 {msg.agentPipeline && (
-                  <div className="rounded-xl border border-violet-500/30 bg-card p-4 shadow-md space-y-4">
+                  <div className="rounded-xl border border-violet-500/30 bg-card p-3.5 shadow-md space-y-3">
                     {/* Pipeline Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                    <div className="flex items-center justify-between pb-2 border-b border-border/60">
                       <div className="flex items-center gap-2">
                         {msg.agentPipeline.status === "in_progress" ? (
-                          <div className="w-3 h-3 rounded-full bg-violet-500 animate-ping" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-ping" />
                         ) : msg.agentPipeline.status === "completed" ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 text-rose-500" />
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
                         )}
                         <span className="font-semibold text-xs tracking-wide uppercase text-foreground">
                           {msg.agentPipeline.status === "in_progress"
-                            ? "Multi-Agent Intelligence Engine in Progress..."
+                            ? "Multi-Agent Engine in Progress..."
                             : msg.agentPipeline.status === "completed"
                             ? "Engine Execution Complete • 6 Agents Synthesized"
-                            : "Pipeline Encountered an Issue"}
+                            : "Pipeline Issue"}
                         </span>
                       </div>
-                      <span className="text-[11px] font-mono text-muted-foreground">
+                      <span className="text-[10px] font-mono text-muted-foreground">
                         {msg.agentPipeline.status === "in_progress"
-                          ? `Agent ${msg.agentPipeline.activeStep + 1} of 6`
-                          : "100% Complete"}
+                          ? `Step ${msg.agentPipeline.activeStep + 1} of 6`
+                          : "100% Done"}
                       </span>
                     </div>
 
                     {/* Stepped Agent Progress */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                       {AGENT_STEPS.map((step, idx) => {
                         const Icon = step.icon;
                         const isDone =
@@ -1073,7 +1000,7 @@ function CampaignStudioContent() {
                         return (
                           <div
                             key={step.id}
-                            className={`flex items-start gap-3 p-2 rounded-lg text-xs transition-all ${
+                            className={`flex items-start gap-2.5 p-1.5 rounded-lg text-xs transition-all ${
                               isActive
                                 ? "bg-violet-500/10 border border-violet-500/30 text-foreground"
                                 : isDone
@@ -1083,24 +1010,24 @@ function CampaignStudioContent() {
                           >
                             <div className="mt-0.5">
                               {isDone ? (
-                                <div className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                  <Check className="w-2 h-2 stroke-[3]" />
                                 </div>
                               ) : isActive ? (
-                                <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+                                <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
                               ) : (
-                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                               )}
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 font-medium">
-                                <Icon className="w-3.5 h-3.5 text-primary" />
+                              <div className="flex items-center gap-1.5 font-medium text-[11px]">
+                                <Icon className="w-3 h-3 text-primary" />
                                 <span>
                                   Agent {idx + 1}: {step.name}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
+                              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
                                 {customDetail || step.desc}
                               </p>
                             </div>
@@ -1111,22 +1038,19 @@ function CampaignStudioContent() {
 
                     {/* Error display */}
                     {msg.agentPipeline.status === "error" && (
-                      <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
+                      <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
                         {msg.agentPipeline.errorMessage}
                       </div>
                     )}
 
-                    {/* Inline Plan Ready Card when Completed */}
+                    {/* Plan Ready CTA when Completed */}
                     {msg.agentPipeline.status === "completed" && msg.agentPipeline.result && (
-                      <div className="mt-3 p-4 rounded-xl bg-gradient-to-br from-violet-600/10 via-background to-indigo-600/10 border border-violet-500/40 space-y-3">
+                      <div className="mt-2 p-3 rounded-xl bg-gradient-to-br from-violet-600/10 via-background to-indigo-600/10 border border-violet-500/40 space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <h3 className="font-bold text-sm text-foreground">
-                              {msg.agentPipeline.result.campaignName}
-                            </h3>
-                          </div>
-                          <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <h3 className="font-bold text-xs text-foreground truncate">
+                            {msg.agentPipeline.result.campaignName}
+                          </h3>
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             🛡️ {(() => {
                               const s = msg.agentPipeline.result.complianceScore ?? 95;
                               return s <= 1 ? Math.round(s * 100) : Math.round(s);
@@ -1134,33 +1058,20 @@ function CampaignStudioContent() {
                           </span>
                         </div>
 
-                        {msg.agentPipeline.result.theme && (
-                          <p className="text-xs text-muted-foreground italic">
-                            Theme: &ldquo;{msg.agentPipeline.result.theme}&rdquo;
-                          </p>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                          <span className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground font-medium">
-                            📦 {msg.agentPipeline.result.deliverablesCount} Deliverables Ready
+                        <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+                          <span className="text-[11px] text-muted-foreground">
+                            📦 {msg.agentPipeline.result.deliverablesCount} Deliverables Architected
                           </span>
-                          <span className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground font-medium">
-                            🎬 Reel Beats & Carousel Decks
-                          </span>
-                        </div>
-
-                        {/* Direct CTA to Campaign Plans */}
-                        <div className="pt-2">
                           <button
                             onClick={() =>
                               router.push(
                                 `/campaign-plans?clientId=${selectedClientId}&campaignId=${msg.agentPipeline?.result?.campaignId}`
                               )
                             }
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold text-xs transition-all shadow-md shadow-violet-500/25 cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold text-[11px] transition-all shadow-xs cursor-pointer"
                           >
-                            <span>Open in Campaign Plans & Convert to Tasks</span>
-                            <ArrowRight className="w-4 h-4" />
+                            <span>Open Plan & Convert</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -1171,8 +1082,8 @@ function CampaignStudioContent() {
 
               {/* User Avatar */}
               {isUser && (
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <User className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-3.5 h-3.5" />
                 </div>
               )}
             </div>
@@ -1182,12 +1093,12 @@ function CampaignStudioContent() {
         {/* Loading Spinner Indicator */}
         {isChatLoading && (
           <div className="flex gap-2.5 justify-start text-sm">
-            <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${currentAgent.avatarBg}`}>
-              <currentAgent.icon className="w-4 h-4" />
+            <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 ${currentAgent.avatarBg}`}>
+              <currentAgent.icon className="w-3.5 h-3.5" />
             </div>
-            <div className="px-4 py-3 rounded-2xl bg-muted/60 border border-border/80 rounded-bl-none text-muted-foreground text-xs flex items-center gap-2">
+            <div className="px-3.5 py-2 rounded-2xl bg-muted/60 border border-border/80 rounded-bl-none text-muted-foreground text-xs flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-              <span>{currentAgent.name} is formulating ideas & consulting brand rules...</span>
+              <span>{currentAgent.name} is thinking...</span>
             </div>
           </div>
         )}
@@ -1195,60 +1106,49 @@ function CampaignStudioContent() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Dynamic Suggested Prompt Starters (Tailored to active agent) */}
-      <div className="py-1.5 shrink-0">
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5 text-amber-500" />
-            <span>
-              {studioMode === "workflow"
-                ? `Suggested Sprint Prompts for ${selectedClient?.business_name || "Client"}:`
-                : `Suggested Questions for ${currentAgent.name}:`}
-            </span>
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {currentAgent.starters.map((starter, i) => (
-            <button
-              key={i}
-              onClick={() => handleSendMessage(starter)}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-muted/60 hover:bg-muted border border-border text-foreground transition-colors text-left cursor-pointer"
-            >
-              {starter}
-            </button>
-          ))}
-        </div>
+      {/* ── 4. Compact Single-Line Quick Prompts (Only ~26px horizontal scroll, no vertical wrapping) ── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none shrink-0 border-t border-border/20">
+        <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
+          <Flame className="w-3 h-3 text-amber-500" />
+          <span className="hidden sm:inline">Try:</span>
+        </span>
+        {currentAgent.starters.map((starter, i) => (
+          <button
+            key={i}
+            onClick={() => handleSendMessage(starter)}
+            className="text-[11px] px-2.5 py-0.5 rounded-full bg-muted/60 hover:bg-muted border border-border/80 text-foreground transition-colors shrink-0 whitespace-nowrap cursor-pointer"
+          >
+            {starter}
+          </button>
+        ))}
       </div>
 
-      {/* Evolving Strategy Draft / Universal Ready to Generate Bar */}
+      {/* ── 5. Sleek Compact Strategy Bar (Only ~32px, no giant text blocks) ── */}
       {(suggestedObjective || isReadyToGenerate) && (
-        <div className="my-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase font-bold tracking-wider text-violet-600 dark:text-violet-400">
-                {isReadyToGenerate ? "Brief Ready for Autonomous Engine" : "Evolving Campaign Strategy (Shared Across Studio)"}
-                {startDate && endDate && durationDays ? ` • ${durationDays} Days (${startDate} to ${endDate})` : ""}
-              </p>
-              <p className="text-xs text-foreground font-medium truncate">
-                {suggestedObjective || suggestedCustomBrief}
-              </p>
-            </div>
+        <div className="my-1 py-1 px-3 rounded-lg bg-violet-500/10 border border-violet-500/25 flex items-center justify-between gap-2 shrink-0 text-xs shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+            <p className="text-[11px] text-foreground font-medium truncate">
+              <span className="font-bold text-violet-600 dark:text-violet-400 mr-1.5">
+                {durationDays ? `${durationDays}-Day Sprint:` : "Strategy:"}
+              </span>
+              {suggestedObjective || suggestedCustomBrief}
+            </p>
           </div>
 
           <button
             onClick={handleRunPipeline}
             disabled={isPipelineRunning}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-[11px] shadow-xs transition-all disabled:opacity-50 cursor-pointer shrink-0"
           >
             {isPipelineRunning ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Running Pipeline...</span>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Running...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3 h-3" />
                 <span>Generate Sprint ✨</span>
               </>
             )}
@@ -1256,8 +1156,8 @@ function CampaignStudioContent() {
         </div>
       )}
 
-      {/* Chat Input Bar */}
-      <footer className="pt-2 border-t border-border/40 shrink-0">
+      {/* ── 6. Chat Input Bar ── */}
+      <footer className="pt-1.5 border-t border-border/40 shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -1275,29 +1175,26 @@ function CampaignStudioContent() {
               isPipelineRunning
                 ? "Autonomous engine is running, please wait..."
                 : isChatLoading
-                ? `${currentAgent.name} is thinking... (type next message)`
+                ? `${currentAgent.name} is thinking...`
                 : studioMode === "workflow"
-                ? "Ask Campaign Director questions, set sprint timeline, or brainstorm..."
-                : `Chat directly with ${currentAgent.name} (${currentAgent.roleTitle})...`
+                ? "Ask Campaign Director questions, set timeline, or brainstorm..."
+                : `Chat with ${currentAgent.name} (${currentAgent.roleTitle})...`
             }
-            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 pr-24 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50 transition-all"
+            className="w-full bg-muted/50 border border-border rounded-xl px-3.5 py-2.5 pr-20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50 transition-all"
             autoFocus
           />
 
-          <div className="absolute right-2 flex items-center gap-1.5">
+          <div className="absolute right-1.5 flex items-center gap-1">
             <button
               type="submit"
               disabled={!chatInput.trim() || isChatLoading || isPipelineRunning}
               className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium text-xs flex items-center gap-1 hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer"
             >
               {isChatLoading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Thinking...</span>
-                </>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <>
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-3 h-3" />
                   <span>Send</span>
                 </>
               )}
