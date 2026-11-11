@@ -85,7 +85,10 @@ class ContentArchitectAdapter(SpecialistAdapter):
         # -------------------------------------------------------------
         # Branch A: Hook Analysis & Comparison
         # -------------------------------------------------------------
-        if any(kw in lower_q for kw in ["hook", "headline", "opening line", "compare hooks"]):
+        is_hook_request = any(kw in lower_q for kw in ["compare hooks", "hook options", "hook variations", "hook breakdown"]) or (
+            context.active_artifact_type != ArtifactType.storyboard.value and any(kw in lower_q for kw in ["hook", "headline", "opening line"])
+        )
+        if is_hook_request:
             activity_logs.append("Synthesizing comparative hook variations with clarity & fluff analysis...")
             prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
 User Request: "{query}"

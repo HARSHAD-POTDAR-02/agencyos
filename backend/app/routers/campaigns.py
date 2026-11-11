@@ -23,6 +23,17 @@ from app.campaign_intelligence.tools.date_utils import (
     extract_format_and_count_from_text,
     sanitize_date_year,
 )
+from app.campaign_intelligence.schemas.brand import BrandContext
+from app.campaign_intelligence.schemas.studio_context import CampaignStudioContext
+from app.campaign_intelligence.services.studio_service import (
+    approve_artifact_version,
+    get_or_create_studio_session,
+    save_or_revise_artifact,
+)
+from app.campaign_intelligence.specialists import (
+    SPECIALIST_REGISTRY,
+    get_specialist_adapter,
+)
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.llm import get_llm, invoke_structured_llm
@@ -32,6 +43,12 @@ from app.models.campaign import Campaign, CampaignStatus
 from app.models.client import Client, ClientStatus
 from app.models.contract import Contract, ScopeItem
 from app.models.deliverable import Deliverable, DeliverableStatus
+from app.models.studio_artifact import (
+    CampaignStudioSession,
+    StudioArtifact,
+    StudioArtifactStatus,
+    StudioArtifactVersion,
+)
 from app.models.task import Task, TaskPriority, TaskStatus
 from app.models.user import Membership
 from app.schemas.campaign import (
@@ -43,6 +60,9 @@ from app.schemas.campaign import (
     DeliverableCreate,
     DeliverableOut,
     GeneratePlanRequest,
+    StudioApproveVersionRequest,
+    StudioArtifactOut,
+    StudioArtifactVersionOut,
 )
 from app.services.tenant_service import (
     assert_campaign_belongs_to_agency,
@@ -568,17 +588,16 @@ async def chat_brief_endpoint(
     agency_id: uuid.UUID,
     client_id: uuid.UUID,
     payload: ChatBriefRequest,
-    _: Membership = Depends(require_agency_member),
+    membership: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> ChatBriefResponse:
     """Conversational intake copilot and specialist agents helping users formulate and refine their campaign brief."""
     client = await get_client_for_agency(client_id, agency_id, db)
 
-    # 1. Resolve active agent profile
-    target_agent_id = payload.agent_id if (payload.agent_id and payload.agent_id in AGENT_SPECS) else "director"
-    agent_spec = AGENT_SPECS[target_agent_id]
+    # 1. Resolve active agent profile & calendar context
+    target_agent_id = payload.agent_id if (payload.agent_id and (payload.agent_id in AGENT_SPECS or payload.agent_id in SPECIALIST_REGISTRY)) else "director"
+    agent_spec = AGENT_SPECS.get(target_agent_id, AGENT_SPECS["director"])
 
-    # 2. Extract conversation history & user texts early (preventing any forward reference errors)
     curr_dt = date.today()
     ref_year = payload.period_year or curr_dt.year
     ref_month = payload.period_month or curr_dt.month
@@ -588,8 +607,201 @@ async def chat_brief_endpoint(
     latest_user_text = user_texts[-1] if user_texts else ""
     has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
 
-    # Bounded sliding window to keep total prompt tokens safely within model ITPM limits (< 2,500 tokens)
-    # Preserves the initial request (scope origin) + the latest 8 messages
+    # 2. Resolve Campaign & Studio Session (multi-tenant boundary)
+    target_campaign_id = payload.campaign_id
+    if target_campaign_id:
+        camp_stmt = select(Campaign).where(
+            Campaign.id == target_campaign_id,
+            Campaign.client_id == client_id,
+        )
+        camp_res = await db.execute(camp_stmt)
+        campaign = camp_res.scalars().first()
+        if not campaign:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Campaign not found for this client.",
+            )
+    else:
+        camp_stmt = (
+            select(Campaign)
+            .where(Campaign.client_id == client_id)
+            .order_by(Campaign.created_at.desc())
+        )
+        camp_res = await db.execute(camp_stmt)
+        existing_campaign = camp_res.scalars().first()
+        if existing_campaign:
+            target_campaign_id = existing_campaign.id
+        else:
+            new_campaign = Campaign(
+                id=uuid.uuid4(),
+                client_id=client_id,
+                name=f"{client.business_name} - Studio Sprint {ref_year}",
+                status=CampaignStatus.planning,
+                period_month=ref_month,
+                period_year=ref_year,
+            )
+            db.add(new_campaign)
+            await db.flush()
+            target_campaign_id = new_campaign.id
+
+    session = await get_or_create_studio_session(
+        db=db,
+        agency_id=agency_id,
+        client_id=client_id,
+        campaign_id=target_campaign_id,
+        user_id=getattr(membership, "user_id", None),
+    )
+
+    # 3. Active Artifact Lookup (Preserves continuity across specialist switches)
+    active_artifact_id = payload.active_artifact_id
+    active_artifact_type = None
+    active_artifact_version = None
+    active_artifact_payload = None
+    if active_artifact_id:
+        art_res = await db.execute(
+            select(StudioArtifact).where(
+                StudioArtifact.id == active_artifact_id,
+                StudioArtifact.agency_id == agency_id,
+                StudioArtifact.campaign_id == target_campaign_id,
+            )
+        )
+        active_art = art_res.scalars().first()
+        if active_art:
+            active_artifact_type = active_art.artifact_type
+            active_artifact_version = active_art.current_version_number
+            ver_res = await db.execute(
+                select(StudioArtifactVersion).where(
+                    StudioArtifactVersion.artifact_id == active_art.id,
+                    StudioArtifactVersion.version_number == active_art.current_version_number,
+                )
+            )
+            active_ver = ver_res.scalars().first()
+            if active_ver:
+                active_artifact_payload = active_ver.payload
+
+    # 4. Fetch Brand Profile & build BrandContext
+    bp_result = await db.execute(
+        select(BrandProfile)
+        .where(BrandProfile.client_id == client_id)
+        .order_by(BrandProfile.version.desc())
+    )
+    brand_profile = bp_result.scalars().first()
+
+    brand_voice = brand_profile.brand_voice if brand_profile and brand_profile.brand_voice else "Professional and authentic"
+    pillars = brand_profile.content_pillars if brand_profile and brand_profile.content_pillars else []
+    prohibited = brand_profile.prohibited_claims if brand_profile and brand_profile.prohibited_claims else []
+    approved_phrases = brand_profile.approved_phrases if brand_profile and brand_profile.approved_phrases else []
+    target_aud = brand_profile.target_audience if brand_profile and brand_profile.target_audience else {}
+    brand_goals = brand_profile.goals if brand_profile and brand_profile.goals else {}
+    client_location = client.location or (target_aud.get("location") if isinstance(target_aud, dict) else None) or (target_aud.get("city") if isinstance(target_aud, dict) else None)
+
+    brand_context = None
+    if brand_profile:
+        brand_context = BrandContext(
+            brand_name=client.business_name,
+            voice_and_tone=brand_voice,
+            target_audience=target_aud,
+            content_pillars=pillars,
+            prohibited_claims=prohibited,
+            key_offers=approved_phrases,
+            verified_facts=[client.business_name, client.industry or "General Business"],
+        )
+
+    brief = CampaignBrief(
+        client_id=client_id,
+        agency_id=agency_id,
+        period_month=ref_month,
+        period_year=ref_year,
+        objective=f"Campaign sprint for {client.business_name}",
+        custom_brief=combined_user_text or latest_user_text or "General marketing sprint",
+        target_audience=(
+            target_aud if isinstance(target_aud, list) else ([str(target_aud)] if target_aud else [])
+        ),
+        deliverable_preferences=["reel", "carousel"],
+    )
+
+    studio_context = CampaignStudioContext(
+        agency_id=agency_id,
+        client_id=client_id,
+        campaign_id=target_campaign_id,
+        client_name=client.business_name,
+        client_industry=client.industry,
+        client_location=client_location,
+        campaign_brief=brief,
+        brand_context=brand_context,
+        active_artifact_id=active_artifact_id,
+        active_artifact_type=active_artifact_type,
+        active_artifact_version=active_artifact_version,
+        active_artifact_payload=active_artifact_payload,
+    )
+
+    # 5. SPECIALIST DISPATCH: Route to dedicated specialist adapter when requested
+    if target_agent_id in SPECIALIST_REGISTRY and target_agent_id != "director":
+        adapter = get_specialist_adapter(target_agent_id)
+        specialist_res = await adapter.execute(
+            query=latest_user_text or "Please advise on strategy based on our brand guidelines and market data.",
+            context=studio_context,
+            db=db,
+        )
+
+        saved_artifact = None
+        saved_version = None
+        if specialist_res.artifact_payload:
+            art_type_str = (
+                specialist_res.artifact_type.value
+                if hasattr(specialist_res.artifact_type, "value")
+                else str(specialist_res.artifact_type or "draft")
+            )
+            art_title = (
+                specialist_res.artifact_payload.get("deliverable_title")
+                or specialist_res.artifact_payload.get("query_topic")
+                or f"{adapter.specialist_name} Asset"
+            )
+            saved_artifact, saved_version = await save_or_revise_artifact(
+                session_id=session.id,
+                agency_id=agency_id,
+                client_id=client_id,
+                campaign_id=target_campaign_id,
+                artifact_type=art_type_str,
+                title=art_title,
+                payload=specialist_res.artifact_payload,
+                actor_type="agent",
+                actor_id=target_agent_id,
+                db=db,
+                artifact_id=active_artifact_id if (active_artifact_type == art_type_str) else None,
+                change_summary=f"Created/revised by {adapter.specialist_name}",
+            )
+            await db.commit()
+
+        # Date extraction fallback for specialist turns so campaign state is kept fresh
+        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
+
+        return ChatBriefResponse(
+            reply=specialist_res.reply,
+            agent_id=target_agent_id,
+            agent_name=specialist_res.specialist_name,
+            campaign_id=target_campaign_id,
+            session_id=session.id,
+            artifact_id=saved_artifact.id if saved_artifact else active_artifact_id,
+            artifact_type=saved_artifact.artifact_type if saved_artifact else active_artifact_type,
+            artifact_title=saved_artifact.title if saved_artifact else None,
+            artifact_payload=specialist_res.artifact_payload or active_artifact_payload,
+            artifact_version_number=saved_version.version_number if saved_version else active_artifact_version,
+            artifact_status=saved_artifact.status if saved_artifact else None,
+            activity_logs=[{"message": log} if isinstance(log, str) else log for log in specialist_res.activity_logs],
+            suggested_objective=f"{adapter.specialist_name} strategic plan for {client.business_name}",
+            suggested_custom_brief=latest_user_text,
+            suggested_deliverable_preferences=extracted_fmts or (["reel", "carousel"] if target_agent_id == "content_architect" else None),
+            suggested_period_month=extracted.period_month if extracted else (payload.period_month or ref_month),
+            suggested_period_year=extracted.period_year if extracted else (payload.period_year or ref_year),
+            suggested_start_date=extracted.start_date.isoformat() if extracted else payload.start_date,
+            suggested_end_date=extracted.end_date.isoformat() if extracted else payload.end_date,
+            suggested_duration_days=extracted.duration_days if extracted else extracted_cnt,
+            is_ready_to_generate=False,
+        )
+
+    # 6. CAMPAIGN DIRECTOR FLOW: Intake copilot synthesizing overall brief
     if len(payload.messages) > 9:
         windowed_messages = [payload.messages[0]] + payload.messages[-8:]
         omitted_count = len(payload.messages) - 9
@@ -606,23 +818,6 @@ async def chat_brief_endpoint(
             sender_name = m.agent_name or AGENT_SPECS.get(m.agent_id or "director", {}).get("name", "Campaign Director")
             formatted_convo_parts.append(f"{sender_name.upper()}: {m.content}")
     formatted_convo = "\n".join(formatted_convo_parts)
-
-    # 3. Fetch brand profile if available & extract dynamic brand attributes
-    bp_result = await db.execute(
-        select(BrandProfile)
-        .where(BrandProfile.client_id == client_id)
-        .order_by(BrandProfile.version.desc())
-    )
-    brand_profile = bp_result.scalars().first()
-
-    brand_voice = brand_profile.brand_voice if brand_profile and brand_profile.brand_voice else "Professional and authentic"
-    pillars = brand_profile.content_pillars if brand_profile and brand_profile.content_pillars else []
-    prohibited = brand_profile.prohibited_claims if brand_profile and brand_profile.prohibited_claims else []
-    approved_phrases = brand_profile.approved_phrases if brand_profile and brand_profile.approved_phrases else []
-    target_aud = brand_profile.target_audience if brand_profile and brand_profile.target_audience else {}
-    brand_goals = brand_profile.goals if brand_profile and brand_profile.goals else {}
-
-    # Completely dynamic location retrieval from database without hardcoding
     client_location = client.location or (target_aud.get("location") if isinstance(target_aud, dict) else None) or (target_aud.get("city") if isinstance(target_aud, dict) else None)
 
     # 4. Dynamic Specialized Context (e.g. historical stats if Performance Analyst, live web research if Market Research)
@@ -786,6 +981,12 @@ CRITICAL SYSTEM RULES:
             reply=reply_text,
             agent_id=target_agent_id,
             agent_name=agent_spec["name"],
+            campaign_id=target_campaign_id,
+            session_id=session.id,
+            artifact_id=active_artifact_id,
+            artifact_type=active_artifact_type,
+            artifact_payload=active_artifact_payload,
+            artifact_version_number=active_artifact_version,
             suggested_objective=output.suggested_objective,
             suggested_custom_brief=output.suggested_custom_brief,
             suggested_deliverable_preferences=final_deliverable_prefs,
@@ -845,6 +1046,12 @@ CRITICAL SYSTEM RULES:
             reply=fallback_reply,
             agent_id=target_agent_id,
             agent_name=agent_spec["name"],
+            campaign_id=target_campaign_id,
+            session_id=session.id,
+            artifact_id=active_artifact_id,
+            artifact_type=active_artifact_type,
+            artifact_payload=active_artifact_payload,
+            artifact_version_number=active_artifact_version,
             suggested_period_month=p_month,
             suggested_period_year=p_year,
             suggested_start_date=start_date_str,
@@ -853,6 +1060,147 @@ CRITICAL SYSTEM RULES:
             suggested_deliverable_preferences=extracted_fmts,
             is_ready_to_generate=False,
         )
+
+
+# =====================================================================
+# Campaign Studio Artifact Endpoints (Draft Persistence & Versioning)
+# =====================================================================
+
+@router.get(
+    "/agencies/{agency_id}/campaigns/{campaign_id}/studio/artifacts",
+    response_model=list[StudioArtifactOut],
+    status_code=status.HTTP_200_OK,
+)
+async def list_studio_artifacts(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[StudioArtifactOut]:
+    """List all studio draft artifacts for a campaign."""
+    await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    stmt = (
+        select(StudioArtifact)
+        .where(
+            StudioArtifact.agency_id == agency_id,
+            StudioArtifact.campaign_id == campaign_id,
+        )
+        .order_by(StudioArtifact.updated_at.desc())
+    )
+    result = await db.execute(stmt)
+    artifacts = result.scalars().all()
+
+    outputs = []
+    for art in artifacts:
+        v_stmt = select(StudioArtifactVersion).where(
+            StudioArtifactVersion.artifact_id == art.id,
+            StudioArtifactVersion.version_number == art.current_version_number,
+        )
+        v_res = await db.execute(v_stmt)
+        latest_ver = v_res.scalars().first()
+        art_out = StudioArtifactOut(
+            id=art.id,
+            session_id=art.session_id,
+            agency_id=art.agency_id,
+            client_id=art.client_id,
+            campaign_id=art.campaign_id,
+            artifact_type=art.artifact_type,
+            title=art.title,
+            status=art.status,
+            current_version_number=art.current_version_number,
+            created_at=art.created_at,
+            updated_at=art.updated_at,
+            latest_version=StudioArtifactVersionOut.model_validate(latest_ver) if latest_ver else None,
+            versions=[],
+        )
+        outputs.append(art_out)
+    return outputs
+
+
+@router.get(
+    "/agencies/{agency_id}/campaigns/{campaign_id}/studio/artifacts/{artifact_id}",
+    response_model=StudioArtifactOut,
+    status_code=status.HTTP_200_OK,
+)
+async def get_studio_artifact_detail(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> StudioArtifactOut:
+    """Get full studio artifact with complete revision history."""
+    await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    stmt = (
+        select(StudioArtifact)
+        .where(
+            StudioArtifact.id == artifact_id,
+            StudioArtifact.agency_id == agency_id,
+            StudioArtifact.campaign_id == campaign_id,
+        )
+    )
+    result = await db.execute(stmt)
+    artifact = result.scalars().first()
+    if not artifact:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Studio artifact not found.",
+        )
+
+    v_stmt = (
+        select(StudioArtifactVersion)
+        .where(StudioArtifactVersion.artifact_id == artifact.id)
+        .order_by(StudioArtifactVersion.version_number.desc())
+    )
+    v_res = await db.execute(v_stmt)
+    versions = v_res.scalars().all()
+    latest = versions[0] if versions else None
+
+    return StudioArtifactOut(
+        id=artifact.id,
+        session_id=artifact.session_id,
+        agency_id=artifact.agency_id,
+        client_id=artifact.client_id,
+        campaign_id=artifact.campaign_id,
+        artifact_type=artifact.artifact_type,
+        title=artifact.title,
+        status=artifact.status,
+        current_version_number=artifact.current_version_number,
+        created_at=artifact.created_at,
+        updated_at=artifact.updated_at,
+        latest_version=StudioArtifactVersionOut.model_validate(latest) if latest else None,
+        versions=[StudioArtifactVersionOut.model_validate(v) for v in versions],
+    )
+
+
+@router.post(
+    "/agencies/{agency_id}/campaigns/{campaign_id}/studio/artifacts/{artifact_id}/approve",
+    response_model=StudioArtifactOut,
+    status_code=status.HTTP_200_OK,
+)
+async def approve_studio_artifact_endpoint(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    payload: StudioApproveVersionRequest,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> StudioArtifactOut:
+    """Approve a specific version of a studio artifact."""
+    await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    user_id = getattr(membership, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User context missing for approval.")
+    await approve_artifact_version(
+        artifact_id=artifact_id,
+        version_number=payload.version_number,
+        agency_id=agency_id,
+        campaign_id=campaign_id,
+        user_id=user_id,
+        db=db,
+    )
+    await db.commit()
+    return await get_studio_artifact_detail(agency_id, campaign_id, artifact_id, membership, db)
 
 
 @router.post(

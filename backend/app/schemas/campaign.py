@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.campaign import CampaignStatus
 from app.models.deliverable import DeliverableStatus
@@ -114,6 +114,9 @@ class ChatBriefRequest(BaseModel):
     period_year: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    campaign_id: uuid.UUID | None = None
+    active_artifact_id: uuid.UUID | None = None
+    active_artifact_version: int | None = None
 
 
 class ChatBriefResponse(BaseModel):
@@ -129,4 +132,57 @@ class ChatBriefResponse(BaseModel):
     suggested_end_date: str | None = None
     suggested_duration_days: int | None = None
     is_ready_to_generate: bool = False
+
+    # Collaborative Studio & Draft Artifact additions
+    campaign_id: uuid.UUID | None = None
+    session_id: uuid.UUID | None = None
+    artifact_id: uuid.UUID | None = None
+    artifact_type: str | None = None
+    artifact_title: str | None = None
+    artifact_payload: dict[str, Any] | None = None
+    artifact_version_number: int | None = None
+    artifact_status: str | None = None
+    supporting_evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
+    activity_logs: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class StudioArtifactVersionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    artifact_id: uuid.UUID
+    version_number: int
+    parent_version_id: uuid.UUID | None = None
+    actor_type: str
+    actor_id: str
+    payload: dict[str, Any]
+    supporting_evidence_refs: list[dict[str, Any]] | None = None
+    change_summary: str | None = None
+    is_approved: bool
+    approved_by_id: uuid.UUID | None = None
+    approved_at: datetime | None = None
+    created_at: datetime
+
+
+class StudioArtifactOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    session_id: uuid.UUID
+    agency_id: uuid.UUID
+    client_id: uuid.UUID
+    campaign_id: uuid.UUID
+    artifact_type: str
+    title: str
+    status: str
+    current_version_number: int
+    created_at: datetime
+    updated_at: datetime
+    latest_version: StudioArtifactVersionOut | None = None
+    versions: list[StudioArtifactVersionOut] = []
+
+
+class StudioApproveVersionRequest(BaseModel):
+    version_number: int
+
 

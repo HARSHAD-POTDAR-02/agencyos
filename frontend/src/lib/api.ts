@@ -215,6 +215,9 @@ export const campaignApi = {
       period_year?: number;
       start_date?: string;
       end_date?: string;
+      campaign_id?: string;
+      active_artifact_id?: string;
+      active_artifact_version?: number;
     },
     token: string
   ) =>
@@ -231,6 +234,16 @@ export const campaignApi = {
       suggested_end_date?: string;
       suggested_duration_days?: number;
       is_ready_to_generate: boolean;
+      campaign_id?: string;
+      session_id?: string;
+      artifact_id?: string;
+      artifact_type?: string;
+      artifact_title?: string;
+      artifact_payload?: Record<string, unknown>;
+      artifact_version_number?: number;
+      artifact_status?: string;
+      supporting_evidence_refs?: Array<Record<string, unknown>>;
+      activity_logs?: Array<Record<string, unknown> | string>;
     }>(`/agencies/${agencyId}/clients/${clientId}/campaigns/chat-brief`, {
       method: "POST",
       body: data,
