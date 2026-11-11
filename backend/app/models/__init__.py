@@ -22,3 +22,11 @@ from app.models.publication_job import (  # noqa: F401
     JobStatus,
     AttemptStatus,
 )
+from app.models.studio_artifact import (  # noqa: F401
+    CampaignStudioSession,
+    StudioArtifact,
+    StudioArtifactVersion,
+    StudioExport,
+    StudioArtifactType,
+    StudioArtifactStatus,
+)
