@@ -9,12 +9,13 @@ type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   token?: string;
+  headers?: Record<string, string>;
 };
 
 async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, token } = opts;
+  const { method = "GET", body, token, headers: customHeaders } = opts;
 
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...(customHeaders ?? {}) };
   if (!(body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -283,6 +284,32 @@ export const studioApi = {
       {
         method: "POST",
         body: { version_number: versionNumber },
+        token,
+      }
+    ),
+
+  exportToPipeline: (
+    agencyId: string,
+    campaignId: string,
+    payload: {
+      artifact_id: string;
+      expected_version_number: number;
+      assignee_id?: string | null;
+      default_due_date?: string | null;
+      target_format?: string | null;
+      deliverable_name?: string | null;
+    },
+    idempotencyKey: string,
+    token: string
+  ) =>
+    apiFetch<any>(
+      `/agencies/${agencyId}/campaigns/${campaignId}/studio/export-pipeline`,
+      {
+        method: "POST",
+        headers: {
+          "X-Idempotency-Key": idempotencyKey,
+        },
+        body: payload,
         token,
       }
     ),

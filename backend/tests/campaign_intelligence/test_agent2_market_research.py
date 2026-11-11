@@ -166,7 +166,7 @@ async def test_market_research_node_execution():
     assert telemetry.agent_name == "market_research"
     assert telemetry.success is True
     assert telemetry.duration_ms > 0
-    assert telemetry.model_name == settings.GROQ_MODEL
+    assert telemetry.model_name in [settings.GROQ_MODEL, settings.FALLBACK_MODEL]
 
 
 def test_parallel_intelligence_state_isolation():

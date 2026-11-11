@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign
 from app.models.client import Client
+from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.studio_artifact import (
     CampaignStudioSession,
     StudioArtifact,
@@ -21,6 +22,7 @@ from app.models.studio_artifact import (
     StudioArtifactVersion,
     StudioExport,
 )
+from app.models.task import Task, TaskPriority, TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -260,3 +262,144 @@ async def check_idempotency_or_existing_export(
         return existing
 
     return None
+
+
+async def export_artifact_to_production(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    expected_version_number: int,
+    user_id: uuid.UUID,
+    idempotency_key: str,
+    raw_payload_dict: dict[str, Any],
+    db: AsyncSession,
+    assignee_id: uuid.UUID | None = None,
+    default_due_date: Any = None,
+    target_format: str | None = None,
+    deliverable_name: str | None = None,
+) -> tuple[StudioExport, bool]:
+    """
+    Export an approved studio draft artifact version into actual production tables (Deliverable, Task).
+    Guarantees:
+    1. Idempotency recovery: identical requests return cached export mapping with is_replay=True.
+    2. Version locking: export is rejected if version is not approved or version mismatch.
+    3. Multi-tenant validation: campaign, artifact, and export share identical agency_id.
+    4. Atomicity: Deliverable, Task, StudioExport, and artifact status update commit together.
+    """
+    # 1. Check idempotency & canonical request fingerprint
+    fingerprint = compute_request_fingerprint(raw_payload_dict)
+    existing_export = await check_idempotency_or_existing_export(
+        agency_id=agency_id,
+        idempotency_key=idempotency_key,
+        request_fingerprint=fingerprint,
+        db=db,
+    )
+    if existing_export:
+        return existing_export, True
+
+    # 2. Lock parent artifact and validate tenant relationship
+    art_stmt = (
+        select(StudioArtifact)
+        .where(
+            StudioArtifact.id == artifact_id,
+            StudioArtifact.agency_id == agency_id,
+            StudioArtifact.campaign_id == campaign_id,
+        )
+        .with_for_update()
+    )
+    art_res = await db.execute(art_stmt)
+    artifact = art_res.scalars().first()
+    if not artifact:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Studio artifact not found for this campaign.",
+        )
+
+    # 3. Retrieve the exact version number
+    ver_stmt = select(StudioArtifactVersion).where(
+        StudioArtifactVersion.artifact_id == artifact_id,
+        StudioArtifactVersion.version_number == expected_version_number,
+    )
+    ver_res = await db.execute(ver_stmt)
+    version = ver_res.scalars().first()
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Artifact version {expected_version_number} does not exist.",
+        )
+
+    # 4. Enforce approval requirement
+    if not version.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Artifact version {expected_version_number} has not been approved. Approval is required before exporting to production.",
+        )
+
+    # 5. Determine deliverable attributes
+    fmt = target_format or version.payload.get("format_type") or artifact.artifact_type
+    platform = version.payload.get("platform") or "instagram"
+    title = deliverable_name or version.payload.get("deliverable_title") or artifact.title
+
+    # 6. Create production Deliverable
+    deliverable = Deliverable(
+        id=uuid.uuid4(),
+        campaign_id=campaign_id,
+        title=title,
+        deliverable_type=fmt,
+        platform=platform,
+        status=DeliverableStatus.not_started,
+        planned_date=default_due_date,
+    )
+    db.add(deliverable)
+    await db.flush()
+
+    # 7. Create production Task
+    task_notes = None
+    if "scenes" in version.payload:
+        task_notes = f"Storyboard with {len(version.payload['scenes'])} scenes ready for shoot."
+    elif "slides" in version.payload:
+        task_notes = f"Carousel deck with {len(version.payload['slides'])} slides ready for design."
+
+    task = Task(
+        id=uuid.uuid4(),
+        deliverable_id=deliverable.id,
+        title=f"Produce: {title}",
+        task_type="creative_production",
+        assignee_id=assignee_id,
+        status=TaskStatus.todo,
+        priority=TaskPriority.medium,
+        due_date=default_due_date,
+        notes=task_notes,
+    )
+    db.add(task)
+    await db.flush()
+
+    # 8. Mark artifact status as exported
+    artifact.status = StudioArtifactStatus.exported.value
+    artifact.updated_at = datetime.now(timezone.utc)
+
+    # 9. Record StudioExport audit record
+    production_mapping = {
+        "deliverable_id": str(deliverable.id),
+        "deliverable_title": deliverable.title,
+        "task_id": str(task.id),
+        "task_title": task.title,
+    }
+
+    export_rec = StudioExport(
+        id=uuid.uuid4(),
+        artifact_version_id=version.id,
+        agency_id=agency_id,
+        client_id=artifact.client_id,
+        campaign_id=campaign_id,
+        exported_by_id=user_id,
+        idempotency_key=idempotency_key,
+        request_fingerprint=fingerprint,
+        production_mapping=production_mapping,
+        export_status="completed",
+    )
+    db.add(export_rec)
+    await db.flush()
+
+    return export_rec, False
+

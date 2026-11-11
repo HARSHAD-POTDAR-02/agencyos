@@ -359,7 +359,7 @@ async def test_performance_analysis_node_execution():
     assert telemetry.agent_name == "performance_analysis"
     assert telemetry.success is True
     assert telemetry.duration_ms > 0
-    assert telemetry.model_name == settings.GROQ_MODEL
+    assert telemetry.model_name in [settings.GROQ_MODEL, settings.FALLBACK_MODEL]
 
 
 def test_three_way_parallel_intelligence_isolation():

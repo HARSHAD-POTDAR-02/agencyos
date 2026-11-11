@@ -5,7 +5,7 @@ import re
 import uuid
 from datetime import date, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -27,6 +27,7 @@ from app.campaign_intelligence.schemas.brand import BrandContext
 from app.campaign_intelligence.schemas.studio_context import CampaignStudioContext
 from app.campaign_intelligence.services.studio_service import (
     approve_artifact_version,
+    export_artifact_to_production,
     get_or_create_studio_session,
     save_or_revise_artifact,
 )
@@ -63,6 +64,8 @@ from app.schemas.campaign import (
     StudioApproveVersionRequest,
     StudioArtifactOut,
     StudioArtifactVersionOut,
+    StudioExportPipelineRequest,
+    StudioExportPipelineResponse,
 )
 from app.services.tenant_service import (
     assert_campaign_belongs_to_agency,
@@ -1201,6 +1204,53 @@ async def approve_studio_artifact_endpoint(
     )
     await db.commit()
     return await get_studio_artifact_detail(agency_id, campaign_id, artifact_id, membership, db)
+
+
+@router.post(
+    "/agencies/{agency_id}/campaigns/{campaign_id}/studio/export-pipeline",
+    response_model=StudioExportPipelineResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def export_studio_artifact_pipeline_endpoint(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    payload: StudioExportPipelineRequest,
+    x_idempotency_key: str = Header(..., alias="X-Idempotency-Key"),
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> StudioExportPipelineResponse:
+    """Export an approved studio draft artifact version into actual production tables (Deliverable, Task)."""
+    await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    user_id = getattr(membership, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User context missing for export.")
+
+    export_rec, is_replay = await export_artifact_to_production(
+        agency_id=agency_id,
+        campaign_id=campaign_id,
+        artifact_id=payload.artifact_id,
+        expected_version_number=payload.expected_version_number,
+        user_id=user_id,
+        idempotency_key=x_idempotency_key,
+        raw_payload_dict=payload.model_dump(mode="json"),
+        db=db,
+        assignee_id=payload.assignee_id,
+        default_due_date=payload.default_due_date,
+        target_format=payload.target_format,
+        deliverable_name=payload.deliverable_name,
+    )
+    await db.commit()
+
+    mapping = export_rec.production_mapping or {}
+    return StudioExportPipelineResponse(
+        is_replay=is_replay,
+        export_id=export_rec.id,
+        deliverable_id=uuid.UUID(mapping["deliverable_id"]),
+        task_id=uuid.UUID(mapping["task_id"]),
+        deliverable_title=mapping.get("deliverable_title", "Deliverable"),
+        task_title=mapping.get("task_title", "Production Task"),
+        exported_at=export_rec.exported_at,
+    )
 
 
 @router.post(

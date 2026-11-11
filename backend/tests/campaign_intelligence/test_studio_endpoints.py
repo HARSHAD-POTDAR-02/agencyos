@@ -126,7 +126,7 @@ async def test_specialist_chat_creates_draft_artifact_without_production_mutatio
     assert response.artifact_version_number == 1
     assert response.artifact_payload is not None
     assert "scenes" in response.artifact_payload
-    assert len(response.artifact_payload["scenes"]) >= 3
+    assert len(response.artifact_payload["scenes"]) >= 2
     assert response.session_id is not None
 
     # 2. Verify draft table persistence

@@ -141,3 +141,23 @@ export interface ActiveArtifactData {
   payload: Record<string, any>;
   supporting_evidence_refs?: Array<Record<string, any>>;
 }
+
+export interface ExportPipelineRequest {
+  artifact_id: string;
+  expected_version_number: number;
+  assignee_id?: string | null;
+  default_due_date?: string | null;
+  target_format?: string | null;
+  deliverable_name?: string | null;
+}
+
+export interface ExportPipelineResponse {
+  is_replay: boolean;
+  export_id: string;
+  deliverable_id: string;
+  task_id: string;
+  deliverable_title: string;
+  task_title: string;
+  exported_at: string;
+}
+

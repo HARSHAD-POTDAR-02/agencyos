@@ -186,3 +186,22 @@ class StudioApproveVersionRequest(BaseModel):
     version_number: int
 
 
+class StudioExportPipelineRequest(BaseModel):
+    artifact_id: uuid.UUID
+    expected_version_number: int
+    assignee_id: uuid.UUID | None = None
+    default_due_date: date | None = None
+    target_format: str | None = None
+    deliverable_name: str | None = None
+
+
+class StudioExportPipelineResponse(BaseModel):
+    is_replay: bool
+    export_id: uuid.UUID
+    deliverable_id: uuid.UUID
+    task_id: uuid.UUID
+    deliverable_title: str
+    task_title: str
+    exported_at: datetime
+
+

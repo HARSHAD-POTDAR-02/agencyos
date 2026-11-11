@@ -4,8 +4,9 @@ import React, { useEffect, useState, useCallback, useRef, Suspense } from "react
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { clientApi, campaignApi, studioApi } from "@/lib/api";
+import { clientApi, campaignApi, studioApi, agencyApi } from "@/lib/api";
 import { ContextualCanvas } from "@/components/campaign-studio/ContextualCanvas";
+import { ExportPreviewModal } from "@/components/campaign-studio/ExportPreviewModal";
 import { ActiveArtifactData } from "@/components/campaign-studio/types";
 import {
   Sparkles,
@@ -288,6 +289,8 @@ function CampaignStudioContent() {
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(searchParams.get("campaignId") || null);
   const [activeArtifact, setActiveArtifact] = useState<ActiveArtifactData | null>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "canvas">("chat");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; email: string; role?: string }>>([]);
 
   // Date range and timeline state
   const [startDate, setStartDate] = useState<string>("");
@@ -369,6 +372,26 @@ function CampaignStudioContent() {
       })
       .catch((err) => console.error("Failed to load clients", err));
   }, [token, effectiveAgencyId, selectedClientId]);
+
+  // Load agency team members for production assignment
+  useEffect(() => {
+    if (!token || !effectiveAgencyId) return;
+    agencyApi
+      .listMembers(effectiveAgencyId, token)
+      .then((data: any) => {
+        if (Array.isArray(data)) {
+          setTeamMembers(
+            data.map((m: any) => ({
+              id: m.user_id || m.id,
+              full_name: m.user?.full_name || m.full_name || "Team Member",
+              email: m.user?.email || m.email || "",
+              role: m.role || "Member",
+            }))
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to load team members", err));
+  }, [token, effectiveAgencyId]);
 
   // Persistent Chat Storage Key Helper
   const getStorageKey = useCallback(
@@ -1345,10 +1368,8 @@ function CampaignStudioContent() {
           <ContextualCanvas
             artifact={activeArtifact}
             onApproveVersion={handleApproveVersion}
-            onExportClick={(art) => {
-              if (selectedClientId) {
-                router.push(`/campaign-plans?clientId=${selectedClientId}`);
-              }
+            onExportClick={() => {
+              setIsExportModalOpen(true);
             }}
             onSelectPrompt={(agentId, promptText) => {
               setActiveSpecialistId(agentId);
@@ -1360,6 +1381,22 @@ function CampaignStudioContent() {
           />
         </div>
       </div>
+
+      <ExportPreviewModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        artifact={activeArtifact}
+        agencyId={effectiveAgencyId || ""}
+        campaignId={activeCampaignId || ""}
+        token={token || ""}
+        teamMembers={teamMembers}
+        onApproveVersion={handleApproveVersion}
+        onExportSuccess={(res) => {
+          setActiveArtifact((prev) =>
+            prev ? { ...prev, status: "exported" } : prev
+          );
+        }}
+      />
     </div>
   );
 }
