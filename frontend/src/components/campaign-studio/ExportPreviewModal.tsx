@@ -241,7 +241,7 @@ export function ExportPreviewModal({
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground font-medium">Audit Export ID</span>
                   <span className="font-mono text-[11px] text-muted-foreground">
-                    {exportResult.export_id.substring(0, 8)}...
+                    {String(exportResult.export_id || exportResult.deliverable_id || "").substring(0, 8)}...
                   </span>
                 </div>
               </div>

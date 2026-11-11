@@ -23,7 +23,12 @@ from app.campaign_intelligence.tools.date_utils import (
     extract_format_and_count_from_text,
     sanitize_date_year,
 )
-from app.campaign_intelligence.schemas.brand import BrandContext
+from app.campaign_intelligence.schemas.brand import (
+    BrandContext,
+    ProhibitedClaim,
+    ProhibitedTerm,
+    VerifiedOffer,
+)
 from app.campaign_intelligence.schemas.studio_context import CampaignStudioContext
 from app.campaign_intelligence.services.studio_service import (
     approve_artifact_version,
@@ -698,16 +703,89 @@ async def chat_brief_endpoint(
     brand_goals = brand_profile.goals if brand_profile and brand_profile.goals else {}
     client_location = client.location or (target_aud.get("location") if isinstance(target_aud, dict) else None) or (target_aud.get("city") if isinstance(target_aud, dict) else None)
 
+    prohibited_claims_objs: list[ProhibitedClaim] = []
+    prohibited_terms_objs: list[ProhibitedTerm] = []
+    if brand_profile and brand_profile.prohibited_claims:
+        raw_claims = brand_profile.prohibited_claims
+        if isinstance(raw_claims, list):
+            for item in raw_claims:
+                if isinstance(item, dict):
+                    prohibited_claims_objs.append(
+                        ProhibitedClaim(
+                            claim=item.get("claim", str(item)),
+                            semantic_context=item.get("context"),
+                            reason=item.get("reason"),
+                        )
+                    )
+                else:
+                    prohibited_claims_objs.append(ProhibitedClaim(claim=str(item)))
+        elif isinstance(raw_claims, dict):
+            for k, v in raw_claims.items():
+                if k == "exact_terms" and isinstance(v, list):
+                    for term in v:
+                        prohibited_terms_objs.append(ProhibitedTerm(term=str(term), is_exact_match=True))
+                else:
+                    prohibited_claims_objs.append(ProhibitedClaim(claim=f"{k}: {v}"))
+
+    verified_offers_objs: list[VerifiedOffer] = []
+    if approved_phrases:
+        phrases_list = approved_phrases if isinstance(approved_phrases, list) else [approved_phrases]
+        for phrase in phrases_list:
+            verified_offers_objs.append(
+                VerifiedOffer(
+                    name=str(phrase),
+                    description="",
+                    source="confirmed_brand_profile",
+                )
+            )
+
     brand_context = None
     if brand_profile:
+        brand_voice_list = (
+            brand_profile.brand_voice
+            if isinstance(brand_profile.brand_voice, list)
+            else [str(brand_profile.brand_voice)]
+            if brand_profile.brand_voice
+            else ["Professional and authentic"]
+        )
+        pillars_list = (
+            brand_profile.content_pillars
+            if isinstance(brand_profile.content_pillars, list)
+            else [str(brand_profile.content_pillars)]
+            if brand_profile.content_pillars
+            else []
+        )
+        target_aud_list = (
+            target_aud
+            if isinstance(target_aud, list)
+            else [str(v) for v in target_aud.values()]
+            if isinstance(target_aud, dict)
+            else [str(target_aud)]
+            if target_aud
+            else []
+        )
+        approved_phrases_list = (
+            approved_phrases
+            if isinstance(approved_phrases, list)
+            else [str(approved_phrases)]
+            if approved_phrases
+            else []
+        )
+
         brand_context = BrandContext(
-            brand_name=client.business_name,
-            voice_and_tone=brand_voice,
-            target_audience=target_aud,
-            content_pillars=pillars,
-            prohibited_claims=prohibited,
-            key_offers=approved_phrases,
-            verified_facts=[client.business_name, client.industry or "General Business"],
+            client_id=client_id,
+            agency_id=agency_id,
+            business_name=client.business_name,
+            industry=client.industry,
+            website=client.website if hasattr(client, "website") else None,
+            brand_voice=brand_voice_list,
+            target_audience=target_aud_list,
+            content_pillars=pillars_list,
+            approved_phrases=approved_phrases_list,
+            prohibited_terms=prohibited_terms_objs,
+            prohibited_claims=prohibited_claims_objs,
+            verified_offers=verified_offers_objs,
+            confirmed_facts=[client.business_name, client.industry or "General Business"],
         )
 
     brief = CampaignBrief(
