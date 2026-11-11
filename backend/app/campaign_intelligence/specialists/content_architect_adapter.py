@@ -188,6 +188,31 @@ Return strictly matching CarouselGenerationOutput schema.
         # -------------------------------------------------------------
         activity_logs.append("Architecting timestamped Reel storyboard (scenes, camera cues, voiceover, Flux prompts)...")
 
+        # Optional bounded delegation: consult Market Research if user mentions competitor or trend whitespace
+        delegated_insights = ""
+        if any(kw in lower_q for kw in ["competitor", "trend", "whitespace", "viral angle", "market"]):
+            try:
+                from app.campaign_intelligence.collaboration.delegation_runner import (
+                    BoundedDelegationRunner,
+                    DelegationRequest,
+                )
+                runner = BoundedDelegationRunner(max_depth=1, max_calls_per_turn=1)
+                del_res = await runner.delegate(
+                    request=DelegationRequest(
+                        caller_agent_id=self.specialist_id,
+                        target_agent_id="market_research",
+                        sub_query=f"Find high-retention video angles and competitor whitespace for {client_name}",
+                        current_depth=0,
+                    ),
+                    context=context,
+                    db=db,
+                )
+                if del_res:
+                    activity_logs.append(del_res.activity_log)
+                    delegated_insights = f"\nMarket Intelligence from Market Research Specialist:\n{del_res.findings_summary}\n"
+            except Exception as del_err:
+                logger.warning(f"Delegation to market research failed: {del_err}")
+
         existing_scenes_text = ""
         if context.active_artifact_payload and context.active_artifact_type == ArtifactType.storyboard.value:
             activity_logs.append(f"Detected active storyboard '{context.active_artifact_payload.get('deliverable_title')}'. Applying revision...")
@@ -198,6 +223,7 @@ User Request: "{query}"
 
 Client: {client_name} ({industry}, Location: {context.client_location or 'General'})
 Brand Voice: {brand_voice}
+{delegated_insights}
 {existing_scenes_text}
 
 YOUR TASK:
