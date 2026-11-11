@@ -257,6 +257,37 @@ export const campaignApi = {
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}`, { method: "DELETE", token }),
 };
 
+/* ── Campaign Studio Artifact & Version endpoints ── */
+export const studioApi = {
+  listArtifacts: (agencyId: string, campaignId: string, token: string) =>
+    apiFetch<Array<any>>(
+      `/agencies/${agencyId}/campaigns/${campaignId}/studio/artifacts`,
+      { token }
+    ),
+
+  getArtifactDetail: (agencyId: string, campaignId: string, artifactId: string, token: string) =>
+    apiFetch<any>(
+      `/agencies/${agencyId}/campaigns/${campaignId}/studio/artifacts/${artifactId}`,
+      { token }
+    ),
+
+  approveArtifactVersion: (
+    agencyId: string,
+    campaignId: string,
+    artifactId: string,
+    versionNumber: number,
+    token: string
+  ) =>
+    apiFetch<any>(
+      `/agencies/${agencyId}/campaigns/${campaignId}/studio/artifacts/${artifactId}/approve`,
+      {
+        method: "POST",
+        body: { version_number: versionNumber },
+        token,
+      }
+    ),
+};
+
 /* ── Task endpoints ── */
 export const taskApi = {
   list: (agencyId: string, token: string, params?: Record<string, string>) => {
