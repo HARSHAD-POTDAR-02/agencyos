@@ -949,30 +949,40 @@ function CampaignStudioContent() {
         >
           {/* Specialist / Timeline Pill Strip */}
           {studioMode === "specialists" ? (
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1.5 border-b border-border/30 shrink-0 scrollbar-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground shrink-0 mr-1 flex items-center gap-1">
-                <Compass className="w-3 h-3 text-primary" />
-                <span className="hidden sm:inline">Specialist:</span>
-              </span>
-              {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => {
-                const Icon = agent.icon;
-                const isSelected = activeSpecialistId === agent.id;
-                return (
-                  <button
-                    key={agent.id}
-                    type="button"
-                    onClick={() => setActiveSpecialistId(agent.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer border ${
-                      isSelected
-                        ? `${agent.badgeBg} ${agent.badgeText} ${agent.borderColor} shadow-2xs ring-1 ring-primary/20 font-bold`
-                        : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{agent.shortName}</span>
-                  </button>
-                );
-              })}
+            <div className="py-2 border-b border-border/40 shrink-0 space-y-1.5">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
+                  <Compass className="w-3 h-3 text-primary" />
+                  <span>Choose Specialist</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[200px]">
+                  {SPECIALIST_AGENTS.find((a) => a.id === activeSpecialistId)?.name || "Specialist"}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => {
+                  const Icon = agent.icon;
+                  const isSelected = activeSpecialistId === agent.id;
+                  return (
+                    <button
+                      key={agent.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveSpecialistId(agent.id);
+                        setStudioMode("specialists");
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                        isSelected
+                          ? `${agent.badgeBg} ${agent.badgeText} ${agent.borderColor} shadow-2xs ring-1 ring-primary/20 font-bold`
+                          : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground border-border/40 hover:border-border"
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span>{agent.shortName}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 border-b border-border/30 shrink-0 text-xs">
