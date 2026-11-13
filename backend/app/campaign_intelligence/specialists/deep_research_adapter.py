@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.campaign_intelligence.schemas.studio_context import CampaignStudioContext
 from app.campaign_intelligence.specialists.base import SpecialistAdapter, SpecialistResult
-from app.campaign_intelligence.research.deep_research_graph import run_deep_research
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +34,7 @@ class DeepResearchSpecialistAdapter(SpecialistAdapter):
         on_event: Any | None = None,
     ) -> SpecialistResult:
         logger.info(f"DeepResearchSpecialistAdapter executing multi-stage research for: '{query[:60]}...'")
+        from app.campaign_intelligence.research.deep_research_graph import run_deep_research
         return await run_deep_research(
             query=query,
             context=context,

@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.campaign_intelligence.runtime.schemas import ToolExecutionContext
 from app.campaign_intelligence.runtime.tool_registry import SpecialistTool, ToolRegistry
@@ -38,6 +38,14 @@ class WebSearchInput(BaseModel):
     )
     max_results: int = Field(default=5, ge=1, le=10, description="Maximum number of search results to retrieve (1-10).")
 
+    @field_validator("query", mode="before")
+    def sanitize_query(cls, v: Any) -> str:
+        if not isinstance(v, str):
+            v = str(v or "")
+        cleaned = re.sub(r'[\r\n\t]+', ' ', v).strip()
+        cleaned = re.sub(r'^["\'`]+|["\'`]+$', '', cleaned).strip()
+        return cleaned or "market research intelligence"
+
 
 class ExtractWebpagesInput(BaseModel):
     """Input for inspecting full webpage content of discovered URLs."""
@@ -50,6 +58,15 @@ class ExtractWebpagesInput(BaseModel):
             "TikTok, Facebook, LinkedIn, etc.) as scrapers are blocked by authentication walls."
         )
     )
+
+    @field_validator("urls", mode="before")
+    def sanitize_urls(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            v = [v]
+        if not isinstance(v, list):
+            return ["https://example.com"]
+        cleaned = [u.strip() for u in v if isinstance(u, str) and u.strip().startswith(("http://", "https://"))]
+        return cleaned or ["https://example.com"]
 
 
 class PlatformDocumentationInput(BaseModel):
@@ -76,8 +93,21 @@ class BrandContextToolInput(BaseModel):
 
 async def web_search_handler(args: WebSearchInput, ctx: ToolExecutionContext) -> dict[str, Any]:
     """Execute live web search with fallback cascade and return clean, structured evidence."""
+    sanitized_q = (args.query or "").strip()
+    sanitized_q = re.sub(r'[\r\n\t]+', ' ', sanitized_q)
+    sanitized_q = re.sub(r'^["\'`]+|["\'`]+$', '', sanitized_q).strip()
+
+    if not sanitized_q:
+        return {
+            "query": "",
+            "search_depth": args.search_depth,
+            "result_count": 0,
+            "results": [],
+            "error": "Query string was empty or malformed",
+        }
+
     results = await execute_query_with_fallbacks(
-        query=args.query,
+        query=sanitized_q,
         max_results=args.max_results,
         search_depth=args.search_depth,
         days=args.days,
@@ -93,7 +123,7 @@ async def web_search_handler(args: WebSearchInput, ctx: ToolExecutionContext) ->
             "relevance_score": r.relevance_score,
         })
     return {
-        "query": args.query,
+        "query": sanitized_q,
         "search_depth": args.search_depth,
         "result_count": len(clean_results),
         "results": clean_results,

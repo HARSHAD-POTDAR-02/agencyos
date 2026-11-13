@@ -368,3 +368,549 @@ def test_format_brand_context_block_handles_none_gracefully():
     from app.campaign_intelligence.research.deep_research_graph import _format_brand_context_block
 
     assert _format_brand_context_block(None, "test") == ""
+
+
+# ===========================================================================
+# The 12-Item Freeze Gate Acceptance Tests
+# ===========================================================================
+
+def test_freeze_gate_01_context_resolution():
+    """Gate 1: Context resolution — 'Who are our competitors?' resolves to active client brand, discarding stale coffee artifacts."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        _build_deep_research_prior_context,
+        _resolve_research_mode,
+    )
+    from app.campaign_intelligence.collaboration.schemas import ResearchScopeMode
+
+    client_context = CampaignStudioContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        client_name="Hotel Shauryawada",
+        client_industry="Restaurant",
+        client_location="Handewadi, Pune",
+        campaign_brief=CampaignBrief(
+            client_id=uuid.uuid4(),
+            agency_id=uuid.uuid4(),
+            period_month=11,
+            period_year=2026,
+            objective="Local dining growth",
+        ),
+        active_artifact_type="research_evidence",
+        active_artifact_payload={
+            "query_topic": "Specialty Coffee Roasters Subko and Blue Tokai",
+            "observed_competitors": [{"competitor_name": "Blue Tokai", "platform": "instagram", "observed_creative_angle": "Roastery tours"}],
+        },
+    )
+
+    mode, is_ambiguous = _resolve_research_mode("Who are our competitors?", client_context)
+    assert mode == ResearchScopeMode.CLIENT_SCOPED
+    assert is_ambiguous is False
+
+    # Stale topic isolation: Coffee artifact has zero keyword overlap with "Who are our competitors?"
+    prior_ctx = _build_deep_research_prior_context(client_context, "Who are our competitors?", mode)
+    assert prior_ctx == ""  # Stale coffee artifact discarded!
+
+
+def test_freeze_gate_02_independent_research():
+    """Gate 2: Independent research — Explicit external subjects take priority over unrelated client context."""
+    from app.campaign_intelligence.research.deep_research_graph import _resolve_research_mode
+    from app.campaign_intelligence.collaboration.schemas import ResearchScopeMode
+
+    client_context = CampaignStudioContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        client_name="Hotel Shauryawada",
+        client_industry="Restaurant",
+        client_location="Handewadi, Pune",
+        campaign_brief=CampaignBrief(
+            client_id=uuid.uuid4(),
+            agency_id=uuid.uuid4(),
+            period_month=11,
+            period_year=2026,
+            objective="Local dining growth",
+        ),
+    )
+
+    query = "Conduct deep market research on specialty coffee roasters in Mumbai and Pune, specifically Blue Tokai, Subko, Third Wave Coffee"
+    mode, is_ambiguous = _resolve_research_mode(query, client_context)
+    assert mode == ResearchScopeMode.INDEPENDENT_RESEARCH
+    assert is_ambiguous is False
+
+
+def test_freeze_gate_03_client_informed_external():
+    """Gate 3: Client-informed external research — External trends queries informed by client context."""
+    from app.campaign_intelligence.research.deep_research_graph import _resolve_research_mode
+    from app.campaign_intelligence.collaboration.schemas import ResearchScopeMode
+
+    client_context = CampaignStudioContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        client_name="Hotel Shauryawada",
+        client_industry="Restaurant",
+        client_location="Handewadi, Pune",
+        campaign_brief=CampaignBrief(
+            client_id=uuid.uuid4(),
+            agency_id=uuid.uuid4(),
+            period_month=11,
+            period_year=2026,
+            objective="Local dining growth",
+        ),
+    )
+
+    query = "What are the viral reels hooks and trending formats for food brands this month?"
+    mode, is_ambiguous = _resolve_research_mode(query, client_context)
+    assert mode == ResearchScopeMode.CLIENT_INFORMED_EXTERNAL
+    assert is_ambiguous is False
+
+
+@pytest.mark.asyncio
+async def test_freeze_gate_04_ambiguity_handling():
+    """Gate 4: Ambiguity handling — Missing client business category triggers clarification question without guessing."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        _resolve_research_mode,
+        compile_report_node,
+        plan_scoping_node,
+    )
+    from app.campaign_intelligence.collaboration.schemas import ResearchScopeMode
+
+    ambiguous_context = CampaignStudioContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        client_name="Shaurya Holdings",
+        client_industry=None,  # Missing business category!
+        campaign_brief=CampaignBrief(
+            client_id=uuid.uuid4(),
+            agency_id=uuid.uuid4(),
+            period_month=11,
+            period_year=2026,
+            objective="Brand strategy",
+        ),
+    )
+
+    query = "What are our direct and indirect competitors?"
+    mode, is_ambiguous = _resolve_research_mode(query, ambiguous_context)
+    assert mode == ResearchScopeMode.CLIENT_SCOPED
+    assert is_ambiguous is True
+
+    # plan_scoping_node should halt with is_ambiguous_clarification=True
+    state = {
+        "query": query,
+        "context": ambiguous_context,
+        "plan": None,
+        "current_topic_idx": 0,
+        "used_tool_budget": 0,
+        "max_global_budget": 6,
+        "topic_evidences": [],
+        "discovered_sources": {},
+        "inspected_sources": {},
+        "synthesis": None,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+    plan_res = await plan_scoping_node(state)
+    assert plan_res["is_ambiguous"] is True
+    plan = plan_res["plan"]
+    assert plan.is_ambiguous_clarification is True
+    assert len(plan.sub_topics) == 0
+
+    # compile_report_node should return clarification request
+    state["plan"] = plan
+    compile_res = await compile_report_node(state)
+    synthesis = compile_res["synthesis"]
+    assert "clarify the primary business category" in synthesis.executive_summary
+    assert len(synthesis.observed_competitors) == 0
+
+
+def test_freeze_gate_05_research_planning_evidence_types():
+    """Gate 5: Research planning — Pre-flight evidence types prioritize sources appropriately."""
+    from app.campaign_intelligence.research.deep_research_graph import _select_best_url_for_topic
+
+    results = [
+        {"url": "https://brandx.com", "title": "BrandX Official Homepage", "content": "Welcome to our store", "score": 0.9},
+        {"url": "https://consumerforum.in/brandx-complaints", "title": "BrandX Delivery Delay Reviews", "content": "Customer complaints regarding stale food and delays", "score": 0.7},
+        {"url": "https://brandx.com/menu-pricing", "title": "BrandX Official Menu & Pricing", "content": "Full pricing tiers and pack options", "score": 0.8},
+    ]
+
+    # For 'independent_reviews', brand homepage is penalized; review portal is selected
+    review_url = _select_best_url_for_topic(
+        results=results,
+        topic_title="Customer Complaints and Delivery Delays",
+        target_entity="BrandX",
+        already_inspected=set(),
+        evidence_type="independent_reviews",
+    )
+    assert review_url == "https://consumerforum.in/brandx-complaints"
+
+    # For 'official_menu_or_store', menu page on official domain is preferred
+    store_url = _select_best_url_for_topic(
+        results=results,
+        topic_title="Menu Offerings and Bean Pricing Tiers",
+        target_entity="BrandX",
+        already_inspected=set(),
+        evidence_type="official_menu_or_store",
+    )
+    assert store_url == "https://brandx.com/menu-pricing"
+
+
+def test_freeze_gate_06_evidence_accounting():
+    """Gate 6: Evidence accounting — Discovered search snippets and deeply inspected pages are counted separately."""
+    from app.campaign_intelligence.collaboration.schemas import (
+        CompetitorActivity,
+        EvidenceCitation,
+        MarketResearchArtifactPayload,
+    )
+
+    payload = MarketResearchArtifactPayload(
+        query_topic="Competitor pricing",
+        observed_competitors=[
+            CompetitorActivity(
+                competitor_name="Brand A",
+                observed_creative_angle="Discount pricing",
+                observed_format="Post",
+                citation=EvidenceCitation(
+                    source_title="Brand A",
+                    source_url="https://branda.com",
+                    publisher="branda.com",
+                    excerpt="Price is ₹500",
+                ),
+            )
+        ],
+        discovered_count=12,
+        inspected_count=3,
+        claim_supported_count=1,
+    )
+    assert payload.discovered_count == 12
+    assert payload.inspected_count == 3
+    assert payload.claim_supported_count == 1
+
+
+@pytest.mark.asyncio
+async def test_freeze_gate_07_claim_verification():
+    """Gate 7: Claim verification — Unverified numerical metrics not in inspected sources are tagged unverified."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        MarketResearchSynthesisOutput,
+    )
+
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Competitive study.",
+        key_findings=[
+            # This finding claims 900 daily Raans and ₹20 lakh, but neither exists in inspected dossier
+            CitedKeyFinding(
+                finding="Hotel Shauryawada serves 900 daily Raans generating ₹20 lakh in daily turnover.",
+                source_url="https://someblog.in/raan",
+            ),
+            # This finding's metric IS in inspected metrics
+            CitedKeyFinding(
+                finding="Subko starts pricing at ₹495 for 158g bags.",
+                source_url="https://subko.cr/coffee",
+            ),
+        ],
+        observed_competitors=[],
+        inferred_opportunities=[],
+        research_dimensions=[],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Subko pricing",
+        target_entity="Subko",
+        findings=["Subko pricing from ₹495"],
+        key_excerpts=["Packs start from ₹495 for 158g"],
+        detected_metrics=["₹495", "158g"],
+        inspected_sources=["https://subko.cr/coffee"],
+        snippet_sources=[],
+        status="answered",
+        summary="Verified pricing",
+    )
+
+    state = {
+        "query": "Pricing check",
+        "context": None,
+        "plan": None,
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://subko.cr/coffee": {"title": "Subko", "snippet": "₹495"}},
+        "inspected_sources": {"https://subko.cr/coffee": {"title": "Subko", "summary": "Packs start from ₹495"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+        # Finding 1 should be flagged as unverified metric because 900 and 20 lakh are not in inspected sources
+        f1 = synth.key_findings[0].finding
+        assert "[Unverified Metric" in f1 or "[PRELIMINARY" in f1
+        # Finding 2 should NOT be flagged as unverified
+        f2 = synth.key_findings[1].finding
+        assert "[Unverified Metric" not in f2
+
+
+@pytest.mark.asyncio
+async def test_freeze_gate_08_review_integrity():
+    """Gate 8: Review integrity — Distinguishes 1 review (anecdote) from 2-4 (repeated) and 5+ (recurring complaint)."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        MarketResearchSynthesisOutput,
+    )
+
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Complaints audit.",
+        key_findings=[
+            CitedKeyFinding(
+                finding="Single diner reported delivery delay on weekend evening.",
+                source_url="https://reviewsite.in/1",
+            ),
+            CitedKeyFinding(
+                finding="Multiple recurring complaints regarding stale beans across Bangalore hubs.",
+                source_url="https://reviewsite.in/2",
+            ),
+        ],
+        observed_competitors=[],
+        inferred_opportunities=[],
+        research_dimensions=[],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Review check",
+        findings=["Found reviews"],
+        inspected_sources=["https://reviewsite.in/1"],
+        snippet_sources=[],
+    )
+
+    state = {
+        "query": "Complaints check",
+        "context": None,
+        "plan": None,
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://reviewsite.in/1": {"title": "R1", "snippet": "delay"}},
+        "inspected_sources": {"https://reviewsite.in/1": {"title": "R1", "summary": "delay"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+        assert synth.key_findings[0].finding.startswith("Preliminary individual anecdote (1 review):")
+        assert synth.key_findings[1].finding.startswith("Recurring customer complaint (multiple verified reviews):")
+
+
+@pytest.mark.asyncio
+async def test_freeze_gate_09_competitor_classification_channel():
+    """Gate 9: Competitor classification — Aggregators (Zomato, Swiggy) classified as CHANNEL, not DIRECT."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.collaboration.schemas import CompetitorType
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        CompetitorFindingItem,
+        MarketResearchSynthesisOutput,
+    )
+
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Competitor map.",
+        key_findings=[
+            CitedKeyFinding(finding="Competitors identified across local market.", source_url=None)
+        ],
+        observed_competitors=[
+            CompetitorFindingItem(
+                competitor_name="Zomato",
+                platform="instagram",
+                observed_creative_angle="Online restaurant delivery",
+                supporting_source_url="https://zomato.com",
+            ),
+            CompetitorFindingItem(
+                competitor_name="Surve's Pure Non-Veg",
+                platform="instagram",
+                observed_creative_angle="Authentic Maharashtrian mutton thalis",
+                supporting_source_url="https://surves.in",
+            ),
+        ],
+        inferred_opportunities=[],
+        research_dimensions=[],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Competitors",
+        findings=["Found competitors"],
+        inspected_sources=["https://surves.in"],
+    )
+
+    state = {
+        "query": "Competitors check",
+        "context": None,
+        "plan": None,
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://surves.in": {"title": "Surves", "snippet": "Thalis"}},
+        "inspected_sources": {"https://surves.in": {"title": "Surves", "summary": "Thalis"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+        zomato = synth.observed_competitors[0]
+        surves = synth.observed_competitors[1]
+        assert zomato.competitor_type == CompetitorType.CHANNEL
+        assert "channel platform" in zomato.relevance.product_or_service_overlap.lower()
+        assert surves.competitor_type == CompetitorType.DIRECT
+
+
+@pytest.mark.asyncio
+async def test_freeze_gate_10_recommendation_discipline():
+    """Gate 10: Recommendation discipline — Opportunities default to HYPOTHESIS with low-risk test methods."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.collaboration.schemas import OpportunityStatus
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        InferredOpportunityItem,
+        MarketResearchSynthesisOutput,
+    )
+
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Opportunity analysis.",
+        key_findings=[
+            CitedKeyFinding(finding="Opportunities identified across target whitespace.", source_url=None)
+        ],
+        observed_competitors=[],
+        inferred_opportunities=[
+            InferredOpportunityItem(
+                opportunity_description="Introduce ready-to-eat vacuum packed mutton curries",
+                target_whitespace="Take-home weekend packs",
+                supporting_source_urls=["https://source.in"],
+            )
+        ],
+        research_dimensions=[],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Whitespace",
+        findings=["Found whitespace"],
+        inspected_sources=["https://source.in"],
+    )
+
+    state = {
+        "query": "Whitespace check",
+        "context": None,
+        "plan": None,
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://source.in": {"title": "Source", "snippet": "Packs"}},
+        "inspected_sources": {"https://source.in": {"title": "Source", "summary": "Packs"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+        opp = synth.inferred_opportunities[0]
+        assert opp.status == OpportunityStatus.HYPOTHESIS
+        assert len(opp.missing_evidence) > 0
+        assert opp.test_method is not None
+        assert opp.validation_criteria is not None
+
+
+@pytest.mark.asyncio
+async def test_freeze_gate_11_failure_honesty():
+    """Gate 11: Failure honesty — Explicitly reports zero sources when search yields no evidence."""
+    from app.campaign_intelligence.research.deep_research_graph import compile_report_node
+
+    empty_state = {
+        "query": "Impossible query with zero results",
+        "context": None,
+        "plan": None,
+        "current_topic_idx": 0,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [],
+        "discovered_sources": {},
+        "inspected_sources": {},
+        "synthesis": None,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "independent_research",
+        "is_ambiguous": False,
+    }
+
+    res = await compile_report_node(empty_state)
+    synth = res["synthesis"]
+    assert "Zero sources retrieved" in synth.executive_summary
+    assert "No verifiable market evidence could be retrieved" in synth.executive_summary
+    assert len(synth.observed_competitors) == 0
+
+
+def test_freeze_gate_12_runtime_safety():
+    """Gate 12: Runtime safety — Tool inputs sanitize illegal characters, quotes, and empty values safely."""
+    from app.campaign_intelligence.tools.market_research_tools import (
+        ExtractWebpagesInput,
+        WebSearchInput,
+    )
+
+    # WebSearchInput sanitization
+    in1 = WebSearchInput(query="   \"\"\"   ")
+    assert in1.query == "market research intelligence"
+
+    in2 = WebSearchInput(query="  \"Blue Tokai pricing\"  ")
+    assert in2.query == "Blue Tokai pricing"
+
+    # ExtractWebpagesInput sanitization
+    in3 = ExtractWebpagesInput(urls=["malformed_string", "   https://subko.cr/menu   ", "ftp://invalid.com"])
+    assert in3.urls == ["https://subko.cr/menu"]
+
+    in4 = ExtractWebpagesInput(urls=["all_invalid"])
+    assert in4.urls == ["https://example.com"]
+

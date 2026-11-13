@@ -30,12 +30,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.campaign_intelligence.collaboration.schemas import (
     ArtifactType,
+    ComplaintScope,
     CompetitorActivity,
+    CompetitorRelevance,
+    CompetitorType,
     EvidenceCitation,
     InferredOpportunity,
     MarketResearchArtifactPayload,
+    OpportunityStatus,
     ResearchDimensionItem,
     ResearchDimensionStatus,
+    ResearchScopeMode,
     SocialPlatform,
 )
 from app.campaign_intelligence.runtime import (
@@ -65,7 +70,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class CitedKeyFinding(BaseModel):
-    """A key finding with its supporting source URL."""
+    """A key finding with its supporting source URL and verification tag."""
     finding: str = Field(description="Factual statement grounded in retrieved evidence")
     source_url: str | None = Field(
         default=None,
@@ -75,22 +80,50 @@ class CitedKeyFinding(BaseModel):
 
 class CompetitorFindingItem(BaseModel):
     competitor_name: str = Field(
-        description="Exact name of an actual business, brand, company, product, or creator entity. Must NOT be an SEO aggregate title, search query, or hashtag topic (e.g. not 'Best Tools', 'Popular Reels', or 'Top Rated Services')."
+        description="Exact name of an actual business, brand, company, product, or creator entity. Must NOT be an SEO aggregate title, search query, or hashtag topic."
     )
     platform: str = Field(default="instagram", description="Platform observed on")
     observed_creative_angle: str = Field(description="Specific observed hook, positioning, or creative pattern")
-    observed_format: str = Field(description="e.g. 'Short-form Video', 'Carousel Deck', 'Case Study'")
+    observed_format: str = Field(default="Social Post", description="e.g. 'Short-form Video', 'Carousel Deck', 'Menu Offering', 'Storefront'")
     supporting_source_url: str | None = Field(
         default=None,
         description="Exact URL from retrieved evidence that establishes this observation",
     )
     citation_quote: str = Field(default="", description="Verbatim excerpt from source")
+    competitor_type: CompetitorType = Field(
+        default=CompetitorType.DIRECT,
+        description="Classification: 'direct' (same food/product & area), 'indirect' (substitute dining/needs), 'product_level' (specific dish/item), or 'channel' (aggregators like Zomato/Swiggy)."
+    )
+    relevance: CompetitorRelevance | None = Field(
+        default=None,
+        description="Structured overlap analysis across geography, product, price, audience, and occasion."
+    )
 
 
 class InferredOpportunityItem(BaseModel):
     opportunity_description: str = Field(description="Concrete strategic opportunity or actionable differentiation angle")
     target_whitespace: str = Field(
-        description="Authentic market whitespace or unserved customer need. Must be logically consistent with findings (do NOT state an angle is missing if findings state competitors already do it)."
+        description="Authentic market whitespace or unserved customer need. Must be logically consistent with findings."
+    )
+    status: OpportunityStatus = Field(
+        default=OpportunityStatus.HYPOTHESIS,
+        description="Explicit status: 'validated_opportunity' (grounded in verified cost/demand metrics) or 'hypothesis' (untested strategic angle)."
+    )
+    supporting_evidence: list[str] = Field(
+        default_factory=list,
+        description="Verified observations backing this opportunity",
+    )
+    missing_evidence: list[str] = Field(
+        default_factory=list,
+        description="Crucial missing data points (costs, margin, willingness to pay)",
+    )
+    test_method: str | None = Field(
+        default=None,
+        description="Practical, low-risk way for an agency to test this hypothesis cheaply",
+    )
+    validation_criteria: str | None = Field(
+        default=None,
+        description="Specific measurable outcome that validates or rejects the hypothesis",
     )
     supporting_source_urls: list[str] = Field(
         default_factory=list,
@@ -121,7 +154,7 @@ class MarketResearchSynthesisOutput(BaseModel):
     inferred_opportunities: list[InferredOpportunityItem] = Field(default_factory=list)
     research_dimensions: list[ResearchDimensionItem] = Field(
         default_factory=list,
-        description="Explicit accounting of each requested query dimension: answered, partial, or missing, with evidence or reason.",
+        description="Explicit accounting of each requested query dimension: answered, partial, missing, not_verified, or not_available.",
     )
     search_limitations: str | None = Field(
         default=None,
@@ -542,26 +575,31 @@ STRICT RULES:
             # Fallback deterministic synthesis when invoke_structured_llm fails
             if synthesis is None:
                 top_sources = list(verified_sources_map.values())
-                limit_msg = (
-                    "Structured synthesis failed. The following sources were retrieved "
-                    "but could not be synthesized automatically."
-                    if top_sources
-                    else "Research could not be completed: no evidence was retrieved and synthesis failed."
-                )
-                findings = [
-                    CitedKeyFinding(finding=s.excerpt[:200], source_url=s.source_url)
-                    for s in top_sources[:3]
-                ]
-                if not findings:
-                    findings = [CitedKeyFinding(finding="No evidence retrieved.", source_url=None)]
-
-                subject_label = client_name if is_client_scoped else f"'{query[:50]}'"
-                synthesis = MarketResearchSynthesisOutput(
-                    executive_summary=(
-                        f"Market landscape investigation: I've analyzed the market landscape for "
+                if top_sources:
+                    limit_msg = (
+                        "Structured synthesis failed. The following sources were retrieved "
+                        "but could not be synthesized automatically."
+                    )
+                    findings = [
+                        CitedKeyFinding(finding=s.excerpt[:200], source_url=s.source_url)
+                        for s in top_sources[:3]
+                    ]
+                    subject_label = client_name if is_client_scoped else f"'{query[:50]}'"
+                    exec_summary = (
+                        f"Market landscape investigation: Analyzed the market landscape for "
                         f"{subject_label} across {len(discovered_sources_map)} discovered search results "
                         f"({len(inspected_sources_map)} deeply inspected pages)."
-                    ),
+                    )
+                else:
+                    limit_msg = "Zero sources retrieved: No verifiable evidence was found across the queried terms."
+                    findings = [CitedKeyFinding(finding="No verifiable evidence retrieved across queried terms.", source_url=None)]
+                    exec_summary = (
+                        f"Zero sources retrieved: No verifiable evidence could be retrieved for '{query[:50]}'. "
+                        "The requested research dimensions remain unverified."
+                    )
+
+                synthesis = MarketResearchSynthesisOutput(
+                    executive_summary=exec_summary,
                     key_findings=findings,
                     verified_observations=[],
                     source_reported_claims=[],
@@ -900,18 +938,33 @@ STRICT RULES:
     @staticmethod
     def _classify_research_scope(query: str, client_name: str) -> str:
         """
-        Classify whether research is scoped to the agency's client or an independent market query.
-        Returns:
-            "CLIENT_SCOPED" or "INDEPENDENT_RESEARCH"
-        Rule:
-            When ambiguous, prefer "INDEPENDENT_RESEARCH" to avoid injecting unrelated client context.
+        Classify research into one of three explicit modes:
+        - CLIENT_SCOPED: Researching the active client's market, competitors, or offerings.
+        - CLIENT_INFORMED_EXTERNAL: Researching external trends/practices informed by the client's industry/location.
+        - INDEPENDENT_RESEARCH: Explicitly named external subjects take precedence over client context.
         """
         q = query.lower()
+
+        # Priority 1: Explicit user-named external subjects take priority
+        named_patterns = [
+            r"\bspecifically\b",
+            r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
+            r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
+            r"\bcompeting with\b",
+            r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
+            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand)\b",
+        ]
+        if any(re.search(pat, q) for pat in named_patterns):
+            return "INDEPENDENT_RESEARCH"
+
+        # Priority 2: Client-scoped cues
         client_terms = {
-            "my client", "our client", "the client", "our brand", "our restaurant",
-            "our cafe", "our company", "our business", "our product", "our competitors",
-            "our pricing", "our location", "around us", "for us", "we offer", "we are",
-            "we're", "our service", "our shop", "our agency client",
+            "our competitors", "who are our competitors", "what are our competitors",
+            "what are our direct and indirect competitors", "our direct competitors",
+            "who is our competition", "my client", "our client", "the client",
+            "our brand", "our restaurant", "our cafe", "our company", "our business",
+            "our product", "our pricing", "our location", "around us", "for us",
+            "we offer", "we are", "we're", "our service", "our shop", "our agency client",
         }
         if any(term in q for term in client_terms):
             return "CLIENT_SCOPED"
@@ -919,6 +972,11 @@ STRICT RULES:
         cleaned_client = re.sub(r"[^\w\s]", "", (client_name or "").lower()).strip()
         if len(cleaned_client) >= 4 and cleaned_client in q:
             return "CLIENT_SCOPED"
+
+        # Priority 3: External trend queries informed by client context
+        trend_terms = {"trend", "trends", "viral", "hooks", "benchmark", "benchmarks", "format", "formats", "growth", "playbook"}
+        if any(t in q for t in trend_terms):
+            return "CLIENT_INFORMED_EXTERNAL"
 
         return "INDEPENDENT_RESEARCH"
 
@@ -1074,31 +1132,56 @@ STRICT RULES:
                 elif status_val == "partial":
                     icon = "⚠️"
                     label = "Partial"
+                elif status_val == "not_verified":
+                    icon = "🔍"
+                    label = "Not Verified"
+                elif status_val == "not_available":
+                    icon = "🚫"
+                    label = "Not Available"
                 else:
                     icon = "❌"
                     label = "Missing"
                 dim_lines.append(f"- {icon} **{d.dimension}**: {label} — {d.summary}")
             dim_block = "\n\n### Research Scope & Dimension Tracking\n" + "\n".join(dim_lines)
 
-        # --- Competitor block ---
+        # --- Competitor block with classification and structured relevance ---
         comp_block = ""
         if validated_competitors:
-            lines = [
-                f"- **{c.competitor_name}** ({c.platform.value}): {c.observed_creative_angle} "
-                f"— *[{c.citation.publisher}]({c.citation.source_url})*"
-                for c in validated_competitors[:3]
-            ]
-            comp_block = "\n\n### Observed Competitor Strategies\n" + "\n".join(lines)
+            lines = []
+            for c in validated_competitors[:4]:
+                type_tag = f"[{c.competitor_type.value.upper()}]" if hasattr(c, "competitor_type") else ""
+                rel_parts = []
+                if hasattr(c, "relevance") and c.relevance:
+                    if getattr(c.relevance, "geographic_overlap", None):
+                        rel_parts.append(f"Geo: {c.relevance.geographic_overlap}")
+                    if getattr(c.relevance, "product_or_service_overlap", None):
+                        rel_parts.append(f"Product: {c.relevance.product_or_service_overlap}")
+                rel_str = f" *({', '.join(rel_parts)})*" if rel_parts else ""
+                lines.append(
+                    f"- {type_tag} **{c.competitor_name}** ({c.platform.value}): {c.observed_creative_angle}{rel_str} "
+                    f"— *[{c.citation.publisher}]({c.citation.source_url})*"
+                )
+            comp_block = "\n\n### Observed Competitor Landscape\n" + "\n".join(lines)
 
-        # --- Opportunity block ---
+        # --- Opportunity block with hypothesis labeling and practical test methods ---
         opp_block = ""
         real_opps = [o for o in validated_opportunities if not o.opportunity_description.startswith("[UNVERIFIED")]
         if real_opps:
-            lines = [
-                f"- **{o.opportunity_description}** *(Whitespace: {o.target_whitespace})*"
-                for o in real_opps[:2]
-            ]
-            opp_block = "\n\n### Strategic Content Whitespace\n" + "\n".join(lines)
+            lines = []
+            for o in real_opps[:3]:
+                status_tag = f"[{o.status.value.replace('_', ' ').upper()}]" if hasattr(o, "status") else "[HYPOTHESIS]"
+                extra_lines = []
+                if hasattr(o, "missing_evidence") and o.missing_evidence:
+                    extra_lines.append(f"    * Missing Evidence: {', '.join(o.missing_evidence)}")
+                if hasattr(o, "test_method") and o.test_method:
+                    extra_lines.append(f"    * Low-Risk Test: {o.test_method}")
+                if hasattr(o, "validation_criteria") and o.validation_criteria:
+                    extra_lines.append(f"    * Success Metric: {o.validation_criteria}")
+                extra_str = ("\n" + "\n".join(extra_lines)) if extra_lines else ""
+                lines.append(
+                    f"- {status_tag} **{o.opportunity_description}** *(Whitespace: {o.target_whitespace})*{extra_str}"
+                )
+            opp_block = "\n\n### Strategic Market Whitespace & Actionable Hypotheses\n" + "\n".join(lines)
 
         # --- Limitations ---
         limit_section = ""

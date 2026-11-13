@@ -69,6 +69,43 @@ class EvidenceCitation(BaseModel):
         return self
 
 
+class ResearchScopeMode(str, Enum):
+    """Explicit research context resolution mode."""
+    CLIENT_SCOPED = "client_scoped"
+    CLIENT_INFORMED_EXTERNAL = "client_informed_external"
+    INDEPENDENT_RESEARCH = "independent_research"
+
+
+class CompetitorType(str, Enum):
+    """Categorization of observed market competitor entities."""
+    DIRECT = "direct"
+    INDIRECT = "indirect"
+    PRODUCT_LEVEL = "product_level"
+    CHANNEL = "channel"
+
+
+class CompetitorRelevance(BaseModel):
+    """Structured overlap analysis without manufactured numerical scores."""
+    geographic_overlap: str = Field(description="Local, regional, national, or delivery radius overlap")
+    product_or_service_overlap: str = Field(description="Degree of menu/product offering substitution")
+    price_overlap: str = Field(description="Relative price tier comparison (budget, parity, premium)")
+    audience_overlap: str = Field(description="Target customer segment alignment")
+    occasion_overlap: str = Field(description="Dining or purchase occasion alignment (daily, weekend, celebration, quick bite)")
+
+
+class OpportunityStatus(str, Enum):
+    """Evidence confidence status of an inferred strategic recommendation."""
+    VALIDATED_OPPORTUNITY = "validated_opportunity"
+    HYPOTHESIS = "hypothesis"
+
+
+class ComplaintScope(str, Enum):
+    """Granularity of verified customer negative feedback."""
+    INDIVIDUAL_ANECDOTE = "individual_anecdote"
+    REPEATED_SIGNAL = "repeated_signal"
+    RECURRING_COMPLAINT = "recurring_complaint"
+
+
 class CompetitorActivity(BaseModel):
     """Directly observed competitor creative posting behavior."""
     competitor_name: str
@@ -76,6 +113,8 @@ class CompetitorActivity(BaseModel):
     observed_creative_angle: str
     observed_format: str
     citation: EvidenceCitation
+    competitor_type: CompetitorType = CompetitorType.DIRECT
+    relevance: CompetitorRelevance | None = None
 
 
 class InferredOpportunity(BaseModel):
@@ -83,12 +122,19 @@ class InferredOpportunity(BaseModel):
     opportunity_description: str
     target_whitespace: str
     supporting_citations: list[EvidenceCitation] = Field(default_factory=list)
+    status: OpportunityStatus = OpportunityStatus.HYPOTHESIS
+    supporting_evidence: list[str] = Field(default_factory=list)
+    missing_evidence: list[str] = Field(default_factory=list)
+    test_method: str | None = None
+    validation_criteria: str | None = None
 
 
 class ResearchDimensionStatus(str, Enum):
     ANSWERED = "answered"
     PARTIAL = "partial"
     MISSING = "missing"
+    NOT_VERIFIED = "not_verified"
+    NOT_AVAILABLE = "not_available"
 
 
 class ResearchDimensionItem(BaseModel):
