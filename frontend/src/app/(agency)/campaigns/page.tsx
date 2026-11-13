@@ -246,6 +246,8 @@ interface ChatMsg {
   agent_id?: string;
   agent_name?: string;
   activity_logs?: Array<Record<string, unknown> | string>;
+  isStreaming?: boolean;
+  streamingStatus?: string;
   artifact_summary?: {
     id: string;
     type: string;
@@ -527,16 +529,33 @@ function CampaignStudioContent() {
     };
 
     const nextMessages = [...chatMessages, userMsg];
-    setChatMessages(nextMessages);
     if (!textOverride) setChatInput("");
     setIsChatLoading(true);
+
+    const aiMsgId = `ai-${Date.now()}`;
+    const initialAiMsg: ChatMsg = {
+      id: aiMsgId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      agent_id: currentAgentId,
+      agent_name: currentAgent.name,
+      activity_logs: [],
+      isStreaming: true,
+      streamingStatus: `Connecting to ${currentAgent.name}...`,
+    };
+
+    setChatMessages([...nextMessages, initialAiMsg]);
 
     setTimeout(() => {
       chatInputRef.current?.focus();
     }, 0);
 
+    let accumulatedContent = "";
+    let accumulatedLogs: string[] = [];
+
     try {
-      const response = await campaignApi.chatBrief(
+      await campaignApi.chatBriefStream(
         effectiveAgencyId,
         selectedClientId,
         {
@@ -555,91 +574,207 @@ function CampaignStudioContent() {
           active_artifact_id: activeArtifact?.id || undefined,
           active_artifact_version: activeArtifact?.version || undefined,
         },
-        token
-      );
-
-      if (response.campaign_id) {
-        setActiveCampaignId(response.campaign_id);
-      }
-
-      if (response.artifact_id && response.artifact_payload) {
-        setActiveArtifact({
-          id: response.artifact_id,
-          type: response.artifact_type || "storyboard",
-          title: response.artifact_title || `${currentAgent.name} Asset`,
-          version: response.artifact_version_number || 1,
-          status: response.artifact_status || "draft",
-          payload: response.artifact_payload,
-          supporting_evidence_refs: response.supporting_evidence_refs || [],
-        });
-        setMobileTab("canvas");
-      }
-
-      const aiMsg: ChatMsg = {
-        id: `ai-${Date.now()}`,
-        role: "assistant",
-        content: response.reply,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        agent_id: response.agent_id || currentAgentId,
-        agent_name: response.agent_name || currentAgent.name,
-        activity_logs: response.activity_logs || [],
-        artifact_summary: response.artifact_id
-          ? {
-              id: response.artifact_id,
-              type: response.artifact_type || "storyboard",
-              title: response.artifact_title || "Creative Asset",
-              version: response.artifact_version_number || 1,
-              status: response.artifact_status || "draft",
+        token,
+        (evt) => {
+          if (evt.type === "status" || evt.type === "turn_start") {
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId
+                  ? { ...m, streamingStatus: evt.message }
+                  : m
+              )
+            );
+          } else if (evt.type === "tool_start") {
+            const displayMsg = evt.message || `Running ${evt.tool}...`;
+            accumulatedLogs = [...accumulatedLogs, `⏳ ${displayMsg}`];
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId
+                  ? { ...m, streamingStatus: displayMsg, activity_logs: accumulatedLogs }
+                  : m
+              )
+            );
+          } else if (evt.type === "tool_end") {
+            const completedMsg = evt.message || `Tool: ${evt.tool} → ${evt.summary || "completed"}`;
+            accumulatedLogs = [
+              ...accumulatedLogs.filter((l) => typeof l === "string" ? !l.startsWith("⏳") : true),
+              completedMsg,
+            ];
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId
+                  ? { ...m, activity_logs: accumulatedLogs }
+                  : m
+              )
+            );
+          } else if (evt.type === "token") {
+            accumulatedContent += (evt.content || "");
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId
+                  ? { ...m, content: accumulatedContent, streamingStatus: undefined }
+                  : m
+              )
+            );
+          } else if (evt.type === "done" && evt.response) {
+            const response = evt.response;
+            if (response.campaign_id) {
+              setActiveCampaignId(response.campaign_id);
             }
-          : undefined,
-      };
+            if (response.artifact_id && response.artifact_payload) {
+              setActiveArtifact({
+                id: response.artifact_id,
+                type: response.artifact_type || "storyboard",
+                title: response.artifact_title || `${currentAgent.name} Asset`,
+                version: response.artifact_version_number || 1,
+                status: response.artifact_status || "draft",
+                payload: response.artifact_payload,
+                supporting_evidence_refs: response.supporting_evidence_refs || [],
+              });
+              setMobileTab("canvas");
+            }
+            if (response.suggested_objective) setSuggestedObjective(response.suggested_objective);
+            if (response.suggested_custom_brief) setSuggestedCustomBrief(response.suggested_custom_brief);
+            if (response.suggested_deliverable_preferences && response.suggested_deliverable_preferences.length > 0) {
+              setDeliverablePreferences(response.suggested_deliverable_preferences);
+            }
+            if (response.suggested_start_date) setStartDate(response.suggested_start_date);
+            if (response.suggested_end_date) setEndDate(response.suggested_end_date);
+            if (response.suggested_duration_days) setDurationDays(response.suggested_duration_days);
+            if (response.suggested_period_month) setPeriodMonth(response.suggested_period_month);
+            if (response.suggested_period_year) setPeriodYear(response.suggested_period_year);
+            if (response.is_ready_to_generate) setIsReadyToGenerate(true);
 
-      setChatMessages([...nextMessages, aiMsg]);
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId
+                  ? {
+                      ...m,
+                      content: response.reply || accumulatedContent,
+                      activity_logs: response.activity_logs && response.activity_logs.length > 0 ? response.activity_logs : accumulatedLogs,
+                      isStreaming: false,
+                      streamingStatus: undefined,
+                      artifact_summary: response.artifact_id
+                        ? {
+                            id: response.artifact_id,
+                            type: response.artifact_type || "storyboard",
+                            title: response.artifact_title || "Creative Asset",
+                            version: response.artifact_version_number || 1,
+                            status: response.artifact_status || "draft",
+                          }
+                        : undefined,
+                    }
+                  : m
+              )
+            );
+          } else if (evt.type === "error") {
+            const errorMsg = evt.error || "An error occurred while generating response.";
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId
+                  ? {
+                      ...m,
+                      content: `⚠️ **Research Notice**: ${errorMsg}`,
+                      isStreaming: false,
+                      streamingStatus: undefined,
+                    }
+                  : m
+              )
+            );
+          }
+        }
+      );
+    } catch (streamErr: any) {
+      console.warn("SSE Stream encountered issue, falling back to sync endpoint:", streamErr);
+      try {
+        const response = await campaignApi.chatBrief(
+          effectiveAgencyId,
+          selectedClientId,
+          {
+            messages: nextMessages.map((m) => ({
+              role: m.role,
+              content: m.content,
+              agent_id: m.agent_id,
+              agent_name: m.agent_name,
+            })),
+            agent_id: currentAgentId,
+            period_month: periodMonth,
+            period_year: periodYear,
+            start_date: startDate || undefined,
+            end_date: endDate || undefined,
+            campaign_id: activeCampaignId || undefined,
+            active_artifact_id: activeArtifact?.id || undefined,
+            active_artifact_version: activeArtifact?.version || undefined,
+          },
+          token
+        );
 
-      if (response.suggested_objective) {
-        setSuggestedObjective(response.suggested_objective);
+        if (response.campaign_id) setActiveCampaignId(response.campaign_id);
+        if (response.artifact_id && response.artifact_payload) {
+          setActiveArtifact({
+            id: response.artifact_id,
+            type: response.artifact_type || "storyboard",
+            title: response.artifact_title || `${currentAgent.name} Asset`,
+            version: response.artifact_version_number || 1,
+            status: response.artifact_status || "draft",
+            payload: response.artifact_payload,
+            supporting_evidence_refs: response.supporting_evidence_refs || [],
+          });
+          setMobileTab("canvas");
+        }
+        if (response.suggested_objective) setSuggestedObjective(response.suggested_objective);
+        if (response.suggested_custom_brief) setSuggestedCustomBrief(response.suggested_custom_brief);
+        if (response.suggested_deliverable_preferences && response.suggested_deliverable_preferences.length > 0) {
+          setDeliverablePreferences(response.suggested_deliverable_preferences);
+        }
+        if (response.suggested_start_date) setStartDate(response.suggested_start_date);
+        if (response.suggested_end_date) setEndDate(response.suggested_end_date);
+        if (response.suggested_duration_days) setDurationDays(response.suggested_duration_days);
+        if (response.suggested_period_month) setPeriodMonth(response.suggested_period_month);
+        if (response.suggested_period_year) setPeriodYear(response.suggested_period_year);
+        if (response.is_ready_to_generate) setIsReadyToGenerate(true);
+
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMsgId
+              ? {
+                  ...m,
+                  content: response.reply,
+                  activity_logs: response.activity_logs || [],
+                  isStreaming: false,
+                  streamingStatus: undefined,
+                  artifact_summary: response.artifact_id
+                    ? {
+                        id: response.artifact_id,
+                        type: response.artifact_type || "storyboard",
+                        title: response.artifact_title || "Creative Asset",
+                        version: response.artifact_version_number || 1,
+                        status: response.artifact_status || "draft",
+                      }
+                    : undefined,
+                }
+              : m
+          )
+        );
+      } catch (err: any) {
+        console.error("Chat brief fallback error:", err);
+        const isNetworkErr = err?.message?.toLowerCase().includes("fetch") || err?.message?.toLowerCase().includes("network");
+        const errorContent = isNetworkErr
+          ? "Could not connect to the campaign server. Please check your network or server status and try again."
+          : (err?.message || "I encountered an issue processing your request. Please try again.");
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMsgId
+              ? {
+                  ...m,
+                  content: errorContent,
+                  isStreaming: false,
+                  streamingStatus: undefined,
+                }
+              : m
+          )
+        );
       }
-      if (response.suggested_custom_brief) {
-        setSuggestedCustomBrief(response.suggested_custom_brief);
-      }
-      if (response.suggested_deliverable_preferences && response.suggested_deliverable_preferences.length > 0) {
-        setDeliverablePreferences(response.suggested_deliverable_preferences);
-      }
-      if (response.suggested_start_date) {
-        setStartDate(response.suggested_start_date);
-      }
-      if (response.suggested_end_date) {
-        setEndDate(response.suggested_end_date);
-      }
-      if (response.suggested_duration_days) {
-        setDurationDays(response.suggested_duration_days);
-      }
-      if (response.suggested_period_month) {
-        setPeriodMonth(response.suggested_period_month);
-      }
-      if (response.suggested_period_year) {
-        setPeriodYear(response.suggested_period_year);
-      }
-      if (response.is_ready_to_generate) {
-        setIsReadyToGenerate(true);
-      }
-    } catch (err: any) {
-      console.error("Chat brief error:", err);
-      const isNetworkErr = err?.message?.toLowerCase().includes("fetch") || err?.message?.toLowerCase().includes("network");
-      const errorContent = isNetworkErr
-        ? "Could not connect to the campaign server. Please check your network or server status and try again."
-        : (err?.message || "I encountered an issue processing your request. Please try again.");
-      setChatMessages([
-        ...nextMessages,
-        {
-          id: `ai-err-${Date.now()}`,
-          role: "assistant",
-          content: errorContent,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          agent_id: currentAgentId,
-          agent_name: currentAgent.name,
-        },
-      ]);
     } finally {
       setIsChatLoading(false);
       setTimeout(() => {
@@ -1066,6 +1201,14 @@ function CampaignStudioContent() {
                       </div>
                     )}
 
+                    {/* Live Streaming Active Status Pill */}
+                    {msg.streamingStatus && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/30 text-xs text-violet-600 dark:text-violet-400 font-medium animate-pulse mb-1 w-fit shadow-2xs">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-violet-500" />
+                        <span>{msg.streamingStatus}</span>
+                      </div>
+                    )}
+
                     {/* Text Bubble */}
                     <div
                       className={`px-4 py-2.5 rounded-2xl ${
@@ -1075,7 +1218,15 @@ function CampaignStudioContent() {
                       }`}
                     >
                       <div className="whitespace-pre-wrap leading-relaxed text-[13.5px]">
-                        {msg.content}
+                        {msg.content || (msg.isStreaming ? (
+                          <span className="text-muted-foreground/80 italic text-xs flex items-center gap-2 py-0.5">
+                            <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse shrink-0" />
+                            <span>Gathering real-time evidence & analyzing market landscape...</span>
+                          </span>
+                        ) : null)}
+                        {msg.isStreaming && msg.content && (
+                          <span className="inline-block w-1.5 h-3.5 bg-primary ml-0.5 animate-pulse align-middle" />
+                        )}
                       </div>
                       <span
                         className={`block mt-1 text-[10px] ${
@@ -1088,16 +1239,25 @@ function CampaignStudioContent() {
 
                     {/* Operational Activity Logs Breadcrumbs */}
                     {msg.activity_logs && msg.activity_logs.length > 0 && (
-                      <div className="space-y-1 pl-1 pt-0.5">
+                      <div className="space-y-1 pl-1 pt-1">
                         {msg.activity_logs.map((log: any, i: number) => {
                           const logText = typeof log === "string" ? log : log.message || JSON.stringify(log);
+                          const isPending = logText.startsWith("⏳");
                           return (
                             <div
                               key={i}
-                              className="flex items-center gap-1.5 text-[10.5px] font-mono text-muted-foreground/90 bg-muted/40 px-2 py-0.5 rounded border border-border/40 w-fit max-w-full truncate"
+                              className={`flex items-center gap-1.5 text-[10.5px] font-mono px-2 py-0.5 rounded border w-fit max-w-full truncate transition-all duration-200 ${
+                                isPending
+                                  ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 animate-pulse"
+                                  : "bg-muted/40 border-border/40 text-muted-foreground/90"
+                              }`}
                             >
-                              <Sparkles className="w-2.5 h-2.5 text-primary shrink-0" />
-                              <span className="truncate">{logText}</span>
+                              {isPending ? (
+                                <Loader2 className="w-2.5 h-2.5 text-amber-500 animate-spin shrink-0" />
+                              ) : (
+                                <Sparkles className="w-2.5 h-2.5 text-primary shrink-0" />
+                              )}
+                              <span className="truncate">{logText.replace(/^⏳\s*/, "")}</span>
                             </div>
                           );
                         })}
@@ -1256,7 +1416,7 @@ function CampaignStudioContent() {
               );
             })}
 
-            {isChatLoading && (
+            {isChatLoading && !chatMessages.some((m) => m.isStreaming) && (
               <div className="flex gap-2.5 justify-start text-sm">
                 <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 ${currentAgent.avatarBg}`}>
                   <currentAgent.icon className="w-3.5 h-3.5" />

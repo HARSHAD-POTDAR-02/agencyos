@@ -275,6 +275,7 @@ async def test_specialist_llm_network_timeout_graceful_recovery(db_session: Asyn
             period_year=2026,
             objective="Analyze competitors in private jet catering",
         ),
+        mode="fast",
     )
 
     from app.campaign_intelligence.schemas.research import ResearchEvidence
@@ -290,7 +291,15 @@ async def test_specialist_llm_network_timeout_graceful_recovery(db_session: Asyn
         )
     ]
 
-    with patch("app.campaign_intelligence.specialists.market_research_adapter.gather_market_evidence", AsyncMock(return_value=fake_evidence)), \
+    from app.campaign_intelligence.runtime.schemas import ToolExecutionResult, ExecutionStatus
+    from langchain_core.messages import AIMessage
+    fake_tool_res = ToolExecutionResult(
+        status=ExecutionStatus.NORMAL_COMPLETION,
+        final_message=AIMessage(content="Summary of catering"),
+    )
+
+    with patch("app.campaign_intelligence.specialists.market_research_adapter.BoundedToolRuntime.run", AsyncMock(return_value=fake_tool_res)), \
+         patch("app.campaign_intelligence.specialists.market_research_adapter.gather_market_evidence", AsyncMock(return_value=fake_evidence)), \
          patch("app.campaign_intelligence.specialists.market_research_adapter.invoke_structured_llm", side_effect=TimeoutError("Connection timed out after 30s")):
         result = await adapter.execute("Analyze competitors in private jet catering", context, db=db_session)
         assert result is not None

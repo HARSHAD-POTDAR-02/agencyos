@@ -5,7 +5,11 @@ import re
 import uuid
 from datetime import date, datetime, timedelta
 
+import asyncio
+import json
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -587,19 +591,15 @@ Your domain is rigorous pre-flight content auditing: spotting weak or cliché ho
 }
 
 
-@router.post(
-    "/agencies/{agency_id}/clients/{client_id}/campaigns/chat-brief",
-    response_model=ChatBriefResponse,
-    status_code=status.HTTP_200_OK,
-)
-async def chat_brief_endpoint(
+async def execute_chat_turn(
     agency_id: uuid.UUID,
     client_id: uuid.UUID,
     payload: ChatBriefRequest,
-    membership: Membership = Depends(require_agency_member),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession,
+    membership: Membership | None = None,
+    on_event: Any | None = None,
 ) -> ChatBriefResponse:
-    """Conversational intake copilot and specialist agents helping users formulate and refine their campaign brief."""
+    """Core turn executor for both synchronous and streaming campaign chat brief endpoints."""
     client = await get_client_for_agency(client_id, agency_id, db)
 
     # 1. Resolve active agent profile & calendar context
@@ -819,10 +819,20 @@ async def chat_brief_endpoint(
     # 5. SPECIALIST DISPATCH: Route to dedicated specialist adapter when requested
     if target_agent_id in SPECIALIST_REGISTRY and target_agent_id != "director":
         adapter = get_specialist_adapter(target_agent_id)
+        if on_event:
+            try:
+                await on_event({
+                    "type": "status",
+                    "stage": "init",
+                    "message": f"Connecting to {adapter.specialist_name}...",
+                })
+            except Exception:
+                pass
         specialist_res = await adapter.execute(
             query=latest_user_text or "Please advise on strategy based on our brand guidelines and market data.",
             context=studio_context,
             db=db,
+            on_event=on_event,
         )
 
         saved_artifact = None
@@ -883,6 +893,16 @@ async def chat_brief_endpoint(
         )
 
     # 6. CAMPAIGN DIRECTOR FLOW: Intake copilot synthesizing overall brief
+    if on_event:
+        try:
+            await on_event({
+                "type": "status",
+                "stage": "init",
+                "message": "Campaign Director is reviewing guidelines and campaign history...",
+            })
+        except Exception:
+            pass
+
     if len(payload.messages) > 9:
         windowed_messages = [payload.messages[0]] + payload.messages[-8:]
         omitted_count = len(payload.messages) - 9
@@ -1141,6 +1161,107 @@ CRITICAL SYSTEM RULES:
             suggested_deliverable_preferences=extracted_fmts,
             is_ready_to_generate=False,
         )
+
+
+@router.post(
+    "/agencies/{agency_id}/clients/{client_id}/campaigns/chat-brief",
+    response_model=ChatBriefResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def chat_brief_endpoint(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: ChatBriefRequest,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ChatBriefResponse:
+    """Conversational intake copilot and specialist agents helping users formulate and refine their campaign brief."""
+    return await execute_chat_turn(agency_id, client_id, payload, db, membership=membership)
+
+
+@router.post(
+    "/agencies/{agency_id}/clients/{client_id}/campaigns/chat-brief/stream",
+)
+async def chat_brief_stream_endpoint(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: ChatBriefRequest,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Server-Sent Events (SSE) streaming endpoint for Campaign Studio.
+    Streams live tool execution, status updates, and token typing in real-time.
+    """
+    async def event_generator():
+        queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+
+        async def push_event(evt: dict[str, Any]):
+            await queue.put(evt)
+
+        async def worker():
+            try:
+                resp = await execute_chat_turn(
+                    agency_id=agency_id,
+                    client_id=client_id,
+                    payload=payload,
+                    db=db,
+                    membership=membership,
+                    on_event=push_event,
+                )
+
+                # Stream the reply text in natural token chunks for live typing animation
+                words = resp.reply.split(" ")
+                chunk: list[str] = []
+                for word in words:
+                    chunk.append(word)
+                    if len(chunk) >= 4:
+                        await push_event({
+                            "type": "token",
+                            "content": " ".join(chunk) + " ",
+                        })
+                        await asyncio.sleep(0.015)
+                        chunk = []
+                if chunk:
+                    await push_event({
+                        "type": "token",
+                        "content": " ".join(chunk),
+                    })
+
+                # Emit final done event with complete response payload
+                await push_event({
+                    "type": "done",
+                    "response": resp.model_dump(),
+                })
+            except Exception as exc:
+                logger.error(f"[ChatBrief Stream] Execution error: {exc}", exc_info=True)
+                await push_event({
+                    "type": "error",
+                    "error": str(exc),
+                })
+            finally:
+                await queue.put(None)
+
+        worker_task = asyncio.create_task(worker())
+        try:
+            while True:
+                evt = await queue.get()
+                if evt is None:
+                    break
+                yield f"data: {json.dumps(evt, default=str)}\n\n"
+        finally:
+            if not worker_task.done():
+                worker_task.cancel()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # =====================================================================

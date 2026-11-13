@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.campaign_intelligence.specialists.base import SpecialistAdapter, SpecialistResult
 from app.campaign_intelligence.specialists.brand_adapter import BrandSpecialistAdapter
 from app.campaign_intelligence.specialists.content_architect_adapter import ContentArchitectAdapter
+from app.campaign_intelligence.specialists.deep_research_adapter import DeepResearchSpecialistAdapter
 from app.campaign_intelligence.specialists.market_research_adapter import MarketResearchSpecialistAdapter
 from app.campaign_intelligence.specialists.performance_adapter import PerformanceSpecialistAdapter
 from app.campaign_intelligence.specialists.quality_evaluator_adapter import QualityEvaluatorAdapter
@@ -11,6 +12,7 @@ from app.campaign_intelligence.specialists.strategist_adapter import CampaignStr
 SPECIALIST_REGISTRY: dict[str, SpecialistAdapter] = {
     "brand_intelligence": BrandSpecialistAdapter(),
     "market_research": MarketResearchSpecialistAdapter(),
+    "deep_research": DeepResearchSpecialistAdapter(),
     "historical_performance": PerformanceSpecialistAdapter(),
     "campaign_strategist": CampaignStrategistAdapter(),
     "director": CampaignStrategistAdapter(),  # Campaign Director routes to Strategist
@@ -32,6 +34,7 @@ __all__ = [
     "SpecialistResult",
     "BrandSpecialistAdapter",
     "ContentArchitectAdapter",
+    "DeepResearchSpecialistAdapter",
     "MarketResearchSpecialistAdapter",
     "PerformanceSpecialistAdapter",
     "QualityEvaluatorAdapter",

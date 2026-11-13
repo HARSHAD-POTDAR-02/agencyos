@@ -33,6 +33,7 @@ class SpecialistAdapter(abc.ABC):
         query: str,
         context: CampaignStudioContext,
         db: AsyncSession,
+        on_event: Any | None = None,
     ) -> SpecialistResult:
         """Execute conversational request using existing agent logic and return structured result."""
         pass

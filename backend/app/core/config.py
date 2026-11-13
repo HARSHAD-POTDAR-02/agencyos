@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_API_KEY_2: str = ""
     TAVILY_API_KEY: str = ""
+    TAVILY_API_KEY_2: str = ""
     BRAVE_SEARCH_API_KEY: str = ""
     SERPER_API_KEY: str = ""
     LLM_PROVIDER: str = "groq"
@@ -32,7 +33,13 @@ class Settings(BaseSettings):
     EXPERIMENTAL_MODEL: str = "openai/gpt-oss-20b"
     LLM_TEMPERATURE: float = 0.2
     LLM_MAX_TOKENS: int = 2500
-    LLM_TIMEOUT_SECONDS: int = 60
+    LLM_TIMEOUT_SECONDS: int = 120
+
+    # NVIDIA NIM Configuration
+    NVIDIA_API_KEY: str = ""
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    NVIDIA_MODEL: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
+    MARKET_RESEARCH_MODEL: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
     @property
     def groq_api_keys(self) -> list[str]:
@@ -42,6 +49,16 @@ class Settings(BaseSettings):
             keys.append(self.GROQ_API_KEY.strip())
         if self.GROQ_API_KEY_2:
             keys.append(self.GROQ_API_KEY_2.strip())
+        return keys or [""]
+
+    @property
+    def tavily_api_keys(self) -> list[str]:
+        """Returns all configured Tavily API keys as an active pool."""
+        keys = []
+        if self.TAVILY_API_KEY:
+            keys.append(self.TAVILY_API_KEY.strip())
+        if self.TAVILY_API_KEY_2:
+            keys.append(self.TAVILY_API_KEY_2.strip())
         return keys or [""]
 
     # File storage

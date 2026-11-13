@@ -42,6 +42,7 @@ class CampaignStudioContext(BaseModel):
     # Provenance tracking
     source_versions: dict[str, int | str] = Field(default_factory=dict)
     context_schema_version: str = "1.0"
+    mode: str | None = None
 
     model_config = {
         "frozen": True,

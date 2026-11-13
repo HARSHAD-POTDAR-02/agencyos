@@ -44,8 +44,14 @@ def test_platform_format_evidence_retrieval():
     evidence = get_platform_format_evidence(["linkedin", "instagram"])
     assert len(evidence) >= 3
     urls = [e.source_url for e in evidence]
-    assert any("business.linkedin.com" in u for u in urls)
-    assert any("about.instagram.com" in u for u in urls)
+    # LinkedIn documentation is now at linkedin.com/help (official help center)
+    assert any("linkedin.com" in u for u in urls)
+    assert any("instagram.com" in u or "about.instagram.com" in u for u in urls)
+    # Verify no fabricated publication dates
+    for ev in evidence:
+        assert ev.publication_date is None, (
+            f"Platform doc entry '{ev.source_title}' must not have a fabricated publication_date"
+        )
 
 
 # ============================================================================

@@ -85,6 +85,19 @@ class InferredOpportunity(BaseModel):
     supporting_citations: list[EvidenceCitation] = Field(default_factory=list)
 
 
+class ResearchDimensionStatus(str, Enum):
+    ANSWERED = "answered"
+    PARTIAL = "partial"
+    MISSING = "missing"
+
+
+class ResearchDimensionItem(BaseModel):
+    """Tracking of requested query dimension vs evidence retrieved."""
+    dimension: str
+    status: ResearchDimensionStatus
+    summary: str
+
+
 class MarketResearchArtifactPayload(BaseModel):
     """Structured research report with explicit observed vs inferred separation."""
     query_topic: str
@@ -92,6 +105,10 @@ class MarketResearchArtifactPayload(BaseModel):
     inferred_opportunities: list[InferredOpportunity] = Field(default_factory=list)
     verified_sources: list[EvidenceCitation] = Field(default_factory=list)
     search_limitations: str | None = None
+    research_dimensions: list[ResearchDimensionItem] = Field(default_factory=list)
+    discovered_count: int = 0
+    inspected_count: int = 0
+    claim_supported_count: int = 0
 
 
 # =====================================================================

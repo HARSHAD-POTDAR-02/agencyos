@@ -251,6 +251,76 @@ export const campaignApi = {
       token,
     }),
 
+  chatBriefStream: async (
+    agencyId: string,
+    clientId: string,
+    data: {
+      messages: Array<{ role: string; content: string; agent_id?: string; agent_name?: string }>;
+      agent_id?: string;
+      period_month?: number;
+      period_year?: number;
+      start_date?: string;
+      end_date?: string;
+      campaign_id?: string;
+      active_artifact_id?: string;
+      active_artifact_version?: number;
+    },
+    token: string,
+    onEvent: (event: {
+      type: "status" | "turn_start" | "tool_start" | "tool_end" | "token" | "done" | "error";
+      message?: string;
+      tool?: string;
+      status?: string;
+      duration_ms?: number;
+      summary?: string;
+      content?: string;
+      response?: any;
+      error?: string;
+    }) => void
+  ) => {
+    const res = await fetch(
+      `${API_BASE}/agencies/${agencyId}/clients/${clientId}/campaigns/chat-brief/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No readable response stream available");
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split("\n\n");
+      buffer = blocks.pop() || "";
+
+      for (const block of blocks) {
+        const clean = block.trim();
+        if (clean.startsWith("data: ")) {
+          try {
+            const parsed = JSON.parse(clean.slice(6));
+            onEvent(parsed);
+          } catch (e) {
+            // ignore partial json
+          }
+        }
+      }
+    }
+  },
+
   convertToTasks: (agencyId: string, campaignId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`, { method: "POST", token }),
 
