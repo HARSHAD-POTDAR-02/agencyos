@@ -139,19 +139,19 @@ def _resolve_research_mode(
     """
     q = query.lower()
 
-    # Priority 1: Explicit user-named external subjects take priority over unrelated client context
-    named_external_cues = [
-        r"\bspecifically\b",
-        r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
-        r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
-        r"\bcompeting with\b",
-        r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
-        r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand)\b",
+    # Priority 0: Explicit negative client instructions
+    negative_client_cues = [
+        r"\bdo not relate\b",
+        r"\bnot relate\b",
+        r"\bdo not connect\b",
+        r"\bignore client\b",
+        r"\bindependent of\b",
+        r"\bwithout client\b",
+        r"\bnot related to\b",
     ]
-    if any(re.search(pat, q) for pat in named_external_cues):
+    if any(re.search(pat, q) for pat in negative_client_cues):
         return ResearchScopeMode.INDEPENDENT_RESEARCH, False
 
-    # Priority 2: Client-scoped cues
     client_name = context.client_name if context else ""
     client_industry = (context.client_industry if context else "") or ""
     cleaned_client = re.sub(r"[^\w\s]", "", client_name.lower()).strip()
@@ -165,6 +165,31 @@ def _resolve_research_mode(
         "we offer", "we are", "we're", "our service", "our shop", "our agency client",
     }
     has_client_cue = any(cue in q for cue in client_cues) or (len(cleaned_client) >= 4 and cleaned_client in q)
+
+    # Priority 1: Hybrid Client-Informed External (e.g. "Based on coffee research, what opportunities could Hotel Shauryawada explore?")
+    hybrid_external_cues = [
+        r"\bbased on\b",
+        r"\bwhat opportunities could\b",
+        r"\bwhat can\s+[a-z0-9\s,&-]+\s+learn\b",
+        r"\bhow can\s+[a-z0-9\s,&-]+\s+(?:adopt|explore|apply|leverage)\b",
+        r"\bopportunities\s+for\s+[a-z0-9\s,&-]+\s+from\b",
+        r"\bwhat\s+[a-z0-9\s,&-]+\s+could\s+[a-z0-9\s,&-]+\s+(?:adopt|explore)\b",
+    ]
+    is_hybrid_query = any(re.search(pat, q) for pat in hybrid_external_cues) and (has_client_cue or (len(cleaned_client) >= 4 and cleaned_client in q))
+    if is_hybrid_query:
+        return ResearchScopeMode.CLIENT_INFORMED_EXTERNAL, False
+
+    # Priority 2: Explicit user-named external subjects take priority over unrelated client context
+    named_external_cues = [
+        r"\bspecifically\b",
+        r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
+        r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
+        r"\bcompeting with\b",
+        r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
+        r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand|roaster|roasters)\b",
+    ]
+    if any(re.search(pat, q) for pat in named_external_cues):
+        return ResearchScopeMode.INDEPENDENT_RESEARCH, False
 
     # Check for trend/benchmarks (CLIENT_INFORMED_EXTERNAL)
     trend_cues = {"trend", "trends", "viral", "hooks", "benchmark", "benchmarks", "format", "formats", "growth", "playbook"}
@@ -833,12 +858,45 @@ async def compile_report_node(state: DeepResearchState) -> dict[str, Any]:
         clean_sources.append(f"- [{d.get('title', 'Source')}]({url}): {clean_desc}")
     sources_text = "\n".join(clean_sources) if clean_sources else "Zero sources discovered."
 
-    brand_block = _format_brand_context_block(context, query)
-    brand_section = f"\n{brand_block}\n" if brand_block else ""
+    mode_str = state.get("research_mode", "client_scoped")
+    if plan and getattr(plan, "research_mode", None):
+        mode_str = plan.research_mode.value if hasattr(plan.research_mode, "value") else str(plan.research_mode)
+
+    client_name = (context.client_name if context else None) or "the client brand"
+
+    if mode_str == "independent_research":
+        scope_directive = """--- RESEARCH SCOPE: STRICTLY INDEPENDENT MARKET RESEARCH ---
+STRICT ISOLATION CONTRACT:
+1. This is an INDEPENDENT market investigation into the requested external entities / brands.
+2. Do NOT mention, reference, or relate this research to any agency client (e.g. do NOT mention Hotel Shauryawada, Handewadi, restaurants, or dining).
+3. The entities being investigated (e.g. Blue Tokai, Subko, Third Wave Coffee) are competing directly against EACH OTHER in their market. Their competitor_type is 'direct'. They are NOT indirect competitors to a restaurant!
+4. Strategic whitespace opportunities must be opportunities within the investigated market itself (e.g. specialty coffee roasters), NOT recommendations for an external restaurant client!
+5. Never invent or force an external client relationship."""
+        rule_5 = "5. Inferred opportunities must be categorized as 'hypothesis' by default, representing whitespace within the investigated market itself (do NOT relate to any agency client), with concrete 'missing_evidence', a practical low-risk 'test_method', and measurable 'validation_criteria'."
+    elif mode_str == "client_informed_external":
+        brand_block = _format_brand_context_block(context, query)
+        brand_section = f"\n{brand_block}\n" if brand_block else ""
+        scope_directive = f"""--- RESEARCH SCOPE: CLIENT-INFORMED EXTERNAL OPPORTUNITY ANALYSIS ---
+{brand_section}
+STRICT SCOPE CONTRACT:
+1. Synthesize the external market research (e.g. specialty coffee trends, retail models, subscription practices).
+2. Directly evaluate how the active client brand ({client_name}) can realistically explore, adapt, or adopt these external findings.
+3. Inferred opportunities should explicitly identify concrete, low-risk opportunities for {client_name} based on the external research."""
+        rule_5 = f"5. Inferred opportunities must be categorized as 'hypothesis' by default, evaluating actionable ways {client_name} could realistically adopt or test these external practices, with concrete 'missing_evidence', a practical low-risk 'test_method', and measurable 'validation_criteria'."
+    else:  # client_scoped
+        brand_block = _format_brand_context_block(context, query)
+        brand_section = f"\n{brand_block}\n" if brand_block else ""
+        scope_directive = f"""--- RESEARCH SCOPE: CLIENT-SCOPED COMPETITIVE INTELLIGENCE ---
+{brand_section}
+STRICT SCOPE CONTRACT:
+1. Anchor all findings, competitor observations, and whitespace opportunities to the active client brand ({client_name})."""
+        rule_5 = f"5. Inferred opportunities must be categorized as 'hypothesis' by default, contrasting competitor findings against {client_name}'s category and market, with concrete 'missing_evidence', a practical low-risk 'test_method', and measurable 'validation_criteria'."
 
     synthesis_prompt = f"""You are the Lead Market Research Editor for AgencyOS.
 Produce an evidence-grounded research synthesis for the user query based on the multi-topic investigation dossiers below.
-{brand_section}
+
+{scope_directive}
+
 USER QUERY: "{query}"
 
 --- MULTI-TOPIC RESEARCH EVIDENCE DOSSIERS ---
@@ -848,7 +906,7 @@ USER QUERY: "{query}"
 {sources_text}
 
 STRICT EDITORIAL RULES:
-1. Every competitor (observed_competitors) MUST be an actual business, brand, company, or product. Output exact entity name (e.g. 'Blue Tokai', 'Subko', 'Third Wave Coffee', 'Surve\\'s', 'Jagdamb'). Never output SEO aggregate titles or listicle names.
+1. Every competitor (observed_competitors) MUST be an actual business, brand, company, or product. Output exact entity name (e.g. 'Blue Tokai', 'Subko', 'Third Wave Coffee', 'Garden Gate', 'Surve\\'s'). Never output SEO aggregate titles or listicle names (e.g. never 'Restaurants listed on Zomato', 'Top 10 Cafes', 'Casual Dining in Pune').
 2. Every competitor MUST cite a supporting_source_url that appears verbatim in the bibliography above.
 3. Quantifiable claims (pricing tiers, subscription fees, promotional discounts) must be grounded in the verified metrics and excerpts.
 4. For research_dimensions, explicitly account for each requested query dimension:
@@ -857,7 +915,7 @@ STRICT EDITORIAL RULES:
    - 'not_verified': dimension was researched, but sufficient evidence was not found.
    - 'not_available': information is not publicly published or accessible.
    - 'missing': dimension was not reached within tool budget.
-5. Inferred opportunities must be categorized as 'hypothesis' by default, with concrete 'missing_evidence', a practical low-risk 'test_method', and measurable 'validation_criteria'.
+{rule_5}
 6. When customer complaints are noted, report whether it is an individual anecdote (1 review) or a recurring complaint (multiple verified reviews).
 7. Output valid JSON strictly matching the MarketResearchSynthesisOutput schema."""
 
@@ -920,10 +978,23 @@ STRICT EDITORIAL RULES:
         "grubhub", "tripadvisor", "booking.com", "booking", "airbnb", "expedia",
         "magicpin", "eazydiner", "dineout", "justdial"
     }
+    cleaned_competitors: list[CompetitorFindingItem] = []
     for comp in synthesis.observed_competitors:
         c_name_lower = comp.competitor_name.lower().strip()
+        # Filter out generic listicle article titles
+        if re.search(r"^\d+\s+(?:gorgeous|best|top|popular|great)\b", c_name_lower):
+            continue
+        if re.search(r"\b(?:list of|top \d+|best restaurants|casual dining in)\b", c_name_lower):
+            continue
+
         if any(agg in c_name_lower for agg in AGGREGATOR_PLATFORMS):
             comp.competitor_type = CompetitorType.CHANNEL
+            if "zomato" in c_name_lower:
+                comp.competitor_name = "Zomato"
+            elif "swiggy" in c_name_lower:
+                comp.competitor_name = "Swiggy"
+            elif "magicpin" in c_name_lower:
+                comp.competitor_name = "Magicpin"
             if not comp.relevance:
                 comp.relevance = CompetitorRelevance(
                     geographic_overlap="National / Regional delivery coverage",
@@ -934,8 +1005,37 @@ STRICT EDITORIAL RULES:
                 )
             else:
                 comp.relevance.product_or_service_overlap = "Delivery & discovery channel platform, not a direct culinary producer"
-        elif not getattr(comp, "competitor_type", None):
-            comp.competitor_type = CompetitorType.DIRECT
+        else:
+            if mode_str == "independent_research":
+                comp.competitor_type = CompetitorType.DIRECT
+                if not comp.relevance:
+                    comp.relevance = CompetitorRelevance(
+                        geographic_overlap="Operating in target regional market",
+                        product_or_service_overlap="Direct competition in core category and offerings",
+                        price_overlap="Direct category price tier",
+                        audience_overlap="Target consumer segment",
+                        occasion_overlap="Core consumption occasion",
+                    )
+            elif not getattr(comp, "competitor_type", None):
+                comp.competitor_type = CompetitorType.DIRECT
+
+        cleaned_competitors.append(comp)
+    synthesis.observed_competitors = cleaned_competitors
+
+    # Mode-specific scrubbing for INDEPENDENT_RESEARCH
+    if mode_str == "independent_research" and context and context.client_name:
+        cname = context.client_name.strip()
+        cname_pat = rf"\b(?:Hotel\s+)?{re.escape(cname)}(?:'s)?\b"
+        synthesis.executive_summary = re.sub(
+            rf"\s*While these entities operate in [^.]+? rather than direct restaurant competition with [^.]+?\.\s*",
+            " ",
+            synthesis.executive_summary,
+            flags=re.IGNORECASE,
+        )
+        synthesis.executive_summary = re.sub(cname_pat, "specialty operators", synthesis.executive_summary, flags=re.IGNORECASE)
+        for opp in synthesis.inferred_opportunities:
+            opp.opportunity_description = re.sub(cname_pat, "Specialty operators", opp.opportunity_description, flags=re.IGNORECASE)
+            opp.target_whitespace = re.sub(cname_pat, "specialty market", opp.target_whitespace, flags=re.IGNORECASE)
 
     # Pass 2: Review Integrity Check (Complaints Scope: 1 anecdote vs 2-4 signal vs 5+ recurring)
     for kf in synthesis.key_findings:
@@ -985,20 +1085,31 @@ STRICT EDITORIAL RULES:
         if not opp.validation_criteria:
             opp.validation_criteria = "Achieve >= 15 pre-orders or >= 65% positive response rate before rollout"
 
-    # Pass 5: Dimension Statuses Accounting
+    # Pass 5: Dimension Statuses Accounting & Honest Demotion
     for dim in synthesis.research_dimensions:
-        if not isinstance(dim.status, ResearchDimensionStatus):
-            s_val = str(dim.status).lower()
-            if s_val in ("answered", "verified"):
-                dim.status = ResearchDimensionStatus.ANSWERED
-            elif s_val in ("partial", "partially_answered"):
-                dim.status = ResearchDimensionStatus.PARTIAL
-            elif s_val in ("not_verified", "unverified"):
-                dim.status = ResearchDimensionStatus.NOT_VERIFIED
-            elif s_val in ("not_available", "unavailable"):
+        s_val = dim.status.value if hasattr(dim.status, "value") else str(dim.status).lower()
+        negative_summary_cues = (
+            "not distinctly extracted", "not extracted", "not verified", "not found",
+            "not available", "not analyzed", "unverified", "no direct", "sparse",
+            "could not be", "not present", "missing", "not quantified", "sparsely",
+            "no review", "noise metrics", "cannot be confirmed", "not clearly interpretable",
+            "not distinctly", "not extracted in"
+        )
+        if any(neg in dim.summary.lower() for neg in negative_summary_cues):
+            if "not available" in dim.summary.lower() or "not public" in dim.summary.lower():
                 dim.status = ResearchDimensionStatus.NOT_AVAILABLE
             else:
-                dim.status = ResearchDimensionStatus.MISSING
+                dim.status = ResearchDimensionStatus.NOT_VERIFIED
+        elif s_val in ("answered", "verified"):
+            dim.status = ResearchDimensionStatus.ANSWERED
+        elif s_val in ("partial", "partially_answered"):
+            dim.status = ResearchDimensionStatus.PARTIAL
+        elif s_val in ("not_verified", "unverified"):
+            dim.status = ResearchDimensionStatus.NOT_VERIFIED
+        elif s_val in ("not_available", "unavailable"):
+            dim.status = ResearchDimensionStatus.NOT_AVAILABLE
+        else:
+            dim.status = ResearchDimensionStatus.MISSING
 
     log_msg = f"Editorial Compiler finished: {len(synthesis.key_findings)} key findings, {len(synthesis.observed_competitors)} competitors, {len(synthesis.research_dimensions)} dimensions tracked."
     return {

@@ -945,19 +945,20 @@ STRICT RULES:
         """
         q = query.lower()
 
-        # Priority 1: Explicit user-named external subjects take priority
-        named_patterns = [
-            r"\bspecifically\b",
-            r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
-            r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
-            r"\bcompeting with\b",
-            r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
-            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand)\b",
+        # Priority 0: Explicit negative client instructions
+        negative_client_cues = [
+            r"\bdo not relate\b",
+            r"\bnot relate\b",
+            r"\bdo not connect\b",
+            r"\bignore client\b",
+            r"\bindependent of\b",
+            r"\bwithout client\b",
+            r"\bnot related to\b",
         ]
-        if any(re.search(pat, q) for pat in named_patterns):
+        if any(re.search(pat, q) for pat in negative_client_cues):
             return "INDEPENDENT_RESEARCH"
 
-        # Priority 2: Client-scoped cues
+        cleaned_client = re.sub(r"[^\w\s]", "", (client_name or "").lower()).strip()
         client_terms = {
             "our competitors", "who are our competitors", "what are our competitors",
             "what are our direct and indirect competitors", "our direct competitors",
@@ -966,14 +967,38 @@ STRICT RULES:
             "our product", "our pricing", "our location", "around us", "for us",
             "we offer", "we are", "we're", "our service", "our shop", "our agency client",
         }
-        if any(term in q for term in client_terms):
+        has_client_cue = any(term in q for term in client_terms) or (len(cleaned_client) >= 4 and cleaned_client in q)
+
+        # Priority 1: Hybrid Client-Informed External
+        hybrid_external_cues = [
+            r"\bbased on\b",
+            r"\bwhat opportunities could\b",
+            r"\bwhat can\s+[a-z0-9\s,&-]+\s+learn\b",
+            r"\bhow can\s+[a-z0-9\s,&-]+\s+(?:adopt|explore|apply|leverage)\b",
+            r"\bopportunities\s+for\s+[a-z0-9\s,&-]+\s+from\b",
+            r"\bwhat\s+[a-z0-9\s,&-]+\s+could\s+[a-z0-9\s,&-]+\s+(?:adopt|explore)\b",
+        ]
+        is_hybrid_query = any(re.search(pat, q) for pat in hybrid_external_cues) and has_client_cue
+        if is_hybrid_query:
+            return "CLIENT_INFORMED_EXTERNAL"
+
+        # Priority 2: Explicit user-named external subjects take priority
+        named_patterns = [
+            r"\bspecifically\b",
+            r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
+            r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
+            r"\bcompeting with\b",
+            r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
+            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand|roaster|roasters)\b",
+        ]
+        if any(re.search(pat, q) for pat in named_patterns):
+            return "INDEPENDENT_RESEARCH"
+
+        # Priority 3: Client-scoped cues
+        if has_client_cue:
             return "CLIENT_SCOPED"
 
-        cleaned_client = re.sub(r"[^\w\s]", "", (client_name or "").lower()).strip()
-        if len(cleaned_client) >= 4 and cleaned_client in q:
-            return "CLIENT_SCOPED"
-
-        # Priority 3: External trend queries informed by client context
+        # Priority 4: External trend queries informed by client context
         trend_terms = {"trend", "trends", "viral", "hooks", "benchmark", "benchmarks", "format", "formats", "growth", "playbook"}
         if any(t in q for t in trend_terms):
             return "CLIENT_INFORMED_EXTERNAL"

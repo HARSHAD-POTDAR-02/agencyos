@@ -914,3 +914,318 @@ def test_freeze_gate_12_runtime_safety():
     in4 = ExtractWebpagesInput(urls=["all_invalid"])
     assert in4.urls == ["https://example.com"]
 
+
+# ===========================================================================
+# The 3-Query Manual Sequence & Strict Scope Contract Tests
+# ===========================================================================
+
+def test_manual_sequence_3_modes():
+    """Verify the exact 3-step sequence from user audit resolves to the correct 3 modes."""
+    from app.campaign_intelligence.research.deep_research_graph import _resolve_research_mode
+    from app.campaign_intelligence.collaboration.schemas import ResearchScopeMode
+
+    client_context = CampaignStudioContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        client_name="Hotel Shauryawada",
+        client_industry="Restaurant",
+        client_location="Handewadi, Pune",
+        campaign_brief=CampaignBrief(
+            client_id=uuid.uuid4(),
+            agency_id=uuid.uuid4(),
+            period_month=11,
+            period_year=2026,
+            objective="Local dining growth",
+        ),
+    )
+
+    # 1. Who are our direct and indirect competitors? -> CLIENT_SCOPED
+    q1 = "Who are our direct and indirect competitors?"
+    m1, a1 = _resolve_research_mode(q1, client_context)
+    assert m1 == ResearchScopeMode.CLIENT_SCOPED
+    assert a1 is False
+
+    # 2. Compare Blue Tokai, Subko and Third Wave Coffee in Mumbai and Pune. Do not relate this research to our active client. -> INDEPENDENT_RESEARCH
+    q2 = "Compare Blue Tokai, Subko and Third Wave Coffee in Mumbai and Pune. Do not relate this research to our active client."
+    m2, a2 = _resolve_research_mode(q2, client_context)
+    assert m2 == ResearchScopeMode.INDEPENDENT_RESEARCH
+    assert a2 is False
+
+    # 3. Based on the specialty coffee research, what opportunities could Hotel Shauryawada realistically explore? -> CLIENT_INFORMED_EXTERNAL
+    q3 = "Based on the specialty coffee research, what opportunities could Hotel Shauryawada realistically explore?"
+    m3, a3 = _resolve_research_mode(q3, client_context)
+    assert m3 == ResearchScopeMode.CLIENT_INFORMED_EXTERNAL
+    assert a3 is False
+
+
+@pytest.mark.asyncio
+async def test_independent_research_scrubs_client_and_sets_direct():
+    """Verify that in INDEPENDENT_RESEARCH, competitor entities are DIRECT to each other and client context is not forced."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        DeepResearchPlan,
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.collaboration.schemas import CompetitorType, ResearchScopeMode
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        CompetitorFindingItem,
+        InferredOpportunityItem,
+        MarketResearchSynthesisOutput,
+    )
+
+    client_context = CampaignStudioContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        client_name="Hotel Shauryawada",
+        client_industry="Restaurant",
+        client_location="Handewadi, Pune",
+        campaign_brief=CampaignBrief(
+            client_id=uuid.uuid4(),
+            agency_id=uuid.uuid4(),
+            period_month=11,
+            period_year=2026,
+            objective="Local dining growth",
+        ),
+    )
+
+    plan = DeepResearchPlan(
+        plan_summary="Independent specialty coffee analysis",
+        research_mode=ResearchScopeMode.INDEPENDENT_RESEARCH,
+        sub_topics=[],
+    )
+
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Specialty coffee roasters Blue Tokai, Subko, and Third Wave Coffee operate in Mumbai and Pune. While these entities operate in specialty coffee rather than direct restaurant competition with Hotel Shauryawada, they represent beverage opportunities.",
+        key_findings=[
+            CitedKeyFinding(finding="Blue Tokai operates 250+ cafes.", source_url="https://bluetokai.com"),
+        ],
+        observed_competitors=[
+            CompetitorFindingItem(
+                competitor_name="Blue Tokai",
+                platform="instagram",
+                observed_creative_angle="Specialty coffee single origin",
+                supporting_source_url="https://bluetokai.com",
+            ),
+            CompetitorFindingItem(
+                competitor_name="Subko",
+                platform="instagram",
+                observed_creative_angle="Pan-India microlots",
+                supporting_source_url="https://subko.coffee",
+            ),
+        ],
+        inferred_opportunities=[
+            InferredOpportunityItem(
+                opportunity_description="Introduce specialty coffee at Hotel Shauryawada for diners.",
+                target_whitespace="Post-dinner coffee at Hotel Shauryawada",
+                supporting_source_urls=["https://bluetokai.com"],
+            )
+        ],
+        research_dimensions=[],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Coffee roasters",
+        findings=["Found roasters"],
+        inspected_sources=["https://bluetokai.com"],
+    )
+
+    state = {
+        "query": "Compare Blue Tokai, Subko and Third Wave Coffee in Mumbai and Pune. Do not relate this research to our active client.",
+        "context": client_context,
+        "plan": plan,
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://bluetokai.com": {"title": "Blue Tokai", "snippet": "Coffee"}},
+        "inspected_sources": {"https://bluetokai.com": {"title": "Blue Tokai", "summary": "Coffee"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "independent_research",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+
+        # Competitors must be DIRECT competitors to each other in specialty coffee
+        for comp in synth.observed_competitors:
+            assert comp.competitor_type == CompetitorType.DIRECT
+
+        # Hotel Shauryawada must be scrubbed from executive summary and opportunities
+        assert "Hotel Shauryawada" not in synth.executive_summary
+        assert "Hotel Shauryawada" not in synth.inferred_opportunities[0].opportunity_description
+        assert "Hotel Shauryawada" not in synth.inferred_opportunities[0].target_whitespace
+
+
+@pytest.mark.asyncio
+async def test_dimension_truth_demotion():
+    """Verify that dimensions with negative admissions in their summary are demoted to NOT_VERIFIED."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        DeepResearchPlan,
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.collaboration.schemas import (
+        ResearchDimensionItem,
+        ResearchDimensionStatus,
+        ResearchScopeMode,
+    )
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        MarketResearchSynthesisOutput,
+    )
+
+    plan = DeepResearchPlan(
+        plan_summary="Competitor landscape",
+        research_mode=ResearchScopeMode.CLIENT_SCOPED,
+        sub_topics=[],
+    )
+
+    # LLM marked customer sentiment as 'answered' (Verified), but summary admits competitor review sentiment was not extracted!
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Dining study.",
+        key_findings=[CitedKeyFinding(finding="Sample finding", source_url=None)],
+        observed_competitors=[],
+        inferred_opportunities=[],
+        research_dimensions=[
+            ResearchDimensionItem(
+                dimension="Customer review sentiment & complaint analysis",
+                status=ResearchDimensionStatus.ANSWERED,  # Misleading verified status!
+                summary="Tripadvisor hosts Shauryawada Pune listing; competitor review sentiment not distinctly extracted from snippets.",
+            ),
+            ResearchDimensionItem(
+                dimension="Footprint & locations",
+                status=ResearchDimensionStatus.ANSWERED,
+                summary="Confirmed 14 locations across Pune metropolitan area.",
+            ),
+        ],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Review check",
+        findings=["Found data"],
+        inspected_sources=["https://tripadvisor.com"],
+    )
+
+    state = {
+        "query": "Who are our competitors?",
+        "context": None,
+        "plan": plan,
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://tripadvisor.com": {"title": "Tripadvisor", "snippet": "Reviews"}},
+        "inspected_sources": {"https://tripadvisor.com": {"title": "Tripadvisor", "summary": "Reviews"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+
+        # First dimension MUST be demoted to NOT_VERIFIED
+        d1 = synth.research_dimensions[0]
+        assert d1.status == ResearchDimensionStatus.NOT_VERIFIED
+
+        # Second dimension should remain ANSWERED
+        d2 = synth.research_dimensions[1]
+        assert d2.status == ResearchDimensionStatus.ANSWERED
+
+
+@pytest.mark.asyncio
+async def test_listicle_and_aggregator_cleanup():
+    """Verify that aggregate listing titles are filtered or cleaned to platform names."""
+    from app.campaign_intelligence.research.deep_research_graph import (
+        DeepResearchPlan,
+        TopicEvidence,
+        compile_report_node,
+    )
+    from app.campaign_intelligence.collaboration.schemas import CompetitorType, ResearchScopeMode
+    from app.campaign_intelligence.specialists.market_research_adapter import (
+        CitedKeyFinding,
+        CompetitorFindingItem,
+        MarketResearchSynthesisOutput,
+    )
+
+    fake_synthesis = MarketResearchSynthesisOutput(
+        executive_summary="Competitor study.",
+        key_findings=[CitedKeyFinding(finding="Sample", source_url=None)],
+        observed_competitors=[
+            CompetitorFindingItem(
+                competitor_name="Restaurants listed on Zomato Handewadi, Pune",
+                platform="instagram",
+                observed_creative_angle="Casual dining listings",
+                supporting_source_url="https://zomato.com",
+            ),
+            CompetitorFindingItem(
+                competitor_name="10 gorgeous restaurants for outdoor dining in Pune",
+                platform="web",
+                observed_creative_angle="Listicle article",
+                supporting_source_url="https://cntraveller.in",
+            ),
+            CompetitorFindingItem(
+                competitor_name="Garden Gate Family Restaurant",
+                platform="facebook",
+                observed_creative_angle="Murg Mussalam family specials",
+                supporting_source_url="https://facebook.com/gardengate",
+            ),
+        ],
+        inferred_opportunities=[],
+        research_dimensions=[],
+    )
+
+    ev = TopicEvidence(
+        topic_id="t1",
+        topic_title="Competitors",
+        findings=["Found competitors"],
+        inspected_sources=["https://facebook.com/gardengate"],
+    )
+
+    state = {
+        "query": "Who are our competitors?",
+        "context": None,
+        "plan": DeepResearchPlan(plan_summary="Plan", research_mode=ResearchScopeMode.CLIENT_SCOPED, sub_topics=[]),
+        "current_topic_idx": 1,
+        "used_tool_budget": 2,
+        "max_global_budget": 6,
+        "topic_evidences": [ev],
+        "discovered_sources": {"https://facebook.com/gardengate": {"title": "GG", "snippet": "Food"}},
+        "inspected_sources": {"https://facebook.com/gardengate": {"title": "GG", "summary": "Food"}},
+        "synthesis": fake_synthesis,
+        "final_report": "",
+        "activity_logs": [],
+        "on_event_fn": None,
+        "research_mode": "client_scoped",
+        "is_ambiguous": False,
+    }
+
+    with patch("app.campaign_intelligence.research.deep_research_graph.invoke_structured_llm", return_value=fake_synthesis):
+        res = await compile_report_node(state)
+        synth = res["synthesis"]
+
+        comp_names = [c.competitor_name for c in synth.observed_competitors]
+        # "10 gorgeous restaurants..." must be filtered out
+        assert "10 gorgeous restaurants for outdoor dining in Pune" not in comp_names
+        # "Restaurants listed on Zomato..." must be cleaned to "Zomato"
+        assert "Zomato" in comp_names
+        assert "Garden Gate Family Restaurant" in comp_names
+        # Zomato must be CHANNEL
+        zomato_comp = next(c for c in synth.observed_competitors if c.competitor_name == "Zomato")
+        assert zomato_comp.competitor_type == CompetitorType.CHANNEL
+
+
