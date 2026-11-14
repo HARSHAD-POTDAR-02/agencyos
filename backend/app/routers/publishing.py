@@ -74,8 +74,12 @@ async def publish_deliverable(
     """
     deliverable = await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
 
-    # 1. Guardrail: Deliverable must be approved (or already published being updated)
-    if deliverable.status not in (DeliverableStatus.approved, DeliverableStatus.published):
+    # 1. Guardrail: Deliverable must be approved (or already published / partially published being completed)
+    if deliverable.status not in (
+        DeliverableStatus.approved,
+        DeliverableStatus.published,
+        DeliverableStatus.partially_published,
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(

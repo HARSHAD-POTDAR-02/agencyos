@@ -321,7 +321,7 @@ async def publish_instagram_reel(
                 "Authorization": f"OAuth {access_token}",
                 "offset": "0",
                 "file_size": str(file_size),
-                "Content-Type": file_type or "application/octet-stream",
+                "Content-Type": "application/octet-stream",
             }
             logger.info(f"Initiating direct resumable video upload ({file_size} bytes) to {upload_url}")
             res_upload = await client.post(
@@ -333,10 +333,42 @@ async def publish_instagram_reel(
             if res_upload.status_code not in (200, 201, 204):
                 try:
                     up_data = res_upload.json()
-                    up_err = up_data.get("error", {}).get("message", f"HTTP {res_upload.status_code}")
+                    up_err = (
+                        up_data.get("debug_info", {}).get("message")
+                        or (up_data.get("error", {}).get("message") if isinstance(up_data.get("error"), dict) else None)
+                        or up_data.get("message")
+                        or (up_data.get("error") if isinstance(up_data.get("error"), str) else None)
+                        or f"HTTP {res_upload.status_code}"
+                    )
                 except Exception:
                     up_err = f"HTTP {res_upload.status_code}: {res_upload.text[:200]}"
-                raise MetaPublishingError(f"Direct Instagram video binary upload failed: {up_err}")
+
+                if video_url:
+                    logger.warning(
+                        f"Direct Instagram video binary upload failed ({up_err}). "
+                        f"Falling back to public video_url ingestion: {video_url}"
+                    )
+                    fallback_payload = {
+                        "media_type": "REELS",
+                        "video_url": video_url,
+                        "caption": caption,
+                        "share_to_feed": "true" if share_to_feed else "false",
+                        "access_token": access_token,
+                    }
+                    if cover_url:
+                        fallback_payload["cover_url"] = cover_url
+                    res_fb = await client.post(container_url, data=fallback_payload)
+                    fb_data = res_fb.json()
+                    if res_fb.status_code == 200 and "id" in fb_data:
+                        creation_id = fb_data["id"]
+                    else:
+                        raise MetaPublishingError(
+                            f"Direct Instagram video upload failed ({up_err}) and URL fallback failed: "
+                            f"{fb_data.get('error', {}).get('message', 'Unknown error')}",
+                            fb_data.get("error"),
+                        )
+                else:
+                    raise MetaPublishingError(f"Direct Instagram video binary upload failed: {up_err}")
 
         # Step 2: Poll for video processing status
         status_url = f"{GRAPH_API_BASE}/{version}/{creation_id}"

@@ -667,7 +667,7 @@ function DeliverableDetailContent() {
           </div>
 
           {/* Action buttons based on status */}
-          {deliverable.status === "approved" && (
+          {(deliverable.status === "approved" || deliverable.status === "partially_published") && (
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => {
@@ -678,7 +678,7 @@ function DeliverableDetailContent() {
                 className="inline-flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs shadow-indigo-600/20 transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <Clock className="w-3.5 h-3.5" />
-                <span>Schedule Post</span>
+                <span>{deliverable.status === "partially_published" ? "Schedule Remaining" : "Schedule Post"}</span>
               </button>
               <button
                 onClick={() => {
@@ -689,7 +689,7 @@ function DeliverableDetailContent() {
                 className="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Publish Live</span>
+                <span>{deliverable.status === "partially_published" ? "Publish Remaining Live" : "Publish Live"}</span>
               </button>
             </div>
           )}
