@@ -106,6 +106,7 @@ export function ExportPreviewModal({
 
   const isApproved =
     artifact.status === "approved" ||
+    artifact.status === "exported" ||
     artifact.payload?.is_approved === true ||
     (artifact as any).latest_version?.is_approved === true;
 
@@ -247,7 +248,16 @@ export function ExportPreviewModal({
               </div>
 
               {/* Navigation CTAs */}
-              <div className="flex items-center justify-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                {exportResult.deliverable_id && (
+                  <Link
+                    href={`/deliverables/${exportResult.deliverable_id}`}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition-colors shadow-2xs"
+                  >
+                    <span>View Deliverable & Script</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                )}
                 <Link
                   href="/tasks"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs transition-colors shadow-2xs"

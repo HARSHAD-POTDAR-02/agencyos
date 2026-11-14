@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { ActiveArtifactData } from "./types";
 import { StoryboardPanel } from "./StoryboardPanel";
 import { HookAnalysisPanel } from "./HookAnalysisPanel";
@@ -128,7 +129,8 @@ export function ContextualCanvas({
     );
   }
 
-  const isApproved = artifact.status === "approved";
+  const isExported = artifact.status === "exported";
+  const isApproved = artifact.status === "approved" || isExported;
 
   return (
     <div className="h-full flex flex-col bg-card/40">
@@ -141,12 +143,14 @@ export function ContextualCanvas({
 
           <span
             className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-              isApproved
+              isExported
+                ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                : isApproved
                 ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                 : "bg-muted text-muted-foreground border-border"
             }`}
           >
-            {artifact.status}
+            {isExported ? "Exported" : isApproved ? "Approved" : artifact.status}
           </span>
 
           <h3 className="font-bold text-sm text-foreground truncate max-w-[200px] sm:max-w-[320px]">
@@ -172,6 +176,16 @@ export function ContextualCanvas({
             </button>
           )}
 
+          {isExported && (
+            <Link
+              href="/tasks"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-semibold text-xs hover:bg-purple-100 transition-colors shadow-2xs"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span>In Production</span>
+            </Link>
+          )}
+
           {onExportClick && (
             <button
               type="button"
@@ -179,7 +193,7 @@ export function ContextualCanvas({
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs transition-all shadow-2xs cursor-pointer"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span>Export to Tasks</span>
+              <span>{isExported ? "Re-export" : "Export to Tasks"}</span>
             </button>
           )}
 

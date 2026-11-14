@@ -5,6 +5,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -12,9 +13,11 @@ from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.campaign import Campaign
 from app.models.client import Client
 from app.models.comment import DeliverableComment
+from app.models.content_version import ContentVersion
 from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.studio_artifact import (
     CampaignStudioSession,
@@ -451,31 +454,189 @@ async def export_artifact_to_production(
         title=title,
         deliverable_type=fmt,
         platform=platform,
-        status=DeliverableStatus.not_started,
+        status=DeliverableStatus.in_production,
         planned_date=default_due_date,
     )
     db.add(deliverable)
     await db.flush()
 
-    # 7. Create production Task with enriched creative brief
+    # 7. Extract caption and hashtags for deliverable copy
+    full_caption = version.payload.get("full_caption") or version.payload.get("caption") or ""
+    hashtags = version.payload.get("hashtags") or []
+    if hashtags and isinstance(hashtags, list):
+        tag_str = " ".join([h if h.startswith("#") else f"#{h}" for h in hashtags])
+        if tag_str not in full_caption:
+            caption_text = f"{full_caption}\n\n{tag_str}".strip()
+        else:
+            caption_text = full_caption.strip()
+    else:
+        caption_text = full_caption.strip()
+
+    # 8. Create production Task pipeline with enriched creative brief
     brief_markdown = format_production_brief(version.payload, artifact.artifact_type)
     task_notes = brief_markdown[:1980] if len(brief_markdown) > 1980 else brief_markdown
 
-    task = Task(
-        id=uuid.uuid4(),
-        deliverable_id=deliverable.id,
-        title=f"Produce: {title}",
-        task_type="creative_production",
-        assignee_id=assignee_id,
-        status=TaskStatus.todo,
-        priority=TaskPriority.medium,
-        due_date=default_due_date,
-        notes=task_notes,
-    )
-    db.add(task)
+    # 9. Save creative brief to upload storage
+    upload_dir = Path(settings.UPLOAD_DIR) / str(deliverable.id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    brief_filename = f"{artifact.artifact_type}_shoot_brief_v{version.version_number}.txt"
+    unique_file_name = f"{uuid.uuid4().hex}_{brief_filename}"
+    file_path = upload_dir / unique_file_name
+    brief_bytes = brief_markdown.encode("utf-8")
+    file_path.write_bytes(brief_bytes)
+
+    storage_key = f"{deliverable.id}/{unique_file_name}"
+    checksum = hashlib.sha256(brief_bytes).hexdigest()
+    file_size = len(brief_bytes)
+
+    # 10. Generate stage-based tasks matching the tasks kanban board
+    fmt_lower = (fmt or "").lower()
+    art_type_lower = (artifact.artifact_type or "").lower()
+
+    created_tasks: list[Task] = []
+
+    if "carousel" in fmt_lower or "carousel" in art_type_lower:
+        # Carousel Multi-Stage Pipeline
+        t_script = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Copywriting & Slide Framework ({title[:30]})",
+            task_type="scripting",
+            status=TaskStatus.done,
+            priority=TaskPriority.high,
+            due_date=default_due_date,
+            notes=task_notes,
+        )
+        t_design = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Visual Design & Slide Layout ({title[:30]})",
+            task_type="editing",
+            status=TaskStatus.todo,
+            priority=TaskPriority.high,
+            assignee_id=assignee_id,
+            due_date=default_due_date,
+            notes=task_notes,
+        )
+        t_review = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Graphic QA & Slide Review ({title[:30]})",
+            task_type="approval",
+            status=TaskStatus.backlog,
+            priority=TaskPriority.medium,
+            due_date=default_due_date,
+            notes="Verify slide typography, brand palette, and copy against approved studio brief.",
+        )
+        created_tasks.extend([t_script, t_design, t_review])
+        primary_task = t_design
+        content_version_task = t_script
+    elif "reel" in fmt_lower or "video" in fmt_lower or "storyboard" in art_type_lower:
+        # Video Reel Multi-Stage Pipeline
+        t_script = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Script & Shot Prep ({title[:30]})",
+            task_type="scripting",
+            status=TaskStatus.done,
+            priority=TaskPriority.high,
+            due_date=default_due_date,
+            notes=task_notes,
+        )
+        t_shoot = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Shoot / Raw Footage Capture ({title[:30]})",
+            task_type="filming",
+            status=TaskStatus.todo,
+            priority=TaskPriority.high,
+            assignee_id=assignee_id,
+            due_date=default_due_date,
+            notes=task_notes,
+        )
+        t_edit = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Video Editing & Audio Mix ({title[:30]})",
+            task_type="editing",
+            status=TaskStatus.backlog,
+            priority=TaskPriority.medium,
+            due_date=default_due_date,
+            notes="Cut raw footage to match scene durations and pacing; sync sound effects and voiceovers as specified in storyboard.",
+        )
+        t_review = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Internal & Client Review ({title[:30]})",
+            task_type="approval",
+            status=TaskStatus.backlog,
+            priority=TaskPriority.low,
+            due_date=default_due_date,
+            notes="Review exported video render against the approved studio storyboard.",
+        )
+        created_tasks.extend([t_script, t_shoot, t_edit, t_review])
+        primary_task = t_shoot
+        content_version_task = t_script
+    else:
+        # Generic Pipeline
+        t_script = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Script & Concept ({title[:30]})",
+            task_type="scripting",
+            status=TaskStatus.done,
+            priority=TaskPriority.high,
+            due_date=default_due_date,
+            notes=task_notes,
+        )
+        t_prod = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Produce: {title}",
+            task_type="filming",
+            status=TaskStatus.todo,
+            priority=TaskPriority.medium,
+            assignee_id=assignee_id,
+            due_date=default_due_date,
+            notes=task_notes,
+        )
+        t_review = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliverable.id,
+            title=f"Review & QA ({title[:30]})",
+            task_type="approval",
+            status=TaskStatus.backlog,
+            priority=TaskPriority.low,
+            due_date=default_due_date,
+            notes="Review production asset before client delivery.",
+        )
+        created_tasks.extend([t_script, t_prod, t_review])
+        primary_task = t_prod
+        content_version_task = t_script
+
+    for t in created_tasks:
+        db.add(t)
     await db.flush()
 
-    # 7b. Attach complete creative production brief as internal DeliverableComment
+    # 11. Create initial ContentVersion (Version 1) containing the approved brief and caption
+    content_version = ContentVersion(
+        id=uuid.uuid4(),
+        deliverable_id=deliverable.id,
+        task_id=content_version_task.id,
+        version_number=1,
+        storage_key=storage_key,
+        file_name=brief_filename,
+        file_type="text/plain",
+        file_size_bytes=file_size,
+        checksum_sha256=checksum,
+        caption=caption_text or None,
+        notes=f"Approved in Campaign Studio ({artifact.artifact_type} v{version.version_number})",
+        uploaded_by_id=user_id,
+    )
+    db.add(content_version)
+    await db.flush()
+
+    # 12. Attach complete creative production brief as internal DeliverableComment
     brief_comment = DeliverableComment(
         id=uuid.uuid4(),
         deliverable_id=deliverable.id,
@@ -486,16 +647,21 @@ async def export_artifact_to_production(
     db.add(brief_comment)
     await db.flush()
 
-    # 8. Mark artifact status as exported
+    # 13. Mark artifact status as exported
     artifact.status = StudioArtifactStatus.exported.value
     artifact.updated_at = datetime.now(timezone.utc)
 
-    # 9. Record StudioExport audit record
+    # 14. Record StudioExport audit record
     production_mapping = {
         "deliverable_id": str(deliverable.id),
         "deliverable_title": deliverable.title,
-        "task_id": str(task.id),
-        "task_title": task.title,
+        "task_id": str(primary_task.id),
+        "task_title": primary_task.title,
+        "tasks": [
+            {"id": str(t.id), "title": t.title, "task_type": t.task_type, "status": t.status.value}
+            for t in created_tasks
+        ],
+        "content_version_id": str(content_version.id),
     }
 
     export_rec = StudioExport(

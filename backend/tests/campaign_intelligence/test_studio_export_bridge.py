@@ -12,6 +12,7 @@ from app.core.database import Base
 from app.models.agency import Agency
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.client import Client, ClientStatus
+from app.models.content_version import ContentVersion
 from app.models.deliverable import Deliverable
 from app.models.studio_artifact import (
     CampaignStudioSession,
@@ -211,6 +212,22 @@ async def test_export_approved_artifact_to_production(db_session: AsyncSession):
     assert task.due_date == date(2026, 11, 20)
     assert "Storyboard with 2 scenes" in (task.notes or "")
 
+    # Verify all multi-stage tasks created for reel
+    all_tasks = (await db_session.execute(select(Task).where(Task.deliverable_id == deliv.id))).scalars().all()
+    assert len(all_tasks) == 4
+    stage_types = {t.task_type for t in all_tasks}
+    assert stage_types == {"scripting", "filming", "editing", "approval"}
+
+    # Verify initial ContentVersion (Version 1) created with caption and brief doc
+    cv_stmt = select(ContentVersion).where(ContentVersion.deliverable_id == deliv.id)
+    cv = (await db_session.execute(cv_stmt)).scalars().first()
+    assert cv is not None
+    assert cv.version_number == 1
+    assert cv.caption is not None
+    assert "Nitro Pour" in cv.caption or "Nitro" in cv.caption or len(cv.caption) > 0
+    assert cv.file_name.endswith(".txt")
+    assert cv.storage_key is not None
+
     # Verify Artifact status updated to 'exported'
     art_stmt = select(StudioArtifact).where(StudioArtifact.id == artifact.id)
     refreshed_art = (await db_session.execute(art_stmt)).scalars().first()
@@ -346,12 +363,12 @@ async def test_export_idempotency_replay(db_session: AsyncSession):
     assert res2.task_id == res1.task_id
     assert res2.export_id == res1.export_id
 
-    # Verify in DB there is strictly only 1 Deliverable and 1 Task
+    # Verify in DB there is strictly only 1 Deliverable and the canonical 4 tasks without duplicates
     delivs = (await db_session.execute(select(Deliverable).where(Deliverable.campaign_id == campaign.id))).scalars().all()
     assert len(delivs) == 1
 
     tasks = (await db_session.execute(select(Task).where(Task.deliverable_id == res1.deliverable_id))).scalars().all()
-    assert len(tasks) == 1
+    assert len(tasks) == 4
 
 
 # =====================================================================
