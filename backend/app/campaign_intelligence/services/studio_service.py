@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign
 from app.models.client import Client
+from app.models.comment import DeliverableComment
 from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.studio_artifact import (
     CampaignStudioSession,
@@ -264,6 +265,109 @@ async def check_idempotency_or_existing_export(
     return None
 
 
+def format_production_brief(payload: dict[str, Any], artifact_type: str) -> str:
+    """
+    Format a complete, structured creative production brief for assignees,
+    including video shoot scripts, scene breakdowns, dialogues, cues, and post copy.
+    """
+    title = payload.get("deliverable_title") or "Creative Production Brief"
+    raw_platform = payload.get("platform") or "Instagram"
+    platform_str = raw_platform.value if hasattr(raw_platform, "value") else str(raw_platform).split(".")[-1]
+
+    if "scenes" in payload and isinstance(payload["scenes"], list):
+        scenes = payload["scenes"]
+        target_dur = payload.get("target_duration_seconds", 20)
+        pillar = payload.get("strategic_pillar", "Core Brand")
+
+        lines = [
+            f"Storyboard with {len(scenes)} scenes ready for shoot.",
+            "",
+            f"# Creative Shoot Brief: {title}",
+            f"**Platform**: {platform_str.upper()} | **Duration**: {target_dur}s | **Strategic Pillar**: {pillar}",
+            "",
+            "## Scene-by-Scene Shoot Script:",
+        ]
+
+        for sc in scenes:
+            num = sc.get("scene_number", 1)
+            ts = sc.get("timestamp_range", "0:00 - 0:03")
+            shot = sc.get("shot_type", "Standard Shot")
+            action = sc.get("visual_action", "Action details")
+            vo = sc.get("voiceover_script", "")
+            ost = sc.get("on_screen_text", "")
+            sfx = sc.get("audio_sfx_cue", "")
+            prompt = sc.get("ai_visual_prompt", "")
+
+            lines.append(f"### Scene {num} [{ts}] • {shot}")
+            lines.append(f"- **Visual Action**: {action}")
+            if vo:
+                lines.append(f"- **Voiceover / Dialogue**: \"{vo}\"")
+            if ost:
+                lines.append(f"- **On-Screen Text**: {ost}")
+            if sfx:
+                lines.append(f"- **Audio / SFX Cue**: {sfx}")
+            if prompt:
+                lines.append(f"- **Visual Prompt**: {prompt}")
+            lines.append("")
+
+        caption = payload.get("full_caption")
+        hashtags = payload.get("hashtags")
+        cta = payload.get("call_to_action")
+
+        if caption or cta or hashtags:
+            lines.append("## Post Copy & Off-Ramp:")
+            if caption:
+                lines.append(f"**Caption**: {caption}")
+            if hashtags:
+                tag_str = (
+                    " ".join([f"#{t.replace('#', '')}" for t in hashtags])
+                    if isinstance(hashtags, list)
+                    else str(hashtags)
+                )
+                lines.append(f"**Hashtags**: {tag_str}")
+            if cta:
+                lines.append(f"**Call to Action**: {cta}")
+
+        return "\n".join(lines).strip()
+
+    elif "slides" in payload and isinstance(payload["slides"], list):
+        slides = payload["slides"]
+        lines = [
+            f"Carousel deck with {len(slides)} slides ready for design.",
+            "",
+            f"# Carousel Deck Creative Brief: {title}",
+            f"**Platform**: {platform_str.upper()} | **Slide Count**: {len(slides)}",
+            "",
+            "## Slide-by-Slide Layout & Copy:",
+        ]
+
+        for sl in slides:
+            s_num = sl.get("slide_number", 1)
+            hl = sl.get("headline", "")
+            body = sl.get("body_copy", "")
+            layout = sl.get("visual_layout") or sl.get("visual_layout_note", "")
+
+            lines.append(f"### Slide {s_num}: {hl}")
+            if body:
+                lines.append(f"- **Body Copy**: {body}")
+            if layout:
+                lines.append(f"- **Visual Layout**: {layout}")
+            lines.append("")
+
+        caption = payload.get("full_caption")
+        cta = payload.get("call_to_action")
+        if caption or cta:
+            lines.append("## Post Copy:")
+            if caption:
+                lines.append(f"**Caption**: {caption}")
+            if cta:
+                lines.append(f"**Call to Action**: {cta}")
+
+        return "\n".join(lines).strip()
+
+    return f"Production asset ready for execution: {title}"
+
+
 async def export_artifact_to_production(
     agency_id: uuid.UUID,
     campaign_id: uuid.UUID,
@@ -353,12 +457,9 @@ async def export_artifact_to_production(
     db.add(deliverable)
     await db.flush()
 
-    # 7. Create production Task
-    task_notes = None
-    if "scenes" in version.payload:
-        task_notes = f"Storyboard with {len(version.payload['scenes'])} scenes ready for shoot."
-    elif "slides" in version.payload:
-        task_notes = f"Carousel deck with {len(version.payload['slides'])} slides ready for design."
+    # 7. Create production Task with enriched creative brief
+    brief_markdown = format_production_brief(version.payload, artifact.artifact_type)
+    task_notes = brief_markdown[:1980] if len(brief_markdown) > 1980 else brief_markdown
 
     task = Task(
         id=uuid.uuid4(),
@@ -372,6 +473,17 @@ async def export_artifact_to_production(
         notes=task_notes,
     )
     db.add(task)
+    await db.flush()
+
+    # 7b. Attach complete creative production brief as internal DeliverableComment
+    brief_comment = DeliverableComment(
+        id=uuid.uuid4(),
+        deliverable_id=deliverable.id,
+        author_id=user_id,
+        message=brief_markdown[:1980],
+        is_internal=True,
+    )
+    db.add(brief_comment)
     await db.flush()
 
     # 8. Mark artifact status as exported
