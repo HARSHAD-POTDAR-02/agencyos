@@ -69,6 +69,11 @@ export default function EmployeeWorkspacePage() {
   const [activeTab, setActiveTab] = useState<"action_required" | "revisions" | "in_review" | "completed" | "all">("action_required");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTaskType, setSelectedTaskType] = useState<string>("all");
+  const [todayStr, setTodayStr] = useState<string>("");
+
+  useEffect(() => {
+    setTodayStr(new Date().toISOString().split("T")[0]);
+  }, []);
 
   const loadMyTasks = useCallback(async () => {
     if (!token || !effectiveAgencyId) return;
@@ -91,7 +96,6 @@ export default function EmployeeWorkspacePage() {
   }, [loadMyTasks]);
 
   // Calculations for KPI Cards
-  const todayStr = new Date().toISOString().split("T")[0];
   const activeTasks = tasks.filter((t) => ["todo", "in_progress"].includes(t.status));
   const dueToday = tasks.filter((t) => t.due_date && t.due_date === todayStr && !["approved", "done"].includes(t.status));
   const overdue = tasks.filter((t) => t.due_date && t.due_date < todayStr && !["approved", "done"].includes(t.status));
@@ -132,31 +136,31 @@ export default function EmployeeWorkspacePage() {
     const type = (taskType || "").toLowerCase();
     if (type.includes("script") || type.includes("copy")) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-950/80 text-purple-300 border border-purple-500/30">
-          <PenTool className="w-3.5 h-3.5 text-purple-400" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+          <PenTool className="w-3.5 h-3.5 text-purple-600" />
           <span>Scriptwriting</span>
         </span>
       );
     }
     if (type.includes("edit") || type.includes("video")) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-950/80 text-blue-300 border border-blue-500/30">
-          <Scissors className="w-3.5 h-3.5 text-blue-400" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <Scissors className="w-3.5 h-3.5 text-blue-600" />
           <span>Video Editing</span>
         </span>
       );
     }
     if (type.includes("shoot") || type.includes("film")) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/30">
-          <Film className="w-3.5 h-3.5 text-amber-400" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <Film className="w-3.5 h-3.5 text-amber-600" />
           <span>Footage Shoot</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
         <span>Review / QA</span>
       </span>
     );
@@ -165,366 +169,418 @@ export default function EmployeeWorkspacePage() {
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case "urgent":
-        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-950/90 text-rose-300 border border-rose-500/40 uppercase">Urgent</span>;
+        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 uppercase">Urgent</span>;
       case "high":
-        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-950/90 text-amber-300 border border-amber-500/40 uppercase">High</span>;
+        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 uppercase">High</span>;
       case "low":
-        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 uppercase">Low</span>;
+        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 uppercase">Low</span>;
       default:
-        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-950/90 text-blue-300 border border-blue-500/40 uppercase">Medium</span>;
+        return <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 uppercase">Medium</span>;
     }
   };
 
   return (
-    <div className="min-h-full w-full bg-[#0B0D14] text-slate-100 pb-16">
-      <main className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
-        {/* Personalized Header (Solid Purple-Black Theme, Zero White Bleed) */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#121626] via-[#1D1333] to-[#121626] border border-purple-500/30 rounded-2xl p-6 shadow-2xl">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-inner">
-                <Briefcase className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h1 className="text-2xl font-black text-white tracking-tight">
-                    {user?.full_name ? `Welcome back, ${user.full_name}` : "My Execution Workspace"}
-                  </h1>
-                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/40 capitalize">
-                    {currentMembership?.role || "Team Member"}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Focused operational workspace for your creative assignments, script drafts, and asset submissions.
-                </p>
-              </div>
+    <main className="p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Welcome Banner (Solid Purple-Black Gradient - No white gradient wash) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#121626] via-[#1D1333] to-[#121626] border border-purple-500/30 rounded-2xl p-6 shadow-xl">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-inner">
+              <Briefcase className="w-5 h-5" />
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={loadMyTasks}
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1A2035] hover:bg-[#222A45] border border-white/10 text-xs font-semibold text-slate-200 transition-all hover:text-white"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-purple-400" : ""}`} />
-              <span>Sync Tasks</span>
-            </button>
-            <Link
-              href="/tasks"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 transition-all"
-            >
-              <span>Agency Kanban</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl font-black text-white tracking-tight">
+                  {user?.full_name ? `Welcome back, ${user.full_name}` : "My Execution Workspace"}
+                </h1>
+                <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/40 capitalize">
+                  {currentMembership?.role || "Team Member"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Focused operational workspace for your creative assignments, script drafts, and asset submissions.
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* KPI Overview Cards (Solid, Non-Transparent Surfaces) */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-          <div 
-            onClick={() => setActiveTab("action_required")}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === "action_required" 
-                ? "bg-[#1A1530] border-purple-500/60 shadow-lg shadow-purple-950/60 ring-1 ring-purple-500/40" 
-                : "bg-[#121626] border-white/10 hover:border-white/20 hover:bg-[#161B2E]"
-            }`}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={loadMyTasks}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1A2035] hover:bg-[#222A45] border border-white/10 text-xs font-semibold text-slate-200 transition-all hover:text-white"
           >
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Active Tasks</span>
-              <CheckSquare className="w-4 h-4 text-purple-400" />
-            </div>
-            <div className="text-2xl font-black text-white">{activeTasks.length}</div>
-            <p className="text-[11px] text-slate-400 mt-0.5">Ready to execute</p>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab("revisions")}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === "revisions" 
-                ? "bg-[#251710] border-amber-500/60 shadow-lg shadow-amber-950/60 ring-1 ring-amber-500/40" 
-                : "bg-[#121626] border-white/10 hover:border-white/20 hover:bg-[#161B2E]"
-            }`}
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-purple-400" : ""}`} />
+            <span>Sync Tasks</span>
+          </button>
+          <Link
+            href="/tasks"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 transition-all"
           >
-            <div className="flex items-center justify-between text-amber-400 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Pending Revisions</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-2xl font-black text-amber-400">{pendingRevisions.length}</div>
-            <p className="text-[11px] text-amber-400/80 mt-0.5">Requires update</p>
-          </div>
+            <span>Agency Kanban</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
 
-          <div 
-            onClick={() => setActiveTab("in_review")}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === "in_review" 
-                ? "bg-[#101C30] border-blue-500/60 shadow-lg shadow-blue-950/60 ring-1 ring-blue-500/40" 
-                : "bg-[#121626] border-white/10 hover:border-white/20 hover:bg-[#161B2E]"
-            }`}
-          >
-            <div className="flex items-center justify-between text-blue-400 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Awaiting Review</span>
-              <Clock className="w-4 h-4 text-blue-400" />
+      {/* KPI Overview Cards (Styled exactly like Dashboard Cards: White bg, slate-200/80 border, soft shadow-2xs) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        {/* Active Tasks */}
+        <div 
+          onClick={() => setActiveTab("action_required")}
+          className={`bg-white rounded-2xl p-5 border shadow-2xs transition-all cursor-pointer group ${
+            activeTab === "action_required" 
+              ? "border-purple-400 ring-2 ring-purple-500/20 shadow-md" 
+              : "border-slate-200/80 hover:border-purple-300 hover:shadow-md hover:-translate-y-0.5"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-purple-600 transition-colors">
+              Active Tasks
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CheckSquare className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-black text-blue-400">{awaitingReview.length}</div>
-            <p className="text-[11px] text-blue-400/80 mt-0.5">Internal inspection</p>
           </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              {activeTasks.length}
+            </span>
+            <span className="inline-flex items-center text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+              To Execute
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">Ready to work on</p>
+        </div>
 
-          <div className="p-4 rounded-2xl bg-[#121626] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Due Today / Overdue</span>
-              <Calendar className={`w-4 h-4 ${overdue.length > 0 ? "text-rose-400" : "text-slate-400"}`} />
+        {/* Pending Revisions */}
+        <div 
+          onClick={() => setActiveTab("revisions")}
+          className={`bg-white rounded-2xl p-5 border shadow-2xs transition-all cursor-pointer group ${
+            activeTab === "revisions" 
+              ? "border-amber-400 ring-2 ring-amber-500/20 shadow-md" 
+              : "border-slate-200/80 hover:border-amber-300 hover:shadow-md hover:-translate-y-0.5"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-amber-600 transition-colors">
+              Pending Revisions
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <AlertTriangle className="w-4 h-4" />
             </div>
-            <div className={`text-2xl font-black ${overdue.length > 0 ? "text-rose-400" : "text-white"}`}>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              {pendingRevisions.length}
+            </span>
+            <span className="inline-flex items-center text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+              Needs Update
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">Manager feedback waiting</p>
+        </div>
+
+        {/* Awaiting Review */}
+        <div 
+          onClick={() => setActiveTab("in_review")}
+          className={`bg-white rounded-2xl p-5 border shadow-2xs transition-all cursor-pointer group ${
+            activeTab === "in_review" 
+              ? "border-blue-400 ring-2 ring-blue-500/20 shadow-md" 
+              : "border-slate-200/80 hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors">
+              Awaiting Review
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              {awaitingReview.length}
+            </span>
+            <span className="inline-flex items-center text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+              In Inspection
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">Submitted to manager</p>
+        </div>
+
+        {/* Due Today / Overdue */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Deadlines
+            </span>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${overdue.length > 0 ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-600"}`}>
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className={`text-3xl font-extrabold tracking-tight ${overdue.length > 0 ? "text-rose-600" : "text-slate-900"}`}>
               {dueToday.length + overdue.length}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">{overdue.length > 0 ? `${overdue.length} overdue` : "On schedule"}</p>
+            </span>
+            <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border ${
+              overdue.length > 0 ? "text-rose-700 bg-rose-50 border-rose-200" : "text-slate-600 bg-slate-50 border-slate-200"
+            }`}>
+              {overdue.length > 0 ? `${overdue.length} Overdue` : "On Track"}
+            </span>
           </div>
+          <p className="text-[11px] text-slate-400 mt-2">
+            {overdue.length > 0 ? `${overdue.length} overdue task${overdue.length === 1 ? "" : "s"}` : `${dueToday.length} due today`}
+          </p>
+        </div>
 
-          <div 
-            onClick={() => setActiveTab("completed")}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-              activeTab === "completed" 
-                ? "bg-[#0F261E] border-emerald-500/60 shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-500/40" 
-                : "bg-[#121626] border-white/10 hover:border-white/20 hover:bg-[#161B2E]"
+        {/* Completed / Approved */}
+        <div 
+          onClick={() => setActiveTab("completed")}
+          className={`bg-white rounded-2xl p-5 border shadow-2xs transition-all cursor-pointer group ${
+            activeTab === "completed" 
+              ? "border-emerald-400 ring-2 ring-emerald-500/20 shadow-md" 
+              : "border-slate-200/80 hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
+              Approved
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              {completed.length}
+            </span>
+            <span className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+              Passed QA
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">Client ready</p>
+        </div>
+      </div>
+
+      {/* Filter and Tab Navigation Bar (White Card, Slate Outline, Shadow-2xs) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Tab Controls */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-medium overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("action_required")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "action_required"
+                ? "bg-white text-purple-700 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            <div className="flex items-center justify-between text-emerald-400 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Approved</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-black text-emerald-400">{completed.length}</div>
-            <p className="text-[11px] text-emerald-400/80 mt-0.5">Client ready</p>
-          </div>
+            Action Required ({activeTasks.length + pendingRevisions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("revisions")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "revisions"
+                ? "bg-white text-amber-700 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Revisions ({pendingRevisions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("in_review")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "in_review"
+                ? "bg-white text-blue-700 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            In Review ({awaitingReview.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("completed")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "completed"
+                ? "bg-white text-emerald-700 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Approved ({completed.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === "all"
+                ? "bg-white text-slate-900 shadow-2xs font-extrabold"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            All Assigned ({tasks.length})
+          </button>
         </div>
 
-        {/* Filter and Tab Navigation Bar */}
-        <div className="bg-[#121626] border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Tab Controls */}
-          <div className="flex items-center gap-1.5 bg-[#0B0D14] p-1 rounded-xl border border-white/10 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab("action_required")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === "action_required"
-                  ? "bg-purple-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Action Required ({activeTasks.length + pendingRevisions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("revisions")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === "revisions"
-                  ? "bg-amber-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Revisions ({pendingRevisions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("in_review")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === "in_review"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              In Review ({awaitingReview.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("completed")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === "completed"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Approved ({completed.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === "all"
-                  ? "bg-[#252C48] text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              All Assigned ({tasks.length})
-            </button>
+        {/* Search and Role Filter */}
+        <div className="flex items-center gap-3">
+          <div className="relative w-56">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-2 rounded-xl border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+            />
           </div>
 
-          {/* Search and Stage Selector */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-56">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0B0D14] text-xs text-white pl-8 pr-3 py-1.5 rounded-xl border border-white/10 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-
-            <select
-              value={selectedTaskType}
-              onChange={(e) => setSelectedTaskType(e.target.value)}
-              className="bg-[#0B0D14] text-xs font-semibold text-slate-200 px-3 py-1.5 rounded-xl border border-white/10 focus:outline-none"
-            >
-              <option value="all">All Roles</option>
-              <option value="script">Scriptwriting</option>
-              <option value="edit">Video Editing</option>
-              <option value="shoot">Shooting</option>
-              <option value="design">Design</option>
-            </select>
-          </div>
+          <select
+            value={selectedTaskType}
+            onChange={(e) => setSelectedTaskType(e.target.value)}
+            className="bg-slate-50 text-xs font-semibold text-slate-700 px-3.5 py-2 rounded-xl border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+          >
+            <option value="all">All Roles</option>
+            <option value="script">Scriptwriting</option>
+            <option value="edit">Video Editing</option>
+            <option value="shoot">Shooting</option>
+            <option value="design">Design</option>
+          </select>
         </div>
+      </div>
 
-        {/* Task List / Workspace Grid */}
-        {loading ? (
-          <div className="py-24 text-center space-y-3">
-            <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
-            <p className="text-sm font-semibold text-slate-400">Loading your assigned tasks...</p>
+      {/* Task Cards Grid (Dashboard-style White Cards) */}
+      {loading ? (
+        <div className="py-24 text-center space-y-3">
+          <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
+          <p className="text-sm font-semibold text-slate-500">Loading your assigned tasks...</p>
+        </div>
+      ) : filteredTasks.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-slate-200/80 border-dashed p-12 text-center space-y-3 shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="bg-[#121626] border border-white/10 border-dashed rounded-3xl p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#0B0D14] border border-white/10 flex items-center justify-center mx-auto text-slate-400">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-            </div>
-            <h3 className="text-base font-bold text-white">No tasks matching this view</h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              {activeTab === "revisions"
-                ? "Great job! You have zero revision requests pending."
-                : activeTab === "action_required"
-                ? "All clear! You have no tasks waiting for execution right now."
-                : "No tasks found with the selected filters."}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredTasks.map((t) => {
-              const isRevision = t.status === "changes_requested";
-              const isInReview = t.status === "internal_review";
-              const isApproved = ["approved", "done"].includes(t.status);
+          <h3 className="text-base font-bold text-slate-900">No tasks matching this view</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            {activeTab === "revisions"
+              ? "Great job! You have zero revision requests pending."
+              : activeTab === "action_required"
+              ? "All clear! You have no tasks waiting for execution right now."
+              : "No tasks found with the selected filters."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredTasks.map((t) => {
+            const isRevision = t.status === "changes_requested";
+            const isInReview = t.status === "internal_review";
+            const isApproved = ["approved", "done"].includes(t.status);
 
-              return (
-                <div
-                  key={t.id}
-                  className={`group relative rounded-2xl border p-5 transition-all flex flex-col justify-between ${
-                    isRevision
-                      ? "bg-gradient-to-br from-[#241510] via-[#121626] to-[#121626] border-amber-500/50 hover:border-amber-400"
-                      : isInReview
-                      ? "bg-gradient-to-br from-[#101B2E] via-[#121626] to-[#121626] border-blue-500/50 hover:border-blue-400"
-                      : isApproved
-                      ? "bg-[#121626] border-emerald-500/40 hover:border-emerald-500/60"
-                      : "bg-[#121626] border-white/10 hover:border-purple-500/50 hover:bg-[#151A2E] shadow-xl"
-                  }`}
-                >
-                  {/* Card Top: Badges & Client */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {getTaskTypeBadge(t.task_type)}
-                        {getPriorityBadge(t.priority)}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                        {t.due_date ? (
-                          <span className={`inline-flex items-center gap-1 font-semibold ${
-                            t.due_date < todayStr && !isApproved
-                              ? "text-rose-400"
-                              : t.due_date === todayStr && !isApproved
-                              ? "text-amber-400"
-                              : "text-slate-400"
-                          }`}>
-                            <Clock className="w-3 h-3" />
-                            <span>{t.due_date}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 text-[11px]">No deadline</span>
-                        )}
-                      </div>
+            return (
+              <div
+                key={t.id}
+                className="group relative bg-white rounded-2xl border border-slate-200/80 p-5 transition-all flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-purple-300 hover:-translate-y-0.5"
+              >
+                {/* Card Top: Badges & Deadline */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {getTaskTypeBadge(t.task_type)}
+                      {getPriorityBadge(t.priority)}
                     </div>
 
-                    {/* Client & Campaign Context */}
-                    <div className="flex items-center gap-2 text-xs text-slate-400 pt-0.5">
-                      <span className="inline-flex items-center gap-1 font-bold text-slate-200">
-                        <Building2 className="w-3.5 h-3.5 text-purple-400" />
-                        <span>{t.client_name || "Client"}</span>
-                      </span>
-                      <span>•</span>
-                      <span className="truncate max-w-[220px] text-slate-300">
-                        {t.campaign_title || "Campaign"}
-                      </span>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      {t.due_date ? (
+                        <span className={`inline-flex items-center gap-1 font-semibold ${
+                          t.due_date < todayStr && !isApproved
+                            ? "text-rose-600 font-bold"
+                            : t.due_date === todayStr && !isApproved
+                            ? "text-amber-600 font-bold"
+                            : "text-slate-500"
+                        }`}>
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{t.due_date}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">No deadline</span>
+                      )}
                     </div>
-
-                    {/* Task Title */}
-                    <Link
-                      href={`/tasks/${t.id}`}
-                      className="block text-base font-extrabold text-white group-hover:text-purple-300 transition-colors line-clamp-1"
-                    >
-                      {t.title}
-                    </Link>
-
-                    {/* Context Note preview */}
-                    {t.notes && (
-                      <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed bg-[#0B0D14] p-2.5 rounded-xl border border-white/10 font-mono text-[11px]">
-                        {t.notes.slice(0, 160)}...
-                      </p>
-                    )}
-
-                    {/* Feedback / Status Alert Pill */}
-                    {isRevision && (
-                      <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-950/80 border border-amber-500/40 text-amber-200 text-xs font-semibold">
-                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold text-amber-300">Manager requested changes.</span> Click below to view review notes and resubmit your revised draft.
-                        </div>
-                      </div>
-                    )}
-
-                    {isInReview && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-950/80 border border-blue-500/40 text-blue-200 text-xs font-semibold">
-                        <Clock className="w-4 h-4 text-blue-400 shrink-0" />
-                        <span>Submitted for internal review. Awaiting manager approval.</span>
-                      </div>
-                    )}
-
-                    {isApproved && (
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Approved internally. Ready for client review & scheduling.</span>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Card Bottom: Open Task Action */}
-                  <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Status: <span className="text-slate-200 font-bold">{t.status.replace("_", " ")}</span>
+                  {/* Client & Campaign Context */}
+                  <div className="flex items-center gap-2 text-xs text-slate-500 pt-0.5">
+                    <span className="inline-flex items-center gap-1 font-bold text-slate-800">
+                      <Building2 className="w-3.5 h-3.5 text-purple-600" />
+                      <span>{t.client_name || "Client"}</span>
                     </span>
-
-                    <Link
-                      href={`/tasks/${t.id}`}
-                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md ${
-                        isRevision
-                          ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30"
-                          : isInReview
-                          ? "bg-blue-600 hover:bg-blue-500 text-white"
-                          : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30"
-                      }`}
-                    >
-                      <span>{isRevision ? "Address Feedback & Resubmit" : "Open Workspace"}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
+                    <span>•</span>
+                    <span className="truncate max-w-[220px] text-slate-500 font-medium">
+                      {t.campaign_title || "Campaign"}
+                    </span>
                   </div>
+
+                  {/* Task Title */}
+                  <Link
+                    href={`/tasks/${t.id}`}
+                    className="block text-base font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors line-clamp-1"
+                  >
+                    {t.title}
+                  </Link>
+
+                  {/* Context Note preview */}
+                  {t.notes && (
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 font-mono text-[11px]">
+                      {t.notes.slice(0, 160)}...
+                    </p>
+                  )}
+
+                  {/* Feedback / Status Alert Pill */}
+                  {isRevision && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs font-semibold">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Manager requested changes.</span> Click below to view review notes and resubmit your revised draft.
+                      </div>
+                    </div>
+                  )}
+
+                  {isInReview && (
+                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 border border-blue-200/80 text-blue-900 text-xs font-semibold">
+                      <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span>Submitted for internal review. Awaiting manager approval.</span>
+                    </div>
+                  )}
+
+                  {isApproved && (
+                    <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Approved internally. Ready for client review & scheduling.</span>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
+
+                {/* Card Bottom: Open Task Action */}
+                <div className="pt-3.5 mt-3.5 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Status: <span className="text-slate-800 font-bold">{t.status.replace("_", " ")}</span>
+                  </span>
+
+                  <Link
+                    href={`/tasks/${t.id}`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                      isRevision
+                        ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/20"
+                        : isInReview
+                        ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20"
+                        : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/20 hover:scale-[1.02]"
+                    }`}
+                  >
+                    <span>{isRevision ? "Address Feedback & Resubmit" : "Open Workspace"}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </main>
   );
 }
