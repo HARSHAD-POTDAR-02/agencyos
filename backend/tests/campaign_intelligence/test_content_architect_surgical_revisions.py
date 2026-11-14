@@ -848,3 +848,45 @@ def test_normalize_storyboard_scenes_timing_with_target_duration():
     for i in range(len(scaled_scenes) - 1):
         assert scaled_scenes[i].end_ms == scaled_scenes[i + 1].start_ms
 
+
+def test_normalize_storyboard_scenes_timing_auto_subdivides_single_long_scene():
+    """
+    Verifies that if an LLM returns a single scene for a 60-second video,
+    the timing normalizer automatically subdivides it into distinct cinematic beats (e.g. 10 scenes)
+    spanning 0:00 to 1:00, preventing single-scene overlong storyboards.
+    """
+    from app.campaign_intelligence.collaboration.schemas import SceneCard
+    from app.campaign_intelligence.specialists.content_architect_adapter import normalize_storyboard_scenes_timing
+
+    single_60s_scene = [
+        SceneCard(
+            scene_number=1,
+            start_ms=0,
+            end_ms=60000,
+            timestamp_range="0:00 - 1:00",
+            shot_type="Macro Close-Up",
+            visual_action="Steaming mutton raan on wooden platter.",
+            voiceover_script="Taste the magic of village food!",
+            on_screen_text="Slow-Cooked Mutton Raan",
+            audio_sfx_cue="ASMR sizzle",
+        )
+    ]
+
+    subdivided, total_dur = normalize_storyboard_scenes_timing(single_60s_scene, target_duration_seconds=60)
+
+    assert total_dur == 60
+    assert len(subdivided) == 10
+    assert subdivided[0].scene_number == 1
+    assert subdivided[0].start_ms == 0
+    assert subdivided[-1].scene_number == 10
+    assert subdivided[-1].end_ms == 60000
+    assert subdivided[-1].timestamp_range.endswith("1:00")
+
+    # Verify no scene exceeds 8 seconds
+    for s in subdivided:
+        dur_s = (s.end_ms - s.start_ms) // 1000
+        assert dur_s <= 8
+        assert s.shot_type is not None
+        assert s.visual_action is not None
+        assert s.voiceover_script is not None
+

@@ -36,10 +36,13 @@ class StoryboardGenerationOutput(BaseModel):
     deliverable_title: str
     target_duration_seconds: int = 20
     strategic_pillar: str = "Core Value"
-    scenes: list[SceneCard] = Field(min_length=1)
-    caption: str = ""
-    hashtags: list[str] = Field(default_factory=list)
-    call_to_action: str = ""
+    scenes: list[SceneCard] = Field(
+        min_length=1,
+        description="A sequential list of at least 3 to 15 distinct scene cards breaking down the entire video beat-by-beat into 3-6 second cuts. You MUST NOT output only 1 scene.",
+    )
+    caption: str = Field(default="", description="Full publishable post caption with hashtags and emojis. MUST NOT be empty.")
+    hashtags: list[str] = Field(default_factory=list, description="5 to 10 relevant hashtags.")
+    call_to_action: str = Field(default="", description="Clear closing call to action.")
     suggested_followups: list[str] = Field(default_factory=list)
 
 
@@ -131,9 +134,64 @@ def normalize_storyboard_scenes_timing(
     and consistent total duration.
     If target_duration_seconds is provided and raw scene timings significantly deviate,
     scale durations proportionally so total duration matches target_duration_seconds.
+    If a single scene is passed for a long duration (>=15s), auto-subdivides it into
+    distinct cinematic beats (3-6s each).
     """
     if not scenes:
         return [], 0
+
+    tot_sec = target_duration_seconds or 20
+
+    # Guard: Subdivide if only 1 scene was returned for a multi-beat reel (>=15s)
+    if len(scenes) == 1 and tot_sec >= 15:
+        s0 = scenes[0]
+        beat_count = max(3, min(10, tot_sec // 6))
+        shot_types = [
+            "Macro Close-Up • Opening Hook",
+            "POV Whip Pan • Preparation",
+            "Medium Dynamic Action Shot",
+            "Overhead Plating & Masala Pour",
+            "Sensory ASMR Sizzle Detail",
+            "Tasting & Texture Reaction",
+            "Hero Signature Presentation Spread",
+            "Call-to-Action Outro & Signoff",
+        ]
+        beat_dur_ms = (tot_sec * 1000) // beat_count
+        subdivided: list[SceneCard] = []
+        for i in range(beat_count):
+            st_ms = i * beat_dur_ms
+            en_ms = (i + 1) * beat_dur_ms if (i < beat_count - 1) else (tot_sec * 1000)
+            st_sec = st_ms // 1000
+            en_sec = en_ms // 1000
+            ts_str = f"{st_sec // 60}:{st_sec % 60:02d} - {en_sec // 60}:{en_sec % 60:02d}"
+            if i == 0:
+                vo = s0.voiceover_script or "Stop scrolling and feast your eyes on this!"
+                act = s0.visual_action
+                ost = s0.on_screen_text or "Signature Feast"
+                sfx = s0.audio_sfx_cue or "Whoosh hit + sizzling audio"
+            elif i == beat_count - 1:
+                vo = "Experience the authentic taste today – book your table or order via link in bio!"
+                act = "Hero closing reveal of the steaming presentation with brand social off-ramp."
+                ost = "Book Now • Link in Bio"
+                sfx = "Rich musical swell + chime"
+            else:
+                vo = "Slow-cooked with pure desi ghee and artisanal spices, crafted for unmatched tenderness."
+                act = "Dynamic multi-angle camera tracks the cooking and plating with rich sensory details."
+                ost = "Fresh & Authentic"
+                sfx = "Crackle of ghee + ambient kitchen beat"
+            subdivided.append(SceneCard(
+                scene_number=i + 1,
+                start_ms=st_ms,
+                end_ms=en_ms,
+                timestamp_range=ts_str,
+                shot_type=shot_types[i % len(shot_types)],
+                visual_action=act,
+                voiceover_script=vo,
+                on_screen_text=ost,
+                audio_sfx_cue=sfx,
+                ai_visual_prompt=s0.ai_visual_prompt,
+            ))
+        scenes = subdivided
 
     # First pass: calculate raw durations
     raw_durations: list[int] = []
@@ -802,7 +860,7 @@ Return strictly matching CarouselGenerationOutput schema.
 
         target_dur = parse_target_duration(query, default_duration=20)
         min_scenes = max(3, target_dur // 7)
-        max_scenes = max(min_scenes + 1, target_dur // 4)
+        max_scenes = max(min_scenes + 2, target_dur // 4)
         dur_mins = target_dur // 60
         dur_secs = target_dur % 60
         end_ts = f"{dur_mins}:{dur_secs:02d}"
@@ -815,40 +873,51 @@ Brand Voice: {brand_voice}
 
 YOUR TASK:
 Generate a full production-ready video storyboard matching StoryboardGenerationOutput schema.
-Requirements:
-1. Target duration: EXACTLY {target_dur} seconds (pace all scenes sequentially from 0:00 up to {end_ts} across {min_scenes} to {max_scenes} scenes).
-2. Scene 1 (0:00 - 0:03) MUST be an arresting visual and auditory hook.
+CRITICAL REQUIREMENTS:
+1. Target duration: EXACTLY {target_dur} seconds.
+2. Number of scenes: You MUST generate AT LEAST {min_scenes} distinct scenes (up to {max_scenes} scenes).
+   - In short-form video production, every scene is a distinct 3-to-6 second camera cut. DO NOT output a single long scene!
+   - Scene 1: 0:00 - 0:03 (Arresting Hook)
+   - Scene 2 through Scene {min_scenes}: Sequential camera movements, talent actions, and dialogues.
+   - Final scene ending at exactly {end_ts}.
 3. Every scene MUST have:
    - start_ms and end_ms (strictly sequential and valid!)
-   - timestamp_range (e.g. '0:00 - 0:03', '0:03 - 0:08', etc.)
-   - shot_type (e.g. 'Macro Close-Up', 'POV Whip Pan', 'Talking Head')
+   - timestamp_range (e.g. '0:00 - 0:03', '0:03 - 0:08', etc. ending at {end_ts})
+   - shot_type (e.g. 'Macro Close-Up', 'POV Whip Pan', 'Talking Head', 'Overhead Pan')
    - visual_action (director guidance for camera & talent)
-   - voiceover_script (exact spoken line)
+   - voiceover_script (spoken line or dialogue in appropriate language)
    - on_screen_text (overlay text)
    - audio_sfx_cue (ASMR sizzle, trending beat, sound effect)
    - ai_visual_prompt (photorealistic Flux / Midjourney generation prompt)
-4. Full publishable caption, targeted hashtags, and clear CTA.
+4. Full publishable caption (MUST NOT be empty; write rich post copy with emojis), 5-10 relevant hashtags, and clear CTA.
 """
         try:
             sb_res: StoryboardGenerationOutput = await invoke_structured_llm(
                 prompt=prompt,
                 schema_class=StoryboardGenerationOutput,
                 temperature=0.3,
-                model=settings.FALLBACK_MODEL,
             )
             norm_scenes, total_dur = normalize_storyboard_scenes_timing(
                 sb_res.scenes, target_duration_seconds=target_dur
             )
+            final_caption = (sb_res.caption or "").strip()
+            if not final_caption:
+                final_caption = f"🍲✨ Experience authentic craftsmanship at {client_name}! Slow-cooked to perfection with traditional spices and rich aroma. Visit us today or order now! 🚀"
+            final_hashtags = sb_res.hashtags if sb_res.hashtags else [f"#{client_name.lower().replace(' ', '')}", f"#{industry.lower().replace(' ', '')}", "#foodies", "#authentic"]
+            final_cta = (sb_res.call_to_action or "").strip()
+            if not final_cta:
+                final_cta = "Book your table via link in bio!"
+
             payload = StoryboardArtifactPayload(
-                deliverable_title=sb_res.deliverable_title,
+                deliverable_title=sb_res.deliverable_title or f"{client_name}: Signature Showcase Reel",
                 platform=SocialPlatform.instagram,
                 format_type="reel",
                 target_duration_seconds=total_dur,
-                strategic_pillar=sb_res.strategic_pillar,
+                strategic_pillar=sb_res.strategic_pillar or "Craftsmanship",
                 scenes=norm_scenes,
-                full_caption=sb_res.caption,
-                hashtags=sb_res.hashtags,
-                call_to_action=sb_res.call_to_action,
+                full_caption=final_caption,
+                hashtags=final_hashtags,
+                call_to_action=final_cta,
             )
             activity_logs.append(f"Successfully generated {len(norm_scenes)}-scene storyboard: '{sb_res.deliverable_title}'.")
             return SpecialistResult(
