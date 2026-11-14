@@ -42,12 +42,15 @@ from app.campaign_intelligence.services.studio_service import (
 )
 from app.campaign_intelligence.specialists.content_architect_adapter import (
     ContentArchitectAdapter,
+    ReviseAllScenesOutput,
+    SceneScriptUpdate,
     TargetedCopyRevisionOutput,
     TargetedSceneRevisionOutput,
     TargetedSlideRevisionOutput,
     classify_storyboard_operation,
     classify_carousel_operation,
     normalize_storyboard_scenes_timing,
+    parse_insert_position,
 )
 
 
@@ -241,6 +244,53 @@ def test_classify_storyboard_operations():
     assert op == "FULL_REWRITE"
 
 
+def test_parse_insert_position_all_variations():
+    # Between
+    assert parse_insert_position("add a scene between 1 and 2", 3) == 1
+    assert parse_insert_position("insert between scene 2 and scene 3", 3) == 2
+    assert parse_insert_position("put a card between scenes 1 & 2", 3) == 1
+
+    # After
+    assert parse_insert_position("add a scene after scene 1", 3) == 1
+    assert parse_insert_position("add a slide after slide 2", 4) == 2
+
+    # Before
+    assert parse_insert_position("insert before scene 2", 3) == 1
+    assert parse_insert_position("add a card before scene 1", 3) == 0
+
+    # Start / Beginning / End
+    assert parse_insert_position("add a scene at the beginning", 3) == 0
+    assert parse_insert_position("add a new scene at the start", 3) == 0
+    assert parse_insert_position("add a scene at the end", 3) == 3
+
+
+def test_classify_positional_scene_insert_and_script_revision():
+    payload = _build_test_storyboard_payload()
+
+    # User's exact prompt from live testing:
+    q_insert = "add a scene between 1 and 2 where the chef sprinkles some tasty masala and ghee on the mutton raan"
+    op, info = classify_storyboard_operation(q_insert, payload)
+    assert op == "STRUCTURAL_EDIT"
+    assert info["action"] == "add"
+    assert info["insert_index"] == 1
+
+    # User's exact prompt from live testing:
+    q_script = "also change the script for all the scenes"
+    op, info = classify_storyboard_operation(q_script, payload)
+    assert op == "REVISE_ALL_SCENES"
+
+    # User's exact prompt from live testing:
+    q_use = "okay use that in the storyboard"
+    op, info = classify_storyboard_operation(q_use, payload)
+    assert op == "REVISE_ALL_SCENES"
+
+    # Caption only edit (does not trigger REVISE_ALL_SCENES)
+    q_caption = "update the caption with regional hashtags and emojis"
+    op, info = classify_storyboard_operation(q_caption, payload)
+    assert op == "TARGETED_EDIT"
+    assert info["target_type"] == "caption"
+
+
 def test_normalize_storyboard_scenes_timing():
     raw_scenes = [
         SceneCard(
@@ -408,6 +458,139 @@ async def test_storyboard_structural_delete_scene():
     assert scenes[1]["scene_number"] == 2
     assert scenes[1]["voiceover_script"] == initial_payload["scenes"][2]["voiceover_script"]
     assert scenes[1]["start_ms"] == scenes[0]["end_ms"]
+
+
+@pytest.mark.asyncio
+async def test_storyboard_structural_insert_between_scenes(monkeypatch: pytest.MonkeyPatch):
+    """
+    Verifies that inserting a scene 'between 1 and 2' places the new scene
+    at position 2 (index 1), pushes the original Scene 2 to Scene 3,
+    and original Scene 3 to Scene 4, with smooth monotonic timestamps.
+    """
+    initial_payload = _build_test_storyboard_payload()
+    ctx = _build_test_studio_context(initial_payload, "storyboard")
+    adapter = ContentArchitectAdapter()
+
+    new_scene_mock = TargetedSceneRevisionOutput(
+        conversational_intro="Added the ghee and spice sprinkling scene right after the opening hook.",
+        shot_type="Macro Close-Up • Slow Motion",
+        visual_action="Chef sprinkles stone-ground masala and pours fragrant golden desi ghee over the sizzling mutton raan.",
+        voiceover_script="A generous pour of desi ghee and our signature secret masala blend.",
+        on_screen_text="Pure Desi Ghee & Handewadi Masala",
+        audio_sfx_cue="Sizzling ghee crackle + rich chime",
+        ai_visual_prompt="Macro slow-motion shot of golden clarified butter drizzled over roasted spiced meat, cinematic restaurant lighting",
+    )
+
+    async def mock_invoke(*args, **kwargs):
+        return new_scene_mock
+
+    monkeypatch.setattr(
+        "app.campaign_intelligence.specialists.content_architect_adapter.invoke_structured_llm",
+        mock_invoke,
+    )
+
+    res = await adapter.execute(
+        query="add a scene between 1 and 2 where the chef sprinkles some tasty masala and ghee on the mutton raan",
+        context=ctx,
+        db=None,
+    )
+
+    assert res.artifact_type == ArtifactType.storyboard
+    new_payload = res.artifact_payload
+    scenes = new_payload["scenes"]
+
+    # Must now have 4 scenes (3 original + 1 inserted)
+    assert len(scenes) == 4
+
+    # Scene 1: Untouched original Scene 1
+    assert scenes[0]["scene_number"] == 1
+    assert scenes[0]["voiceover_script"] == initial_payload["scenes"][0]["voiceover_script"]
+    assert scenes[0]["start_ms"] == 0
+
+    # Scene 2: Newly inserted scene!
+    assert scenes[1]["scene_number"] == 2
+    assert "A generous pour of desi ghee" in scenes[1]["voiceover_script"]
+    assert "Chef sprinkles stone-ground masala" in scenes[1]["visual_action"]
+    assert scenes[1]["start_ms"] == scenes[0]["end_ms"]
+
+    # Scene 3: Original Scene 2, shifted to position 3
+    assert scenes[2]["scene_number"] == 3
+    assert scenes[2]["voiceover_script"] == initial_payload["scenes"][1]["voiceover_script"]
+    assert scenes[2]["visual_action"] == initial_payload["scenes"][1]["visual_action"]
+    assert scenes[2]["start_ms"] == scenes[1]["end_ms"]
+
+    # Scene 4: Original Scene 3, shifted to position 4
+    assert scenes[3]["scene_number"] == 4
+    assert scenes[3]["voiceover_script"] == initial_payload["scenes"][2]["voiceover_script"]
+    assert scenes[3]["start_ms"] == scenes[2]["end_ms"]
+
+
+@pytest.mark.asyncio
+async def test_storyboard_revise_all_scenes_updates_voiceovers(monkeypatch: pytest.MonkeyPatch):
+    """
+    Verifies that requesting a global script revision updates voiceover_script
+    and on_screen_text across all scenes while preserving camera framing and structure.
+    """
+    initial_payload = _build_test_storyboard_payload()
+    ctx = _build_test_studio_context(initial_payload, "storyboard")
+    adapter = ContentArchitectAdapter()
+
+    revised_all_output = ReviseAllScenesOutput(
+        conversational_intro="हे बघा, मी संपूर्ण स्टोरीबोर्ड अस्सल गावरान आणि मराठी स्टाइलमध्ये बदलला आहे!",
+        scenes=[
+            SceneScriptUpdate(
+                scene_number=1,
+                voiceover_script="मंडळी, अस्सल हांडेवाडी स्टाइल मटण रान कधी खाल्लंय का? थांबा आणि बघा!",
+                on_screen_text="अस्सल गावरान चव • हांडेवाडी",
+            ),
+            SceneScriptUpdate(
+                scene_number=2,
+                voiceover_script="१८ सुगंधी मसाल्यांमध्ये ६ तास मंद आचेवर शिजवलेलं गावरान मटण!",
+                on_screen_text="६ तास मंद आचेवर शिजवलेलं",
+            ),
+            SceneScriptUpdate(
+                scene_number=3,
+                voiceover_script="हॉटेल्स शौर्यवाड्यात या, आणि आजच आपल्या कुटुंबासोबत या चवीचा आनंद घ्या!",
+                on_screen_text="हॉटेल शौर्यवाडा • आजच बुक करा",
+            ),
+        ],
+        caption="🍲✨ अस्सल गावरान चवीचा अनुभव फक्त शौर्यवाड्यात! आजच भेट द्या. #PuneFoodies #HotelShauryawada",
+        call_to_action="आताच बायोमधील लिंकवर क्लिक करून टेबल बुक करा!",
+    )
+
+    async def mock_invoke(*args, **kwargs):
+        return revised_all_output
+
+    monkeypatch.setattr(
+        "app.campaign_intelligence.specialists.content_architect_adapter.invoke_structured_llm",
+        mock_invoke,
+    )
+
+    res = await adapter.execute(
+        query="also change the script for all the scenes to authentic Marathi village style",
+        context=ctx,
+        db=None,
+    )
+
+    assert res.artifact_type == ArtifactType.storyboard
+    new_payload = res.artifact_payload
+    scenes = new_payload["scenes"]
+    assert len(scenes) == 3
+
+    # All scenes must have the updated Marathi voiceover
+    assert "मंडळी, अस्सल हांडेवाडी स्टाइल" in scenes[0]["voiceover_script"]
+    assert scenes[0]["on_screen_text"] == "अस्सल गावरान चव • हांडेवाडी"
+    # Core framing preserved
+    assert scenes[0]["shot_type"] == initial_payload["scenes"][0]["shot_type"]
+
+    assert "१८ सुगंधी मसाल्यांमध्ये" in scenes[1]["voiceover_script"]
+    assert scenes[1]["shot_type"] == initial_payload["scenes"][1]["shot_type"]
+
+    assert "हॉटेल्स शौर्यवाड्यात या" in scenes[2]["voiceover_script"]
+
+    # Updated caption and call to action
+    assert "अस्सल गावरान चवीचा अनुभव" in new_payload["full_caption"]
+    assert "आताच बायोमधील लिंकवर" in new_payload["call_to_action"]
 
 
 @pytest.mark.asyncio

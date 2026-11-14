@@ -85,6 +85,36 @@ class CarouselGenerationOutput(BaseModel):
     suggested_followups: list[str] = Field(default_factory=list)
 
 
+class SceneScriptUpdate(BaseModel):
+    scene_number: int = Field(description="Scene number (1-based index matching existing scenes)")
+    voiceover_script: str = Field(description="Spoken dialogue or voiceover for this scene")
+    on_screen_text: str = Field(default="", description="Text overlay on screen")
+    visual_action: str | None = Field(default=None, description="Updated visual action if altered, otherwise null to keep existing")
+
+
+class ReviseAllScenesOutput(BaseModel):
+    conversational_intro: str
+    scenes: list[SceneScriptUpdate] = Field(min_length=1, description="Updated scripts and on-screen text for each scene")
+    caption: str | None = Field(default=None, description="Updated full caption if modified to match the new script style")
+    call_to_action: str | None = Field(default=None, description="Updated call to action if applicable")
+    suggested_followups: list[str] = Field(default_factory=list)
+
+
+class SlideCopyUpdate(BaseModel):
+    slide_number: int = Field(description="Slide number (1-based index)")
+    headline: str = Field(description="Updated headline for this slide")
+    body_copy: str = Field(description="Updated body text for this slide")
+    visual_layout: str | None = Field(default=None, description="Updated visual layout if altered")
+
+
+class ReviseAllSlidesOutput(BaseModel):
+    conversational_intro: str
+    slides: list[SlideCopyUpdate] = Field(min_length=1, description="Updated copy for each slide")
+    caption: str | None = Field(default=None, description="Updated post caption if modified")
+    call_to_action: str | None = Field(default=None, description="Updated call to action")
+    suggested_followups: list[str] = Field(default_factory=list)
+
+
 # =====================================================================
 # Timing & Intent Classification Helpers
 # =====================================================================
@@ -119,38 +149,76 @@ def normalize_storyboard_scenes_timing(scenes: list[SceneCard]) -> tuple[list[Sc
     return normalized, total_seconds
 
 
+def parse_insert_position(query: str, current_count: int) -> int:
+    """
+    Parse natural language insertion targets:
+    - 'between 1 and 2' -> index 1 (becomes new Scene/Slide 2)
+    - 'between scene 2 and 3' -> index 2
+    - 'after scene 1' -> index 1
+    - 'before scene 2' -> index 1
+    - 'at the beginning' / 'as scene 1' -> index 0
+    - 'at the end' -> index current_count
+    """
+    lower = query.lower()
+
+    # 'between X and Y' (e.g. 'between 1 and 2', 'between scene 1 and scene 2')
+    btw_match = re.search(r"\bbetween\s+(?:the\s+)?(?:scenes?|slides?)?\s*(\d+)\s+(?:and|&)\s+(?:scenes?|slides?)?\s*(\d+)\b", lower)
+    if btw_match:
+        pos = min(int(btw_match.group(1)), int(btw_match.group(2)))
+        return pos  # 0-based insertion index
+
+    # 'after scene X' / 'after slide X'
+    after_match = re.search(r"\bafter\s+(?:the\s+)?(?:scenes?|slides?)\s*(\d+)\b", lower)
+    if after_match:
+        return int(after_match.group(1))
+
+    # 'before scene X' / 'before slide X'
+    before_match = re.search(r"\bbefore\s+(?:the\s+)?(?:scenes?|slides?)\s*(\d+)\b", lower)
+    if before_match:
+        return max(0, int(before_match.group(1)) - 1)
+
+    # 'as scene X' / 'as slide X'
+    as_match = re.search(r"\bas\s+(?:the\s+)?(?:scenes?|slides?)\s*(\d+)\b", lower)
+    if as_match:
+        return max(0, int(as_match.group(1)) - 1)
+
+    if any(kw in lower for kw in ["at the beginning", "at the start", "first scene", "first slide", "at beginning", "at start"]):
+        return 0
+
+    return current_count
+
+
 def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """
-    Classify user query into one of three broad operations:
+    Classify user query into:
     1. TARGETED_EDIT (specific scene, caption, cta, hashtags, title)
     2. STRUCTURAL_EDIT (add scene, delete scene)
-    3. FULL_REWRITE (regenerate whole storyboard)
+    3. REVISE_ALL_SCENES (script/voiceover changes across all scenes)
+    4. FULL_REWRITE (regenerate whole storyboard from scratch)
     """
     lower = query.lower()
 
     # 1. Check for explicit full rewrite triggers
     if any(phrase in lower for phrase in [
         "start over", "from scratch", "scrap this", "completely new",
-        "new concept", "rewrite everything", "rewrite the whole", "new storyboard"
+        "new concept", "brand new script", "new storyboard"
     ]):
         return "FULL_REWRITE", {}
 
     # 2. Check for Structural Edits
     # Delete Scene: e.g. "delete scene 2", "remove scene 3", "drop scene 1"
-    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?scene\s+(\d+)\b", lower)
+    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?scene\s*(\d+)\b", lower)
     if del_match:
         return "STRUCTURAL_EDIT", {"action": "delete", "target_number": int(del_match.group(1))}
 
-    # Add Scene: e.g. "add a scene", "add scene 4", "insert a scene"
-    if any(kw in lower for kw in ["add a scene", "add scene", "insert a scene", "insert scene", "new scene", "add another scene"]):
+    # Add Scene: e.g. "add a scene", "insert a scene between 1 and 2", "new scene"
+    if re.search(r"\b(?:add|insert)\s+(?:a\s+)?(?:new\s+)?(?:another\s+)?(?:\d+th\s+)?scenes?\b", lower) or "new scene" in lower:
         num_scenes = len(active_payload.get("scenes", []))
-        pos_match = re.search(r"\b(?:after\s+scene\s+|at\s+the\s+end|as\s+scene\s+|scene\s+)(\d+)\b", lower)
-        target_pos = int(pos_match.group(1)) if pos_match else num_scenes + 1
-        return "STRUCTURAL_EDIT", {"action": "add", "target_number": target_pos}
+        insert_idx = parse_insert_position(query, num_scenes)
+        return "STRUCTURAL_EDIT", {"action": "add", "insert_index": insert_idx}
 
-    # 3. Check for Targeted Edits
-    # Specific Scene Edit
-    scene_match = re.search(r"\bscene\s+(\d+)\b", lower)
+    # 3. Check for Specific Scene Edit (e.g. Scene 2, 2nd scene)
+    scene_match = re.search(r"\bscene\s*(\d+)\b", lower)
     target_num = None
     if scene_match:
         target_num = int(scene_match.group(1))
@@ -167,25 +235,31 @@ def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) ->
                 target_num = v
                 break
 
-    if target_num is not None:
+    # If single scene matched and query is NOT asking for all scenes
+    if target_num is not None and not any(kw in lower for kw in ["all scenes", "all the scenes", "every scene"]):
         return "TARGETED_EDIT", {"target_type": "scene", "target_number": target_num}
 
-    # Field-specific targets
+    # 4. Explicit Field Targets (ONLY when targeting CTA or title alone)
     if any(kw in lower for kw in ["call to action", "cta", "closing line", "closing cta"]):
         return "TARGETED_EDIT", {"target_type": "cta"}
-    if any(kw in lower for kw in ["caption", "post copy", "description"]):
+    if any(kw in lower for kw in ["rename", "deliverable title"]):
+        return "TARGETED_EDIT", {"target_type": "title"}
+    if (
+        any(kw in lower for kw in ["caption", "post description", "post copy"])
+        and not any(kw in lower for kw in ["scene", "scenes", "storyboard", "script", "voiceover", "dialogue"])
+    ):
         return "TARGETED_EDIT", {"target_type": "caption"}
     if any(kw in lower for kw in ["hashtag", "hashtags", "tags"]):
         return "TARGETED_EDIT", {"target_type": "hashtags"}
-    if any(kw in lower for kw in ["title", "rename", "headline"]):
-        return "TARGETED_EDIT", {"target_type": "title"}
 
-    # "hook" alone refers to Scene 1
-    if "hook" in lower:
+    # Single "hook" refers to Scene 1
+    if "hook" in lower and not any(kw in lower for kw in ["all", "scenes", "storyboard"]):
         return "TARGETED_EDIT", {"target_type": "scene", "target_number": 1}
 
-    # Default to targeted edit on caption/overall direction if active artifact exists
-    return "TARGETED_EDIT", {"target_type": "caption"}
+    # 5. REVISE_ALL_SCENES (Global script/voiceover/style revision across all scenes)
+    # Triggered by "change the script for all scenes", "use that in the storyboard",
+    # "rewrite voiceovers", or general creative tone adjustments ("make it Marathi", "more energetic")
+    return "REVISE_ALL_SCENES", {}
 
 
 def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -197,15 +271,16 @@ def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> t
     ]):
         return "FULL_REWRITE", {}
 
-    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?slide\s+(\d+)\b", lower)
+    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?slide\s*(\d+)\b", lower)
     if del_match:
         return "STRUCTURAL_EDIT", {"action": "delete", "target_number": int(del_match.group(1))}
 
-    if any(kw in lower for kw in ["add a slide", "add slide", "insert a slide", "insert slide", "new slide"]):
+    if re.search(r"\b(?:add|insert)\s+(?:a\s+)?(?:new\s+)?(?:another\s+)?(?:\d+th\s+)?slides?\b", lower) or "new slide" in lower:
         num_slides = len(active_payload.get("slides", []))
-        return "STRUCTURAL_EDIT", {"action": "add", "target_number": num_slides + 1}
+        insert_idx = parse_insert_position(query, num_slides)
+        return "STRUCTURAL_EDIT", {"action": "add", "insert_index": insert_idx}
 
-    slide_match = re.search(r"\bslide\s+(\d+)\b", lower)
+    slide_match = re.search(r"\bslide\s*(\d+)\b", lower)
     target_num = None
     if slide_match:
         target_num = int(slide_match.group(1))
@@ -214,15 +289,18 @@ def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> t
     elif "last slide" in lower or "final slide" in lower or "cta slide" in lower:
         target_num = len(active_payload.get("slides", [])) or 5
 
-    if target_num is not None:
+    if target_num is not None and not any(kw in lower for kw in ["all slides", "all the slides", "every slide"]):
         return "TARGETED_EDIT", {"target_type": "slide", "target_number": target_num}
 
     if any(kw in lower for kw in ["call to action", "cta"]):
         return "TARGETED_EDIT", {"target_type": "cta"}
-    if any(kw in lower for kw in ["caption", "post copy"]):
+    if (
+        any(kw in lower for kw in ["caption", "post copy", "post description"])
+        and not any(kw in lower for kw in ["slide", "slides", "deck"])
+    ):
         return "TARGETED_EDIT", {"target_type": "caption"}
 
-    return "FULL_REWRITE", {}
+    return "REVISE_ALL_SLIDES", {}
 
 
 # =====================================================================
@@ -298,6 +376,15 @@ class ContentArchitectAdapter(SpecialistAdapter):
                     brand_voice=brand_voice,
                     activity_logs=activity_logs,
                 )
+            elif op_type == "REVISE_ALL_SCENES":
+                return await self._handle_storyboard_revise_all_scenes(
+                    query=query,
+                    context=context,
+                    client_name=client_name,
+                    industry=industry,
+                    brand_voice=brand_voice,
+                    activity_logs=activity_logs,
+                )
 
         # -------------------------------------------------------------
         # Branch 2: Active Carousel Revision (Surgical In-Place Edits)
@@ -323,6 +410,15 @@ class ContentArchitectAdapter(SpecialistAdapter):
                 return await self._handle_carousel_structural_edit(
                     query=query,
                     struct_info=op_info,
+                    context=context,
+                    client_name=client_name,
+                    industry=industry,
+                    brand_voice=brand_voice,
+                    activity_logs=activity_logs,
+                )
+            elif op_type == "REVISE_ALL_SLIDES":
+                return await self._handle_carousel_revise_all_slides(
+                    query=query,
                     context=context,
                     client_name=client_name,
                     industry=industry,
@@ -793,14 +889,34 @@ Output the revised {field_name} matching TargetedCopyRevisionOutput schema.
 
         # Case B: Add Scene
         else:
+            insert_idx = struct_info.get("insert_index", len(current_scenes))
+            insert_idx = max(0, min(insert_idx, len(current_scenes)))
+
+            context_flow = []
+            if insert_idx > 0 and insert_idx - 1 < len(current_scenes):
+                prev_s = current_scenes[insert_idx - 1]
+                context_flow.append(
+                    f"Preceding Scene (Scene {prev_s.scene_number}): {prev_s.visual_action} | Spoken: \"{prev_s.voiceover_script}\""
+                )
+            if insert_idx < len(current_scenes):
+                next_s = current_scenes[insert_idx]
+                context_flow.append(
+                    f"Succeeding Scene (Scene {next_s.scene_number}): {next_s.visual_action} | Spoken: \"{next_s.voiceover_script}\""
+                )
+            flow_info = "\n".join(context_flow) if context_flow else "New scene in storyboard."
+
             prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
 User Request: "{query}"
 
 Client: {client_name} ({industry})
 Brand Voice: {brand_voice}
-Current Scenes in Storyboard: {len(current_scenes)}
+Target Insertion Position: Index {insert_idx + 1} of {len(current_scenes) + 1}
 
-Output ONLY the new Scene to add matching TargetedSceneRevisionOutput schema.
+SURROUNDING SCENE FLOW:
+{flow_info}
+
+Output ONLY the new Scene to insert matching TargetedSceneRevisionOutput schema.
+Ensure the visual action and voiceover connect smoothly with preceding and succeeding scenes.
 """
             try:
                 rev: TargetedSceneRevisionOutput = await invoke_structured_llm(
@@ -811,7 +927,7 @@ Output ONLY the new Scene to add matching TargetedSceneRevisionOutput schema.
                 )
 
                 new_card = SceneCard(
-                    scene_number=len(current_scenes) + 1,
+                    scene_number=insert_idx + 1,
                     start_ms=0,
                     end_ms=4000,
                     shot_type=rev.shot_type,
@@ -821,21 +937,27 @@ Output ONLY the new Scene to add matching TargetedSceneRevisionOutput schema.
                     audio_sfx_cue=rev.audio_sfx_cue,
                     ai_visual_prompt=rev.ai_visual_prompt,
                 )
-                updated_scenes = list(current_scenes) + [new_card]
+                updated_scenes = list(current_scenes)
+                updated_scenes.insert(insert_idx, new_card)
                 norm_scenes, total_dur = normalize_storyboard_scenes_timing(updated_scenes)
 
                 new_payload = dict(active)
                 new_payload["scenes"] = [s.model_dump() for s in norm_scenes]
                 new_payload["target_duration_seconds"] = total_dur
 
+                pos_desc = (
+                    f"as Scene {insert_idx + 1}"
+                    if insert_idx < len(current_scenes)
+                    else "at the end"
+                )
                 activity_logs.append(
-                    f"Added new Scene {len(norm_scenes)} while preserving all prior {len(current_scenes)} scenes."
+                    f"Inserted new Scene {insert_idx + 1} ({pos_desc}). Re-indexed all {len(norm_scenes)} scenes."
                 )
 
                 return SpecialistResult(
                     specialist_id=self.specialist_id,
                     specialist_name=self.specialist_name,
-                    reply=f"{rev.conversational_intro}\n\n*Added Scene {len(norm_scenes)} to the storyboard.*",
+                    reply=f"{rev.conversational_intro}\n\n*Inserted new Scene {insert_idx + 1} ({pos_desc}). All {len(norm_scenes)} scenes have been sequentially re-indexed.*",
                     artifact_type=ArtifactType.storyboard,
                     artifact_payload=new_payload,
                     activity_logs=activity_logs,
@@ -844,6 +966,104 @@ Output ONLY the new Scene to add matching TargetedSceneRevisionOutput schema.
             except Exception as ex:
                 logger.error(f"Error adding scene: {ex}", exc_info=True)
                 return await self._fallback_storyboard_result(client_name, industry, activity_logs)
+
+    async def _handle_storyboard_revise_all_scenes(
+        self,
+        query: str,
+        context: CampaignStudioContext,
+        client_name: str,
+        industry: str,
+        brand_voice: str,
+        activity_logs: list[str],
+    ) -> SpecialistResult:
+        active = context.active_artifact_payload or {}
+        raw_scenes = active.get("scenes", [])
+        current_scenes = [SceneCard(**s) for s in raw_scenes]
+
+        if not current_scenes:
+            return await self._fallback_storyboard_result(client_name, industry, activity_logs)
+
+        formatted_scenes = []
+        for s in current_scenes:
+            formatted_scenes.append(
+                f"Scene {s.scene_number} ({s.timestamp_range}) [{s.shot_type}]:\n"
+                f"  Visual Action: {s.visual_action}\n"
+                f"  Current Voiceover: \"{s.voiceover_script}\"\n"
+                f"  Current On-Screen Text: \"{s.on_screen_text}\""
+            )
+        scenes_context = "\n".join(formatted_scenes)
+
+        active_caption = active.get("full_caption", "")
+        caption_context = f"\nACTIVE CAPTION / PROPOSED COPY:\n\"{active_caption}\"\n" if active_caption else ""
+
+        prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
+User Request: "{query}"
+
+Client: {client_name} ({industry})
+Brand Voice: {brand_voice}
+Storyboard Title: "{active.get('deliverable_title', 'Reel')}"
+{caption_context}
+CURRENT STORYBOARD SCENES ({len(current_scenes)} scenes):
+{scenes_context}
+
+YOUR TASK:
+Rewrite/update the voiceover script and on-screen text across ALL {len(current_scenes)} scenes according to the user's instructions.
+- If the user requested a specific dialect, language (e.g. Marathi), tone, or asks to 'use that in the storyboard' / 'change script for all scenes', distribute the lines, dialogue, and hooks across Scene 1 to Scene {len(current_scenes)} naturally.
+- Keep each line paced to fit the scene timing (concise, punchy spoken phrasing).
+- If the visual action needs slight adjustment to match the new voiceover, update it; otherwise preserve the core visuals.
+- Return strictly matching ReviseAllScenesOutput schema.
+"""
+        try:
+            rev: ReviseAllScenesOutput = await invoke_structured_llm(
+                prompt=prompt,
+                schema_class=ReviseAllScenesOutput,
+                temperature=0.3,
+                model=settings.FALLBACK_MODEL,
+            )
+
+            update_by_num = {u.scene_number: u for u in rev.scenes}
+            updated_scenes: list[SceneCard] = []
+            for s in current_scenes:
+                if s.scene_number in update_by_num:
+                    u = update_by_num[s.scene_number]
+                    updated_s = s.model_copy(update={
+                        "voiceover_script": u.voiceover_script or s.voiceover_script,
+                        "on_screen_text": u.on_screen_text if u.on_screen_text is not None else s.on_screen_text,
+                        "visual_action": u.visual_action if u.visual_action else s.visual_action,
+                    })
+                    updated_scenes.append(updated_s)
+                else:
+                    updated_scenes.append(s)
+
+            norm_scenes, total_dur = normalize_storyboard_scenes_timing(updated_scenes)
+
+            new_payload = dict(active)
+            new_payload["scenes"] = [s.model_dump() for s in norm_scenes]
+            new_payload["target_duration_seconds"] = total_dur
+            if rev.caption:
+                new_payload["full_caption"] = rev.caption
+            if rev.call_to_action:
+                new_payload["call_to_action"] = rev.call_to_action
+
+            activity_logs.append(
+                f"Revised voiceovers and on-screen text across all {len(norm_scenes)} scenes."
+            )
+
+            return SpecialistResult(
+                specialist_id=self.specialist_id,
+                specialist_name=self.specialist_name,
+                reply=f"{rev.conversational_intro}\n\n*Updated voiceovers and scripts across all {len(norm_scenes)} scenes in the storyboard.*",
+                artifact_type=ArtifactType.storyboard,
+                artifact_payload=new_payload,
+                activity_logs=activity_logs,
+                suggested_followups=rev.suggested_followups or [
+                    "Audit compliance",
+                    "Export to production pipeline",
+                ],
+            )
+        except Exception as ex:
+            logger.error(f"Error in revise all scenes: {ex}", exc_info=True)
+            return await self._fallback_storyboard_result(client_name, industry, activity_logs)
 
     # =====================================================================
     # Surgical In-Place Revisions: Carousels
@@ -1007,15 +1227,19 @@ Output revised text matching TargetedCopyRevisionOutput schema.
                 suggested_followups=["Export to production"],
             )
         else:
-            # Add slide
+            # Add slide (supporting positional insertion)
+            insert_idx = struct_info.get("insert_index", len(current_slides))
+            insert_idx = max(0, min(insert_idx, len(current_slides)))
+
             new_slide = CarouselSlideCard(
-                slide_number=len(current_slides) + 1,
+                slide_number=insert_idx + 1,
                 headline="Key Takeaway",
                 body_copy="Summary of core value proposition.",
                 visual_layout="Icon grid with highlighted metric callout",
                 slide_type="takeaway",
             )
-            updated_slides = list(current_slides) + [new_slide]
+            updated_slides = list(current_slides)
+            updated_slides.insert(insert_idx, new_slide)
             norm_slides = [
                 s.model_copy(update={"slide_number": idx + 1})
                 for idx, s in enumerate(updated_slides)
@@ -1023,16 +1247,107 @@ Output revised text matching TargetedCopyRevisionOutput schema.
             new_payload = dict(active)
             new_payload["slides"] = [s.model_dump() for s in norm_slides]
 
-            activity_logs.append(f"Added Slide {len(norm_slides)} to carousel deck.")
+            pos_desc = (
+                f"as Slide {insert_idx + 1}"
+                if insert_idx < len(current_slides)
+                else "at the end"
+            )
+            activity_logs.append(f"Inserted Slide {insert_idx + 1} ({pos_desc}). Re-indexed all {len(norm_slides)} slides.")
             return SpecialistResult(
                 specialist_id=self.specialist_id,
                 specialist_name=self.specialist_name,
-                reply=f"Added Slide {len(norm_slides)} to the carousel deck.",
+                reply=f"Inserted Slide {insert_idx + 1} ({pos_desc}) into the carousel deck. All {len(norm_slides)} slides re-indexed.",
                 artifact_type=ArtifactType.carousel_deck,
                 artifact_payload=new_payload,
                 activity_logs=activity_logs,
                 suggested_followups=["Export to production"],
             )
+
+    async def _handle_carousel_revise_all_slides(
+        self,
+        query: str,
+        context: CampaignStudioContext,
+        client_name: str,
+        industry: str,
+        brand_voice: str,
+        activity_logs: list[str],
+    ) -> SpecialistResult:
+        active = context.active_artifact_payload or {}
+        raw_slides = active.get("slides", [])
+        current_slides = [CarouselSlideCard(**s) for s in raw_slides]
+
+        if not current_slides:
+            return await self._fallback_storyboard_result(client_name, industry, activity_logs)
+
+        formatted_slides = []
+        for s in current_slides:
+            formatted_slides.append(
+                f"Slide {s.slide_number} [{s.slide_type}]:\n"
+                f"  Headline: {s.headline}\n"
+                f"  Body Copy: {s.body_copy}\n"
+                f"  Visual Layout: {s.visual_layout}"
+            )
+        slides_context = "\n".join(formatted_slides)
+
+        prompt = f"""You are the Master Scriptwriter for AgencyOS.
+User Request: "{query}"
+
+Client: {client_name} ({industry})
+Brand Voice: {brand_voice}
+Carousel Title: "{active.get('deliverable_title', 'Deck')}"
+
+CURRENT SLIDES ({len(current_slides)} slides):
+{slides_context}
+
+YOUR TASK:
+Rewrite/update headlines and body copy across ALL {len(current_slides)} slides according to the user's instructions.
+Return strictly matching ReviseAllSlidesOutput schema.
+"""
+        try:
+            rev: ReviseAllSlidesOutput = await invoke_structured_llm(
+                prompt=prompt,
+                schema_class=ReviseAllSlidesOutput,
+                temperature=0.3,
+                model=settings.FALLBACK_MODEL,
+            )
+
+            update_by_num = {u.slide_number: u for u in rev.scenes if hasattr(u, "slide_number")} if hasattr(rev, "scenes") else {u.slide_number: u for u in rev.slides}
+            updated_slides: list[CarouselSlideCard] = []
+            for s in current_slides:
+                if s.slide_number in update_by_num:
+                    u = update_by_num[s.slide_number]
+                    updated_s = s.model_copy(update={
+                        "headline": u.headline or s.headline,
+                        "body_copy": u.body_copy if u.body_copy is not None else s.body_copy,
+                        "visual_layout": u.visual_layout if u.visual_layout else s.visual_layout,
+                    })
+                    updated_slides.append(updated_s)
+                else:
+                    updated_slides.append(s)
+
+            new_payload = dict(active)
+            new_payload["slides"] = [s.model_dump() for s in updated_slides]
+            if rev.caption:
+                new_payload["full_caption"] = rev.caption
+            if rev.call_to_action:
+                new_payload["call_to_action"] = rev.call_to_action
+
+            activity_logs.append(
+                f"Revised headlines and copy across all {len(updated_slides)} slides."
+            )
+
+            return SpecialistResult(
+                specialist_id=self.specialist_id,
+                specialist_name=self.specialist_name,
+                reply=f"{rev.conversational_intro}\n\n*Updated copy across all {len(updated_slides)} slides in the carousel.*",
+                artifact_type=ArtifactType.carousel_deck,
+                artifact_payload=new_payload,
+                activity_logs=activity_logs,
+                suggested_followups=["Export to production"],
+            )
+        except Exception as ex:
+            logger.error(f"Error in revise all slides: {ex}", exc_info=True)
+            return await self._fallback_storyboard_result(client_name, industry, activity_logs)
 
     async def _fallback_storyboard_result(
         self, client_name: str, industry: str, activity_logs: list[str]
