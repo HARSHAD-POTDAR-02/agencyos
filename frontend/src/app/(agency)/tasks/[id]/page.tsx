@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, use } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { taskApi, agencyApi, API_BASE } from "@/lib/api";
 import {
@@ -113,9 +113,9 @@ interface TaskDetail {
   review_comments: ReviewComment[];
 }
 
-export default function TaskWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const taskId = resolvedParams.id;
+function TaskWorkspaceContent() {
+  const params = useParams();
+  const taskId = (params?.id as string) || "";
   const router = useRouter();
 
   const { user, token, activeAgencyId, agencies } = useAuth();
@@ -897,5 +897,17 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
         )}
       </main>
     </div>
+  );
+}
+
+export default function TaskWorkspacePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-xs text-slate-400">Loading task workspace...</div>
+      }
+    >
+      <TaskWorkspaceContent />
+    </Suspense>
   );
 }
