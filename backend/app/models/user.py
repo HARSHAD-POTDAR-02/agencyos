@@ -21,9 +21,12 @@ from app.core.database import Base
 
 class RoleEnum(str, enum.Enum):
     owner = "owner"
+    manager = "manager"
     account_manager = "account_manager"
     strategist = "strategist"
+    writer = "writer"
     designer = "designer"
+    editor = "editor"
     client = "client"
 
 

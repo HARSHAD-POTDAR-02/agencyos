@@ -16,7 +16,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Building2,
-  Plus
+  Plus,
+  Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -103,6 +104,12 @@ export function Sidebar() {
       name: "Campaign Plans",
       href: "/campaign-plans",
       icon: CalendarDays,
+      badge: null,
+    },
+    {
+      name: "My Workspace",
+      href: "/workspace",
+      icon: Briefcase,
       badge: null,
     },
     {

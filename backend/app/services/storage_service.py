@@ -54,6 +54,25 @@ async def save_file(file: UploadFile, deliverable_id: uuid.UUID) -> tuple[str, s
     return storage_key, checksum, file_size
 
 
+def save_text_content(deliverable_id: uuid.UUID, file_name: str, text: str) -> tuple[str, str, int]:
+    """
+    Persist raw text (such as scripts, copy, or markdown) to the uploads directory.
+    Returns:
+        (storage_key, checksum_sha256, file_size_bytes)
+    """
+    root = _upload_root()
+    dest_dir = root / str(deliverable_id)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    raw_bytes = text.encode("utf-8")
+    checksum = hashlib.sha256(raw_bytes).hexdigest()
+    file_size = len(raw_bytes)
+    suffix = Path(file_name).suffix or ".txt"
+    unique_name = f"{uuid.uuid4().hex}{suffix}"
+    (dest_dir / unique_name).write_bytes(raw_bytes)
+    storage_key = f"{deliverable_id}/{unique_name}"
+    return storage_key, checksum, file_size
+
+
 def delete_file(storage_key: str) -> None:
     """Remove a stored file (best-effort, ignores missing files)."""
     try:

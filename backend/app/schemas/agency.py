@@ -35,6 +35,8 @@ class MembershipOut(BaseModel):
     role: RoleEnum
     is_active: bool
     created_at: datetime
+    user_full_name: str | None = None
+    user_email: str | None = None
 
 
 class InviteMemberRequest(BaseModel):

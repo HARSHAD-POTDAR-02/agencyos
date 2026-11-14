@@ -6,6 +6,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member, require_role
@@ -130,7 +131,10 @@ async def invite_member(
     db.add(membership)
     await db.commit()
     await db.refresh(membership)
-    return MembershipOut.model_validate(membership)
+    out = MembershipOut.model_validate(membership)
+    out.user_full_name = target_user.full_name
+    out.user_email = target_user.email
+    return out
 
 
 @router.get("/{agency_id}/members", response_model=list[MembershipOut])
@@ -141,13 +145,20 @@ async def list_members(
 ) -> list[MembershipOut]:
     """List all members of an agency."""
     result = await db.execute(
-        select(Membership).where(
+        select(Membership).options(selectinload(Membership.user)).where(
             Membership.agency_id == agency_id,
             Membership.is_active.is_(True),
         )
     )
     memberships = result.scalars().all()
-    return [MembershipOut.model_validate(m) for m in memberships]
+    out: list[MembershipOut] = []
+    for m in memberships:
+        item = MembershipOut.model_validate(m)
+        if m.user:
+            item.user_full_name = m.user.full_name
+            item.user_email = m.user.email
+        out.append(item)
+    return out
 
 
 @router.get("/{agency_id}/badge-counts", response_model=AgencyBadgeCountsOut)

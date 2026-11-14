@@ -387,12 +387,24 @@ export const studioApi = {
 
 /* ── Task endpoints ── */
 export const taskApi = {
-  list: (agencyId: string, token: string, params?: Record<string, string>) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return apiFetch(`/agencies/${agencyId}/tasks${qs}`, { token });
+  list: (agencyId: string, token: string, params?: Record<string, string | number | boolean>) => {
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null) cleanParams[k] = String(v);
+      }
+    }
+    const qs = Object.keys(cleanParams).length > 0 ? "?" + new URLSearchParams(cleanParams).toString() : "";
+    return apiFetch<any[]>(`/agencies/${agencyId}/tasks${qs}`, { token });
   },
+  get: (agencyId: string, taskId: string, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}`, { token }),
   update: (agencyId: string, taskId: string, data: Record<string, unknown>, token: string) =>
-    apiFetch(`/agencies/${agencyId}/tasks/${taskId}`, { method: "PATCH", body: data, token }),
+    apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}`, { method: "PATCH", body: data, token }),
+  submit: (agencyId: string, taskId: string, formData: FormData, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}/submissions`, { method: "POST", body: formData, token }),
+  review: (agencyId: string, taskId: string, data: { decision: "approved" | "changes_requested"; feedback_notes?: string }, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}/review`, { method: "POST", body: data, token }),
 };
 
 /* ── Deliverable & Content Version endpoints ── */
