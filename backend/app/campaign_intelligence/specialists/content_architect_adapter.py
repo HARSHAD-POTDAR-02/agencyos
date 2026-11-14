@@ -255,6 +255,7 @@ class ContentArchitectAdapter(SpecialistAdapter):
         context: CampaignStudioContext,
         db: AsyncSession,
         on_event: Any = None,
+        **kwargs: Any,
     ) -> SpecialistResult:
         activity_logs: list[str] = []
         lower_q = query.lower()

@@ -48,6 +48,8 @@ class CampaignStrategistAdapter(SpecialistAdapter):
         query: str,
         context: CampaignStudioContext,
         db: AsyncSession,
+        on_event: Any | None = None,
+        **kwargs: Any,
     ) -> SpecialistResult:
         activity_logs: list[str] = []
         activity_logs.append("Synthesizing strategic campaign architecture across brand, market, and performance data...")

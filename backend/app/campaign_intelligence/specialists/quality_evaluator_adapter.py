@@ -49,6 +49,8 @@ class QualityEvaluatorAdapter(SpecialistAdapter):
         query: str,
         context: CampaignStudioContext,
         db: AsyncSession,
+        on_event: Any | None = None,
+        **kwargs: Any,
     ) -> SpecialistResult:
         activity_logs: list[str] = []
         activity_logs.append("Extracting target content draft from active artifact or query...")

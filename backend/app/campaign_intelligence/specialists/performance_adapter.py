@@ -56,6 +56,8 @@ class PerformanceSpecialistAdapter(SpecialistAdapter):
         query: str,
         context: CampaignStudioContext,
         db: AsyncSession,
+        on_event: Any | None = None,
+        **kwargs: Any,
     ) -> SpecialistResult:
         activity_logs: list[str] = []
         activity_logs.append("Querying client published deliverables and engagement analytics...")

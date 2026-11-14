@@ -46,6 +46,8 @@ class BrandSpecialistAdapter(SpecialistAdapter):
         query: str,
         context: CampaignStudioContext,
         db: AsyncSession,
+        on_event: Any | None = None,
+        **kwargs: Any,
     ) -> SpecialistResult:
         activity_logs: list[str] = []
         activity_logs.append("Retrieving confirmed brand profile & database records...")
