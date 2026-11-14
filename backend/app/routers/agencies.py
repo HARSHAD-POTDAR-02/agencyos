@@ -29,6 +29,7 @@ from app.schemas.agency import (
     InviteMemberRequest,
     MembershipOut,
     SearchResultItem,
+    UpdateMemberRoleRequest,
 )
 from app.services.auth_service import create_agency_with_owner
 
@@ -99,17 +100,31 @@ async def get_agency(
 async def invite_member(
     agency_id: uuid.UUID,
     payload: InviteMemberRequest,
-    _: Membership = Depends(require_role(RoleEnum.owner)),
+    current_mem: Membership = Depends(require_role(RoleEnum.owner, RoleEnum.manager)),
     db: AsyncSession = Depends(get_db),
 ) -> MembershipOut:
-    """Invite a user to the agency (owner only). The user must already exist."""
-    result = await db.execute(select(User).where(User.email == payload.email.lower()))
+    """Invite or add a specialist/team member to the agency. Creates account if user does not exist."""
+    from app.core.security import hash_password
+
+    email_clean = payload.email.lower().strip()
+    result = await db.execute(select(User).where(User.email == email_clean))
     target_user = result.scalar_one_or_none()
+
     if target_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No user found with that email. They must register first.",
+        temp_pwd = payload.password or "AgencyPass123!"
+        target_user = User(
+            id=uuid.uuid4(),
+            email=email_clean,
+            hashed_password=hash_password(temp_pwd),
+            full_name=payload.full_name or email_clean.split("@")[0],
         )
+        db.add(target_user)
+        await db.flush()
+    else:
+        if payload.full_name and not target_user.full_name:
+            target_user.full_name = payload.full_name
+            db.add(target_user)
+
     # Check for existing membership
     existing = await db.execute(
         select(Membership).where(
@@ -117,11 +132,22 @@ async def invite_member(
             Membership.agency_id == agency_id,
         )
     )
-    if existing.scalar_one_or_none():
+    existing_mem = existing.scalar_one_or_none()
+    if existing_mem:
+        if not existing_mem.is_active:
+            existing_mem.is_active = True
+            existing_mem.role = payload.role
+            await db.commit()
+            await db.refresh(existing_mem)
+            out = MembershipOut.model_validate(existing_mem)
+            out.user_full_name = target_user.full_name
+            out.user_email = target_user.email
+            return out
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User is already a member of this agency.",
         )
+
     membership = Membership(
         id=uuid.uuid4(),
         user_id=target_user.id,
@@ -135,6 +161,60 @@ async def invite_member(
     out.user_full_name = target_user.full_name
     out.user_email = target_user.email
     return out
+
+
+@router.patch("/{agency_id}/members/{membership_id}", response_model=MembershipOut)
+async def update_member_role(
+    agency_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    payload: UpdateMemberRoleRequest,
+    current_mem: Membership = Depends(require_role(RoleEnum.owner, RoleEnum.manager)),
+    db: AsyncSession = Depends(get_db),
+) -> MembershipOut:
+    """Update a team member's role (e.g. promote to editor, writer, manager)."""
+    result = await db.execute(
+        select(Membership).options(selectinload(Membership.user)).where(
+            Membership.id == membership_id,
+            Membership.agency_id == agency_id,
+        )
+    )
+    mem = result.scalar_one_or_none()
+    if not mem:
+        raise HTTPException(status_code=404, detail="Member not found.")
+
+    mem.role = payload.role
+    await db.commit()
+    await db.refresh(mem)
+    out = MembershipOut.model_validate(mem)
+    if mem.user:
+        out.user_full_name = mem.user.full_name
+        out.user_email = mem.user.email
+    return out
+
+
+@router.delete("/{agency_id}/members/{membership_id}")
+async def remove_member(
+    agency_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    current_mem: Membership = Depends(require_role(RoleEnum.owner)),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    """Remove / deactivate an agency team member."""
+    result = await db.execute(
+        select(Membership).where(
+            Membership.id == membership_id,
+            Membership.agency_id == agency_id,
+        )
+    )
+    mem = result.scalar_one_or_none()
+    if not mem:
+        raise HTTPException(status_code=404, detail="Member not found.")
+    if mem.user_id == current_mem.user_id:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself as agency owner.")
+
+    mem.is_active = False
+    await db.commit()
+    return {"ok": True}
 
 
 @router.get("/{agency_id}/members", response_model=list[MembershipOut])

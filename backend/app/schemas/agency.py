@@ -42,6 +42,12 @@ class MembershipOut(BaseModel):
 class InviteMemberRequest(BaseModel):
     email: str
     role: RoleEnum
+    full_name: str | None = None
+    password: str | None = "AgencyPass123!"
+
+
+class UpdateMemberRoleRequest(BaseModel):
+    role: RoleEnum
 
 
 class AgencyBadgeCountsOut(BaseModel):

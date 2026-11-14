@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Building2,
   Plus,
-  Briefcase
+  Briefcase,
+  UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -92,6 +93,12 @@ export function Sidebar() {
       name: "Clients",
       href: "/clients",
       icon: Users,
+      badge: null,
+    },
+    {
+      name: "Team & Specialists",
+      href: "/team",
+      icon: UserCheck,
       badge: null,
     },
     {

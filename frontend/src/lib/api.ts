@@ -106,6 +106,28 @@ export const agencyApi = {
   listMembers: (agencyId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/members`, { token }),
 
+  inviteMember: (
+    agencyId: string,
+    data: { email: string; role: string; full_name?: string; password?: string },
+    token: string
+  ) =>
+    apiFetch(`/agencies/${agencyId}/members`, { method: "POST", body: data, token }),
+
+  updateMemberRole: (
+    agencyId: string,
+    memberId: string,
+    role: string,
+    token: string
+  ) =>
+    apiFetch(`/agencies/${agencyId}/members/${memberId}`, {
+      method: "PATCH",
+      body: { role },
+      token,
+    }),
+
+  removeMember: (agencyId: string, memberId: string, token: string) =>
+    apiFetch(`/agencies/${agencyId}/members/${memberId}`, { method: "DELETE", token }),
+
   badgeCounts: (agencyId: string, token: string) =>
     apiFetch<{
       tasks_count: number;
