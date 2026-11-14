@@ -21,7 +21,7 @@ from app.models.studio_artifact import (
     StudioArtifactStatus,
     StudioArtifactVersion,
 )
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.models.user import Membership, RoleEnum, User
 from app.campaign_intelligence.collaboration.schemas import (
     ArtifactType,
@@ -775,12 +775,14 @@ async def test_end_to_end_production_export_enrichment(db_session: AsyncSession)
     assert deliv.title == "Shauryawada Signature Raan Reel"
     assert deliv.deliverable_type == "reel"
 
-    # Verify Task in DB has full shoot script in notes
+    # Verify Task in DB has full shoot script in notes and is ready in To Do / Scripting stage
     task_res = await db_session.execute(select(Task).where(Task.id == task_id))
     task = task_res.scalars().first()
     assert task is not None
     assert task.assignee_id == user.id
     assert task.due_date == date(2026, 11, 25)
+    assert task.task_type == "scripting"
+    assert task.status == TaskStatus.todo
     assert "Storyboard with 3 scenes ready for shoot." in task.notes
     assert "Scene 1 [0:00 - 0:03] • Extreme Close-Up" in task.notes
     assert "You have never tasted mutton cooked this way" in task.notes
@@ -798,3 +800,51 @@ async def test_end_to_end_production_export_enrichment(db_session: AsyncSession)
     assert "Storyboard with 3 scenes ready for shoot." in c.message
     assert "Scene-by-Scene Shoot Script:" in c.message
     assert "Tap link in bio to book your table" in c.message
+
+
+def test_parse_target_duration_all_variations():
+    """Verifies natural language extraction of target durations across all common units."""
+    from app.campaign_intelligence.specialists.content_architect_adapter import parse_target_duration
+
+    assert parse_target_duration("create a 60 sec draft") == 60
+    assert parse_target_duration("draft a 60-second reel") == 60
+    assert parse_target_duration("give me a 60s thali video") == 60
+    assert parse_target_duration("make it 45 seconds") == 45
+    assert parse_target_duration("15 second teaser") == 15
+    assert parse_target_duration("1 minute thali showcase") == 60
+    assert parse_target_duration("2 mins behind the scenes") == 120
+    assert parse_target_duration("1.5 minutes full walk-through") == 90
+    assert parse_target_duration("add a scene between 1 and 2") == 20  # default fallback
+    assert parse_target_duration("add some ghee and masala", default_duration=15) == 15
+
+
+def test_normalize_storyboard_scenes_timing_with_target_duration():
+    """
+    Verifies that passing a target duration proportionally scales short scene cards
+    to fill the full duration, producing smooth sequential timestamps ending at the target.
+    """
+    from app.campaign_intelligence.collaboration.schemas import SceneCard
+    from app.campaign_intelligence.specialists.content_architect_adapter import normalize_storyboard_scenes_timing
+
+    # 5 scenes that raw-sum to 20s (4s each)
+    short_scenes = [
+        SceneCard(scene_number=1, start_ms=0, end_ms=4000, timestamp_range="0:00 - 0:04", shot_type="Macro Close-Up", visual_action="Hook", voiceover_script="Hook line"),
+        SceneCard(scene_number=2, start_ms=4000, end_ms=8000, timestamp_range="0:04 - 0:08", shot_type="Medium Shot", visual_action="Prep", voiceover_script="Prep line"),
+        SceneCard(scene_number=3, start_ms=8000, end_ms=12000, timestamp_range="0:08 - 0:12", shot_type="Close-Up", visual_action="Sizzle", voiceover_script="Sizzle line"),
+        SceneCard(scene_number=4, start_ms=12000, end_ms=16000, timestamp_range="0:12 - 0:16", shot_type="Overhead", visual_action="Garnish", voiceover_script="Garnish line"),
+        SceneCard(scene_number=5, start_ms=16000, end_ms=20000, timestamp_range="0:16 - 0:20", shot_type="Wide Shot", visual_action="CTA", voiceover_script="CTA line"),
+    ]
+
+    # Normalize with 60 seconds requested
+    scaled_scenes, total_dur = normalize_storyboard_scenes_timing(short_scenes, target_duration_seconds=60)
+
+    assert total_dur == 60
+    assert len(scaled_scenes) == 5
+    assert scaled_scenes[0].start_ms == 0
+    assert scaled_scenes[-1].end_ms == 60000
+    assert scaled_scenes[-1].timestamp_range.endswith("1:00")
+
+    # Timestamps strictly sequential and monotonic
+    for i in range(len(scaled_scenes) - 1):
+        assert scaled_scenes[i].end_ms == scaled_scenes[i + 1].start_ms
+

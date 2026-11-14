@@ -502,8 +502,9 @@ async def export_artifact_to_production(
             deliverable_id=deliverable.id,
             title=f"Copywriting & Slide Framework ({title[:30]})",
             task_type="scripting",
-            status=TaskStatus.done,
+            status=TaskStatus.todo,
             priority=TaskPriority.high,
+            assignee_id=assignee_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -512,9 +513,8 @@ async def export_artifact_to_production(
             deliverable_id=deliverable.id,
             title=f"Visual Design & Slide Layout ({title[:30]})",
             task_type="editing",
-            status=TaskStatus.todo,
+            status=TaskStatus.backlog,
             priority=TaskPriority.high,
-            assignee_id=assignee_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -529,7 +529,7 @@ async def export_artifact_to_production(
             notes="Verify slide typography, brand palette, and copy against approved studio brief.",
         )
         created_tasks.extend([t_script, t_design, t_review])
-        primary_task = t_design
+        primary_task = t_script
         content_version_task = t_script
     elif "reel" in fmt_lower or "video" in fmt_lower or "storyboard" in art_type_lower:
         # Video Reel Multi-Stage Pipeline
@@ -538,8 +538,9 @@ async def export_artifact_to_production(
             deliverable_id=deliverable.id,
             title=f"Script & Shot Prep ({title[:30]})",
             task_type="scripting",
-            status=TaskStatus.done,
+            status=TaskStatus.todo,
             priority=TaskPriority.high,
+            assignee_id=assignee_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -548,9 +549,8 @@ async def export_artifact_to_production(
             deliverable_id=deliverable.id,
             title=f"Shoot / Raw Footage Capture ({title[:30]})",
             task_type="filming",
-            status=TaskStatus.todo,
+            status=TaskStatus.backlog,
             priority=TaskPriority.high,
-            assignee_id=assignee_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -575,7 +575,7 @@ async def export_artifact_to_production(
             notes="Review exported video render against the approved studio storyboard.",
         )
         created_tasks.extend([t_script, t_shoot, t_edit, t_review])
-        primary_task = t_shoot
+        primary_task = t_script
         content_version_task = t_script
     else:
         # Generic Pipeline
@@ -584,8 +584,9 @@ async def export_artifact_to_production(
             deliverable_id=deliverable.id,
             title=f"Script & Concept ({title[:30]})",
             task_type="scripting",
-            status=TaskStatus.done,
+            status=TaskStatus.todo,
             priority=TaskPriority.high,
+            assignee_id=assignee_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -594,9 +595,8 @@ async def export_artifact_to_production(
             deliverable_id=deliverable.id,
             title=f"Produce: {title}",
             task_type="filming",
-            status=TaskStatus.todo,
+            status=TaskStatus.backlog,
             priority=TaskPriority.medium,
-            assignee_id=assignee_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -611,7 +611,7 @@ async def export_artifact_to_production(
             notes="Review production asset before client delivery.",
         )
         created_tasks.extend([t_script, t_prod, t_review])
-        primary_task = t_prod
+        primary_task = t_script
         content_version_task = t_script
 
     for t in created_tasks:

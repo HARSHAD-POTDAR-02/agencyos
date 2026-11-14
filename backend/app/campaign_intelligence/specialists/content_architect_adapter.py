@@ -122,16 +122,48 @@ class ReviseAllSlidesOutput(BaseModel):
 # Timing & Intent Classification Helpers
 # =====================================================================
 
-def normalize_storyboard_scenes_timing(scenes: list[SceneCard]) -> tuple[list[SceneCard], int]:
+def normalize_storyboard_scenes_timing(
+    scenes: list[SceneCard],
+    target_duration_seconds: int | None = None,
+) -> tuple[list[SceneCard], int]:
     """
     Ensure sequential start_ms/end_ms, monotonic timestamp_range,
     and consistent total duration.
+    If target_duration_seconds is provided and raw scene timings significantly deviate,
+    scale durations proportionally so total duration matches target_duration_seconds.
     """
+    if not scenes:
+        return [], 0
+
+    # First pass: calculate raw durations
+    raw_durations: list[int] = []
+    for s in scenes:
+        d = max(2000, s.end_ms - s.start_ms) if (s.end_ms > s.start_ms) else 3000
+        raw_durations.append(d)
+
+    total_raw_ms = sum(raw_durations)
+
+    # If target_duration_seconds is specified and differs from raw sum by > 20%, scale proportionally
+    durations = raw_durations
+    if target_duration_seconds and target_duration_seconds >= 5 and total_raw_ms > 0:
+        target_total_ms = target_duration_seconds * 1000
+        ratio = target_total_ms / total_raw_ms
+        if ratio < 0.8 or ratio > 1.2:
+            scaled: list[int] = []
+            accum = 0
+            for i, d in enumerate(raw_durations):
+                if i == len(raw_durations) - 1:
+                    scaled_d = max(2000, target_total_ms - accum)
+                else:
+                    scaled_d = max(2000, int(d * ratio))
+                    accum += scaled_d
+                scaled.append(scaled_d)
+            durations = scaled
+
     normalized: list[SceneCard] = []
     curr_ms = 0
-    for idx, s in enumerate(scenes):
+    for idx, (s, dur) in enumerate(zip(scenes, durations)):
         s_num = idx + 1
-        dur = max(2000, s.end_ms - s.start_ms) if (s.end_ms > s.start_ms) else 3000
         start = curr_ms
         end = curr_ms + dur
         curr_ms = end
@@ -150,6 +182,35 @@ def normalize_storyboard_scenes_timing(scenes: list[SceneCard]) -> tuple[list[Sc
         )
     total_seconds = max(5, (curr_ms + 999) // 1000)
     return normalized, total_seconds
+
+
+def parse_target_duration(query: str, default_duration: int = 20) -> int:
+    """
+    Extract target video duration in seconds from user query.
+    Handles '60s', '60 sec', '60 secs', '60 second', '60 seconds', '1 minute', '2 minutes', etc.
+    Clamps between 5 and 180 seconds.
+    """
+    lower = query.lower()
+
+    # Minute patterns: "1 minute", "2 min", "1.5 minutes"
+    min_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:minutes?|mins?)\b", lower)
+    if min_match:
+        try:
+            val = float(min_match.group(1))
+            return max(5, min(180, int(val * 60)))
+        except ValueError:
+            pass
+
+    # Second patterns: "60 seconds", "60 sec", "60s", "30-second", "15 second"
+    sec_match = re.search(r"\b(\d+)\s*(?:-|–)?\s*(?:seconds?|secs?|s)\b", lower)
+    if sec_match:
+        try:
+            val = int(sec_match.group(1))
+            return max(5, min(180, val))
+        except ValueError:
+            pass
+
+    return default_duration
 
 
 def parse_insert_position(query: str, current_count: int) -> int:
@@ -222,7 +283,7 @@ Classify the user prompt into one operation:
 - TARGETED_SCENE_EDIT: modifying an EXISTING scene in place without adding/removing scenes.
 - TARGETED_FIELD_EDIT: modifying only caption, CTA, hashtags, or title.
 - REVISE_ALL_SCENES: revising voiceovers/script/dialogue/language/tone across existing scenes, or asking to 'use that in the storyboard' / 'apply this script' / 'update script for all scenes'.
-- FULL_REWRITE: starting completely over from scratch (e.g. 'start over', 'scrap this', 'completely new concept').
+- FULL_REWRITE: starting completely over from scratch or requesting a new draft/storyboard/duration (e.g. 'start over', 'scrap this', 'completely new concept', 'create a 60 sec draft', 'draft a 60 second reel', 'new 30s storyboard').
 
 Output JSON only without any markdown formatting or extra text:
 {{
@@ -313,8 +374,9 @@ def classify_storyboard_operation_rules(query: str, active_payload: dict[str, An
 
     if any(phrase in lower for phrase in [
         "start over", "from scratch", "scrap this", "completely new",
-        "new concept", "brand new script", "new storyboard"
-    ]):
+        "new concept", "brand new script", "new storyboard",
+        "create a", "create new", "draft a", "new draft", "new reel"
+    ]) and not any(kw in lower for kw in ["new scene", "another scene", "insert", "add a", "between"]):
         return "FULL_REWRITE", {}
 
     del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?(?:scenes?|slides?|shots?|cards?)\s*(\d+)\b", lower)
@@ -738,6 +800,13 @@ Return strictly matching CarouselGenerationOutput schema.
         # -------------------------------------------------------------
         activity_logs.append("Architecting timestamped Reel storyboard (scenes, camera cues, voiceover, Flux prompts)...")
 
+        target_dur = parse_target_duration(query, default_duration=20)
+        min_scenes = max(3, target_dur // 7)
+        max_scenes = max(min_scenes + 1, target_dur // 4)
+        dur_mins = target_dur // 60
+        dur_secs = target_dur % 60
+        end_ts = f"{dur_mins}:{dur_secs:02d}"
+
         prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
 User Request: "{query}"
 
@@ -747,11 +816,11 @@ Brand Voice: {brand_voice}
 YOUR TASK:
 Generate a full production-ready video storyboard matching StoryboardGenerationOutput schema.
 Requirements:
-1. Target duration: 15 to 30 seconds.
+1. Target duration: EXACTLY {target_dur} seconds (pace all scenes sequentially from 0:00 up to {end_ts} across {min_scenes} to {max_scenes} scenes).
 2. Scene 1 (0:00 - 0:03) MUST be an arresting visual and auditory hook.
 3. Every scene MUST have:
    - start_ms and end_ms (strictly sequential and valid!)
-   - timestamp_range (e.g. '0:00 - 0:03', '0:03 - 0:08')
+   - timestamp_range (e.g. '0:00 - 0:03', '0:03 - 0:08', etc.)
    - shot_type (e.g. 'Macro Close-Up', 'POV Whip Pan', 'Talking Head')
    - visual_action (director guidance for camera & talent)
    - voiceover_script (exact spoken line)
@@ -767,7 +836,9 @@ Requirements:
                 temperature=0.3,
                 model=settings.FALLBACK_MODEL,
             )
-            norm_scenes, total_dur = normalize_storyboard_scenes_timing(sb_res.scenes)
+            norm_scenes, total_dur = normalize_storyboard_scenes_timing(
+                sb_res.scenes, target_duration_seconds=target_dur
+            )
             payload = StoryboardArtifactPayload(
                 deliverable_title=sb_res.deliverable_title,
                 platform=SocialPlatform.instagram,
@@ -831,13 +902,16 @@ Requirements:
                     ai_visual_prompt=f"Hero wide shot of {client_name} storefront in action, golden hour",
                 ),
             ]
+            norm_fallback, fallback_dur = normalize_storyboard_scenes_timing(
+                fallback_scenes, target_duration_seconds=target_dur
+            )
             fallback_payload = StoryboardArtifactPayload(
                 deliverable_title=f"{client_name}: Signature Showcase Reel",
                 platform=SocialPlatform.instagram,
                 format_type="reel",
-                target_duration_seconds=15,
+                target_duration_seconds=fallback_dur,
                 strategic_pillar="Craftsmanship",
-                scenes=fallback_scenes,
+                scenes=norm_fallback,
                 full_caption=f"Discover what sets {client_name} apart. Check our link in bio!",
                 hashtags=["#quality", f"#{industry.lower().replace(' ', '')}"],
                 call_to_action="Follow for more behind-the-scenes",
@@ -845,7 +919,7 @@ Requirements:
             return SpecialistResult(
                 specialist_id=self.specialist_id,
                 specialist_name=self.specialist_name,
-                reply=f"I've drafted a 3-scene shoot concept for **{client_name}** with timestamped camera cues, B-roll framing, and Flux visual prompts.",
+                reply=f"I've drafted a {len(norm_fallback)}-scene shoot concept for **{client_name}** with timestamped camera cues, B-roll framing, and Flux visual prompts.",
                 artifact_type=ArtifactType.storyboard,
                 artifact_payload=fallback_payload.model_dump(),
                 activity_logs=activity_logs,
