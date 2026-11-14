@@ -346,13 +346,13 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
 
         {/* Manager Review Action Banner (Active during internal_review) */}
         {isInternalReview && isManagerOrOwner && (
-          <div className="bg-gradient-to-r from-[#121626] via-[#1D1333] to-[#121626] border border-purple-500/30 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 text-white">
+          <div className="bg-white border-2 border-purple-200 rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-purple-300 font-extrabold text-sm">
-                <ShieldCheck className="w-5 h-5 text-purple-400" />
+              <div className="flex items-center gap-2 text-purple-700 font-extrabold text-sm">
+                <ShieldCheck className="w-5 h-5 text-purple-600" />
                 <span>Internal Review Required</span>
               </div>
-              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+              <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
                 The assigned specialist has submitted work for this task. Review the version below and either approve to unlock the next production stage or request specific revisions.
               </p>
             </div>
@@ -363,9 +363,9 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
                   setReviewDecision("changes_requested");
                   setReviewModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-600/30 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold shadow-2xs transition-all"
               >
-                <AlertTriangle className="w-3.5 h-3.5" />
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                 <span>Request Revision</span>
               </button>
 
@@ -374,7 +374,7 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
                   setReviewDecision("approved");
                   setReviewModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-sm shadow-emerald-500/25 transition-all"
               >
                 <Check className="w-3.5 h-3.5" />
                 <span>Approve Submission</span>

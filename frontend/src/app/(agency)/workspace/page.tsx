@@ -181,23 +181,24 @@ export default function EmployeeWorkspacePage() {
 
   return (
     <main className="p-8 space-y-8 max-w-7xl mx-auto">
-      {/* Welcome Banner (Solid Purple-Black Gradient - No white gradient wash) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#121626] via-[#1D1333] to-[#121626] border border-purple-500/30 rounded-2xl p-6 shadow-xl">
+      {/* Welcome Banner Card (White bg, slate-200/80 border, matching Dashboard style) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-inner">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shadow-2xs">
               <Briefcase className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl font-black text-white tracking-tight">
-                  {user?.full_name ? `Welcome back, ${user.full_name}` : "My Execution Workspace"}
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  Welcome back, {user?.full_name?.split(" ")[0] || "Team Member"}!
+                  <span className="text-xl">👋</span>
                 </h1>
-                <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/40 capitalize">
+                <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-200 capitalize">
                   {currentMembership?.role || "Team Member"}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-sm text-slate-500 mt-1">
                 Focused operational workspace for your creative assignments, script drafts, and asset submissions.
               </p>
             </div>
@@ -208,17 +209,17 @@ export default function EmployeeWorkspacePage() {
           <button
             onClick={loadMyTasks}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1A2035] hover:bg-[#222A45] border border-white/10 text-xs font-semibold text-slate-200 transition-all hover:text-white"
+            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-2xs transition-all"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-purple-400" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-purple-600" : "text-slate-400"}`} />
             <span>Sync Tasks</span>
           </button>
           <Link
             href="/tasks"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 transition-all"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm shadow-purple-500/25 transition-all"
           >
             <span>Agency Kanban</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5 text-purple-200" />
           </Link>
         </div>
       </div>
