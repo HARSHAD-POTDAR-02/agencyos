@@ -314,6 +314,17 @@ async def publish_instagram_reel(
             file_path = Path(local_file_path)
             file_size = file_path.stat().st_size
 
+            # Meta rupload requires a video MIME type (video/mp4 or video/quicktime)
+            effective_content_type = file_type
+            if not effective_content_type or effective_content_type in ("application/octet-stream", "binary/octet-stream"):
+                import mimetypes
+                guessed, _ = mimetypes.guess_type(str(local_file_path))
+                effective_content_type = guessed or "video/mp4"
+
+            if not effective_content_type.startswith("video/"):
+                suffix = file_path.suffix.lower()
+                effective_content_type = "video/quicktime" if suffix in (".mov", ".qt") else "video/mp4"
+
             with open(file_path, "rb") as f:
                 video_bytes = f.read()
 
@@ -321,31 +332,86 @@ async def publish_instagram_reel(
                 "Authorization": f"OAuth {access_token}",
                 "offset": "0",
                 "file_size": str(file_size),
-                "Content-Type": "application/octet-stream",
+                "Content-Type": effective_content_type,
             }
-            logger.info(f"Initiating direct resumable video upload ({file_size} bytes) to {upload_url}")
-            res_upload = await client.post(
-                upload_url,
-                headers=upload_headers,
-                content=video_bytes,
-                timeout=180.0,
+            logger.info(
+                f"Initiating direct resumable video upload ({file_size} bytes, "
+                f"Content-Type: {effective_content_type}) to {upload_url}"
             )
-            if res_upload.status_code not in (200, 201, 204):
-                try:
-                    up_data = res_upload.json()
-                    up_err = (
-                        up_data.get("debug_info", {}).get("message")
-                        or (up_data.get("error", {}).get("message") if isinstance(up_data.get("error"), dict) else None)
-                        or up_data.get("message")
-                        or (up_data.get("error") if isinstance(up_data.get("error"), str) else None)
-                        or f"HTTP {res_upload.status_code}"
-                    )
-                except Exception:
-                    up_err = f"HTTP {res_upload.status_code}: {res_upload.text[:200]}"
 
-                if video_url:
+            current_offset = 0
+            upload_success = False
+            last_upload_err = ""
+            max_upload_retries = 3
+
+            for attempt in range(max_upload_retries):
+                try:
+                    upload_headers["offset"] = str(current_offset)
+                    chunk_to_send = video_bytes[current_offset:]
+                    res_upload = await client.post(
+                        upload_url,
+                        headers=upload_headers,
+                        content=chunk_to_send,
+                        timeout=180.0,
+                    )
+                    if res_upload.status_code in (200, 201, 204):
+                        upload_success = True
+                        logger.info(f"Direct resumable video upload succeeded on attempt {attempt + 1}")
+                        break
+
+                    try:
+                        up_data = res_upload.json()
+                        last_upload_err = (
+                            up_data.get("debug_info", {}).get("message")
+                            or (up_data.get("error", {}).get("message") if isinstance(up_data.get("error"), dict) else None)
+                            or up_data.get("message")
+                            or (up_data.get("error") if isinstance(up_data.get("error"), str) else None)
+                            or f"HTTP {res_upload.status_code}"
+                        )
+                    except Exception:
+                        last_upload_err = f"HTTP {res_upload.status_code}: {res_upload.text[:200]}"
+
                     logger.warning(
-                        f"Direct Instagram video binary upload failed ({up_err}). "
+                        f"Direct video upload attempt {attempt + 1} returned {res_upload.status_code}: {last_upload_err}. "
+                        "Querying Meta for current byte offset..."
+                    )
+                except (httpx.TimeoutException, httpx.NetworkError) as net_err:
+                    last_upload_err = f"Network/timeout error: {str(net_err)}"
+                    logger.warning(
+                        f"Direct video upload attempt {attempt + 1} failed with {last_upload_err}. "
+                        "Querying Meta for current byte offset..."
+                    )
+
+                # Query Meta rupload status to see how many bytes were received and resume
+                await asyncio.sleep(2 * (attempt + 1))
+                try:
+                    res_check = await client.get(
+                        upload_url,
+                        headers={"Authorization": f"OAuth {access_token}"},
+                        timeout=15.0,
+                    )
+                    if res_check.status_code == 200:
+                        chk_data = res_check.json()
+                        reported_offset = int(chk_data.get("offset", 0))
+                        logger.info(f"Meta rupload reported received offset: {reported_offset}/{file_size}")
+                        if reported_offset >= file_size:
+                            upload_success = True
+                            break
+                        current_offset = reported_offset
+                except Exception as chk_exc:
+                    logger.warning(f"Failed to check resumable offset: {chk_exc}")
+
+            if not upload_success:
+                # Direct upload failed after retries. Only attempt video_url fallback IF video_url is a publicly routable URL!
+                can_fallback_url = False
+                if video_url:
+                    lowered_url = video_url.lower()
+                    if not any(h in lowered_url for h in ("localhost", "127.0.0.1", "0.0.0.0", "trycloudflare.com")):
+                        can_fallback_url = True
+
+                if can_fallback_url:
+                    logger.warning(
+                        f"Direct Instagram video binary upload failed ({last_upload_err}). "
                         f"Falling back to public video_url ingestion: {video_url}"
                     )
                     fallback_payload = {
@@ -363,12 +429,15 @@ async def publish_instagram_reel(
                         creation_id = fb_data["id"]
                     else:
                         raise MetaPublishingError(
-                            f"Direct Instagram video upload failed ({up_err}) and URL fallback failed: "
+                            f"Direct Instagram video upload failed ({last_upload_err}) and URL fallback failed: "
                             f"{fb_data.get('error', {}).get('message', 'Unknown error')}",
                             fb_data.get("error"),
                         )
                 else:
-                    raise MetaPublishingError(f"Direct Instagram video binary upload failed: {up_err}")
+                    raise MetaPublishingError(
+                        f"Direct Instagram video binary upload failed after {max_upload_retries} attempts: {last_upload_err}. "
+                        "Please verify your local network connection and video file integrity."
+                    )
 
         # Step 2: Poll for video processing status
         status_url = f"{GRAPH_API_BASE}/{version}/{creation_id}"

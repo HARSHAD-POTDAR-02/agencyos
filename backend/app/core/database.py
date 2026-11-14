@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import AsyncGenerator
 
 from sqlalchemy import create_engine, event
@@ -8,11 +9,28 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
 
+
+def _normalize_sqlite_url(url: str) -> str:
+    """Ensure relative SQLite database URLs always resolve to the workspace root."""
+    if not url.startswith("sqlite"):
+        return url
+    prefix, sep, rest = url.partition(":///")
+    if rest.startswith("./") or rest.startswith(".\\") or not Path(rest).is_absolute():
+        clean_rel = rest.lstrip("./").lstrip(".\\")
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        abs_db_path = (project_root / clean_rel).resolve().as_posix()
+        return f"{prefix}:///{abs_db_path}"
+    return url
+
+
 # ---------------------------------------------------------------------------
 # Async engine (used by the application at runtime)
 # ---------------------------------------------------------------------------
 
-is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+effective_db_url = _normalize_sqlite_url(settings.DATABASE_URL)
+effective_sync_url = _normalize_sqlite_url(settings.SYNC_DATABASE_URL)
+
+is_sqlite = effective_db_url.startswith("sqlite")
 engine_kwargs = {"echo": settings.APP_ENV == "development"}
 if not is_sqlite:
     engine_kwargs.update({"pool_pre_ping": True, "pool_size": 10, "max_overflow": 20})
@@ -20,7 +38,7 @@ else:
     engine_kwargs["connect_args"] = {"timeout": 30.0, "check_same_thread": False}
 
 async_engine = create_async_engine(
-    settings.DATABASE_URL,
+    effective_db_url,
     **engine_kwargs,
 )
 
@@ -45,13 +63,13 @@ AsyncSessionLocal = async_sessionmaker(
 # ---------------------------------------------------------------------------
 
 sync_kwargs = {"echo": False}
-if not settings.SYNC_DATABASE_URL.startswith("sqlite"):
+if not effective_sync_url.startswith("sqlite"):
     sync_kwargs["pool_pre_ping"] = True
 else:
     sync_kwargs["connect_args"] = {"timeout": 30.0, "check_same_thread": False}
 
 sync_engine = create_engine(
-    settings.SYNC_DATABASE_URL,
+    effective_sync_url,
     **sync_kwargs,
 )
 

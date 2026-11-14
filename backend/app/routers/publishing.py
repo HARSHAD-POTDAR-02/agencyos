@@ -122,6 +122,11 @@ async def publish_deliverable(
 
         # Check if local file exists on disk (avoids relying on external public URL fetch)
         local_path = Path(settings.UPLOAD_DIR) / latest_version.storage_key
+        if not local_path.is_file():
+            project_root = Path(__file__).resolve().parent.parent.parent.parent
+            root_candidate = project_root / settings.UPLOAD_DIR / latest_version.storage_key
+            if root_candidate.is_file():
+                local_path = root_candidate
         local_file_str = str(local_path) if local_path.is_file() and not payload.media_url_override else None
         is_video = (latest_version.file_type or "").startswith("video/") or latest_version.storage_key.endswith(
             (".mp4", ".mov")
@@ -215,6 +220,24 @@ async def publish_deliverable(
                         "permalink": live_url,
                     }
 
+                existing_external_id = deliverable.external_post_id or ""
+                already_has_ig = "ig:" in existing_external_id
+                already_has_fb = "fb:" in existing_external_id
+
+                if payload.platform == "instagram" and already_has_fb:
+                    fb_id = existing_external_id.split("fb:")[-1].split(",")[0]
+                    external_post_id = f"ig:{external_post_id},fb:{fb_id}"
+                    target_status = DeliverableStatus.published
+                    effective_platform = "both"
+                elif payload.platform == "facebook" and already_has_ig:
+                    ig_id = existing_external_id.split("ig:")[-1].split(",")[0]
+                    external_post_id = f"ig:{ig_id},fb:{external_post_id}"
+                    target_status = DeliverableStatus.published
+                    effective_platform = "both"
+                else:
+                    target_status = DeliverableStatus.published
+                    effective_platform = payload.platform
+
             except MetaPublishingError as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -244,8 +267,29 @@ async def publish_deliverable(
                     detail=f"No connected social accounts found for client '{client.business_name}'.",
                 )
 
-            # 1. Instagram
-            if ig_account and ig_account.instagram_business_id:
+            existing_external_id = deliverable.external_post_id or ""
+            already_has_ig = "ig:" in existing_external_id or (
+                deliverable.publishing_platform == "instagram"
+                and deliverable.status in (DeliverableStatus.published, DeliverableStatus.partially_published)
+            )
+            already_has_fb = "fb:" in existing_external_id or (
+                deliverable.publishing_platform == "facebook"
+                and deliverable.status in (DeliverableStatus.published, DeliverableStatus.partially_published)
+            )
+
+            # 1. Instagram (only if not already published)
+            if already_has_ig:
+                existing_ig_id = (
+                    existing_external_id.split("ig:")[-1].split(",")[0]
+                    if "ig:" in existing_external_id
+                    else existing_external_id
+                )
+                platform_results["instagram"] = {
+                    "success": True,
+                    "post_id": existing_ig_id,
+                    "permalink": deliverable.live_post_url,
+                }
+            elif ig_account and ig_account.instagram_business_id:
                 try:
                     if is_video:
                         ig_result = await publish_instagram_reel(
@@ -280,8 +324,19 @@ async def publish_deliverable(
                     "error": "No connected Instagram Business account.",
                 }
 
-            # 2. Facebook
-            if fb_account and fb_account.facebook_page_id:
+            # 2. Facebook (only if not already published)
+            if already_has_fb:
+                existing_fb_id = (
+                    existing_external_id.split("fb:")[-1].split(",")[0]
+                    if "fb:" in existing_external_id
+                    else existing_external_id
+                )
+                platform_results["facebook"] = {
+                    "success": True,
+                    "post_id": existing_fb_id,
+                    "permalink": deliverable.live_post_url,
+                }
+            elif fb_account and fb_account.facebook_page_id:
                 try:
                     fb_result = await publish_facebook_page_post(
                         access_token=fb_account.access_token,
@@ -316,14 +371,20 @@ async def publish_deliverable(
                 live_url = platform_results["instagram"].get("permalink") or platform_results["facebook"].get("permalink")
                 external_post_id = f"ig:{platform_results['instagram']['post_id']},fb:{platform_results['facebook']['post_id']}"
                 success_message = "Successfully published to both Instagram and Facebook Page!"
+                target_status = DeliverableStatus.published
+                effective_platform = "both"
             elif fb_ok and not ig_ok:
                 live_url = platform_results["facebook"].get("permalink")
-                external_post_id = str(platform_results["facebook"]["post_id"])
+                external_post_id = f"fb:{platform_results['facebook']['post_id']}"
                 success_message = f"Published to Facebook Page successfully. (Instagram failed: {platform_results['instagram'].get('error')})"
+                target_status = DeliverableStatus.partially_published
+                effective_platform = "both"
             elif ig_ok and not fb_ok:
                 live_url = platform_results["instagram"].get("permalink")
-                external_post_id = str(platform_results["instagram"]["post_id"])
+                external_post_id = f"ig:{platform_results['instagram']['post_id']}"
                 success_message = f"Published to Instagram successfully. (Facebook failed: {platform_results['facebook'].get('error')})"
+                target_status = DeliverableStatus.partially_published
+                effective_platform = "both"
             else:
                 # Both failed
                 raise HTTPException(
@@ -336,11 +397,11 @@ async def publish_deliverable(
                 )
 
     # 4. Update Deliverable Status and Publishing Metadata
-    deliverable.status = DeliverableStatus.published
-    deliverable.published_at = now
+    deliverable.status = target_status if payload.mode == "automated" else DeliverableStatus.published
+    deliverable.published_at = deliverable.published_at or now
     deliverable.live_post_url = live_url
     deliverable.external_post_id = external_post_id
-    deliverable.publishing_platform = payload.platform
+    deliverable.publishing_platform = effective_platform if payload.mode == "automated" else payload.platform
 
     # 5. Two-way Task Sync: mark any associated tasks as done
     tasks_res = await db.execute(select(Task).where(Task.deliverable_id == deliverable.id))

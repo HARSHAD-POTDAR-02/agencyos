@@ -27,6 +27,9 @@ from app.services.meta_publisher import (
 
 logger = logging.getLogger(__name__)
 
+# Concurrency lock to prevent concurrent multi-megabyte video uploads from saturating upstream bandwidth
+_video_upload_lock = asyncio.Lock()
+
 
 def classify_provider_error(error_data: dict[str, Any] | None) -> tuple[str, bool, int]:
     """
@@ -138,6 +141,11 @@ async def execute_publication_job(
     file_name = None
     if version and version.storage_key:
         candidate_path = Path(settings.UPLOAD_DIR) / version.storage_key
+        if not candidate_path.is_file():
+            project_root = Path(__file__).resolve().parent.parent.parent.parent
+            root_candidate = project_root / settings.UPLOAD_DIR / version.storage_key
+            if root_candidate.is_file():
+                candidate_path = root_candidate
         if candidate_path.is_file():
             local_file_path = str(candidate_path)
             file_type = version.file_type
@@ -179,15 +187,16 @@ async def execute_publication_job(
                     raise StaleWorkerError("Worker lost claim lease during Instagram video processing.")
 
             if is_video:
-                result = await publish_instagram_reel(
-                    access_token=social_acc.access_token,
-                    instagram_business_id=social_acc.instagram_business_id,
-                    video_url=media_url,
-                    caption=job.caption_snapshot or "",
-                    share_to_feed=job.share_to_feed,
-                    local_file_path=local_file_path,
-                    file_type=file_type,
-                )
+                async with _video_upload_lock:
+                    result = await publish_instagram_reel(
+                        access_token=social_acc.access_token,
+                        instagram_business_id=social_acc.instagram_business_id,
+                        video_url=media_url,
+                        caption=job.caption_snapshot or "",
+                        share_to_feed=job.share_to_feed,
+                        local_file_path=local_file_path,
+                        file_type=file_type,
+                    )
             else:
                 # Ensure photo is converted to Instagram-compliant JPEG in sRGB
                 ig_local_path, ig_storage_key = ensure_instagram_compatible_image(
@@ -211,16 +220,29 @@ async def execute_publication_job(
                 (job.media_url_snapshot or "").lower().endswith((".mp4", ".mov", ".m4v"))
                 or (file_type and "video" in file_type)
             )
-            result = await publish_facebook_page_post(
-                access_token=social_acc.access_token,
-                page_id=social_acc.facebook_page_id,
-                media_url=media_url,
-                caption=job.caption_snapshot or "",
-                is_video=is_video,
-                local_file_path=local_file_path,
-                file_name=file_name,
-                file_type=file_type,
-            )
+            if is_video:
+                async with _video_upload_lock:
+                    result = await publish_facebook_page_post(
+                        access_token=social_acc.access_token,
+                        page_id=social_acc.facebook_page_id,
+                        media_url=media_url,
+                        caption=job.caption_snapshot or "",
+                        is_video=is_video,
+                        local_file_path=local_file_path,
+                        file_name=file_name,
+                        file_type=file_type,
+                    )
+            else:
+                result = await publish_facebook_page_post(
+                    access_token=social_acc.access_token,
+                    page_id=social_acc.facebook_page_id,
+                    media_url=media_url,
+                    caption=job.caption_snapshot or "",
+                    is_video=is_video,
+                    local_file_path=local_file_path,
+                    file_name=file_name,
+                    file_type=file_type,
+                )
 
         else:
             raise MetaPublishingError(f"Unsupported publication platform: '{job.platform}'")
