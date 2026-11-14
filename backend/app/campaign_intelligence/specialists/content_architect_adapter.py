@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import logging
+import os
 import re
 from typing import Any, Literal
+import requests
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -182,42 +185,167 @@ def parse_insert_position(query: str, current_count: int) -> int:
     if as_match:
         return max(0, int(as_match.group(1)) - 1)
 
-    if any(kw in lower for kw in ["at the beginning", "at the start", "first scene", "first slide", "at beginning", "at start"]):
+    if any(kw in lower for kw in [
+        "at the beginning", "at the start", "first scene", "first slide",
+        "at beginning", "at start", "hook scene", "hook slide", "as a hook", "as hook", "new hook"
+    ]):
         return 0
 
     return current_count
 
 
-def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+# =====================================================================
+# LLM Intent Classification (NVIDIA NIM)
+# =====================================================================
+
+def classify_storyboard_intent_nim(query: str, current_scene_count: int) -> dict[str, Any] | None:
     """
-    Classify user query into:
-    1. TARGETED_EDIT (specific scene, caption, cta, hashtags, title)
-    2. STRUCTURAL_EDIT (add scene, delete scene)
-    3. REVISE_ALL_SCENES (script/voiceover changes across all scenes)
-    4. FULL_REWRITE (regenerate whole storyboard from scratch)
+    Call NVIDIA NIM 'nvidia/nemotron-3.5-bolt-e4b' to classify user edit intent.
+    Uses requests with a fast 5s timeout. Returns structured intent dict or None on failure.
     """
+    api_key = getattr(settings, "NVIDIA_API_KEY", "") or os.environ.get("NVIDIA_API_KEY", "")
+    if not api_key:
+        return None
+
+    base_url = getattr(settings, "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
+    url = f"{base_url}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    system_prompt = f"""You are an expert intent classifier for a video storyboard editor.
+The active storyboard currently has {current_scene_count} scenes (Scene 1 to Scene {current_scene_count}).
+Classify the user prompt into one operation:
+- STRUCTURAL_ADD: adding or inserting a NEW scene anywhere (beginning, hook, middle, between, end).
+- STRUCTURAL_DELETE: deleting or removing an existing scene.
+- TARGETED_SCENE_EDIT: modifying an EXISTING scene in place without adding/removing scenes.
+- TARGETED_FIELD_EDIT: modifying only caption, CTA, hashtags, or title.
+- REVISE_ALL_SCENES: revising voiceovers/script/dialogue/language/tone across existing scenes, or asking to 'use that in the storyboard' / 'apply this script' / 'update script for all scenes'.
+- FULL_REWRITE: starting completely over from scratch (e.g. 'start over', 'scrap this', 'completely new concept').
+
+Output JSON only without any markdown formatting or extra text:
+{{
+  "operation": "STRUCTURAL_ADD" | "STRUCTURAL_DELETE" | "TARGETED_SCENE_EDIT" | "TARGETED_FIELD_EDIT" | "REVISE_ALL_SCENES" | "FULL_REWRITE",
+  "target_scene_number": null or integer (1-based),
+  "insert_index": null or integer (0-based index for insertion; 0 for beginning/hook, 1 for after scene 1 or between 1 and 2, {current_scene_count} for end),
+  "target_field": null or "caption" | "cta" | "hashtags" | "title"
+}}"""
+
+    payload = {
+        "model": "nvidia/nemotron-3.5-bolt-e4b",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 150,
+    }
+
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=5)
+        if r.status_code == 200:
+            content = r.json()["choices"][0]["message"]["content"]
+            cleaned = content.strip().strip("```json").strip("```").strip()
+            return json.loads(cleaned)
+    except Exception as ex:
+        logger.warning(f"NVIDIA NIM intent classification fallback triggered: {ex}")
+    return None
+
+
+def classify_carousel_intent_nim(query: str, current_slide_count: int) -> dict[str, Any] | None:
+    """
+    Call NVIDIA NIM 'nvidia/nemotron-3.5-bolt-e4b' to classify carousel edit intent.
+    """
+    api_key = getattr(settings, "NVIDIA_API_KEY", "") or os.environ.get("NVIDIA_API_KEY", "")
+    if not api_key:
+        return None
+
+    base_url = getattr(settings, "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
+    url = f"{base_url}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    system_prompt = f"""You are an expert intent classifier for a carousel deck editor.
+The active deck currently has {current_slide_count} slides (Slide 1 to Slide {current_slide_count}).
+Classify the user prompt into one operation:
+- STRUCTURAL_ADD: adding or inserting a NEW slide anywhere.
+- STRUCTURAL_DELETE: deleting or removing an existing slide.
+- TARGETED_SLIDE_EDIT: modifying an EXISTING slide in place.
+- TARGETED_FIELD_EDIT: modifying only caption or CTA.
+- REVISE_ALL_SLIDES: revising headlines and copy across all slides.
+- FULL_REWRITE: starting completely over from scratch.
+
+Output JSON only without any markdown formatting or extra text:
+{{
+  "operation": "STRUCTURAL_ADD" | "STRUCTURAL_DELETE" | "TARGETED_SLIDE_EDIT" | "TARGETED_FIELD_EDIT" | "REVISE_ALL_SLIDES" | "FULL_REWRITE",
+  "target_slide_number": null or integer (1-based),
+  "insert_index": null or integer (0-based index for insertion; 0 for cover/first, {current_slide_count} for end),
+  "target_field": null or "caption" | "cta"
+}}"""
+
+    payload = {
+        "model": "nvidia/nemotron-3.5-bolt-e4b",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 150,
+    }
+
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=5)
+        if r.status_code == 200:
+            content = r.json()["choices"][0]["message"]["content"]
+            cleaned = content.strip().strip("```json").strip("```").strip()
+            return json.loads(cleaned)
+    except Exception as ex:
+        logger.warning(f"NVIDIA NIM carousel intent classification fallback: {ex}")
+    return None
+
+
+def classify_storyboard_operation_rules(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Deterministic regex rule fallback for storyboard operation classification."""
     lower = query.lower()
 
-    # 1. Check for explicit full rewrite triggers
     if any(phrase in lower for phrase in [
         "start over", "from scratch", "scrap this", "completely new",
         "new concept", "brand new script", "new storyboard"
     ]):
         return "FULL_REWRITE", {}
 
-    # 2. Check for Structural Edits
-    # Delete Scene: e.g. "delete scene 2", "remove scene 3", "drop scene 1"
-    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?scene\s*(\d+)\b", lower)
+    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?(?:scenes?|slides?|shots?|cards?)\s*(\d+)\b", lower)
     if del_match:
         return "STRUCTURAL_EDIT", {"action": "delete", "target_number": int(del_match.group(1))}
 
-    # Add Scene: e.g. "add a scene", "insert a scene between 1 and 2", "new scene"
-    if re.search(r"\b(?:add|insert)\s+(?:a\s+)?(?:new\s+)?(?:another\s+)?(?:\d+th\s+)?scenes?\b", lower) or "new scene" in lower:
+    if (
+        any(kw in lower for kw in ["caption", "post description", "post copy"])
+        and not any(s in lower for s in ["scene", "shot", "card", "hook", "storyboard", "script", "voiceover", "dialogue"])
+    ):
+        return "TARGETED_EDIT", {"target_type": "caption"}
+    if any(kw in lower for kw in ["call to action", "cta", "closing line", "closing cta"]) and not any(s in lower for s in ["scene", "shot", "card", "hook"]):
+        return "TARGETED_EDIT", {"target_type": "cta"}
+    if any(kw in lower for kw in ["hashtag", "hashtags", "tag", "tags"]) and not any(s in lower for s in ["scene", "shot", "card", "hook"]):
+        return "TARGETED_EDIT", {"target_type": "hashtags"}
+
+    is_add_scene_intent = (
+        bool(re.search(r"\b(?:add|insert|include|put)\b.*\b(?:scenes?|slides?|cards?|shots?|hooks?)\b", lower))
+        or bool(re.search(r"\b(?:add|insert|include|put)\s+(?:a\s+)?(?:new\s+)?(?:another\s+)?(?:\w+\s+)?(?:scene|card|shot|hook)\b", lower))
+        or (
+            any(v in lower for v in ["add ", "insert ", "put "])
+            and any(p in lower for p in ["between", "after scene", "before scene", "at the beginning", "at the start", "at the end", "as scene"])
+        )
+        or any(kw in lower for kw in ["new scene", "new hook scene", "another scene", "insert hook", "add hook"])
+    )
+
+    if is_add_scene_intent:
         num_scenes = len(active_payload.get("scenes", []))
         insert_idx = parse_insert_position(query, num_scenes)
         return "STRUCTURAL_EDIT", {"action": "add", "insert_index": insert_idx}
 
-    # 3. Check for Specific Scene Edit (e.g. Scene 2, 2nd scene)
     scene_match = re.search(r"\bscene\s*(\d+)\b", lower)
     target_num = None
     if scene_match:
@@ -235,13 +363,9 @@ def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) ->
                 target_num = v
                 break
 
-    # If single scene matched and query is NOT asking for all scenes
     if target_num is not None and not any(kw in lower for kw in ["all scenes", "all the scenes", "every scene"]):
         return "TARGETED_EDIT", {"target_type": "scene", "target_number": target_num}
 
-    # 4. Explicit Field Targets (ONLY when targeting CTA or title alone)
-    if any(kw in lower for kw in ["call to action", "cta", "closing line", "closing cta"]):
-        return "TARGETED_EDIT", {"target_type": "cta"}
     if any(kw in lower for kw in ["rename", "deliverable title"]):
         return "TARGETED_EDIT", {"target_type": "title"}
     if (
@@ -249,21 +373,55 @@ def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) ->
         and not any(kw in lower for kw in ["scene", "scenes", "storyboard", "script", "voiceover", "dialogue"])
     ):
         return "TARGETED_EDIT", {"target_type": "caption"}
-    if any(kw in lower for kw in ["hashtag", "hashtags", "tags"]):
-        return "TARGETED_EDIT", {"target_type": "hashtags"}
 
-    # Single "hook" refers to Scene 1
     if "hook" in lower and not any(kw in lower for kw in ["all", "scenes", "storyboard"]):
         return "TARGETED_EDIT", {"target_type": "scene", "target_number": 1}
 
-    # 5. REVISE_ALL_SCENES (Global script/voiceover/style revision across all scenes)
-    # Triggered by "change the script for all scenes", "use that in the storyboard",
-    # "rewrite voiceovers", or general creative tone adjustments ("make it Marathi", "more energetic")
     return "REVISE_ALL_SCENES", {}
 
 
-def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    """Classify carousel editing operations."""
+def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """
+    Classify user query into:
+    1. TARGETED_EDIT (specific scene, caption, cta, hashtags, title)
+    2. STRUCTURAL_EDIT (add scene, delete scene)
+    3. REVISE_ALL_SCENES (script/voiceover changes across all scenes)
+    4. FULL_REWRITE (regenerate whole storyboard from scratch)
+
+    Uses NVIDIA NIM 'nvidia/nemotron-3.5-bolt-e4b' as primary LLM classifier,
+    with deterministic regex rules as a fallback.
+    """
+    scenes = active_payload.get("scenes", [])
+    num_scenes = len(scenes)
+
+    nim_res = classify_storyboard_intent_nim(query, num_scenes)
+    if nim_res and "operation" in nim_res:
+        op = nim_res["operation"]
+        if op == "STRUCTURAL_ADD":
+            idx = nim_res.get("insert_index")
+            if idx is None:
+                idx = parse_insert_position(query, num_scenes)
+            idx = max(0, min(idx, num_scenes))
+            return "STRUCTURAL_EDIT", {"action": "add", "insert_index": idx}
+        elif op == "STRUCTURAL_DELETE":
+            target_num = nim_res.get("target_scene_number") or 1
+            return "STRUCTURAL_EDIT", {"action": "delete", "target_number": target_num}
+        elif op == "TARGETED_SCENE_EDIT":
+            target_num = nim_res.get("target_scene_number") or 1
+            return "TARGETED_EDIT", {"target_type": "scene", "target_number": target_num}
+        elif op == "TARGETED_FIELD_EDIT":
+            field = nim_res.get("target_field") or "caption"
+            return "TARGETED_EDIT", {"target_type": field}
+        elif op == "REVISE_ALL_SCENES":
+            return "REVISE_ALL_SCENES", {}
+        elif op == "FULL_REWRITE":
+            return "FULL_REWRITE", {}
+
+    return classify_storyboard_operation_rules(query, active_payload)
+
+
+def classify_carousel_operation_rules(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Deterministic regex rule fallback for carousel operation classification."""
     lower = query.lower()
     if any(phrase in lower for phrase in [
         "start over", "from scratch", "scrap this", "completely new",
@@ -271,11 +429,24 @@ def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> t
     ]):
         return "FULL_REWRITE", {}
 
-    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?slide\s*(\d+)\b", lower)
+    del_match = re.search(r"\b(?:delete|remove|drop|cut)\s+(?:the\s+)?(?:slides?|cards?)\s*(\d+)\b", lower)
     if del_match:
         return "STRUCTURAL_EDIT", {"action": "delete", "target_number": int(del_match.group(1))}
 
-    if re.search(r"\b(?:add|insert)\s+(?:a\s+)?(?:new\s+)?(?:another\s+)?(?:\d+th\s+)?slides?\b", lower) or "new slide" in lower:
+    if any(kw in lower for kw in ["call to action", "cta"]):
+        return "TARGETED_EDIT", {"target_type": "cta"}
+
+    is_add_slide_intent = (
+        bool(re.search(r"\b(?:add|insert|include|put)\b.*\b(?:slides?|cards?|covers?)\b", lower))
+        or bool(re.search(r"\b(?:add|insert|include|put)\s+(?:a\s+)?(?:new\s+)?(?:another\s+)?(?:\w+\s+)?(?:slide|card|cover)\b", lower))
+        or (
+            any(v in lower for v in ["add ", "insert ", "put "])
+            and any(p in lower for p in ["between", "after slide", "before slide", "at the beginning", "at the start", "at the end", "as slide"])
+        )
+        or any(kw in lower for kw in ["new slide", "another slide", "new cover slide"])
+    )
+
+    if is_add_slide_intent:
         num_slides = len(active_payload.get("slides", []))
         insert_idx = parse_insert_position(query, num_slides)
         return "STRUCTURAL_EDIT", {"action": "add", "insert_index": insert_idx}
@@ -292,8 +463,6 @@ def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> t
     if target_num is not None and not any(kw in lower for kw in ["all slides", "all the slides", "every slide"]):
         return "TARGETED_EDIT", {"target_type": "slide", "target_number": target_num}
 
-    if any(kw in lower for kw in ["call to action", "cta"]):
-        return "TARGETED_EDIT", {"target_type": "cta"}
     if (
         any(kw in lower for kw in ["caption", "post copy", "post description"])
         and not any(kw in lower for kw in ["slide", "slides", "deck"])
@@ -301,6 +470,39 @@ def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> t
         return "TARGETED_EDIT", {"target_type": "caption"}
 
     return "REVISE_ALL_SLIDES", {}
+
+
+def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """
+    Classify carousel editing operations using NVIDIA NIM with rules fallback.
+    """
+    slides = active_payload.get("slides", [])
+    num_slides = len(slides)
+
+    nim_res = classify_carousel_intent_nim(query, num_slides)
+    if nim_res and "operation" in nim_res:
+        op = nim_res["operation"]
+        if op == "STRUCTURAL_ADD":
+            idx = nim_res.get("insert_index")
+            if idx is None:
+                idx = parse_insert_position(query, num_slides)
+            idx = max(0, min(idx, num_slides))
+            return "STRUCTURAL_EDIT", {"action": "add", "insert_index": idx}
+        elif op == "STRUCTURAL_DELETE":
+            target_num = nim_res.get("target_slide_number") or 1
+            return "STRUCTURAL_EDIT", {"action": "delete", "target_number": target_num}
+        elif op == "TARGETED_SLIDE_EDIT":
+            target_num = nim_res.get("target_slide_number") or 1
+            return "TARGETED_EDIT", {"target_type": "slide", "target_number": target_num}
+        elif op == "TARGETED_FIELD_EDIT":
+            field = nim_res.get("target_field") or "caption"
+            return "TARGETED_EDIT", {"target_type": field}
+        elif op == "REVISE_ALL_SLIDES":
+            return "REVISE_ALL_SLIDES", {}
+        elif op == "FULL_REWRITE":
+            return "FULL_REWRITE", {}
+
+    return classify_carousel_operation_rules(query, active_payload)
 
 
 # =====================================================================

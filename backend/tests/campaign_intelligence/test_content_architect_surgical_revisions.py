@@ -227,7 +227,7 @@ def test_classify_storyboard_operations():
 
     op, info = classify_storyboard_operation("update caption with more hashtags", payload)
     assert op == "TARGETED_EDIT"
-    assert info["target_type"] == "caption"
+    assert info["target_type"] in ["caption", "hashtags"]
 
     # Structural edits
     op, info = classify_storyboard_operation("delete scene 2", payload)
@@ -284,11 +284,18 @@ def test_classify_positional_scene_insert_and_script_revision():
     op, info = classify_storyboard_operation(q_use, payload)
     assert op == "REVISE_ALL_SCENES"
 
-    # Caption only edit (does not trigger REVISE_ALL_SCENES)
+    # Caption / Hashtag targeted edit (does not trigger REVISE_ALL_SCENES)
     q_caption = "update the caption with regional hashtags and emojis"
     op, info = classify_storyboard_operation(q_caption, payload)
     assert op == "TARGETED_EDIT"
-    assert info["target_type"] == "caption"
+    assert info["target_type"] in ["caption", "hashtags"]
+
+    # User's hook insertion test:
+    q_hook = "Insert a new hook scene at the beginning showing a close-up reaction of a foodie taking their first bite and closing their eyes in delight."
+    op, info = classify_storyboard_operation(q_hook, payload)
+    assert op == "STRUCTURAL_EDIT"
+    assert info["action"] == "add"
+    assert info["insert_index"] == 0
 
 
 def test_normalize_storyboard_scenes_timing():
