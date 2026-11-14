@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ActiveArtifactData, ExportPipelineResponse } from "./types";
 import { studioApi } from "@/lib/api";
 import {
@@ -64,25 +64,33 @@ export function ExportPreviewModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [exportResult, setExportResult] = useState<ExportPipelineResponse | null>(null);
 
-  // Initialize defaults whenever modal opens or active artifact changes
+  // Track previous modal state to initialize defaults ONLY when modal first opens or target artifact changes,
+  // NEVER when activeArtifact.status transitions to "exported" while the modal is already showing results.
+  const prevIsOpenRef = useRef(false);
+  const prevArtifactKeyRef = useRef("");
+
   useEffect(() => {
-    if (isOpen && artifact) {
+    const artifactKey = artifact ? `${artifact.id}-v${artifact.version}` : "";
+    const justOpened = isOpen && !prevIsOpenRef.current;
+    const artifactChanged = isOpen && artifactKey !== prevArtifactKeyRef.current;
+
+    if (justOpened || artifactChanged) {
       const defaultName =
-        artifact.payload?.deliverable_title ||
-        artifact.title ||
+        artifact?.payload?.deliverable_title ||
+        artifact?.title ||
         "Creative Deliverable";
       setDeliverableName(defaultName);
 
       const fmt =
-        artifact.payload?.format_type ||
-        (artifact.type === "storyboard"
+        artifact?.payload?.format_type ||
+        (artifact?.type === "storyboard"
           ? "reel_storyboard"
-          : artifact.type === "carousel_deck"
+          : artifact?.type === "carousel_deck"
           ? "carousel"
-          : artifact.type);
+          : artifact?.type || "reel_storyboard");
       setTargetFormat(fmt);
 
-      const plat = artifact.payload?.platform || "instagram";
+      const plat = artifact?.payload?.platform || "instagram";
       setTargetPlatform(plat);
 
       // Default due date to 7 days in future
@@ -100,7 +108,10 @@ export function ExportPreviewModal({
       setErrorMessage(null);
       setExportResult(null);
     }
-  }, [isOpen, artifact]);
+
+    prevIsOpenRef.current = isOpen;
+    prevArtifactKeyRef.current = artifactKey;
+  }, [isOpen, artifact?.id, artifact?.version]);
 
   if (!isOpen || !artifact) return null;
 
@@ -174,8 +185,12 @@ export function ExportPreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div
+        onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-2xl rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
@@ -184,15 +199,23 @@ export function ExportPreviewModal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border/80 bg-muted/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
-              <Share2 className="w-5 h-5" />
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs transition-colors ${
+                exportResult
+                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                  : "bg-primary/10 border border-primary/20 text-primary"
+              }`}
+            >
+              {exportResult ? <CheckCircle2 className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
             </div>
             <div>
               <h2 id="export-modal-title" className="font-bold text-base text-foreground">
-                Export to Production Pipeline
+                {exportResult ? "Production Export Complete" : "Export to Production Pipeline"}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Convert approved studio draft v{artifact.version} into production Deliverable & Tasks.
+                {exportResult
+                  ? `Artifact v${artifact.version} was exported into deliverables & tasks.`
+                  : `Convert approved studio draft v${artifact.version} into production Deliverable & Tasks.`}
               </p>
             </div>
           </div>
