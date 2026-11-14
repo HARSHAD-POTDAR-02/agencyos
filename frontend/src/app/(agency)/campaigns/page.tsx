@@ -254,6 +254,9 @@ interface ChatMsg {
     title: string;
     version: number;
     status: string;
+    campaign_id?: string;
+    payload?: Record<string, any>;
+    supporting_evidence_refs?: Array<Record<string, any>>;
   };
   agentPipeline?: {
     status: "in_progress" | "completed" | "error";
@@ -425,6 +428,8 @@ function CampaignStudioContent() {
             if (parsed.periodYear) setPeriodYear(parsed.periodYear);
             if (parsed.studioMode) setStudioMode(parsed.studioMode);
             if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
+            if (parsed.activeArtifact) setActiveArtifact(parsed.activeArtifact);
+            if (parsed.activeCampaignId) setActiveCampaignId(parsed.activeCampaignId);
             return;
           }
         } catch (e) {
@@ -472,12 +477,14 @@ function CampaignStudioContent() {
           periodYear,
           studioMode,
           activeSpecialistId,
+          activeArtifact,
+          activeCampaignId,
         })
       );
     } catch (e) {
       console.error("Failed to save chat to storage", e);
     }
-  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, selectedClientId, getStorageKey]);
+  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, activeArtifact, activeCampaignId, selectedClientId, getStorageKey]);
 
   // Reset conversation handler
   const handleResetChat = () => {
@@ -661,6 +668,9 @@ function CampaignStudioContent() {
                             title: response.artifact_title || "Creative Asset",
                             version: response.artifact_version_number || 1,
                             status: response.artifact_status || "draft",
+                            campaign_id: response.campaign_id || activeCampaignId || undefined,
+                            payload: response.artifact_payload,
+                            supporting_evidence_refs: response.supporting_evidence_refs || [],
                           }
                         : undefined,
                     }
@@ -750,6 +760,9 @@ function CampaignStudioContent() {
                         title: response.artifact_title || "Creative Asset",
                         version: response.artifact_version_number || 1,
                         status: response.artifact_status || "draft",
+                        campaign_id: response.campaign_id || activeCampaignId || undefined,
+                        payload: response.artifact_payload,
+                        supporting_evidence_refs: response.supporting_evidence_refs || [],
                       }
                     : undefined,
                 }
@@ -801,6 +814,74 @@ function CampaignStudioContent() {
       }
     } catch (err: any) {
       console.error("Failed to approve artifact version:", err);
+    }
+  };
+
+  // View or restore a specific artifact version on the Contextual Canvas
+  const [isLoadingCanvasArtifact, setIsLoadingCanvasArtifact] = useState<string | null>(null);
+
+  const handleViewOnCanvas = async (summary: NonNullable<ChatMsg["artifact_summary"]>) => {
+    // 1. If payload is directly embedded on the message, restore immediately
+    if (summary.payload && Object.keys(summary.payload).length > 0) {
+      setActiveArtifact({
+        id: summary.id,
+        type: summary.type,
+        title: summary.title,
+        version: summary.version,
+        status: summary.status,
+        payload: summary.payload,
+        supporting_evidence_refs: summary.supporting_evidence_refs || [],
+      });
+      setMobileTab("canvas");
+      return;
+    }
+
+    // 2. If the canvas is already displaying this exact artifact and version, just switch view tab
+    if (
+      activeArtifact &&
+      activeArtifact.id === summary.id &&
+      activeArtifact.version === summary.version
+    ) {
+      setMobileTab("canvas");
+      return;
+    }
+
+    // 3. Otherwise, fetch detail from backend
+    const targetCampaignId = summary.campaign_id || activeCampaignId;
+    if (effectiveAgencyId && targetCampaignId && token) {
+      setIsLoadingCanvasArtifact(summary.id);
+      try {
+        const detail = await studioApi.getArtifactDetail(
+          effectiveAgencyId,
+          targetCampaignId,
+          summary.id,
+          token
+        );
+        if (detail) {
+          const targetVer =
+            detail.versions?.find((v: any) => v.version_number === summary.version) ||
+            detail.latest_version;
+          const payload = targetVer?.payload || detail.payload || {};
+
+          setActiveArtifact({
+            id: detail.id,
+            type: detail.artifact_type || summary.type,
+            title: detail.title || summary.title,
+            version: targetVer?.version_number || summary.version,
+            status: targetVer?.is_approved ? "approved" : (detail.status || summary.status),
+            payload: payload,
+            supporting_evidence_refs: detail.supporting_evidence_refs || [],
+          });
+          setMobileTab("canvas");
+        }
+      } catch (err) {
+        console.error("Failed to load artifact details for canvas:", err);
+        setMobileTab("canvas");
+      } finally {
+        setIsLoadingCanvasArtifact(null);
+      }
+    } else {
+      setMobileTab("canvas");
     }
   };
 
@@ -1268,20 +1349,41 @@ function CampaignStudioContent() {
                     {msg.artifact_summary && (
                       <button
                         type="button"
-                        onClick={() => setMobileTab("canvas")}
-                        className="flex items-center justify-between w-full p-2.5 rounded-xl bg-card border border-primary/30 hover:border-primary transition-all text-xs cursor-pointer shadow-2xs group"
+                        onClick={() => handleViewOnCanvas(msg.artifact_summary!)}
+                        disabled={isLoadingCanvasArtifact === msg.artifact_summary.id}
+                        className={`flex items-center justify-between w-full p-2.5 rounded-xl bg-card border transition-all text-xs cursor-pointer shadow-2xs group ${
+                          activeArtifact?.id === msg.artifact_summary.id &&
+                          activeArtifact?.version === msg.artifact_summary.version
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-primary/30 hover:border-primary hover:bg-muted/30"
+                        }`}
                       >
                         <div className="flex items-center gap-2">
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-primary/10 text-primary">
                             v{msg.artifact_summary.version}
                           </span>
-                          <span className="font-semibold text-foreground text-[11px] group-hover:text-primary transition-colors">
+                          <span className="font-semibold text-foreground text-[11px] group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-[280px]">
                             {msg.artifact_summary.title}
                           </span>
+                          {activeArtifact?.id === msg.artifact_summary.id &&
+                            activeArtifact?.version === msg.artifact_summary.version && (
+                              <span className="px-1.5 py-0.5 text-[9px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full shrink-0">
+                                Active on Canvas
+                              </span>
+                            )}
                         </div>
-                        <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
-                          <span>View on Canvas</span>
-                          <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                        <span className="text-[10px] text-primary font-medium flex items-center gap-0.5 shrink-0">
+                          {isLoadingCanvasArtifact === msg.artifact_summary.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Loading...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>View on Canvas</span>
+                              <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                            </>
+                          )}
                         </span>
                       </button>
                     )}
