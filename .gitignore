@@ -34,7 +34,8 @@ frontend/.env.local
 *.swp
 *.swo
 
-# OS
+# Scratch
+scratch/
 .DS_Store
 Thumbs.db
 

@@ -1476,6 +1476,20 @@ async def convert_campaign_to_tasks(
     deliverables_created = 0
     tasks_created = 0
 
+    # Resolve agency specialists by registered role for automatic role-based assignment
+    mem_stmt = (
+        select(Membership)
+        .where(Membership.agency_id == agency_id, Membership.is_active == True)
+        .order_by(Membership.created_at.asc())
+    )
+    mem_res = await db.execute(mem_stmt)
+    memberships = mem_res.scalars().all()
+    specialist_map: dict[str, uuid.UUID] = {}
+    for m in memberships:
+        role_key = m.role.value if hasattr(m.role, "value") else str(m.role)
+        if role_key not in specialist_map:
+            specialist_map[role_key] = m.user_id
+
     for item in deliverables_data:
         dtype = (item.get("deliverable_type") or "reel").lower()
         planned_dt: date | None = None
@@ -1527,6 +1541,14 @@ async def convert_campaign_to_tasks(
             ]
 
         for stage_title, stage_type, stage_status, stage_priority in task_stages:
+            stage_assignee = None
+            if stage_type in ("scripting", "copywriting"):
+                stage_assignee = specialist_map.get("writer")
+            elif stage_type in ("editing", "filming"):
+                stage_assignee = specialist_map.get("editor")
+            elif stage_type in ("design", "qa"):
+                stage_assignee = specialist_map.get("designer") or specialist_map.get("editor")
+
             t = Task(
                 id=uuid.uuid4(),
                 deliverable_id=deliv.id,
@@ -1535,6 +1557,7 @@ async def convert_campaign_to_tasks(
                 status=stage_status,
                 priority=stage_priority,
                 due_date=planned_dt,
+                assignee_id=stage_assignee,
             )
             db.add(t)
             tasks_created += 1

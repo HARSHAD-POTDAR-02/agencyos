@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { taskApi, clientApi } from "@/lib/api";
+import { taskApi, clientApi, agencyApi } from "@/lib/api";
 import {
   Kanban,
   List,
@@ -23,7 +23,15 @@ import {
   RefreshCw,
   ExternalLink,
   Briefcase,
+  User,
 } from "lucide-react";
+
+interface AgencyMember {
+  user_id: string;
+  role: string;
+  user_full_name?: string | null;
+  user_email?: string | null;
+}
 
 interface Task {
   id: string;
@@ -97,15 +105,17 @@ function TasksContent() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [members, setMembers] = useState<AgencyMember[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<string>("all");
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [loading, setLoading] = useState(true);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Load clients and tasks
+  // Load clients, members and tasks
   const loadData = useCallback(async () => {
     if (!token || !effectiveAgencyId) return;
     setLoading(true);
@@ -118,7 +128,15 @@ function TasksContent() {
         // ignore
       }
 
-      // 2. Fetch all agency tasks (up to 200)
+      // 2. Fetch agency members for assigning
+      try {
+        const memberList = (await agencyApi.listMembers(effectiveAgencyId, token)) as AgencyMember[];
+        setMembers(memberList || []);
+      } catch (e) {
+        console.error("Failed to load agency members", e);
+      }
+
+      // 3. Fetch all agency tasks (up to 200)
       const params: Record<string, string> = { limit: "200" };
       if (selectedClientId !== "all") {
         params.client_id = selectedClientId;
@@ -142,17 +160,44 @@ function TasksContent() {
     if (!token || !effectiveAgencyId) return;
     setUpdatingTaskId(taskId);
     try {
-      const updated = (await taskApi.update(
+      await taskApi.update(
         effectiveAgencyId,
         taskId,
         { status: newStatus },
         token
-      )) as Task;
+      );
 
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
       window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Failed to update task status." });
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  // Reassign task
+  const handleUpdateAssignee = async (taskId: string, newAssigneeId: string | null) => {
+    if (!token || !effectiveAgencyId) return;
+    setUpdatingTaskId(taskId);
+    try {
+      await taskApi.update(
+        effectiveAgencyId,
+        taskId,
+        { assignee_id: newAssigneeId },
+        token
+      );
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, assignee_id: newAssigneeId } : t))
+      );
+      setNotification({
+        type: "success",
+        text: newAssigneeId ? "Task reassigned successfully." : "Task marked as unassigned.",
+      });
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to update assignee." });
     } finally {
       setUpdatingTaskId(null);
     }
@@ -164,6 +209,14 @@ function TasksContent() {
     if (selectedStage !== "all") {
       if ((t.task_type || "").toLowerCase() !== selectedStage.toLowerCase()) {
         return false;
+      }
+    }
+    // Assignee filter
+    if (selectedAssigneeId !== "all") {
+      if (selectedAssigneeId === "unassigned") {
+        if (t.assignee_id) return false;
+      } else {
+        if (t.assignee_id !== selectedAssigneeId) return false;
       }
     }
     // Search query
@@ -344,6 +397,23 @@ function TasksContent() {
               ))}
             </select>
           )}
+
+          {/* Assignee Filter */}
+          {members.length > 0 && (
+            <select
+              value={selectedAssigneeId}
+              onChange={(e) => setSelectedAssigneeId(e.target.value)}
+              className="bg-slate-50 text-xs font-bold text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 focus:outline-none"
+            >
+              <option value="all">All Assignees ({members.length})</option>
+              <option value="unassigned">Unassigned Only</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* View Switcher: Kanban vs List */}
@@ -465,23 +535,45 @@ function TasksContent() {
                           )}
                         </div>
 
-                        {/* Status Transition Selector */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-[10px] font-semibold text-slate-400">Move stage:</span>
-                          <select
-                            value={t.status}
-                            disabled={updatingTaskId === t.id}
-                            onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
-                            className="text-[10px] font-bold bg-slate-50 text-slate-700 px-2 py-1 rounded-md border border-slate-200 focus:outline-none focus:border-purple-600"
-                          >
-                            <option value="backlog">Backlog</option>
-                            <option value="todo">To Do</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="internal_review">Internal Review</option>
-                            <option value="client_review">Client Review</option>
-                            <option value="approved">Approved</option>
-                            <option value="done">Done</option>
-                          </select>
+                        {/* Assignee & Status Transition Selectors */}
+                        <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                              <User className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>Assign:</span>
+                            </span>
+                            <select
+                              value={t.assignee_id || ""}
+                              disabled={updatingTaskId === t.id}
+                              onChange={(e) => handleUpdateAssignee(t.id, e.target.value || null)}
+                              className="text-[10px] font-bold bg-slate-50 text-slate-800 px-2 py-1 rounded-md border border-slate-200 focus:outline-none focus:border-purple-600 max-w-[130px] truncate"
+                            >
+                              <option value="">Unassigned</option>
+                              {members.map((m) => (
+                                <option key={m.user_id} value={m.user_id}>
+                                  {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-semibold text-slate-400">Move stage:</span>
+                            <select
+                              value={t.status}
+                              disabled={updatingTaskId === t.id}
+                              onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
+                              className="text-[10px] font-bold bg-slate-50 text-slate-700 px-2 py-1 rounded-md border border-slate-200 focus:outline-none focus:border-purple-600 max-w-[130px]"
+                            >
+                              <option value="backlog">Backlog</option>
+                              <option value="todo">To Do</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="internal_review">Internal Review</option>
+                              <option value="client_review">Client Review</option>
+                              <option value="approved">Approved</option>
+                              <option value="done">Done</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -500,6 +592,7 @@ function TasksContent() {
                 <th className="py-3 px-4">Task Name</th>
                 <th className="py-3 px-4">Stage</th>
                 <th className="py-3 px-4">Priority</th>
+                <th className="py-3 px-4">Assignee</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Quick Transition</th>
               </tr>
@@ -533,6 +626,21 @@ function TasksContent() {
                   </td>
                   <td className="py-3 px-4">{getStageBadge(t.task_type)}</td>
                   <td className="py-3 px-4">{getPriorityBadge(t.priority)}</td>
+                  <td className="py-3 px-4">
+                    <select
+                      value={t.assignee_id || ""}
+                      disabled={updatingTaskId === t.id}
+                      onChange={(e) => handleUpdateAssignee(t.id, e.target.value || null)}
+                      className="text-xs font-semibold bg-slate-50 text-slate-800 px-2 py-1 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-600 max-w-[150px] truncate"
+                    >
+                      <option value="">Unassigned</option>
+                      {members.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="py-3 px-4">
                     <span className="capitalize font-bold text-slate-700">{t.status.replace("_", " ")}</span>
                   </td>

@@ -70,6 +70,9 @@ export default function EmployeeWorkspacePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTaskType, setSelectedTaskType] = useState<string>("all");
   const [todayStr, setTodayStr] = useState<string>("");
+  const [viewScope, setViewScope] = useState<"my" | "all">("my");
+
+  const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(currentMembership?.role || "");
 
   useEffect(() => {
     setTodayStr(new Date().toISOString().split("T")[0]);
@@ -79,17 +82,18 @@ export default function EmployeeWorkspacePage() {
     if (!token || !effectiveAgencyId) return;
     setLoading(true);
     try {
-      const myTaskList = (await taskApi.list(effectiveAgencyId, token, {
-        my_tasks: true,
-        limit: "100",
-      })) as TaskItem[];
+      const params: Record<string, string | boolean> = { limit: "100" };
+      if (viewScope === "my") {
+        params.my_tasks = true;
+      }
+      const myTaskList = (await taskApi.list(effectiveAgencyId, token, params)) as TaskItem[];
       setTasks(myTaskList || []);
     } catch (err) {
       console.error("Failed to load employee tasks:", err);
     } finally {
       setLoading(false);
     }
-  }, [token, effectiveAgencyId]);
+  }, [token, effectiveAgencyId, viewScope]);
 
   useEffect(() => {
     loadMyTasks();
@@ -206,6 +210,31 @@ export default function EmployeeWorkspacePage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {isManagerOrOwner && (
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                onClick={() => setViewScope("my")}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  viewScope === "my"
+                    ? "bg-white text-purple-700 shadow-2xs font-extrabold"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                My Tasks
+              </button>
+              <button
+                onClick={() => setViewScope("all")}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  viewScope === "all"
+                    ? "bg-white text-purple-700 shadow-2xs font-extrabold"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                All Agency Tasks
+              </button>
+            </div>
+          )}
+
           <button
             onClick={loadMyTasks}
             disabled={loading}
@@ -460,12 +489,30 @@ export default function EmployeeWorkspacePage() {
           </div>
           <h3 className="text-base font-bold text-slate-900">No tasks matching this view</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            {activeTab === "revisions"
+            {viewScope === "my" && tasks.length === 0 && isManagerOrOwner
+              ? "You currently have 0 tasks assigned directly to your account. Switch to 'All Agency Tasks' or assign tasks to yourself on the Kanban board."
+              : activeTab === "revisions"
               ? "Great job! You have zero revision requests pending."
               : activeTab === "action_required"
               ? "All clear! You have no tasks waiting for execution right now."
               : "No tasks found with the selected filters."}
           </p>
+          {viewScope === "my" && tasks.length === 0 && isManagerOrOwner && (
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <button
+                onClick={() => setViewScope("all")}
+                className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 transition-colors shadow-2xs"
+              >
+                View All Agency Tasks
+              </button>
+              <Link
+                href="/tasks"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors shadow-2xs"
+              >
+                Go to Kanban Board
+              </Link>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

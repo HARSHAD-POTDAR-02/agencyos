@@ -67,6 +67,13 @@ interface ReviewComment {
   created_at: string;
 }
 
+interface AgencyMember {
+  user_id: string;
+  role: string;
+  user_full_name?: string | null;
+  user_email?: string | null;
+}
+
 interface TaskDetail {
   id: string;
   deliverable_id: string;
@@ -135,6 +142,8 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
   const [reviewDecision, setReviewDecision] = useState<"approved" | "changes_requested">("approved");
   const [feedbackNotes, setFeedbackNotes] = useState("");
   const [reviewing, setReviewing] = useState(false);
+  const [members, setMembers] = useState<AgencyMember[]>([]);
+  const [reassigning, setReassigning] = useState(false);
 
   // Preview State
   const [activePreviewVersion, setActivePreviewVersion] = useState<SubmissionVersion | null>(null);
@@ -146,6 +155,13 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
     setLoading(true);
     setError(null);
     try {
+      try {
+        const memberList = (await agencyApi.listMembers(effectiveAgencyId, token)) as AgencyMember[];
+        setMembers(memberList || []);
+      } catch (e) {
+        // ignore
+      }
+
       const data = (await taskApi.get(effectiveAgencyId, taskId, token)) as TaskDetail;
       setTask(data);
       // Determine default submission mode based on task_type
@@ -162,6 +178,35 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
       setLoading(false);
     }
   }, [token, effectiveAgencyId, taskId]);
+
+  const handleReassign = async (newAssigneeId: string | null) => {
+    if (!token || !effectiveAgencyId || !task) return;
+    setReassigning(true);
+    try {
+      await taskApi.update(
+        effectiveAgencyId,
+        task.id,
+        { assignee_id: newAssigneeId || null },
+        token
+      );
+      const selectedMember = members.find((m) => m.user_id === newAssigneeId);
+      setTask((prev) =>
+        prev
+          ? {
+              ...prev,
+              assignee_id: newAssigneeId,
+              assignee_name: selectedMember?.user_full_name || selectedMember?.user_email?.split("@")[0] || null,
+              assignee_role: selectedMember?.role || null,
+            }
+          : prev
+      );
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      setError(err?.message || "Failed to reassign task");
+    } finally {
+      setReassigning(false);
+    }
+  };
 
   useEffect(() => {
     loadTask();
@@ -320,10 +365,26 @@ export default function TaskWorkspacePage({ params }: { params: Promise<{ id: st
 
           {/* Top Actions: Assignee, Due Date & Navigation */}
           <div className="flex items-center gap-3">
-            <div className="bg-white border border-slate-200/80 rounded-xl px-3.5 py-2 flex items-center gap-2 text-xs shadow-2xs">
-              <User className="w-3.5 h-3.5 text-purple-600" />
+            <div className="bg-white border border-slate-200/80 rounded-xl px-3.5 py-1.5 flex items-center gap-2 text-xs shadow-2xs">
+              <User className="w-3.5 h-3.5 text-purple-600 shrink-0" />
               <span className="text-slate-400">Assigned:</span>
-              <span className="font-bold text-slate-800">{task.assignee_name || "Unassigned"}</span>
+              {isManagerOrOwner ? (
+                <select
+                  value={task.assignee_id || ""}
+                  disabled={reassigning}
+                  onChange={(e) => handleReassign(e.target.value || null)}
+                  className="bg-slate-50 text-xs font-bold text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-600 cursor-pointer"
+                >
+                  <option value="">Unassigned</option>
+                  {members.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-bold text-slate-800">{task.assignee_name || "Unassigned"}</span>
+              )}
             </div>
 
             {task.due_date && (

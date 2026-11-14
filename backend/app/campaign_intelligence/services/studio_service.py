@@ -27,6 +27,7 @@ from app.models.studio_artifact import (
     StudioExport,
 )
 from app.models.task import Task, TaskPriority, TaskStatus
+from app.models.user import Membership, RoleEnum
 
 logger = logging.getLogger(__name__)
 
@@ -489,7 +490,25 @@ async def export_artifact_to_production(
     checksum = hashlib.sha256(brief_bytes).hexdigest()
     file_size = len(brief_bytes)
 
-    # 10. Generate stage-based tasks matching the tasks kanban board
+    # 10. Resolve registered agency specialists by role for automatic role-based assignment
+    mem_stmt = (
+        select(Membership)
+        .where(Membership.agency_id == agency_id, Membership.is_active == True)
+        .order_by(Membership.created_at.asc())
+    )
+    mem_res = await db.execute(mem_stmt)
+    memberships = mem_res.scalars().all()
+    specialist_map: dict[str, uuid.UUID] = {}
+    for m in memberships:
+        role_key = m.role.value if hasattr(m.role, "value") else str(m.role)
+        if role_key not in specialist_map:
+            specialist_map[role_key] = m.user_id
+
+    writer_id = assignee_id or specialist_map.get("writer")
+    editor_id = specialist_map.get("editor")
+    designer_id = specialist_map.get("designer")
+
+    # 11. Generate stage-based tasks matching the tasks kanban board
     fmt_lower = (fmt or "").lower()
     art_type_lower = (artifact.artifact_type or "").lower()
 
@@ -504,7 +523,7 @@ async def export_artifact_to_production(
             task_type="scripting",
             status=TaskStatus.todo,
             priority=TaskPriority.high,
-            assignee_id=assignee_id,
+            assignee_id=writer_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -515,6 +534,7 @@ async def export_artifact_to_production(
             task_type="editing",
             status=TaskStatus.backlog,
             priority=TaskPriority.high,
+            assignee_id=designer_id or editor_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -540,7 +560,7 @@ async def export_artifact_to_production(
             task_type="scripting",
             status=TaskStatus.todo,
             priority=TaskPriority.high,
-            assignee_id=assignee_id,
+            assignee_id=writer_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -551,6 +571,7 @@ async def export_artifact_to_production(
             task_type="filming",
             status=TaskStatus.backlog,
             priority=TaskPriority.high,
+            assignee_id=editor_id or writer_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -561,6 +582,7 @@ async def export_artifact_to_production(
             task_type="editing",
             status=TaskStatus.backlog,
             priority=TaskPriority.medium,
+            assignee_id=editor_id,
             due_date=default_due_date,
             notes="Cut raw footage to match scene durations and pacing; sync sound effects and voiceovers as specified in storyboard.",
         )
@@ -586,7 +608,7 @@ async def export_artifact_to_production(
             task_type="scripting",
             status=TaskStatus.todo,
             priority=TaskPriority.high,
-            assignee_id=assignee_id,
+            assignee_id=writer_id,
             due_date=default_due_date,
             notes=task_notes,
         )
@@ -597,6 +619,7 @@ async def export_artifact_to_production(
             task_type="filming",
             status=TaskStatus.backlog,
             priority=TaskPriority.medium,
+            assignee_id=editor_id or designer_id,
             due_date=default_due_date,
             notes=task_notes,
         )
