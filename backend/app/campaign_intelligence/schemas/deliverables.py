@@ -21,7 +21,11 @@ class ReelScene(BaseModel):
         if not isinstance(data, dict):
             return data
         d = dict(data)
-        d.setdefault("scene_number", d.get("scene") or 1)
+        sn = d.get("scene_number") if d.get("scene_number") is not None else d.get("scene", 1)
+        try:
+            d["scene_number"] = max(1, int(sn or 1))
+        except Exception:
+            d["scene_number"] = 1
         d.setdefault("timestamp_range", d.get("timestamp") or "0:00 - 0:03")
         if not d.get("visual_action"):
             d["visual_action"] = d.get("visual") or d.get("action") or d.get("description") or "Camera angle on subject"
@@ -44,13 +48,27 @@ class CarouselSlide(BaseModel):
         if not isinstance(data, dict):
             return data
         d = dict(data)
-        d.setdefault("slide_number", d.get("slide") or 1)
+        sn = d.get("slide_number") if d.get("slide_number") is not None else d.get("slide", 1)
+        try:
+            d["slide_number"] = max(1, int(sn or 1))
+        except Exception:
+            d["slide_number"] = 1
         if not d.get("headline"):
             d["headline"] = d.get("title") or d.get("header") or "Key Takeaway"
         if not d.get("body_copy"):
             d["body_copy"] = d.get("content") or d.get("copy") or d.get("caption") or d.get("text") or ""
         if not d.get("visual_layout"):
             d["visual_layout"] = d.get("visual") or d.get("layout") or d.get("image") or d.get("visual_concept") or "Clean brand aesthetic with bold typography"
+
+        st = str(d.get("slide_type") or "content").lower().strip()
+        if st in ("cover", "hook", "title", "intro", "first"):
+            d["slide_type"] = "cover"
+        elif st in ("cta", "call_to_action", "action", "outro", "end", "last"):
+            d["slide_type"] = "cta"
+        elif st in ("takeaway", "summary", "conclusion", "recap"):
+            d["slide_type"] = "takeaway"
+        else:
+            d["slide_type"] = "content"
         return d
 
 
@@ -95,7 +113,45 @@ class DeliverablePlan(BaseModel):
         if not d.get("platform"):
             d["platform"] = "instagram" if "reel" in d["deliverable_type"] else "linkedin"
         d["platform"] = str(d["platform"]).lower()
-        d.setdefault("planned_week", d.get("week") or 1)
+
+        # Sanitize non-UUID deliverable_id (e.g. LLM generates "deliv-001")
+        raw_deliv_id = d.get("deliverable_id")
+        if raw_deliv_id is not None:
+            try:
+                uuid.UUID(str(raw_deliv_id))
+            except Exception:
+                d["deliverable_id"] = None
+
+        # Sanitize non-UUID scope_item_id (e.g. LLM generates "scope-001")
+        raw_scope_id = d.get("scope_item_id")
+        if raw_scope_id is not None:
+            try:
+                uuid.UUID(str(raw_scope_id))
+            except Exception:
+                d["scope_item_id"] = None
+
+        # Sanitize planned_week (clamp between 1 and 5)
+        try:
+            week_raw = d.get("planned_week") if d.get("planned_week") is not None else d.get("week", 1)
+            week_val = int(week_raw or 1)
+            if week_val < 1:
+                week_val = 1
+            elif week_val > 5:
+                week_val = 5
+            d["planned_week"] = week_val
+        except Exception:
+            d["planned_week"] = 1
+
+        # Sanitize planned_day (ensure >= 1)
+        try:
+            day_raw = d.get("planned_day") if d.get("planned_day") is not None else d.get("day", 1)
+            day_val = int(day_raw or 1)
+            d["planned_day"] = max(1, day_val)
+        except Exception:
+            d["planned_day"] = 1
+
+        if not d.get("title") or len(str(d.get("title")).strip()) < 3:
+            d["title"] = d.get("primary_hook") or d.get("headline") or f"Deliverable Day {d.get('planned_day', 1)}"
         if not d.get("strategic_angle"):
             d["strategic_angle"] = d.get("pillar") or d.get("angle") or "Core Brand Theme"
         if not d.get("primary_hook"):

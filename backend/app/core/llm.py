@@ -233,10 +233,9 @@ def _is_transient_error(exc: Exception) -> bool:
 
 
 MODEL_CASCADE = [
-    "nvidia/nemotron-3.5-lightning-30b-a3b",
     "qwen/qwen3.8-27b",
     "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
+    "nvidia/nemotron-3.5-bolt-e4b",
 ]
 
 

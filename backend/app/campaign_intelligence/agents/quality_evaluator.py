@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.campaign_intelligence.orchestration.state import CampaignState
 from app.campaign_intelligence.schemas.brand import BrandContext
@@ -30,11 +30,41 @@ logger = logging.getLogger(__name__)
 
 class SemanticAuditIssue(BaseModel):
     """Structured issue returned by semantic LLM audit."""
-    deliverable_index: int = Field(description="Index (0-based) of the affected deliverable")
-    category: Literal["prohibited_claim", "brand_compliance", "strategic_alignment"]
-    severity: Literal["critical", "warning", "info"]
+    deliverable_index: int = Field(default=0, description="Index (0-based) of the affected deliverable")
+    category: Literal["prohibited_claim", "brand_compliance", "strategic_alignment"] = "brand_compliance"
+    severity: Literal["critical", "warning", "info"] = "warning"
     issue_description: str
     remediation_instruction: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_issue(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+
+        sev = str(d.get("severity") or "warning").lower().strip()
+        if sev in ("critical", "high", "urgent", "blocker"):
+            d["severity"] = "critical"
+        elif sev in ("info", "low", "minor", "suggestion"):
+            d["severity"] = "info"
+        else:
+            d["severity"] = "warning"
+
+        cat = str(d.get("category") or "brand_compliance").lower().strip()
+        if "claim" in cat or "prohibit" in cat:
+            d["category"] = "prohibited_claim"
+        elif "strateg" in cat or "align" in cat:
+            d["category"] = "strategic_alignment"
+        else:
+            d["category"] = "brand_compliance"
+
+        try:
+            d["deliverable_index"] = max(0, int(d.get("deliverable_index") or 0))
+        except Exception:
+            d["deliverable_index"] = 0
+
+        return d
 
 
 class SemanticAuditOutput(BaseModel):
