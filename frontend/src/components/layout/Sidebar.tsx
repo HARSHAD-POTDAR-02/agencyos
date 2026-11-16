@@ -27,7 +27,18 @@ import { agencyApi, taskApi, approvalApi } from "@/lib/api";
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, token, activeAgencyId, agencies, setActiveAgencyId, createAgency, logout } = useAuth();
+  const {
+    user,
+    token,
+    activeAgencyId,
+    agencies,
+    currentRole,
+    isOwnerOrManager,
+    isSpecialist,
+    setActiveAgencyId,
+    createAgency,
+    logout,
+  } = useAuth();
   const [showAgencyModal, setShowAgencyModal] = useState(false);
   const [newAgencyName, setNewAgencyName] = useState("");
   const [creatingAgency, setCreatingAgency] = useState(false);
@@ -82,62 +93,90 @@ export function Sidebar() {
     };
   }, [fetchBadgeCounts]);
 
-  const navigation = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      badge: null,
-    },
-    {
-      name: "Clients",
-      href: "/clients",
-      icon: Users,
-      badge: null,
-    },
-    {
-      name: "Team & Specialists",
-      href: "/team",
-      icon: UserCheck,
-      badge: null,
-    },
-    {
-      name: "Campaign Studio",
-      href: "/campaigns",
-      icon: Sparkles,
-      badge: "AI",
-    },
-    {
-      name: "Campaign Plans",
-      href: "/campaign-plans",
-      icon: CalendarDays,
-      badge: null,
-    },
-    {
-      name: "My Workspace",
-      href: "/workspace",
-      icon: Briefcase,
-      badge: null,
-    },
-    {
-      name: "Tasks",
-      href: "/tasks",
-      icon: CheckSquare,
-      badge: taskCount !== null ? String(taskCount) : null,
-    },
-    {
-      name: "Approvals",
-      href: "/approvals",
-      icon: FileCheck2,
-      badge: approvalCount !== null ? String(approvalCount) : null,
-    },
-    {
-      name: "Analytics",
-      href: "/reports",
-      icon: BarChart3,
-      badge: null,
-    },
-  ];
+  // Dynamic persona navigation based on logged-in role
+  const navigation = isSpecialist
+    ? [
+        {
+          name: "My Tasks & Workbench",
+          href: "/tasks",
+          icon: CheckSquare,
+          badge: taskCount !== null ? String(taskCount) : null,
+        },
+        {
+          name: "My Workspace",
+          href: "/workspace",
+          icon: Briefcase,
+          badge: null,
+        },
+        {
+          name: "Campaign Plans & Briefs",
+          href: "/campaign-plans",
+          icon: CalendarDays,
+          badge: null,
+        },
+        {
+          name: "Review Submissions",
+          href: "/approvals",
+          icon: FileCheck2,
+          badge: approvalCount !== null ? String(approvalCount) : null,
+        },
+      ]
+    : [
+        {
+          name: "Dashboard",
+          href: "/dashboard",
+          icon: LayoutDashboard,
+          badge: null,
+        },
+        {
+          name: "Clients",
+          href: "/clients",
+          icon: Users,
+          badge: null,
+        },
+        {
+          name: "Team & Specialists",
+          href: "/team",
+          icon: UserCheck,
+          badge: null,
+        },
+        {
+          name: "Campaign Studio",
+          href: "/campaigns",
+          icon: Sparkles,
+          badge: "AI",
+        },
+        {
+          name: "Campaign Plans",
+          href: "/campaign-plans",
+          icon: CalendarDays,
+          badge: null,
+        },
+        {
+          name: "My Workspace",
+          href: "/workspace",
+          icon: Briefcase,
+          badge: null,
+        },
+        {
+          name: "Tasks",
+          href: "/tasks",
+          icon: CheckSquare,
+          badge: taskCount !== null ? String(taskCount) : null,
+        },
+        {
+          name: "Approvals",
+          href: "/approvals",
+          icon: FileCheck2,
+          badge: approvalCount !== null ? String(approvalCount) : null,
+        },
+        {
+          name: "Analytics",
+          href: "/reports",
+          icon: BarChart3,
+          badge: null,
+        },
+      ];
 
 
   const handleCreateAgency = async (e: React.FormEvent) => {
@@ -176,20 +215,32 @@ export function Sidebar() {
                 </span>
                 <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
               </div>
-              <p className="text-[11px] text-slate-400 font-medium capitalize flex items-center gap-1">
-                <Building2 className="w-3 h-3 text-slate-500" />
-                {currentAgency?.role ? `${currentAgency.role}` : "No Active Agency"}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {isSpecialist ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wide">
+                    {currentRole === "writer" ? "⚡ Scriptwriter" : currentRole === "editor" ? "🎬 Video Editor" : "🎨 Designer"}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wide">
+                    👑 {currentRole || "Owner"}
+                  </span>
+                )}
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {isSpecialist ? "Workbench" : "Executive"}
+                </span>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowAgencyModal(true)}
-            title="Create New Agency Workspace"
-            className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+          {!isSpecialist && (
+            <button
+              onClick={() => setShowAgencyModal(true)}
+              title="Create New Agency Workspace"
+              className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Agency Switcher if multiple */}
@@ -209,7 +260,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {agencies.length === 0 && (
+        {agencies.length === 0 && !isSpecialist && (
           <button
             onClick={() => setShowAgencyModal(true)}
             className="mt-3 w-full py-1.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
@@ -222,8 +273,13 @@ export function Sidebar() {
 
       {/* Main Navigation */}
       <div className="px-3 pt-4 pb-2">
-        <p className="px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
-          Main Menu
+        <p className="px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-widest flex items-center justify-between">
+          <span>{isSpecialist ? "⚡ Specialist Tools" : "Agency Management"}</span>
+          {isSpecialist && (
+            <span className="text-[9px] text-amber-400/90 font-mono font-bold uppercase bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+              Tasks Only
+            </span>
+          )}
         </p>
       </div>
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">

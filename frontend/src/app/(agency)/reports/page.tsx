@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { clientApi, publishingApi, MonthlyReport } from "@/lib/api";
 import {
@@ -52,9 +52,16 @@ const MONTHS = [
 ];
 
 function ReportsContent() {
-  const { token, activeAgencyId, agencies } = useAuth();
+  const router = useRouter();
+  const { token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!isLoading && isSpecialist) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, isSpecialist, router]);
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
@@ -172,6 +179,10 @@ function ReportsContent() {
   const monthName = MONTHS.find((m) => m.value === selectedMonth)?.label || "Month";
 
   const years = [currentYear, currentYear - 1, currentYear - 2];
+
+  if (!isLoading && isSpecialist) {
+    return null;
+  }
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none">

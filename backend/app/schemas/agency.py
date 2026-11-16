@@ -24,6 +24,7 @@ class AgencyOut(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    role: RoleEnum | None = None
 
 
 class MembershipOut(BaseModel):

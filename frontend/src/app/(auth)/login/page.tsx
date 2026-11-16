@@ -22,9 +22,12 @@ export default function LoginPage() {
 
     try {
       const res = await authApi.login({ email, password });
-      const loggedInUser = await login(res.access_token);
-      if (loggedInUser?.is_client) {
+      const authResult = await login(res.access_token);
+      if (authResult?.user?.is_client) {
         router.push("/portal");
+      } else if (authResult?.isSpecialist) {
+        // Specialists (Scriptwriters, Video Editors, Designers) land directly on their Task Workbench
+        router.push("/tasks");
       } else {
         router.push("/dashboard");
       }

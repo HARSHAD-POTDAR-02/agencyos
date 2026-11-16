@@ -278,8 +278,14 @@ function CampaignStudioContent() {
   const router = useRouter();
   const initialClientId = searchParams.get("clientId") || "";
 
-  const { token, activeAgencyId, agencies } = useAuth();
+  const { token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+
+  useEffect(() => {
+    if (!isLoading && isSpecialist) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, isSpecialist, router]);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState(initialClientId);
@@ -1043,6 +1049,10 @@ function CampaignStudioContent() {
     if (msg.agentPipeline) return true;
     return msg.agent_id === currentAgentId || !msg.agent_id;
   });
+
+  if (!isLoading && isSpecialist) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] w-full max-w-[1700px] mx-auto px-2 sm:px-4 py-2 overflow-hidden">

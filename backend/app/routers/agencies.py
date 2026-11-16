@@ -67,18 +67,22 @@ async def list_my_agencies(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[AgencyOut]:
-    """List all agencies the current user belongs to."""
+    """List all agencies the current user belongs to, with membership role."""
     from app.models.agency import Agency
     result = await db.execute(
-        select(Agency)
+        select(Agency, Membership.role)
         .join(Membership, Membership.agency_id == Agency.id)
         .where(
             Membership.user_id == current_user.id,
             Membership.is_active.is_(True),
         )
     )
-    agencies = result.scalars().all()
-    return [AgencyOut.model_validate(a) for a in agencies]
+    agencies_out: list[AgencyOut] = []
+    for agency, role in result.all():
+        out = AgencyOut.model_validate(agency)
+        out.role = role
+        agencies_out.append(out)
+    return agencies_out
 
 
 @router.get("/{agency_id}", response_model=AgencyOut)
@@ -307,7 +311,14 @@ async def get_agency_badge_counts(
 @router.get("/{agency_id}/dashboard-stats", response_model=DashboardStatsOut)
 async def get_agency_dashboard_stats(
     agency_id: uuid.UUID,
-    _: Membership = Depends(require_agency_member),
+    _: Membership = Depends(
+        require_role(
+            RoleEnum.owner,
+            RoleEnum.manager,
+            RoleEnum.account_manager,
+            RoleEnum.strategist,
+        )
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> DashboardStatsOut:
     """Get live aggregated dashboard metrics and feed data for the agency."""

@@ -109,9 +109,15 @@ function ClientWorkspaceContent() {
   const params = useParams();
   const router = useRouter();
   const clientId = params.id as string;
-  const { token, activeAgencyId, agencies } = useAuth();
+  const { token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
 
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+
+  useEffect(() => {
+    if (!isLoading && isSpecialist) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, isSpecialist, router]);
 
   const [client, setClient] = useState<Client | null>(null);
   const [activeTab, setActiveTab] = useState<"brand" | "contracts" | "campaigns" | "reviewers" | "social" | "reports">("brand");
@@ -193,7 +199,10 @@ function ClientWorkspaceContent() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   const loadData = useCallback(async () => {
-    if (!token || !effectiveAgencyId || !clientId) return;
+    if (!token || !effectiveAgencyId || !clientId || isSpecialist) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       // 1. Fetch Client Details
@@ -473,6 +482,10 @@ function ClientWorkspaceContent() {
       setCreatingContract(false);
     }
   };
+
+  if (!isLoading && isSpecialist) {
+    return null;
+  }
 
   if (loading) {
     return (

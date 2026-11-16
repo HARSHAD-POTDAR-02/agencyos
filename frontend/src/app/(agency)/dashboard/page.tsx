@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   Users, 
   CheckCircle2, 
@@ -61,7 +62,8 @@ function formatCurrencyINR(amount: number): string {
 }
 
 export default function DashboardPage() {
-  const { user, token, activeAgencyId, agencies } = useAuth();
+  const router = useRouter();
+  const { user, token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +71,14 @@ export default function DashboardPage() {
 
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
+  useEffect(() => {
+    if (!isLoading && isSpecialist) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, isSpecialist, router]);
+
   const fetchStats = useCallback(async () => {
-    if (!token || !effectiveAgencyId) return;
+    if (!token || !effectiveAgencyId || isSpecialist) return;
     try {
       const data = await agencyApi.dashboardStats(effectiveAgencyId, token);
       setStats(data);
@@ -107,6 +115,10 @@ export default function DashboardPage() {
   const tasksPercent = stats && stats.tasks_total > 0
     ? Math.round(((stats.tasks_total - stats.tasks_remaining) / stats.tasks_total) * 100)
     : 0;
+
+  if (!isLoading && isSpecialist) {
+    return null;
+  }
 
   return (
     <main className="p-8 space-y-8 max-w-7xl mx-auto">

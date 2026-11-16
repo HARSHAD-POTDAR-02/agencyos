@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.dependencies import get_current_user, require_agency_member
+from app.dependencies import get_current_user, require_agency_member, require_role
 from app.models.approval import Approval
 from app.models.brand_profile import BrandProfile
 from app.models.campaign import Campaign
@@ -122,7 +122,7 @@ async def update_client(
 async def delete_client(
     agency_id: uuid.UUID,
     client_id: uuid.UUID,
-    _: Membership = Depends(require_agency_member),
+    _: Membership = Depends(require_role(RoleEnum.owner, RoleEnum.manager)),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Delete a client workspace and cascade delete all their campaigns, contracts, and deliverables."""
@@ -248,7 +248,14 @@ async def upsert_brand_profile(
 async def list_contracts(
     agency_id: uuid.UUID,
     client_id: uuid.UUID,
-    _: Membership = Depends(require_agency_member),
+    _: Membership = Depends(
+        require_role(
+            RoleEnum.owner,
+            RoleEnum.manager,
+            RoleEnum.account_manager,
+            RoleEnum.strategist,
+        )
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[ContractOut]:
     """List all retainer contracts and their scope items for a client."""
@@ -265,7 +272,14 @@ async def create_contract(
     agency_id: uuid.UUID,
     client_id: uuid.UUID,
     payload: ContractCreate,
-    _: Membership = Depends(require_agency_member),
+    _: Membership = Depends(
+        require_role(
+            RoleEnum.owner,
+            RoleEnum.manager,
+            RoleEnum.account_manager,
+            RoleEnum.strategist,
+        )
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> ContractOut:
     """Create a new contract and associated monthly scope items."""

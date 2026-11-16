@@ -17,13 +17,22 @@ export interface AgencyMembership {
   agency_name: string;
 }
 
+export interface LoginResult {
+  user: User;
+  role: string;
+  isSpecialist: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
   activeAgencyId: string | null;
   agencies: AgencyMembership[];
+  currentRole: string;
+  isOwnerOrManager: boolean;
+  isSpecialist: boolean;
   isLoading: boolean;
-  login: (token: string) => Promise<User | null>;
+  login: (token: string) => Promise<LoginResult | null>;
   logout: () => void;
   setActiveAgencyId: (id: string) => void;
   createAgency: (name: string) => Promise<string>;
@@ -35,6 +44,9 @@ const AuthContext = createContext<AuthContextType>({
   token: null,
   activeAgencyId: null,
   agencies: [],
+  currentRole: "owner",
+  isOwnerOrManager: true,
+  isSpecialist: false,
   isLoading: true,
   login: async () => null,
   logout: () => {},
@@ -50,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [activeAgencyId, setActiveAgencyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchAgencies = async (authToken: string) => {
+  const fetchAgencies = async (authToken: string): Promise<AgencyMembership[]> => {
     try {
       const data = (await agencyApi.listMine(authToken)) as any[];
       const mapped = (data || [])
@@ -71,19 +83,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem("agencyos_active_agency", mapped[0].agency_id);
         }
       }
+      return mapped;
     } catch (e) {
       console.error("Failed to fetch agencies", e);
+      return [];
     }
   };
 
-  const login = async (newToken: string): Promise<User | null> => {
+  const login = async (newToken: string): Promise<LoginResult | null> => {
     localStorage.setItem("agencyos_token", newToken);
     setToken(newToken);
     try {
       const userData = (await authApi.me(newToken)) as User;
       setUser(userData);
-      await fetchAgencies(newToken);
-      return userData;
+      const userAgencies = await fetchAgencies(newToken);
+      const stored = localStorage.getItem("agencyos_active_agency");
+      const activeAgency = userAgencies.find((a) => a.agency_id === stored) || userAgencies[0];
+      if (activeAgency) {
+        setActiveAgencyId(activeAgency.agency_id);
+        localStorage.setItem("agencyos_active_agency", activeAgency.agency_id);
+      }
+      const role = (activeAgency?.role || "owner").toLowerCase();
+      const isSpec = ["writer", "editor", "designer"].includes(role);
+      return { user: userData, role, isSpecialist: isSpec };
     } catch (e) {
       console.error("Login verification failed", e);
       logout();
@@ -126,6 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+  const currentAgency = agencies.find((a) => a.agency_id === (activeAgencyId || effectiveAgencyId));
+  const currentRole = (currentAgency?.role || "owner").toLowerCase();
+  const isOwnerOrManager = ["owner", "manager", "account_manager"].includes(currentRole);
+  const isSpecialist = ["writer", "editor", "designer"].includes(currentRole);
+
   return (
     <AuthContext.Provider
       value={{
@@ -133,6 +161,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         activeAgencyId,
         agencies,
+        currentRole,
+        isOwnerOrManager,
+        isSpecialist,
         isLoading,
         login,
         logout,

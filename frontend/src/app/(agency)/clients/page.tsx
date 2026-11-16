@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { clientApi } from "@/lib/api";
 import { 
@@ -49,7 +50,8 @@ interface Client {
 }
 
 export default function ClientsPage() {
-  const { token, activeAgencyId, agencies } = useAuth();
+  const router = useRouter();
+  const { token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,8 +73,14 @@ export default function ClientsPage() {
 
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
+  useEffect(() => {
+    if (!isLoading && isSpecialist) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, isSpecialist, router]);
+
   const loadClients = useCallback(async () => {
-    if (!token || !effectiveAgencyId) {
+    if (!token || !effectiveAgencyId || isSpecialist) {
       setLoading(false);
       return;
     }
@@ -195,6 +203,10 @@ export default function ClientsPage() {
       </span>
     );
   };
+
+  if (!isLoading && isSpecialist) {
+    return null;
+  }
 
   return (
     <main className="p-8 space-y-6 max-w-7xl mx-auto">

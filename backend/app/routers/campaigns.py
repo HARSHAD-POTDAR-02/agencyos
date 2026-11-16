@@ -51,7 +51,7 @@ from app.campaign_intelligence.specialists import (
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.llm import get_llm, invoke_structured_llm
-from app.dependencies import require_agency_member
+from app.dependencies import require_agency_member, require_role
 from app.models.brand_profile import BrandProfile
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.client import Client, ClientStatus
@@ -64,7 +64,7 @@ from app.models.studio_artifact import (
     StudioArtifactVersion,
 )
 from app.models.task import Task, TaskPriority, TaskStatus
-from app.models.user import Membership
+from app.models.user import Membership, RoleEnum
 from app.schemas.campaign import (
     CampaignCreate,
     CampaignOut,
@@ -1919,7 +1919,13 @@ async def convert_campaign_to_tasks(
 async def delete_campaign(
     agency_id: uuid.UUID,
     campaign_id: uuid.UUID,
-    _: Membership = Depends(require_agency_member),
+    _: Membership = Depends(
+        require_role(
+            RoleEnum.owner,
+            RoleEnum.manager,
+            RoleEnum.account_manager,
+        )
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Delete a campaign and cascade delete its deliverables and tasks."""

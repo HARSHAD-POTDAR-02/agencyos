@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   Users, 
   UserPlus, 
@@ -90,7 +91,8 @@ const ROLE_CONFIG: Record<string, { label: string; description: string; icon: an
 };
 
 export default function TeamManagementPage() {
-  const { user, token, activeAgencyId, agencies } = useAuth();
+  const router = useRouter();
+  const { user, token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const currentMembership = agencies.find((a) => a.agency_id === effectiveAgencyId);
   const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(currentMembership?.role || "owner");
@@ -100,6 +102,12 @@ export default function TeamManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (!isLoading && isSpecialist) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, isSpecialist, router]);
 
   // Add Member Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -114,7 +122,10 @@ export default function TeamManagementPage() {
 
   // Load team members
   const loadMembers = useCallback(async () => {
-    if (!token || !effectiveAgencyId) return;
+    if (!token || !effectiveAgencyId || isSpecialist) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -222,6 +233,10 @@ export default function TeamManagementPage() {
   // Specialist counts
   const specialistsCount = members.filter((m) => ["writer", "editor", "designer"].includes(m.role)).length;
   const managersCount = members.filter((m) => ["owner", "manager", "strategist", "account_manager"].includes(m.role)).length;
+
+  if (!isLoading && isSpecialist) {
+    return null;
+  }
 
   return (
     <main className="p-8 space-y-8 max-w-7xl mx-auto">

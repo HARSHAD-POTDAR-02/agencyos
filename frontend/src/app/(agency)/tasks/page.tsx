@@ -100,7 +100,7 @@ const KANBAN_COLUMNS = [
 ];
 
 function TasksContent() {
-  const { token, activeAgencyId, agencies } = useAuth();
+  const { user, token, activeAgencyId, agencies, currentRole, isSpecialist, isOwnerOrManager } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -114,6 +114,13 @@ function TasksContent() {
   const [loading, setLoading] = useState(true);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Set default assignee filter to current user for specialists
+  useEffect(() => {
+    if (isSpecialist && user?.id && selectedAssigneeId === "all") {
+      setSelectedAssigneeId(user.id);
+    }
+  }, [isSpecialist, user?.id]);
 
   // Load clients, members and tasks
   const loadData = useCallback(async () => {
@@ -313,15 +320,69 @@ function TasksContent() {
             <Briefcase className="w-3.5 h-3.5 text-purple-400" />
             <span>My Workspace</span>
           </Link>
-          <Link
-            href="/campaigns"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Sparkles className="w-4 h-4 text-purple-200" />
-            <span>Generate Next Sprint ✨</span>
-          </Link>
+          {!isSpecialist && (
+            <Link
+              href="/campaigns"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Sparkles className="w-4 h-4 text-purple-200" />
+              <span>Generate Next Sprint ✨</span>
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* Specialist Focus Banner */}
+      {isSpecialist && (
+        <div className="bg-gradient-to-r from-slate-900 via-purple-950/70 to-slate-900 border border-purple-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300 text-lg shadow-inner">
+              {currentRole === "writer" ? "⚡" : currentRole === "editor" ? "🎬" : "🎨"}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">Specialist Execution Workbench</h2>
+                <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  {currentRole === "writer" ? "Scriptwriter / Copywriter" : currentRole === "editor" ? "Video Editor" : currentRole === "designer" ? "Graphic Designer" : currentRole}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300/90 mt-0.5">
+                Focused creative mode: View your assigned deliverables, review hooks & scenes, and submit work for internal review.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-stretch sm:self-auto bg-slate-900/80 p-1.5 rounded-xl border border-white/10 shrink-0">
+            <button
+              onClick={() => setSelectedAssigneeId(user?.id || "all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                selectedAssigneeId === user?.id
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>⚡ My Assigned Tasks</span>
+              {user && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/30 text-white">
+                  {tasks.filter((t) => t.assignee_id === user.id).length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setSelectedAssigneeId("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                selectedAssigneeId === "all"
+                  ? "bg-slate-800 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>👥 All Team Tasks</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/30 text-slate-300">
+                {tasks.length}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -409,7 +470,7 @@ function TasksContent() {
               <option value="unassigned">Unassigned Only</option>
               {members.map((m) => (
                 <option key={m.user_id} value={m.user_id}>
-                  {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                  {m.user_id === user?.id ? `⚡ ${m.user_full_name || m.user_email?.split("@")[0]} (Me)` : `${m.user_full_name || m.user_email?.split("@")[0]} (${m.role})`}
                 </option>
               ))}
             </select>
