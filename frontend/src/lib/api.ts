@@ -346,6 +346,44 @@ export const campaignApi = {
   convertToTasks: (agencyId: string, campaignId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`, { method: "POST", token }),
 
+  updateDeliverable: (
+    agencyId: string,
+    clientId: string,
+    campaignId: string,
+    dayNumber: number,
+    data: { deliverable: Record<string, unknown> },
+    token: string
+  ) =>
+    apiFetch<{ success: boolean; deliverable: Record<string, unknown>; campaign_id: string }>(
+      `/agencies/${agencyId}/clients/${clientId}/campaigns/${campaignId}/deliverables/${dayNumber}`,
+      {
+        method: "PUT",
+        body: data,
+        token,
+      }
+    ),
+
+  reviseDeliverableAI: (
+    agencyId: string,
+    clientId: string,
+    campaignId: string,
+    dayNumber: number,
+    data: { instruction: string; current_deliverable: Record<string, unknown> },
+    token: string
+  ) =>
+    apiFetch<{
+      revised_deliverable: Record<string, unknown>;
+      explanation: string;
+      activity_logs?: string[];
+    }>(
+      `/agencies/${agencyId}/clients/${clientId}/campaigns/${campaignId}/deliverables/${dayNumber}/revise-ai`,
+      {
+        method: "POST",
+        body: data,
+        token,
+      }
+    ),
+
   delete: (agencyId: string, campaignId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}`, { method: "DELETE", token }),
 };

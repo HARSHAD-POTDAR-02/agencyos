@@ -10,7 +10,7 @@ import json
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 from app.campaign_intelligence.orchestration.graph import run_campaign_pipeline
 from app.campaign_intelligence.orchestration.state import CampaignState
 from app.campaign_intelligence.schemas.campaign import CampaignBrief
-from app.campaign_intelligence.schemas.deliverables import DeliverablePlan
+from app.campaign_intelligence.schemas.deliverables import (
+    CarouselSlide,
+    DeliverablePlan,
+    ReelScene,
+)
 from app.campaign_intelligence.schemas.quality import QualityEvaluation
 from app.campaign_intelligence.schemas.strategy import CampaignStrategy
 from app.campaign_intelligence.tools.date_utils import (
@@ -75,6 +79,10 @@ from app.schemas.campaign import (
     StudioArtifactVersionOut,
     StudioExportPipelineRequest,
     StudioExportPipelineResponse,
+    UpdateDeliverableRequest,
+    UpdateDeliverableResponse,
+    ReviseDeliverableAIRequest,
+    ReviseDeliverableAIResponse,
 )
 from app.services.tenant_service import (
     assert_campaign_belongs_to_agency,
@@ -1460,6 +1468,291 @@ async def export_studio_artifact_pipeline_endpoint(
         task_title=mapping.get("task_title", "Production Task"),
         exported_at=export_rec.exported_at,
     )
+
+
+# ---------------------------------------------------------------------------
+# Granular Deliverable Edit & AI Revision Endpoints
+# ---------------------------------------------------------------------------
+
+class RevisedReelOutput(BaseModel):
+    title: str = Field(description="Deliverable title")
+    primary_hook: str = Field(description="Arresting 0-3s hook")
+    caption: str = Field(description="Complete social media caption")
+    call_to_action: str = Field(description="Clear CTA")
+    reel_scenes: list[ReelScene] = Field(description="Revised scene cards with sequential timestamps")
+    explanation: str = Field(description="1-2 sentences explaining what was changed and why")
+
+
+class RevisedCarouselOutput(BaseModel):
+    title: str = Field(description="Deliverable title")
+    primary_hook: str = Field(description="Cover hook for slide 1")
+    caption: str = Field(description="Complete social media caption")
+    call_to_action: str = Field(description="Clear CTA")
+    carousel_slides: list[CarouselSlide] = Field(description="Revised slide cards")
+    explanation: str = Field(description="1-2 sentences explaining what was changed and why")
+
+
+class RevisedGenericOutput(BaseModel):
+    title: str = Field(description="Deliverable title")
+    primary_hook: str = Field(description="Opening hook")
+    caption: str = Field(description="Complete social media caption")
+    call_to_action: str = Field(description="Clear CTA")
+    visual_asset_prompt: str | None = Field(default=None, description="Visual description or prompt")
+    explanation: str = Field(description="1-2 sentences explaining what was changed and why")
+
+
+@router.put(
+    "/agencies/{agency_id}/clients/{client_id}/campaigns/{campaign_id}/deliverables/{day_number}",
+    response_model=UpdateDeliverableResponse,
+)
+async def update_campaign_deliverable(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    day_number: int,
+    payload: UpdateDeliverableRequest,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> UpdateDeliverableResponse:
+    """Surgically update a specific day's deliverable inside the campaign's ai_plan_draft."""
+    campaign = await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    if campaign.client_id != client_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign does not belong to client.")
+
+    if not campaign.ai_plan_draft or "deliverables" not in campaign.ai_plan_draft:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Campaign does not have an AI plan draft with deliverables.",
+        )
+
+    draft = dict(campaign.ai_plan_draft)
+    deliverables = list(draft.get("deliverables") or [])
+
+    target_idx: int | None = None
+    for idx, d in enumerate(deliverables):
+        d_day = d.get("planned_day") or d.get("day_number")
+        if d_day == day_number:
+            target_idx = idx
+            break
+
+    if target_idx is None and 1 <= day_number <= len(deliverables):
+        target_idx = day_number - 1
+
+    if target_idx is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Deliverable for day {day_number} not found in campaign plan.",
+        )
+
+    orig = deliverables[target_idx]
+    updated_d = dict(payload.deliverable)
+    merged = {**orig, **updated_d}
+
+    # Ensure crucial indexing metadata is never corrupted
+    merged["planned_day"] = orig.get("planned_day", day_number)
+    merged["day_number"] = orig.get("day_number", day_number)
+    if "scheduled_date" in orig and not merged.get("scheduled_date"):
+        merged["scheduled_date"] = orig["scheduled_date"]
+    if "date_label" in orig and not merged.get("date_label"):
+        merged["date_label"] = orig["date_label"]
+    if "deliverable_id" in orig and not merged.get("deliverable_id"):
+        merged["deliverable_id"] = orig["deliverable_id"]
+
+    deliverables[target_idx] = merged
+    draft["deliverables"] = deliverables
+    campaign.ai_plan_draft = draft
+
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(campaign, "ai_plan_draft")
+    await db.commit()
+    await db.refresh(campaign)
+
+    return UpdateDeliverableResponse(
+        success=True,
+        deliverable=merged,
+        campaign_id=campaign.id,
+    )
+
+
+@router.post(
+    "/agencies/{agency_id}/clients/{client_id}/campaigns/{campaign_id}/deliverables/{day_number}/revise-ai",
+    response_model=ReviseDeliverableAIResponse,
+)
+async def revise_campaign_deliverable_ai(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    day_number: int,
+    payload: ReviseDeliverableAIRequest,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ReviseDeliverableAIResponse:
+    """
+    Surgically revise a specific deliverable using the Content Architect / Scriptwriter AI.
+    Applies user feedback in natural language, revising scene timestamps, visual action, voiceovers,
+    or hooks while strictly adhering to client brand guidelines.
+    """
+    client = await get_client_for_agency(client_id, agency_id, db)
+    campaign = await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+
+    # Extract client brand profile for authentic voice & guardrails
+    bp_stmt = (
+        select(BrandProfile)
+        .where(BrandProfile.client_id == client_id)
+        .order_by(BrandProfile.version.desc())
+    )
+    bp_res = await db.execute(bp_stmt)
+    brand_profile = bp_res.scalars().first()
+
+    brand_voice = brand_profile.brand_voice if brand_profile else "Professional, authentic, inviting"
+    tone_do = brand_profile.tone_examples.get("do", []) if (brand_profile and brand_profile.tone_examples) else []
+    tone_dont = brand_profile.tone_examples.get("dont", []) if (brand_profile and brand_profile.tone_examples) else []
+    prohibited_claims = brand_profile.prohibited_claims if brand_profile else []
+
+    curr_deliv = dict(payload.current_deliverable)
+    dtype = (curr_deliv.get("deliverable_type") or "reel").lower()
+    activity_logs: list[str] = [
+        f"Invoked Content Architect AI for Day {day_number} ({dtype.upper()}).",
+        f"Instruction: '{payload.instruction}'",
+    ]
+
+    # Format-specific revision with structured LLM
+    if "reel" in dtype or "video" in dtype:
+        current_scenes_json = json.dumps(curr_deliv.get("reel_scenes") or [], indent=2)
+        prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
+Your job is to surgically revise the Day {day_number} Reel deliverable based on the user's creative feedback.
+
+CLIENT: {client.business_name} ({client.industry or 'General'})
+BRAND VOICE: {brand_voice}
+DO: {', '.join(tone_do) if tone_do else 'Authentic, high-energy'}
+DONT: {', '.join(tone_dont) if tone_dont else 'Bland, robotic claims'}
+PROHIBITED CLAIMS: {', '.join(prohibited_claims) if prohibited_claims else 'None'}
+
+CURRENT REEL DELIVERABLE (DAY {day_number}):
+- Title: {curr_deliv.get('title', '')}
+- Primary Hook: {curr_deliv.get('primary_hook') or curr_deliv.get('hook', '')}
+- Caption: {curr_deliv.get('caption', '')}
+- Call To Action: {curr_deliv.get('call_to_action') or curr_deliv.get('cta', '')}
+- Current Scenes:
+{current_scenes_json}
+
+USER'S REVISION INSTRUCTION:
+"{payload.instruction}"
+
+REQUIREMENTS:
+1. Apply the user's requested modifications with surgical precision. If they ask to modify a specific scene (e.g. scene 2 or 3), update that scene while keeping the rest cohesive.
+2. If the user asks for a specific total duration (e.g. 30 to 45s, 45 to 60s), adjust the scene count (4-7 scenes) and timestamps accordingly so the final scene ends at the target duration!
+3. If they ask for a new angle, dish, hook, or tone, rewrite the scenes, voiceovers, and visual actions to reflect that dish/concept accurately.
+4. Keep all scenes written strictly in English.
+5. Provide a crisp 1-2 sentence explanation of your changes.
+"""
+        rev_output: RevisedReelOutput = await invoke_structured_llm(
+            prompt=prompt,
+            schema_class=RevisedReelOutput,
+            temperature=0.3,
+            model=settings.GROQ_MODEL,
+        )
+
+        revised_deliv = {
+            **curr_deliv,
+            "title": rev_output.title,
+            "primary_hook": rev_output.primary_hook,
+            "hook": rev_output.primary_hook,
+            "caption": rev_output.caption,
+            "call_to_action": rev_output.call_to_action,
+            "cta": rev_output.call_to_action,
+            "reel_scenes": [s.model_dump() for s in rev_output.reel_scenes],
+        }
+        activity_logs.append(f"Content Architect revised {len(rev_output.reel_scenes)} scene beats for Day {day_number}.")
+        return ReviseDeliverableAIResponse(
+            revised_deliverable=revised_deliv,
+            explanation=rev_output.explanation,
+            activity_logs=activity_logs,
+        )
+
+    elif "carousel" in dtype:
+        current_slides_json = json.dumps(curr_deliv.get("carousel_slides") or [], indent=2)
+        prompt = f"""You are the Master Copywriter & Content Architect for AgencyOS.
+Your job is to surgically revise the Day {day_number} Carousel deliverable based on the user's feedback.
+
+CLIENT: {client.business_name} ({client.industry or 'General'})
+BRAND VOICE: {brand_voice}
+
+CURRENT CAROUSEL DELIVERABLE (DAY {day_number}):
+- Title: {curr_deliv.get('title', '')}
+- Hook: {curr_deliv.get('primary_hook') or curr_deliv.get('hook', '')}
+- Caption: {curr_deliv.get('caption', '')}
+- CTA: {curr_deliv.get('call_to_action') or curr_deliv.get('cta', '')}
+- Current Slides:
+{current_slides_json}
+
+USER'S REVISION INSTRUCTION:
+"{payload.instruction}"
+
+REQUIREMENTS:
+1. Apply the user's instructions cleanly to slide headlines, body copy, and layout prompts.
+2. Provide a crisp 1-2 sentence explanation.
+"""
+        rev_car: RevisedCarouselOutput = await invoke_structured_llm(
+            prompt=prompt,
+            schema_class=RevisedCarouselOutput,
+            temperature=0.3,
+            model=settings.GROQ_MODEL,
+        )
+        revised_deliv = {
+            **curr_deliv,
+            "title": rev_car.title,
+            "primary_hook": rev_car.primary_hook,
+            "hook": rev_car.primary_hook,
+            "caption": rev_car.caption,
+            "call_to_action": rev_car.call_to_action,
+            "cta": rev_car.call_to_action,
+            "carousel_slides": [s.model_dump() for s in rev_car.carousel_slides],
+        }
+        activity_logs.append(f"Content Architect revised {len(rev_car.carousel_slides)} slides for Day {day_number}.")
+        return ReviseDeliverableAIResponse(
+            revised_deliverable=revised_deliv,
+            explanation=rev_car.explanation,
+            activity_logs=activity_logs,
+        )
+
+    else:
+        prompt = f"""You are the Master Content Architect for AgencyOS.
+Your job is to revise the Day {day_number} deliverable ({dtype}) based on user feedback.
+
+CLIENT: {client.business_name} ({client.industry or 'General'})
+BRAND VOICE: {brand_voice}
+
+CURRENT DELIVERABLE:
+- Title: {curr_deliv.get('title', '')}
+- Hook: {curr_deliv.get('primary_hook') or curr_deliv.get('hook', '')}
+- Caption: {curr_deliv.get('caption', '')}
+- CTA: {curr_deliv.get('call_to_action') or curr_deliv.get('cta', '')}
+
+USER INSTRUCTION:
+"{payload.instruction}"
+"""
+        rev_gen: RevisedGenericOutput = await invoke_structured_llm(
+            prompt=prompt,
+            schema_class=RevisedGenericOutput,
+            temperature=0.3,
+            model=settings.GROQ_MODEL,
+        )
+        revised_deliv = {
+            **curr_deliv,
+            "title": rev_gen.title,
+            "primary_hook": rev_gen.primary_hook,
+            "hook": rev_gen.primary_hook,
+            "caption": rev_gen.caption,
+            "call_to_action": rev_gen.call_to_action,
+            "cta": rev_gen.call_to_action,
+            "visual_asset_prompt": rev_gen.visual_asset_prompt,
+        }
+        return ReviseDeliverableAIResponse(
+            revised_deliverable=revised_deliv,
+            explanation=rev_gen.explanation,
+            activity_logs=activity_logs,
+        )
 
 
 @router.post(

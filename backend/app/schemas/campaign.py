@@ -205,3 +205,25 @@ class StudioExportPipelineResponse(BaseModel):
     exported_at: datetime
 
 
+class UpdateDeliverableRequest(BaseModel):
+    deliverable: dict[str, Any]
+
+
+class UpdateDeliverableResponse(BaseModel):
+    success: bool = True
+    deliverable: dict[str, Any]
+    campaign_id: uuid.UUID
+
+
+class ReviseDeliverableAIRequest(BaseModel):
+    instruction: str = Field(min_length=2)
+    current_deliverable: dict[str, Any]
+
+
+class ReviseDeliverableAIResponse(BaseModel):
+    revised_deliverable: dict[str, Any]
+    explanation: str
+    activity_logs: list[str] = Field(default_factory=list)
+
+
+

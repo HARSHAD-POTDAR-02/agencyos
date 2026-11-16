@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { clientApi, campaignApi } from "@/lib/api";
+import { DeliverableEditorModal } from "@/components/campaign-studio/DeliverableEditorModal";
 import {
   CalendarDays,
   Sparkles,
@@ -183,6 +184,31 @@ function CampaignPlansContent() {
   const [expandedDay, setExpandedDay] = useState<number | null>(1);
   const [expandedReelDay, setExpandedReelDay] = useState<number | null>(null);
   const [expandedCarouselDay, setExpandedCarouselDay] = useState<number | null>(null);
+  const [editingDeliverable, setEditingDeliverable] = useState<DeliverableItem | null>(null);
+
+  const handleDeliverableUpdated = (updated: DeliverableItem) => {
+    if (!selectedCampaign || !selectedCampaign.ai_plan_draft) return;
+    const draft = { ...selectedCampaign.ai_plan_draft };
+    const delivs = [...(draft.deliverables || [])];
+    const idx = delivs.findIndex(
+      (d: any) => (d.planned_day || d.day_number) === updated.day_number
+    );
+    if (idx !== -1) {
+      delivs[idx] = { ...delivs[idx], ...updated };
+    } else if (updated.day_number <= delivs.length) {
+      delivs[updated.day_number - 1] = { ...delivs[updated.day_number - 1], ...updated };
+    }
+    draft.deliverables = delivs;
+    const updatedCampaign = { ...selectedCampaign, ai_plan_draft: draft };
+    setSelectedCampaign(updatedCampaign);
+    setCampaigns((prev) =>
+      prev.map((c) => (c.id === updatedCampaign.id ? updatedCampaign : c))
+    );
+    setNotification({
+      type: "success",
+      text: `Updated Day ${updated.day_number} in campaign plan!`,
+    });
+  };
 
   const [converting, setConverting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -682,6 +708,16 @@ function CampaignPlansContent() {
                           )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingDeliverable(item);
+                            }}
+                            className="p-1 rounded-md text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-500/10 cursor-pointer transition-all"
+                            title={`Deep Dive & Edit Day ${item.day_number} with Scriptwriter AI`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                          </button>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
                               isReel
@@ -725,6 +761,15 @@ function CampaignPlansContent() {
                               <p className="text-primary font-medium mt-0.5">{item.cta}</p>
                             </div>
                           )}
+
+                          {/* Deep Dive & Edit with Scriptwriter AI Button */}
+                          <button
+                            onClick={() => setEditingDeliverable(item)}
+                            className="w-full mt-2.5 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-rose-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                            <span>Deep Dive & Edit with Scriptwriter AI</span>
+                          </button>
 
                           {/* Reel Beats Director Button */}
                           {isReel && item.reel_scenes && item.reel_scenes.length > 0 && (
@@ -824,17 +869,26 @@ function CampaignPlansContent() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => copyToClipboard(item.hook, item.day_number)}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
-                      >
-                        {copiedHookDay === item.day_number ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                        <span>{copiedHookDay === item.day_number ? "Copied" : "Copy Hook"}</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setEditingDeliverable(item)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-rose-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                          <span>Deep Dive & Edit with AI</span>
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(item.hook, item.day_number)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+                        >
+                          {copiedHookDay === item.day_number ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                          <span>{copiedHookDay === item.day_number ? "Copied" : "Copy Hook"}</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -866,10 +920,19 @@ function CampaignPlansContent() {
                     {/* Reel Scene Director Breakdown */}
                     {isReel && item.reel_scenes && item.reel_scenes.length > 0 && (
                       <div className="mt-4 pt-3 border-t border-border/40">
-                        <span className="font-bold text-rose-500 text-xs flex items-center gap-1.5 mb-2.5">
-                          <Video className="w-4 h-4" />
-                          <span>Scene-by-Scene Reel Director Script ({item.reel_scenes.length} Beats)</span>
-                        </span>
+                        <div className="flex items-center justify-between mb-2.5">
+                          <span className="font-bold text-rose-500 text-xs flex items-center gap-1.5">
+                            <Video className="w-4 h-4" />
+                            <span>Scene-by-Scene Reel Director Script ({item.reel_scenes.length} Beats)</span>
+                          </span>
+                          <button
+                            onClick={() => setEditingDeliverable(item)}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold text-[11px] cursor-pointer transition-all"
+                          >
+                            <Sparkles className="w-3 h-3 text-rose-500" />
+                            <span>Edit Scenes with AI</span>
+                          </button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                           {item.reel_scenes.map((scene) => (
                             <div
@@ -933,6 +996,18 @@ function CampaignPlansContent() {
           )}
         </div>
       )}
+
+      {/* Deep-Dive Deliverable & Scene Editor Modal with Scriptwriter AI */}
+      <DeliverableEditorModal
+        isOpen={Boolean(editingDeliverable)}
+        onClose={() => setEditingDeliverable(null)}
+        deliverable={editingDeliverable}
+        campaignId={selectedCampaign?.id || ""}
+        clientId={selectedClientId}
+        agencyId={effectiveAgencyId || ""}
+        token={token || ""}
+        onDeliverableUpdated={handleDeliverableUpdated}
+      />
     </div>
   );
 }
