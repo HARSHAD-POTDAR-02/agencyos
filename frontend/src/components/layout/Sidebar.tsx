@@ -200,33 +200,33 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 shrink-0 bg-[#0B0D14] text-slate-300 border-r border-white/[0.08] flex flex-col h-screen select-none">
+    <aside className="w-[240px] shrink-0 bg-[#17171E] text-[#A3A0B0] border-r border-[#30303D] flex flex-col h-screen select-none relative z-30">
       {/* Brand & Agency Selector */}
-      <div className="p-4 border-b border-white/[0.08]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/25 ring-1 ring-white/20">
-              <span className="text-white font-extrabold text-base tracking-wider">A</span>
+      <div className="p-3 border-b border-[#30303D]">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-lg bg-[#20202A] border border-[#30303D] flex items-center justify-center shrink-0 shadow-xs">
+              <span className="text-[#A78BFA] font-bold text-xs tracking-wider">A</span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-white text-sm tracking-tight truncate">
+                <span className="font-semibold text-[#F2F0F7] text-xs tracking-tight truncate">
                   {currentAgency?.agency_name || "Select Workspace"}
                 </span>
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <ShieldCheck className="w-3 h-3 text-[#A78BFA] shrink-0 opacity-80" />
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {isSpecialist ? (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wide">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
                     {currentRole === "writer" ? "⚡ Scriptwriter" : currentRole === "editor" ? "🎬 Video Editor" : "🎨 Designer"}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wide">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-white/[0.06] text-[#F2F0F7] border border-white/10">
                     👑 {currentRole || "Owner"}
                   </span>
                 )}
-                <span className="text-[10px] text-slate-400 font-medium">
-                  {isSpecialist ? "Workbench" : "Executive"}
+                <span className="text-[10px] text-[#6C697D] font-mono">
+                  {isSpecialist ? "Ops" : "Exec"}
                 </span>
               </div>
             </div>
@@ -236,7 +236,7 @@ export function Sidebar() {
             <button
               onClick={() => setShowAgencyModal(true)}
               title="Create New Agency Workspace"
-              className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded-md bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -245,14 +245,14 @@ export function Sidebar() {
 
         {/* Agency Switcher if multiple */}
         {agencies.length > 1 && (
-          <div className="mt-3">
+          <div className="mt-2.5">
             <select
               value={activeAgencyId || ""}
               onChange={(e) => setActiveAgencyId(e.target.value)}
-              className="w-full text-xs bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-lg py-1.5 px-2.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors"
+              className="w-full text-[11px] font-medium bg-[#101014] hover:bg-[#20202A] border border-[#30303D] rounded-lg py-1.5 px-2 text-[#F2F0F7] focus:outline-none focus:border-[#A78BFA] transition-colors"
             >
               {agencies.map((agency) => (
-                <option key={agency.agency_id} value={agency.agency_id} className="bg-[#121520] text-slate-200">
+                <option key={agency.agency_id} value={agency.agency_id} className="bg-[#17171E] text-[#F2F0F7]">
                   {agency.agency_name}
                 </option>
               ))}
@@ -263,7 +263,7 @@ export function Sidebar() {
         {agencies.length === 0 && !isSpecialist && (
           <button
             onClick={() => setShowAgencyModal(true)}
-            className="mt-3 w-full py-1.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+            className="mt-2.5 w-full py-1.5 px-2.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create Agency Workspace</span>
@@ -271,18 +271,20 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Main Navigation */}
-      <div className="px-3 pt-4 pb-2">
-        <p className="px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-widest flex items-center justify-between">
-          <span>{isSpecialist ? "⚡ Specialist Tools" : "Agency Management"}</span>
+      {/* Navigation Group Header */}
+      <div className="px-3 pt-3.5 pb-1">
+        <p className="px-2 text-[10px] font-mono font-medium text-[#6C697D] uppercase tracking-wider flex items-center justify-between">
+          <span>{isSpecialist ? "Specialist Workbench" : "Agency Operations"}</span>
           {isSpecialist && (
-            <span className="text-[9px] text-amber-400/90 font-mono font-bold uppercase bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-              Tasks Only
+            <span className="text-[9px] text-amber-400 font-mono font-semibold uppercase bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20">
+              Tasks
             </span>
           )}
         </p>
       </div>
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+
+      {/* Navigation Links */}
+      <nav className="flex-1 px-2.5 space-y-0.5 overflow-y-auto">
         {navigation.map((item) => {
           const isActive =
             item.href === "/dashboard"
@@ -295,91 +297,84 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group relative",
+                "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors group relative",
                 isActive
-                  ? "bg-purple-600/15 text-white font-semibold border border-purple-500/30 shadow-sm shadow-purple-950/50"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]"
+                  ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                  : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A]/60"
               )}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
                   className={cn(
-                    "w-4 h-4 shrink-0 transition-transform group-hover:scale-110",
-                    isActive ? "text-purple-400" : "text-slate-400 group-hover:text-slate-200"
+                    "w-4 h-4 shrink-0 transition-colors",
+                    isActive ? "text-[#A78BFA]" : "text-[#6C697D] group-hover:text-[#A3A0B0]"
                   )}
                 />
-                <span>{item.name}</span>
+                <span className="truncate">{item.name}</span>
               </div>
 
               {item.badge && (
                 <span
                   className={cn(
-                    "px-1.5 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider transition-colors",
+                    "px-1.5 py-0.2 text-[10px] font-mono font-medium rounded tracking-wide transition-colors shrink-0",
                     item.badge === "AI"
-                      ? "bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30"
+                      ? "bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20"
                       : item.name === "Approvals" && Number(item.badge) > 0
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-xs shadow-amber-500/20"
-                      : "bg-white/[0.08] text-slate-300"
+                      ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                      : "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
                   )}
                 >
                   {item.badge}
                 </span>
-              )}
-
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-purple-500 rounded-r-full" />
               )}
             </Link>
           );
         })}
       </nav>
 
-      {/* AI Pro Banner */}
-      <div className="p-3 mx-3 mb-3 rounded-2xl bg-gradient-to-b from-purple-950/40 via-purple-900/20 to-transparent border border-purple-500/20 relative overflow-hidden group">
-        <div className="absolute -top-6 -right-6 w-20 h-20 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-colors" />
-        <div className="flex items-center gap-2 mb-1.5">
-          <div className="p-1 rounded-md bg-purple-500/20 text-purple-300">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-xs font-semibold text-white tracking-tight">AI Strategy Copilot</span>
+      {/* Compact Contextual AI Studio Entry (Linear/Raycast style - replaces oversized promotional card) */}
+      {!isSpecialist && (
+        <div className="px-2.5 py-2 border-t border-[#30303D]">
+          <Link
+            href="/campaigns"
+            className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-[#20202A]/70 hover:bg-[#20202A] border border-[#30303D] text-xs transition-colors group"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span className="font-medium text-[#F2F0F7]">Campaign Studio</span>
+            </div>
+            <span className="text-[10px] font-mono text-[#6C697D] group-hover:text-[#A3A0B0] bg-[#17171E] px-1.5 py-0.5 rounded border border-[#30303D]">
+              AI
+            </span>
+          </Link>
         </div>
-        <p className="text-[11px] text-slate-400 leading-relaxed mb-2.5">
-          Generate full month reels, hooks & shot lists in 1-click.
-        </p>
-        <Link
-          href="/campaigns"
-          className="inline-flex items-center justify-between w-full px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-semibold transition-all shadow-sm shadow-purple-600/30"
-        >
-          <span>Open AI Planner</span>
-          <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
+      )}
 
       {/* User profile & actions */}
-      <div className="p-3 border-t border-white/[0.08] bg-[#0E1018]">
+      <div className="p-2.5 border-t border-[#30303D] bg-[#14141A]">
         {user ? (
-          <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl hover:bg-white/[0.04] transition-colors">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 shrink-0">
+          <div className="flex items-center justify-between gap-2 p-1 rounded-lg hover:bg-[#20202A] transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-md bg-[#20202A] border border-[#30303D] flex items-center justify-center text-[#F2F0F7] font-semibold text-xs shrink-0">
                 {user.full_name?.charAt(0).toUpperCase() || "A"}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white truncate">{user.full_name}</p>
-                <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+                <p className="text-xs font-medium text-[#F2F0F7] truncate">{user.full_name}</p>
+                <p className="text-[10px] font-mono text-[#6C697D] truncate">{user.email}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
               title="Sign out"
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+              className="p-1 text-[#6C697D] hover:text-[#E16F7B] hover:bg-[#E16F7B]/10 rounded-md transition-colors shrink-0"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
           <Link
             href="/login"
-            className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
+            className="flex items-center justify-center gap-2 w-full py-1.5 px-3 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-lg shadow-xs transition-all"
           >
             Sign in
           </Link>
@@ -388,20 +383,20 @@ export function Sidebar() {
 
       {/* Create Agency Modal */}
       {showAgencyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-[#11131C] text-white rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-white/10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#20202A] text-[#F2F0F7] rounded-2xl shadow-2xl max-w-sm w-full p-5 border border-[#30303D]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Create Agency Workspace</h3>
+              <h3 className="text-sm font-semibold text-[#F2F0F7]">Create Agency Workspace</h3>
               <button
                 onClick={() => setShowAgencyModal(false)}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-[#6C697D] hover:text-[#F2F0F7] text-xs"
               >
                 ✕
               </button>
             </div>
             <form onSubmit={handleCreateAgency} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-mono font-medium text-[#A3A0B0] uppercase tracking-wider mb-1.5">
                   Agency Name *
                 </label>
                 <input
@@ -410,21 +405,21 @@ export function Sidebar() {
                   placeholder="e.g. Elevate Social"
                   value={newAgencyName}
                   onChange={(e) => setNewAgencyName(e.target.value)}
-                  className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                  className="w-full bg-[#17171E] border border-[#30303D] rounded-lg px-3 py-2 text-xs text-[#F2F0F7] placeholder:text-[#6C697D] focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#30303D]">
                 <button
                   type="button"
                   onClick={() => setShowAgencyModal(false)}
-                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white font-semibold"
+                  className="px-3 py-1.5 text-xs text-[#A3A0B0] hover:text-[#F2F0F7] font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingAgency}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-md transition-all disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-lg shadow-xs transition-all disabled:opacity-50"
                 >
                   {creatingAgency ? "Creating..." : "Create Agency"}
                 </button>

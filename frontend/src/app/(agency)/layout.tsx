@@ -25,7 +25,7 @@ export default function AgencyLayout({
   }, [user, token, isLoading, router]);
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden antialiased print:h-auto print:overflow-visible print:bg-white">
+    <div className="flex h-screen bg-[#101014] text-[#F2F0F7] overflow-hidden antialiased print:h-auto print:overflow-visible print:bg-white">
       <div className="print:hidden h-full flex flex-col">
         <Suspense fallback={null}>
           <Sidebar />
@@ -35,10 +35,10 @@ export default function AgencyLayout({
         <div className="print:hidden">
           <Header />
         </div>
-        <div className="flex-1 overflow-y-auto relative print:overflow-visible">
+        <div className="flex-1 overflow-y-auto relative print:overflow-visible bg-[#101014]">
           {(!isLoading && user?.is_client) && (
-            <div className="absolute inset-0 z-50 bg-[#F8FAFC] flex items-center justify-center">
-              <div className="w-8 h-8 border-[3px] border-purple-600 border-t-transparent rounded-full animate-spin" />
+            <div className="absolute inset-0 z-50 bg-[#101014] flex items-center justify-center">
+              <div className="w-8 h-8 border-[3px] border-[#A78BFA] border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           {children}

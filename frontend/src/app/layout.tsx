@@ -1,18 +1,25 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 
-const jakarta = Plus_Jakarta_Sans({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-heading",
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "AgencyOS — Operating System for Social Media Agencies",
-  description: "Workflow and delivery management from onboarding to campaign delivery, approvals and reporting.",
+  title: "AgencyOS — Operating System for Creative Social Media Agencies",
+  description: "Workflow, campaign studio, and delivery operations for high-velocity creative agencies.",
 };
 
 export default function RootLayout({
@@ -21,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={jakarta.variable}>
-      <body className="font-sans antialiased bg-slate-50 text-slate-900 selection:bg-purple-500/20 selection:text-purple-900">
+    <html lang="en" className={`${inter.variable} ${manrope.variable} dark`}>
+      <body className="font-sans antialiased bg-[#101014] text-[#F2F0F7] selection:bg-violet-500/25 selection:text-white">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

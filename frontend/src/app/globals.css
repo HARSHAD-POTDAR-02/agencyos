@@ -8,8 +8,28 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-heading);
+
+  /* Centralized AgencyOS Dark Tokens */
+  --color-app-background: var(--app-background);
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-floating: var(--surface-floating);
+  --color-surface-canvas: var(--surface-canvas);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-muted: var(--border-muted);
+  --color-border-highlight: var(--border-highlight);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -18,11 +38,7 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -39,6 +55,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,73 +65,72 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+:root, .dark {
+  /* ── Core Surfaces & Dark Canvas ── */
+  --app-background: #101014;
+  --surface-primary: #17171E;
+  --surface-secondary: #20202A;
+  --surface-elevated: #262630;
+  --surface-floating: #2E2E3B;
+  --surface-canvas: #0D0D11;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* ── Subtle Hairline Borders ── */
+  --border-subtle: #30303D;
+  --border-muted: rgba(255, 255, 255, 0.06);
+  --border-highlight: rgba(255, 255, 255, 0.14);
+  --border-active: #A78BFA;
+
+  /* ── Typography Contrast Hierarchy ── */
+  --text-primary: #F2F0F7;
+  --text-secondary: #A3A0B0;
+  --text-muted: #6C697D;
+  --text-disabled: #474554;
+
+  /* ── Selective Violet Brand Accent ── */
+  --accent-primary: #A78BFA;
+  --accent-hover: #B69BFF;
+  --accent-muted: rgba(167, 139, 250, 0.12);
+  --accent-border: rgba(167, 139, 250, 0.28);
+
+  /* ── Semantic Operational Signals ── */
+  --success: #45B88A;
+  --success-bg: rgba(69, 184, 138, 0.12);
+  --warning: #E5AA58;
+  --warning-bg: rgba(229, 170, 88, 0.12);
+  --error: #E16F7B;
+  --error-bg: rgba(225, 111, 123, 0.12);
+  --info: #69A9D8;
+  --info-bg: rgba(105, 169, 216, 0.12);
+
+  /* ── System / Shadcn Variable Alignment ── */
+  --background: #101014;
+  --foreground: #F2F0F7;
+  --card: #17171E;
+  --card-foreground: #F2F0F7;
+  --popover: #262630;
+  --popover-foreground: #F2F0F7;
+  --primary: #A78BFA;
+  --primary-foreground: #101014;
+  --secondary: #20202A;
+  --secondary-foreground: #F2F0F7;
+  --muted: #20202A;
+  --muted-foreground: #A3A0B0;
+  --accent: #262630;
+  --accent-foreground: #F2F0F7;
+  --destructive: #E16F7B;
+  --border: #30303D;
+  --input: #30303D;
+  --ring: #A78BFA;
+  --radius: 0.625rem;
+
+  --sidebar: #17171E;
+  --sidebar-foreground: #F2F0F7;
+  --sidebar-primary: #A78BFA;
+  --sidebar-primary-foreground: #101014;
+  --sidebar-accent: #20202A;
+  --sidebar-accent-foreground: #F2F0F7;
+  --sidebar-border: #30303D;
+  --sidebar-ring: #A78BFA;
 }
 
 @layer base {
@@ -127,4 +143,20 @@
   html {
     @apply font-sans;
   }
+}
+
+/* Custom sleek dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }

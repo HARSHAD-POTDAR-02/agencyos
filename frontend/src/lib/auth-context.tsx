@@ -169,7 +169,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         setActiveAgencyId: handleSetActiveAgency,
         createAgency,
-        refreshAgencies: () => (token ? fetchAgencies(token) : Promise.resolve()),
+        refreshAgencies: async () => {
+          if (token) {
+            await fetchAgencies(token);
+          }
+        },
       }}
     >
       {children}

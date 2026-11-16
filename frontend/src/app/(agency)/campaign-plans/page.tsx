@@ -5,7 +5,12 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { clientApi, campaignApi } from "@/lib/api";
-import { DeliverableEditorModal } from "@/components/campaign-studio/DeliverableEditorModal";
+import { 
+  DeliverableEditorModal, 
+  type DeliverableItem, 
+  type ReelSceneItem, 
+  type CarouselSlideItem 
+} from "@/components/campaign-studio/DeliverableEditorModal";
 import {
   CalendarDays,
   Sparkles,
@@ -46,43 +51,6 @@ interface Client {
   id: string;
   business_name: string;
   industry: string | null;
-}
-
-interface ReelSceneItem {
-  scene_number: number;
-  timestamp_range: string;
-  visual_action: string;
-  on_screen_text: string;
-  spoken_audio_or_voiceover: string;
-  b_roll_notes?: string;
-}
-
-interface CarouselSlideItem {
-  slide_number: number;
-  headline: string;
-  body_copy: string;
-  visual_layout: string;
-  slide_type: "cover" | "content" | "takeaway" | "cta";
-}
-
-interface DeliverableItem {
-  day_number: number;
-  scheduled_date?: string;
-  date_label?: string;
-  title?: string;
-  deliverable_type: string;
-  platform: string;
-  pillar: string;
-  hook: string;
-  visual_concept: string;
-  caption: string;
-  cta: string;
-  audio_vibe: string;
-  hashtags: string[];
-  hook_options?: string[];
-  production_notes?: string;
-  reel_scenes?: ReelSceneItem[];
-  carousel_slides?: CarouselSlideItem[];
 }
 
 interface QualityFindingItem {
@@ -332,7 +300,7 @@ function CampaignPlansContent() {
   const filteredDeliverables =
     selectedPillarFilter === "all"
       ? deliverables
-      : deliverables.filter((d) => d.pillar.toLowerCase() === selectedPillarFilter.toLowerCase());
+      : deliverables.filter((d) => (d.pillar || "").toLowerCase() === selectedPillarFilter.toLowerCase());
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 py-4">
@@ -363,15 +331,15 @@ function CampaignPlansContent() {
       )}
 
       {/* Top Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border/50">
+      <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#30303D]">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 flex items-center justify-center">
               <CalendarDays className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Campaign Plans</h1>
-              <p className="text-xs text-muted-foreground">
+              <h1 className="text-xl font-bold tracking-tight text-[#F2F0F7]">Campaign Plans</h1>
+              <p className="text-xs text-[#A3A0B0]">
                 Review, calibrate, and push AI campaign sprints into production tasks
               </p>
             </div>
@@ -381,15 +349,15 @@ function CampaignPlansContent() {
         {/* Client & Campaign Selectors */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Client Select */}
-          <div className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
-            <Building2 className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 bg-[#17171E] px-3 py-1.5 rounded-lg border border-[#30303D]">
+            <Building2 className="w-4 h-4 text-[#A3A0B0]" />
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="bg-transparent text-sm font-medium text-foreground focus:outline-none cursor-pointer"
+              className="bg-transparent text-sm font-medium text-[#F2F0F7] focus:outline-none cursor-pointer"
             >
               {clients.map((c) => (
-                <option key={c.id} value={c.id} className="bg-background text-foreground">
+                <option key={c.id} value={c.id} className="bg-[#17171E] text-[#F2F0F7]">
                   {c.business_name}
                 </option>
               ))}
@@ -398,17 +366,17 @@ function CampaignPlansContent() {
 
           {/* Campaign Sprint Select */}
           {campaigns.length > 0 && (
-            <div className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
+            <div className="flex items-center gap-2 bg-[#17171E] px-3 py-1.5 rounded-lg border border-[#30303D]">
               <select
                 value={selectedCampaign?.id || ""}
                 onChange={(e) => {
                   const match = campaigns.find((c) => c.id === e.target.value);
                   if (match) setSelectedCampaign(match);
                 }}
-                className="bg-transparent text-sm font-medium text-foreground focus:outline-none cursor-pointer max-w-[200px] truncate"
+                className="bg-transparent text-sm font-medium text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[200px] truncate"
               >
                 {campaigns.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-background text-foreground">
+                  <option key={c.id} value={c.id} className="bg-[#17171E] text-[#F2F0F7]">
                     {c.name} ({c.status})
                   </option>
                 ))}
@@ -419,7 +387,7 @@ function CampaignPlansContent() {
           {/* Studio Link Button */}
           <Link
             href={selectedClientId ? `/campaigns?clientId=${selectedClientId}` : "/campaigns"}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] shadow-sm transition-all"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>New Sprint in Studio</span>
@@ -429,17 +397,17 @@ function CampaignPlansContent() {
 
       {/* Main Campaign Plan View */}
       {!selectedCampaign ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-border/60 rounded-2xl bg-card">
-          <div className="w-14 h-14 rounded-2xl bg-violet-500/10 text-violet-500 flex items-center justify-center mb-4">
+        <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#30303D] rounded-2xl bg-[#17171E]">
+          <div className="w-14 h-14 rounded-2xl bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 flex items-center justify-center mb-4">
             <Sparkles className="w-7 h-7" />
           </div>
-          <h2 className="text-base font-bold text-foreground">No Campaign Sprint Found</h2>
-          <p className="text-xs text-muted-foreground mt-1 max-w-md">
+          <h2 className="text-base font-bold text-[#F2F0F7]">No Campaign Sprint Found</h2>
+          <p className="text-xs text-[#A3A0B0] mt-1 max-w-md">
             There are no campaigns generated for this client yet. Launch Campaign Studio to chat with the AI Co-Director and architect your first 30-day sprint.
           </p>
           <Link
             href={selectedClientId ? `/campaigns?clientId=${selectedClientId}` : "/campaigns"}
-            className="mt-5 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+            className="mt-5 flex items-center gap-2 px-4 py-2 rounded-lg bg-[#A78BFA] text-[#101014] text-xs font-semibold hover:bg-[#B69BFF] transition-all"
           >
             <Sparkles className="w-4 h-4" />
             <span>Go to Campaign Studio</span>
@@ -448,37 +416,37 @@ function CampaignPlansContent() {
       ) : (
         <div className="space-y-6">
           {/* Action & Strategy Header Banner */}
-          <div className="p-5 rounded-2xl bg-card border border-border/80 shadow-sm space-y-4">
+          <div className="p-5 rounded-2xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-foreground">{selectedCampaign.name}</h2>
+                  <h2 className="text-lg font-bold text-[#F2F0F7]">{selectedCampaign.name}</h2>
                   <span
-                    className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
                       selectedCampaign.status === "in_production"
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                        ? "bg-[#45B88A]/15 text-[#45B88A] border-[#45B88A]/30"
+                        : "bg-[#E5AA58]/15 text-[#E5AA58] border-[#E5AA58]/30"
                     }`}
                   >
                     {selectedCampaign.status === "in_production" ? "In Production" : "AI Draft • Pending Approval"}
                   </span>
 
                   {quality && (
-                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30">
                       🛡️ {quality.compliance_score <= 1 ? Math.round(quality.compliance_score * 100) : Math.round(quality.compliance_score)}% Brand Compliant
                     </span>
                   )}
                 </div>
                 {strategy?.campaign_theme && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Theme: <span className="text-foreground font-medium">&ldquo;{strategy.campaign_theme}&rdquo;</span>
+                  <p className="text-xs text-[#A3A0B0] mt-1">
+                    Theme: <span className="text-[#F2F0F7] font-medium">&ldquo;{strategy.campaign_theme}&rdquo;</span>
                     {strategy.target_audience_definition && (
                       <span> • Target: {strategy.target_audience_definition}</span>
                     )}
                   </p>
                 )}
                 {draft?.start_date && draft?.end_date && (
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-violet-600 dark:text-violet-400 font-bold">
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[#A78BFA] font-bold">
                     <CalendarDays className="w-3.5 h-3.5" />
                     <span>Sprint Timeline: {draft.start_date} to {draft.end_date} ({draft.duration_days || deliverables.length} Days)</span>
                   </div>
@@ -491,7 +459,7 @@ function CampaignPlansContent() {
                   <button
                     onClick={handleConvertToTasks}
                     disabled={converting}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold text-xs shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#45B88A] hover:bg-[#45B88A]/90 text-white font-semibold text-xs shadow-md shadow-[#45B88A]/20 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     {converting ? (
                       <>
@@ -508,7 +476,7 @@ function CampaignPlansContent() {
                 ) : (
                   <Link
                     href="/tasks"
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/25 transition-colors"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#45B88A]/15 text-[#45B88A] border border-[#45B88A]/30 text-xs font-semibold hover:bg-[#45B88A]/25 transition-colors"
                   >
                     <Kanban className="w-3.5 h-3.5" />
                     <span>View in Production Kanban →</span>
@@ -520,7 +488,7 @@ function CampaignPlansContent() {
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={deleting}
                   title="Delete Campaign Sprint"
-                  className="p-2 rounded-lg border border-border/80 hover:bg-rose-500/10 hover:border-rose-500/30 text-muted-foreground hover:text-rose-500 transition-colors cursor-pointer"
+                  className="p-2 rounded-lg border border-[#30303D] hover:bg-[#E16F7B]/10 hover:border-[#E16F7B]/30 text-[#A3A0B0] hover:text-[#E16F7B] transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -529,12 +497,12 @@ function CampaignPlansContent() {
 
             {/* Strategic Pillars Pills */}
             {pillars.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-xs">
-                <span className="text-muted-foreground font-medium">Core Content Pillars:</span>
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#30303D] text-xs">
+                <span className="text-[#A3A0B0] font-medium">Core Content Pillars:</span>
                 {pillars.map((pillar, i) => (
                   <span
                     key={i}
-                    className="px-2.5 py-0.5 rounded-full bg-secondary font-medium text-secondary-foreground"
+                    className="px-2.5 py-0.5 rounded-full bg-[#20202A] border border-[#30303D] font-medium text-[#F2F0F7]"
                   >
                     {pillar}
                   </span>
@@ -545,28 +513,28 @@ function CampaignPlansContent() {
 
           {/* Delete Confirmation Modal */}
           {showDeleteConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-              <div className="bg-card border border-border rounded-xl p-5 max-w-md w-full shadow-xl space-y-4">
-                <div className="flex items-center gap-3 text-rose-500">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+              <div className="bg-[#17171E] border border-[#30303D] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                <div className="flex items-center gap-3 text-[#E16F7B]">
                   <AlertCircle className="w-6 h-6" />
-                  <h3 className="font-bold text-base text-foreground">Delete Campaign Sprint?</h3>
+                  <h3 className="font-bold text-base text-[#F2F0F7]">Delete Campaign Sprint?</h3>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-[#A3A0B0] leading-relaxed">
                   Are you sure you want to delete <strong>&ldquo;{selectedCampaign.name}&rdquo;</strong>?
                   This will permanently remove the AI draft, deliverables, and associated pipeline tasks.
                 </p>
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#30303D]">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
                     disabled={deleting}
-                    className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-lg border border-[#30303D] text-xs font-semibold hover:bg-[#20202A] text-[#F2F0F7] transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteCampaign}
                     disabled={deleting}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#E16F7B] hover:bg-[#E16F7B]/90 text-white text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     <span>Confirm Delete</span>
@@ -579,51 +547,51 @@ function CampaignPlansContent() {
           {/* Multi-Agent Research Insights Drawers */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Brand Intelligence Drawer */}
-            <div className="p-4 rounded-xl bg-card border border-border/60 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-bold text-foreground">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-[#F2F0F7]">
+                <ShieldCheck className="w-4 h-4 text-[#45B88A]" />
                 <span>Agent 1: Brand Intelligence</span>
               </div>
-              <p className="text-muted-foreground text-[11px]">
-                Brand Voice: <span className="text-foreground">{draft?.brand_voice || "Authentic & Professional"}</span>
+              <p className="text-[#A3A0B0] text-[11px]">
+                Brand Voice: <span className="text-[#F2F0F7] font-medium">{draft?.brand_voice || "Authentic & Professional"}</span>
               </p>
               {draft?.brand_context_summary?.verified_offers && (
-                <div className="text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Verified Offers:</span>{" "}
+                <div className="text-[11px] text-[#A3A0B0]">
+                  <span className="font-medium text-[#F2F0F7]">Verified Offers:</span>{" "}
                   {draft.brand_context_summary.verified_offers.join(", ")}
                 </div>
               )}
             </div>
 
             {/* Market & Trend Research Drawer */}
-            <div className="p-4 rounded-xl bg-card border border-border/60 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-bold text-foreground">
-                <Search className="w-4 h-4 text-indigo-500" />
+            <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-[#F2F0F7]">
+                <Search className="w-4 h-4 text-[#69A9D8]" />
                 <span>Agent 2: Market Evidence</span>
               </div>
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-[#A3A0B0] text-[11px]">
                 Analyzed live web signals & competitor angles for {draft?.brand_context_summary?.industry || "industry"}.
               </p>
               {draft?.market_research_summary?.top_topics && (
-                <div className="text-[11px] text-muted-foreground truncate">
-                  <span className="font-medium text-foreground">Trending Topics:</span>{" "}
+                <div className="text-[11px] text-[#A3A0B0] truncate">
+                  <span className="font-medium text-[#F2F0F7]">Trending Topics:</span>{" "}
                   {draft.market_research_summary.top_topics.slice(0, 2).join(", ")}
                 </div>
               )}
             </div>
 
             {/* Historical Performance Drawer */}
-            <div className="p-4 rounded-xl bg-card border border-border/60 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-bold text-foreground">
-                <BarChart3 className="w-4 h-4 text-violet-500" />
+            <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-[#F2F0F7]">
+                <BarChart3 className="w-4 h-4 text-[#A78BFA]" />
                 <span>Agent 3: Retention Calibrator</span>
               </div>
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-[#A3A0B0] text-[11px]">
                 Applied short-form video retention weights and carousel pacing to avoid content fatigue.
               </p>
               {draft?.performance_summary?.recommended_formats && (
-                <div className="text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Preferred Formats:</span>{" "}
+                <div className="text-[11px] text-[#A3A0B0]">
+                  <span className="font-medium text-[#F2F0F7]">Preferred Formats:</span>{" "}
                   {draft.performance_summary.recommended_formats.join(", ")}
                 </div>
               )}
@@ -633,7 +601,7 @@ function CampaignPlansContent() {
           {/* Deliverables Section Controls */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-foreground">
+              <h3 className="text-base font-bold text-[#F2F0F7]">
                 Planned Deliverables ({filteredDeliverables.length})
               </h3>
 
@@ -641,7 +609,7 @@ function CampaignPlansContent() {
               <select
                 value={selectedPillarFilter}
                 onChange={(e) => setSelectedPillarFilter(e.target.value)}
-                className="text-xs bg-muted/60 border border-border rounded-lg px-2.5 py-1 text-foreground cursor-pointer"
+                className="text-xs bg-[#17171E] border border-[#30303D] rounded-lg px-2.5 py-1 text-[#F2F0F7] cursor-pointer"
               >
                 <option value="all">All Content Pillars</option>
                 {pillars.map((p, i) => (
@@ -653,13 +621,13 @@ function CampaignPlansContent() {
             </div>
 
             {/* View Switcher (Calendar vs List) */}
-            <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border">
+            <div className="flex items-center bg-[#17171E] rounded-lg p-1 border border-[#30303D]">
               <button
                 onClick={() => setViewMode("calendar")}
                 className={`flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                   viewMode === "calendar"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] shadow-xs"
+                    : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                 }`}
               >
                 <Grid className="w-3.5 h-3.5" />
@@ -669,8 +637,8 @@ function CampaignPlansContent() {
                 onClick={() => setViewMode("list")}
                 className={`flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                   viewMode === "list"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] shadow-xs"
+                    : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -692,17 +660,17 @@ function CampaignPlansContent() {
                     key={item.day_number}
                     className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all text-xs ${
                       isExpanded
-                        ? "bg-card border-primary/50 shadow-md ring-1 ring-primary/30"
-                        : "bg-card/70 border-border/70 hover:border-border hover:shadow-xs"
+                        ? "bg-[#17171E] border-[#A78BFA] shadow-md ring-1 ring-[#A78BFA]/30"
+                        : "bg-[#17171E] border-[#30303D] hover:border-[#30303D]/80 hover:shadow-xs"
                     }`}
                   >
                     {/* Card Header */}
                     <div>
-                      <div className="flex items-center justify-between gap-1 pb-2 border-b border-border/40">
+                      <div className="flex items-center justify-between gap-1 pb-2 border-b border-[#30303D]/60">
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-foreground text-xs">Day {item.day_number}</span>
+                          <span className="font-bold text-[#F2F0F7] text-xs">Day {item.day_number}</span>
                           {item.date_label && (
-                            <span className="text-[10px] text-violet-600 dark:text-violet-400 font-semibold truncate">
+                            <span className="text-[10px] text-[#A78BFA] font-semibold truncate">
                               {item.date_label}
                             </span>
                           )}
@@ -713,18 +681,18 @@ function CampaignPlansContent() {
                               e.stopPropagation();
                               setEditingDeliverable(item);
                             }}
-                            className="p-1 rounded-md text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-500/10 cursor-pointer transition-all"
+                            className="p-1 rounded-md text-[#A3A0B0] hover:text-[#A78BFA] hover:bg-[#A78BFA]/10 cursor-pointer transition-all"
                             title={`Deep Dive & Edit Day ${item.day_number} with Scriptwriter AI`}
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                            <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
                           </button>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
                               isReel
-                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                ? "bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/20"
                                 : isCarousel
-                                ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
-                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                ? "bg-[#69A9D8]/15 text-[#69A9D8] border border-[#69A9D8]/20"
+                                : "bg-[#45B88A]/15 text-[#45B88A] border border-[#45B88A]/20"
                             }`}
                           >
                             {item.deliverable_type}
@@ -734,40 +702,40 @@ function CampaignPlansContent() {
 
                       {/* Hook & Pillar */}
                       <div className="mt-2.5 space-y-1.5">
-                        <span className="text-[10px] font-medium text-muted-foreground block truncate">
+                        <span className="text-[10px] font-medium text-[#A3A0B0] block truncate">
                           🎯 {item.pillar}
                         </span>
-                        <p className="font-semibold text-foreground text-xs leading-snug line-clamp-2">
+                        <p className="font-semibold text-[#F2F0F7] text-xs leading-snug line-clamp-2">
                           &ldquo;{item.hook}&rdquo;
                         </p>
                       </div>
 
                       {/* Expandable Details */}
                       {isExpanded && (
-                        <div className="mt-3 pt-3 border-t border-border/40 space-y-2 text-[11px]">
+                        <div className="mt-3 pt-3 border-t border-[#30303D]/60 space-y-2 text-[11px]">
                           <div>
-                            <span className="font-medium text-muted-foreground">Visual Concept:</span>
-                            <p className="text-foreground mt-0.5 leading-normal">{item.visual_concept}</p>
+                            <span className="font-medium text-[#A3A0B0]">Visual Concept:</span>
+                            <p className="text-[#F2F0F7] mt-0.5 leading-normal">{item.visual_concept}</p>
                           </div>
                           <div>
-                            <span className="font-medium text-muted-foreground">Caption:</span>
-                            <p className="text-foreground mt-0.5 leading-normal italic line-clamp-3">
+                            <span className="font-medium text-[#A3A0B0]">Caption:</span>
+                            <p className="text-[#F2F0F7] mt-0.5 leading-normal italic line-clamp-3">
                               {item.caption}
                             </p>
                           </div>
                           {item.cta && (
                             <div>
-                              <span className="font-medium text-muted-foreground">Call to Action:</span>
-                              <p className="text-primary font-medium mt-0.5">{item.cta}</p>
+                              <span className="font-medium text-[#A3A0B0]">Call to Action:</span>
+                              <p className="text-[#45B88A] font-medium mt-0.5">{item.cta}</p>
                             </div>
                           )}
 
                           {/* Deep Dive & Edit with Scriptwriter AI Button */}
                           <button
                             onClick={() => setEditingDeliverable(item)}
-                            className="w-full mt-2.5 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-rose-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                            className="w-full mt-2.5 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-[#A78BFA]/15 hover:bg-[#A78BFA]/25 text-[#A78BFA] border border-[#A78BFA]/30 text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                            <Sparkles className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
                             <span>Deep Dive & Edit with Scriptwriter AI</span>
                           </button>
 
@@ -779,7 +747,7 @@ function CampaignPlansContent() {
                                   expandedReelDay === item.day_number ? null : item.day_number
                                 )
                               }
-                              className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-semibold cursor-pointer"
+                              className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] text-[10px] font-semibold cursor-pointer border border-[#A78BFA]/20"
                             >
                               <Video className="w-3 h-3" />
                               <span>{expandedReelDay === item.day_number ? "Hide Scene Script" : `View ${item.reel_scenes.length} Scene Beats`}</span>
@@ -794,7 +762,7 @@ function CampaignPlansContent() {
                                   expandedCarouselDay === item.day_number ? null : item.day_number
                                 )
                               }
-                              className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold cursor-pointer"
+                              className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded bg-[#69A9D8]/10 hover:bg-[#69A9D8]/20 text-[#69A9D8] text-[10px] font-semibold cursor-pointer border border-[#69A9D8]/20"
                             >
                               <Layers2 className="w-3 h-3" />
                               <span>{expandedCarouselDay === item.day_number ? "Hide Slides" : `View ${item.carousel_slides.length} Slide Deck`}</span>
@@ -805,13 +773,13 @@ function CampaignPlansContent() {
                     </div>
 
                     {/* Card Footer Toggle */}
-                    <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
+                    <div className="mt-3 pt-2 border-t border-[#30303D]/60 flex items-center justify-between">
                       <button
-                        onClick={() => copyToClipboard(item.hook, item.day_number)}
-                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+                        onClick={() => copyToClipboard(item.hook || "", item.day_number)}
+                        className="text-[10px] text-[#A3A0B0] hover:text-[#F2F0F7] flex items-center gap-1 cursor-pointer"
                       >
                         {copiedHookDay === item.day_number ? (
-                          <Check className="w-3 h-3 text-emerald-500" />
+                          <Check className="w-3 h-3 text-[#45B88A]" />
                         ) : (
                           <Copy className="w-3 h-3" />
                         )}
@@ -820,7 +788,7 @@ function CampaignPlansContent() {
 
                       <button
                         onClick={() => setExpandedDay(isExpanded ? null : item.day_number)}
-                        className="text-[10px] font-medium text-primary hover:underline cursor-pointer flex items-center gap-0.5"
+                        className="text-[10px] font-medium text-[#A78BFA] hover:underline cursor-pointer flex items-center gap-0.5"
                       >
                         <span>{isExpanded ? "Collapse" : "Expand"}</span>
                         {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -840,25 +808,25 @@ function CampaignPlansContent() {
                 return (
                   <div
                     key={item.day_number}
-                    className="p-5 rounded-xl border border-border/80 bg-card shadow-sm space-y-4 text-xs"
+                    className="p-5 rounded-xl border border-[#30303D] bg-[#17171E] shadow-sm space-y-4 text-xs"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border/40">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#30303D]/60">
                       <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
+                        <span className="w-8 h-8 rounded-lg bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 font-bold flex items-center justify-center text-xs shrink-0">
                           D{item.day_number}
                         </span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-foreground">
-                              {item.title || `Day ${item.day_number}: ${item.hook.slice(0, 45)}...`}
+                            <span className="font-bold text-sm text-[#F2F0F7]">
+                              {item.title || (item.hook ? `Day ${item.day_number}: ${item.hook.slice(0, 45)}...` : `Day ${item.day_number}`)}
                             </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-secondary text-secondary-foreground">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-[#20202A] text-[#A3A0B0] border border-[#30303D]">
                               {item.platform} • {item.deliverable_type}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <div className="flex items-center gap-2 text-xs text-[#A3A0B0] mt-0.5">
                             {item.date_label && (
-                              <span className="font-semibold text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                              <span className="font-semibold text-[#A78BFA] flex items-center gap-1">
                                 <CalendarDays className="w-3 h-3" />
                                 {item.date_label}
                               </span>
@@ -872,17 +840,17 @@ function CampaignPlansContent() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setEditingDeliverable(item)}
-                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-rose-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#A78BFA]/15 hover:bg-[#A78BFA]/25 text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                          <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
                           <span>Deep Dive & Edit with AI</span>
                         </button>
                         <button
-                          onClick={() => copyToClipboard(item.hook, item.day_number)}
-                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+                          onClick={() => copyToClipboard(item.hook || "", item.day_number)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#30303D] bg-[#20202A] hover:bg-[#262630] text-[#F2F0F7] transition-colors cursor-pointer"
                         >
                           {copiedHookDay === item.day_number ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            <Check className="w-3.5 h-3.5 text-[#45B88A]" />
                           ) : (
                             <Copy className="w-3.5 h-3.5" />
                           )}
@@ -893,24 +861,24 @@ function CampaignPlansContent() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <span className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide block mb-1">
+                        <span className="font-semibold text-[#A3A0B0] uppercase text-[10px] tracking-wide block mb-1">
                           Hook & Opening Angle
                         </span>
-                        <p className="font-semibold text-foreground text-sm">&ldquo;{item.hook}&rdquo;</p>
-                        <p className="text-muted-foreground mt-2 leading-relaxed">
-                          <strong className="text-foreground">Visual Concept:</strong> {item.visual_concept}
+                        <p className="font-semibold text-[#F2F0F7] text-sm">&ldquo;{item.hook}&rdquo;</p>
+                        <p className="text-[#A3A0B0] mt-2 leading-relaxed">
+                          <strong className="text-[#F2F0F7]">Visual Concept:</strong> {item.visual_concept}
                         </p>
                       </div>
 
                       <div>
-                        <span className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide block mb-1">
+                        <span className="font-semibold text-[#A3A0B0] uppercase text-[10px] tracking-wide block mb-1">
                           Caption & CTA
                         </span>
-                        <p className="text-foreground leading-relaxed italic whitespace-pre-line">
+                        <p className="text-[#F2F0F7] leading-relaxed italic whitespace-pre-line bg-[#20202A] p-2.5 rounded-lg border border-[#30303D]/60">
                           {item.caption}
                         </p>
                         {item.cta && (
-                          <p className="mt-2 text-primary font-medium">
+                          <p className="mt-2 text-[#45B88A] font-semibold">
                             Call to Action: {item.cta}
                           </p>
                         )}
@@ -919,17 +887,17 @@ function CampaignPlansContent() {
 
                     {/* Reel Scene Director Breakdown */}
                     {isReel && item.reel_scenes && item.reel_scenes.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-border/40">
+                      <div className="mt-4 pt-3 border-t border-[#30303D]/60">
                         <div className="flex items-center justify-between mb-2.5">
-                          <span className="font-bold text-rose-500 text-xs flex items-center gap-1.5">
+                          <span className="font-bold text-[#A78BFA] text-xs flex items-center gap-1.5">
                             <Video className="w-4 h-4" />
                             <span>Scene-by-Scene Reel Director Script ({item.reel_scenes.length} Beats)</span>
                           </span>
                           <button
                             onClick={() => setEditingDeliverable(item)}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold text-[11px] cursor-pointer transition-all"
+                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] font-semibold text-[11px] cursor-pointer transition-all border border-[#A78BFA]/20"
                           >
-                            <Sparkles className="w-3 h-3 text-rose-500" />
+                            <Sparkles className="w-3 h-3 text-[#A78BFA]" />
                             <span>Edit Scenes with AI</span>
                           </button>
                         </div>
@@ -937,21 +905,21 @@ function CampaignPlansContent() {
                           {item.reel_scenes.map((scene) => (
                             <div
                               key={scene.scene_number}
-                              className="p-3 rounded-lg bg-muted/40 border border-border/60 text-[11px] space-y-1.5"
+                              className="p-3 rounded-lg bg-[#20202A] border border-[#30303D] text-[11px] space-y-1.5"
                             >
-                              <div className="flex items-center justify-between font-bold text-foreground">
+                              <div className="flex items-center justify-between font-bold text-[#F2F0F7]">
                                 <span>Scene {scene.scene_number}</span>
-                                <span className="font-mono text-muted-foreground">{scene.timestamp_range}</span>
+                                <span className="font-mono text-[#A3A0B0]">{scene.timestamp_range}</span>
                               </div>
-                              <p className="text-foreground">
-                                <strong>Visual:</strong> {scene.visual_action}
+                              <p className="text-[#F2F0F7]">
+                                <strong className="text-[#A3A0B0]">Visual:</strong> {scene.visual_action}
                               </p>
                               {scene.on_screen_text && (
-                                <p className="text-primary font-medium">
+                                <p className="text-[#69A9D8] font-medium">
                                   <strong>Text Overlay:</strong> &ldquo;{scene.on_screen_text}&rdquo;
                                 </p>
                               )}
-                              <p className="text-muted-foreground italic">
+                              <p className="text-[#A3A0B0] italic">
                                 <strong>Voiceover:</strong> &ldquo;{scene.spoken_audio_or_voiceover}&rdquo;
                               </p>
                             </div>
@@ -962,8 +930,8 @@ function CampaignPlansContent() {
 
                     {/* Carousel Slides Breakdown */}
                     {isCarousel && item.carousel_slides && item.carousel_slides.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-border/40">
-                        <span className="font-bold text-indigo-500 text-xs flex items-center gap-1.5 mb-2.5">
+                      <div className="mt-4 pt-3 border-t border-[#30303D]/60">
+                        <span className="font-bold text-[#69A9D8] text-xs flex items-center gap-1.5 mb-2.5">
                           <Layers2 className="w-4 h-4" />
                           <span>Carousel Slide Deck ({item.carousel_slides.length} Slides)</span>
                         </span>
@@ -971,17 +939,17 @@ function CampaignPlansContent() {
                           {item.carousel_slides.map((slide) => (
                             <div
                               key={slide.slide_number}
-                              className="p-3 rounded-lg bg-muted/40 border border-border/60 text-[11px] space-y-1.5"
+                              className="p-3 rounded-lg bg-[#20202A] border border-[#30303D] text-[11px] space-y-1.5"
                             >
-                              <div className="flex items-center justify-between font-bold text-foreground">
+                              <div className="flex items-center justify-between font-bold text-[#F2F0F7]">
                                 <span>Slide {slide.slide_number}</span>
-                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-semibold">
+                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#101014] text-[#A3A0B0] border border-[#30303D] font-semibold">
                                   {slide.slide_type}
                                 </span>
                               </div>
-                              <p className="font-bold text-foreground">&ldquo;{slide.headline}&rdquo;</p>
-                              <p className="text-muted-foreground leading-normal">{slide.body_copy}</p>
-                              <p className="text-primary text-[10px]">
+                              <p className="font-bold text-[#F2F0F7]">&ldquo;{slide.headline}&rdquo;</p>
+                              <p className="text-[#A3A0B0] leading-normal">{slide.body_copy}</p>
+                              <p className="text-[#69A9D8] text-[10px]">
                                 <strong>Layout:</strong> {slide.visual_layout}
                               </p>
                             </div>

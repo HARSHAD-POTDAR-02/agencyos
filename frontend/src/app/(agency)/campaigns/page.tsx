@@ -32,6 +32,12 @@ import {
   RotateCcw,
   MessagesSquare,
   Compass,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  FileText,
+  SlidersHorizontal,
 } from "lucide-react";
 
 interface Client {
@@ -299,9 +305,12 @@ function CampaignStudioContent() {
   // Collaborative Studio & Active Canvas State
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(searchParams.get("campaignId") || null);
   const [activeArtifact, setActiveArtifact] = useState<ActiveArtifactData | null>(null);
-  const [mobileTab, setMobileTab] = useState<"chat" | "canvas">("chat");
+  const [mobileTab, setMobileTab] = useState<"nav" | "canvas" | "intel">("canvas");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; email: string; role?: string }>>([]);
+  const [isLeftNavOpen, setIsLeftNavOpen] = useState(true);
+  const [isRightIntelOpen, setIsRightIntelOpen] = useState(true);
+  const [rightPanelTab, setRightPanelTab] = useState<"chat" | "evidence">("chat");
 
   // Date range and timeline state
   const [startDate, setStartDate] = useState<string>("");
@@ -1043,6 +1052,71 @@ function CampaignStudioContent() {
     }
   };
 
+  // Workflow stages definition for left navigation
+  const WORKFLOW_STAGES = [
+    { id: "discovery", name: "Discovery & Brief", step: "01", icon: Sparkles, desc: "Objectives & sprint dates" },
+    { id: "intelligence", name: "Market Intelligence", step: "02", icon: Search, desc: "Competitors & viral hooks" },
+    { id: "strategy", name: "Campaign Blueprint", step: "03", icon: Cpu, desc: "Master theme & pacing" },
+    { id: "storyboards", name: "Content Architecture", step: "04", icon: Layers2, desc: "Reel scenes & decks" },
+    { id: "compliance", name: "Pre-Flight Audit", step: "05", icon: FileCheck, desc: "Claims & brand safety" },
+    { id: "handoff", name: "Production Handoff", step: "06", icon: CheckCircle2, desc: "Task conversion & export" },
+  ];
+
+  // Helper to compute real execution status for any of the 6 agents
+  const getAgentStatus = (agentId: string) => {
+    if (isPipelineRunning) {
+      const activeMsg = chatMessages.find(
+        (m) => m.agentPipeline && m.agentPipeline.status === "in_progress"
+      );
+      if (activeMsg && activeMsg.agentPipeline) {
+        const stepIdx = activeMsg.agentPipeline.activeStep;
+        const stepOrder = [
+          "brand_intelligence",
+          "market_research",
+          "historical_performance",
+          "campaign_strategist",
+          "content_architect",
+          "quality_evaluator",
+        ];
+        const agentIdx = stepOrder.indexOf(agentId);
+        if (agentIdx !== -1) {
+          if (stepIdx === agentIdx) return { state: "running", label: "Running" };
+          if (stepIdx > agentIdx) return { state: "completed", label: "Done" };
+          return { state: "pending", label: "Queued" };
+        }
+      }
+    }
+    if (isChatLoading && currentAgentId === agentId) {
+      return { state: "running", label: "Thinking" };
+    }
+    return { state: "idle", label: "Idle" };
+  };
+
+  // Collect all unique artifacts from chat stream and canvas
+  const studioArtifacts = React.useMemo(() => {
+    const map = new Map<string, NonNullable<ChatMsg["artifact_summary"]>>();
+    chatMessages.forEach((m) => {
+      if (m.artifact_summary) {
+        map.set(`${m.artifact_summary.id}-v${m.artifact_summary.version}`, m.artifact_summary);
+      }
+    });
+    if (activeArtifact) {
+      const key = `${activeArtifact.id}-v${activeArtifact.version}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: activeArtifact.id,
+          type: activeArtifact.type,
+          title: activeArtifact.title,
+          version: activeArtifact.version,
+          status: activeArtifact.status,
+          payload: activeArtifact.payload,
+          supporting_evidence_refs: activeArtifact.supporting_evidence_refs,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [chatMessages, activeArtifact]);
+
   // Messages to display according to the selected view filter
   const displayedMessages = chatMessages.filter((msg) => {
     if (chatFilter === "all") return true;
@@ -1055,29 +1129,29 @@ function CampaignStudioContent() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] w-full max-w-[1700px] mx-auto px-2 sm:px-4 py-2 overflow-hidden">
-      {/* ── 1. Consolidated Sleek Header (Single row: Title + Client + Mode + Utilities) ── */}
-      <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-border/40 shrink-0">
-        {/* Left: Studio Title & Client Dropdown */}
+    <div className="flex flex-col h-[calc(100vh-4.25rem)] w-full mx-auto px-2 sm:px-4 py-2 overflow-hidden bg-[#101014] text-[#F2F0F7]">
+      {/* ── 1. Consolidated Sleek Header ── */}
+      <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-[#30303D] shrink-0">
+        {/* Left: Studio Brand & Client Selector */}
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </div>
-            <span className="text-sm font-bold tracking-tight text-foreground hidden sm:inline">
+            <span className="text-sm font-bold tracking-tight text-[#F2F0F7] hidden sm:inline">
               Campaign Studio
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted px-2.5 py-1 rounded-lg border border-border transition-colors">
-            <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <div className="flex items-center gap-1.5 bg-[#17171E] hover:bg-[#20202A] px-2.5 py-1 rounded-lg border border-[#30303D] transition-colors">
+            <Building2 className="w-3.5 h-3.5 text-[#A3A0B0] shrink-0" />
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer max-w-[150px] sm:max-w-[210px] truncate"
+              className="bg-transparent text-xs font-semibold text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[150px] sm:max-w-[210px] truncate"
             >
               {clients.map((c) => (
-                <option key={c.id} value={c.id} className="bg-background text-foreground">
+                <option key={c.id} value={c.id} className="bg-[#17171E] text-[#F2F0F7]">
                   {c.business_name}
                 </option>
               ))}
@@ -1086,44 +1160,74 @@ function CampaignStudioContent() {
         </div>
 
         {/* Center: Clean Segmented Mode Toggle */}
-        <div className="flex items-center p-0.5 bg-muted/60 dark:bg-muted/30 rounded-lg border border-border shadow-2xs">
+        <div className="flex items-center p-0.5 bg-[#17171E] rounded-lg border border-[#30303D]">
           <button
             type="button"
             onClick={() => setStudioMode("workflow")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               studioMode === "workflow"
-                ? "bg-violet-600 text-white shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] shadow-xs"
+                : "text-[#A3A0B0] hover:text-[#F2F0F7]"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Workflow</span>
           </button>
           <button
             type="button"
             onClick={() => setStudioMode("specialists")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               studioMode === "specialists"
-                ? "bg-indigo-600 text-white shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] shadow-xs"
+                : "text-[#A3A0B0] hover:text-[#F2F0F7]"
             }`}
           >
-            <Bot className="w-3.5 h-3.5" />
+            <Bot className="w-3.5 h-3.5 text-[#69A9D8]" />
             <span>Specialists</span>
           </button>
         </div>
 
-        {/* Right: Quick Tools (Filter, Reset, Plans) */}
+        {/* Right: Panel Toggles & Tools */}
         <div className="flex items-center gap-2">
+          {/* Left Panel Toggle (Desktop) */}
+          <button
+            type="button"
+            onClick={() => setIsLeftNavOpen((prev) => !prev)}
+            title={isLeftNavOpen ? "Collapse Navigation" : "Expand Navigation"}
+            className={`hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
+              isLeftNavOpen
+                ? "bg-[#20202A] border-[#30303D] text-[#F2F0F7]"
+                : "bg-transparent border-[#30303D]/60 text-[#A3A0B0] hover:text-[#F2F0F7]"
+            }`}
+          >
+            {isLeftNavOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
+            <span className="text-[11px] font-mono hidden xl:inline">Nav</span>
+          </button>
+
+          {/* Right Panel Toggle (Desktop) */}
+          <button
+            type="button"
+            onClick={() => setIsRightIntelOpen((prev) => !prev)}
+            title={isRightIntelOpen ? "Collapse Intelligence" : "Expand Intelligence"}
+            className={`hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
+              isRightIntelOpen
+                ? "bg-[#20202A] border-[#30303D] text-[#F2F0F7]"
+                : "bg-transparent border-[#30303D]/60 text-[#A3A0B0] hover:text-[#F2F0F7]"
+            }`}
+          >
+            {isRightIntelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
+            <span className="text-[11px] font-mono hidden xl:inline">Intel</span>
+          </button>
+
           {/* Stream Filter Toggle */}
           <button
             type="button"
             onClick={() => setChatFilter((prev) => (prev === "all" ? "active" : "all"))}
             title={chatFilter === "all" ? "Filter to active agent only" : "Show all agents"}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg bg-muted/50 hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg bg-[#17171E] hover:bg-[#20202A] border border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
           >
-            <MessagesSquare className="w-3 h-3 text-primary" />
-            <span className="font-medium text-[11px]">
+            <MessagesSquare className="w-3 h-3 text-[#A78BFA]" />
+            <span className="font-mono text-[11px]">
               {chatFilter === "all" ? `All (${chatMessages.length})` : currentAgent.shortName}
             </span>
           </button>
@@ -1132,526 +1236,242 @@ function CampaignStudioContent() {
           <button
             onClick={handleResetChat}
             title="Start fresh conversation"
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline text-[11px]">Reset</span>
           </button>
 
-          {/* Campaign Plans Dashboard */}
+          {/* Campaign Plans Link */}
           <Link
             href={selectedClientId ? `/campaign-plans?clientId=${selectedClientId}` : "/campaign-plans"}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border transition-colors shadow-2xs"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#20202A] hover:bg-[#262630] text-[#F2F0F7] border border-[#30303D] transition-colors"
           >
-            <CalendarDays className="w-3.5 h-3.5 text-primary" />
+            <CalendarDays className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span className="hidden md:inline text-[11px]">Plans</span>
-            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <ChevronRight className="w-3 h-3 text-[#A3A0B0]" />
           </Link>
         </div>
       </header>
 
-      {/* Mobile Tab Toggle (< lg only) */}
-      <div className="flex lg:hidden items-center p-0.5 bg-muted/60 rounded-lg border border-border my-1.5 shrink-0">
+      {/* Mobile Tab Control (< lg only) */}
+      <div className="flex lg:hidden items-center p-0.5 bg-[#17171E] rounded-lg border border-[#30303D] my-1.5 shrink-0">
         <button
           type="button"
-          onClick={() => setMobileTab("chat")}
+          onClick={() => setMobileTab("nav")}
           className={`flex-1 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-            mobileTab === "chat" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"
+            mobileTab === "nav" ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]" : "text-[#A3A0B0]"
           }`}
         >
-          Chat & Agents
+          Stages & Artifacts
         </button>
         <button
           type="button"
           onClick={() => setMobileTab("canvas")}
-          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            mobileTab === "canvas" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground"
+          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+            mobileTab === "canvas" ? "bg-[#A78BFA] text-[#101014]" : "text-[#A3A0B0]"
           }`}
         >
           <Sparkles className="w-3 h-3" />
-          <span>Canvas {activeArtifact ? `(v${activeArtifact.version})` : ""}</span>
+          <span>Canvas</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab("intel")}
+          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+            mobileTab === "intel" ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]" : "text-[#A3A0B0]"
+          }`}
+        >
+          Intelligence & Chat
         </button>
       </div>
 
-      {/* ── 2. Split-Screen Body: Left Chat (42%) & Right Canvas (58%) ── */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden pt-1 gap-3">
-        {/* Left Column: Chat & Specialist Controls */}
-        <div
-          className={`w-full lg:w-[45%] xl:w-[40%] flex flex-col h-full min-h-0 border-b lg:border-b-0 lg:border-r border-border/60 pr-0 lg:pr-3 overflow-hidden ${
-            mobileTab === "chat" ? "flex" : "hidden lg:flex"
-          }`}
-        >
-          {/* Specialist / Timeline Pill Strip */}
-          {studioMode === "specialists" ? (
-            <div className="py-2 border-b border-border/40 shrink-0 space-y-1.5">
-              <div className="flex items-center justify-between px-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1">
-                  <Compass className="w-3 h-3 text-primary" />
-                  <span>Choose Specialist</span>
+      {/* ── 2. Three-Region Workspace: Left Nav + Centre Canvas + Right Intel ── */}
+      <div className="flex-1 flex min-h-0 overflow-hidden pt-2 gap-2.5">
+        {/* ── LEFT REGION: Campaign Navigation & Workflow Stages ── */}
+        {(isLeftNavOpen || mobileTab === "nav") && (
+          <aside
+            className={`w-full lg:w-64 xl:w-72 shrink-0 flex flex-col h-full bg-[#17171E] border border-[#30303D] rounded-xl overflow-hidden ${
+              mobileTab === "nav" ? "flex" : "hidden lg:flex"
+            }`}
+          >
+            {/* Sprint Timeline Header Card */}
+            <div className="p-3 border-b border-[#30303D] bg-[#101014]/50 space-y-2 shrink-0">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1">
+                  <CalendarDays className="w-3 h-3 text-[#A78BFA]" />
+                  <span>Sprint Timeline</span>
                 </span>
-                <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[200px]">
-                  {SPECIALIST_AGENTS.find((a) => a.id === activeSpecialistId)?.name || "Specialist"}
-                </span>
+                {durationDays && durationDays > 0 ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30">
+                    {durationDays} Days
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono text-[#A3A0B0]">Dates</span>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => {
-                  const Icon = agent.icon;
-                  const isSelected = activeSpecialistId === agent.id;
+
+              <div className="flex items-center gap-1 bg-[#17171E] px-2 py-1 rounded-lg border border-[#30303D]">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleDateChange(e.target.value, endDate)}
+                  className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-full"
+                />
+                <span className="text-[#A3A0B0] text-[10px]">→</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(e) => handleDateChange(startDate, e.target.value)}
+                  className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-full text-right"
+                />
+              </div>
+            </div>
+
+            {/* Workflow Stages Vertical List */}
+            <div className="p-3 border-b border-[#30303D] space-y-2 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] block px-1">
+                Workflow Stages
+              </span>
+              <div className="space-y-1">
+                {WORKFLOW_STAGES.map((stage) => {
+                  const Icon = stage.icon;
+                  const isCurrent =
+                    (stage.id === "intelligence" && activeSpecialistId === "market_research") ||
+                    (stage.id === "strategy" && activeSpecialistId === "campaign_strategist") ||
+                    (stage.id === "storyboards" && activeSpecialistId === "content_architect") ||
+                    (stage.id === "compliance" && activeSpecialistId === "quality_evaluator") ||
+                    (stage.id === "discovery" && studioMode === "workflow");
+
                   return (
                     <button
-                      key={agent.id}
+                      key={stage.id}
                       type="button"
                       onClick={() => {
-                        setActiveSpecialistId(agent.id);
-                        setStudioMode("specialists");
+                        if (stage.id === "discovery") setStudioMode("workflow");
+                        else if (stage.id === "intelligence") {
+                          setActiveSpecialistId("market_research");
+                          setStudioMode("specialists");
+                        } else if (stage.id === "strategy") {
+                          setActiveSpecialistId("campaign_strategist");
+                          setStudioMode("specialists");
+                        } else if (stage.id === "storyboards") {
+                          setActiveSpecialistId("content_architect");
+                          setStudioMode("specialists");
+                        } else if (stage.id === "compliance") {
+                          setActiveSpecialistId("quality_evaluator");
+                          setStudioMode("specialists");
+                        } else if (stage.id === "handoff") {
+                          setIsExportModalOpen(true);
+                        }
                       }}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                        isSelected
-                          ? `${agent.badgeBg} ${agent.badgeText} ${agent.borderColor} shadow-2xs ring-1 ring-primary/20 font-bold`
-                          : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground border-border/40 hover:border-border"
+                      className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-all text-left cursor-pointer ${
+                        isCurrent
+                          ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-semibold"
+                          : "hover:bg-[#20202A]/50 text-[#A3A0B0] hover:text-[#F2F0F7] border border-transparent"
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5 shrink-0" />
-                      <span>{agent.shortName}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? "text-[#A78BFA]" : "text-[#A3A0B0]"}`} />
+                        <span className="truncate">{stage.name}</span>
+                      </div>
+                      <span className="font-mono text-[10px] text-[#A3A0B0] shrink-0">{stage.step}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 border-b border-border/30 shrink-0 text-xs">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-3.5 h-3.5 text-violet-500" />
-                <span className="text-[11px] font-semibold text-muted-foreground">Sprint Timeline:</span>
-                <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md border border-border/60">
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => handleDateChange(e.target.value, endDate)}
-                    className="bg-transparent text-[11px] font-medium text-foreground focus:outline-none cursor-pointer"
-                  />
-                  <span className="text-muted-foreground text-[10px]">→</span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    min={startDate || undefined}
-                    onChange={(e) => handleDateChange(startDate, e.target.value)}
-                    className="bg-transparent text-[11px] font-medium text-foreground focus:outline-none cursor-pointer"
-                  />
-                </div>
-                {durationDays && durationDays > 0 ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                    {durationDays} Days
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground italic hidden sm:inline">
-                    or state in chat (e.g. &ldquo;from 8th Nov to 11th Nov&rdquo;)
-                  </span>
-                )}
+
+            {/* Campaign Artifacts Stream */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0]">
+                  Campaign Artifacts
+                </span>
+                <span className="text-[10px] font-mono text-[#A78BFA]">
+                  {studioArtifacts.length}
+                </span>
               </div>
-              {startDate && endDate && (
-                <button
-                  type="button"
-                  onClick={() => handleDateChange("", "")}
-                  className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
-                >
-                  Clear
-                </button>
+
+              {studioArtifacts.length === 0 ? (
+                <div className="p-3 rounded-lg bg-[#20202A]/40 border border-[#30303D]/60 text-center text-xs text-[#A3A0B0]">
+                  <FileText className="w-4 h-4 mx-auto mb-1 text-[#A3A0B0]/60" />
+                  <p className="text-[11px]">No artifacts generated yet</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {studioArtifacts.map((art) => {
+                    const isActive = activeArtifact?.id === art.id && activeArtifact?.version === art.version;
+                    return (
+                      <button
+                        key={`${art.id}-v${art.version}`}
+                        type="button"
+                        onClick={() => {
+                          handleViewOnCanvas(art);
+                          setMobileTab("canvas");
+                        }}
+                        className={`w-full p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer space-y-1 ${
+                          isActive
+                            ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-xs"
+                            : "bg-[#101014]/40 hover:bg-[#20202A] border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#101014] text-[#A78BFA] border border-[#30303D]">
+                            v{art.version}
+                          </span>
+                          <span
+                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full border ${
+                              art.status === "approved" || art.status === "exported"
+                                ? "bg-[#45B88A]/15 text-[#45B88A] border-[#45B88A]/30"
+                                : "bg-[#20202A] text-[#A3A0B0] border-[#30303D]"
+                            }`}
+                          >
+                            {art.status}
+                          </span>
+                        </div>
+                        <p className="font-medium text-[11px] truncate text-[#F2F0F7]">
+                          {art.title}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
-          )}
 
-          {/* Main Chat Stream */}
-          <div className="flex-1 overflow-y-auto py-3 space-y-3.5 pr-1">
-            {displayedMessages.map((msg) => {
-              const isUser = msg.role === "user";
-              const msgAgentId = msg.agent_id || "director";
-              const agentInfo = SPECIALIST_AGENTS.find((a) => a.id === msgAgentId) || SPECIALIST_AGENTS[0];
-              const AgentIcon = agentInfo.icon;
-
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex gap-2.5 text-sm ${isUser ? "justify-end" : "justify-start"}`}
-                >
-                  {/* Agent Avatar */}
-                  {!isUser && (
-                    <div
-                      className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-2xs ${agentInfo.avatarBg}`}
-                      title={`${agentInfo.name} (${agentInfo.roleTitle})`}
-                    >
-                      <AgentIcon className="w-3.5 h-3.5" />
-                    </div>
-                  )}
-
-                  <div className="max-w-[88%] md:max-w-[84%] space-y-1.5">
-                    {/* Agent Badge & Name Tag (Assistant messages) */}
-                    {!isUser && (
-                      <div className="flex items-center gap-1.5 pl-1">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${agentInfo.badgeBg} ${agentInfo.badgeText} ${agentInfo.borderColor} flex items-center gap-1`}
-                        >
-                          <AgentIcon className="w-3 h-3" />
-                          <span>{msg.agent_name || agentInfo.name}</span>
-                        </span>
-                        <span className="text-[10px] text-muted-foreground hidden sm:inline">
-                          {agentInfo.roleTitle}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Live Streaming Active Status Pill */}
-                    {msg.streamingStatus && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/30 text-xs text-violet-600 dark:text-violet-400 font-medium animate-pulse mb-1 w-fit shadow-2xs">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-violet-500" />
-                        <span>{msg.streamingStatus}</span>
-                      </div>
-                    )}
-
-                    {/* Text Bubble */}
-                    <div
-                      className={`px-4 py-2.5 rounded-2xl ${
-                        isUser
-                          ? "bg-primary text-primary-foreground rounded-br-none shadow-sm"
-                          : "bg-muted/60 dark:bg-muted/40 border border-border/80 text-foreground rounded-bl-none shadow-sm"
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap leading-relaxed text-[13.5px]">
-                        {msg.content || (msg.isStreaming ? (
-                          <span className="text-muted-foreground/80 italic text-xs flex items-center gap-2 py-0.5">
-                            <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse shrink-0" />
-                            <span>Gathering real-time evidence & analyzing market landscape...</span>
-                          </span>
-                        ) : null)}
-                        {msg.isStreaming && msg.content && (
-                          <span className="inline-block w-1.5 h-3.5 bg-primary ml-0.5 animate-pulse align-middle" />
-                        )}
-                      </div>
-                      <span
-                        className={`block mt-1 text-[10px] ${
-                          isUser ? "text-primary-foreground/70 text-right" : "text-muted-foreground"
-                        }`}
-                      >
-                        {msg.timestamp}
-                      </span>
-                    </div>
-
-                    {/* Operational Activity Logs Breadcrumbs */}
-                    {msg.activity_logs && msg.activity_logs.length > 0 && (
-                      <div className="space-y-1 pl-1 pt-1">
-                        {msg.activity_logs.map((log: any, i: number) => {
-                          const logText = typeof log === "string" ? log : log.message || JSON.stringify(log);
-                          const isPending = logText.startsWith("⏳");
-                          return (
-                            <div
-                              key={i}
-                              className={`flex items-center gap-1.5 text-[10.5px] font-mono px-2 py-0.5 rounded border w-fit max-w-full truncate transition-all duration-200 ${
-                                isPending
-                                  ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 animate-pulse"
-                                  : "bg-muted/40 border-border/40 text-muted-foreground/90"
-                              }`}
-                            >
-                              {isPending ? (
-                                <Loader2 className="w-2.5 h-2.5 text-amber-500 animate-spin shrink-0" />
-                              ) : (
-                                <Sparkles className="w-2.5 h-2.5 text-primary shrink-0" />
-                              )}
-                              <span className="truncate">{logText.replace(/^⏳\s*/, "")}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Artifact Summary Card with quick link to Canvas */}
-                    {msg.artifact_summary && (
-                      <button
-                        type="button"
-                        onClick={() => handleViewOnCanvas(msg.artifact_summary!)}
-                        disabled={isLoadingCanvasArtifact === msg.artifact_summary.id}
-                        className={`flex items-center justify-between w-full p-2.5 rounded-xl bg-card border transition-all text-xs cursor-pointer shadow-2xs group ${
-                          activeArtifact?.id === msg.artifact_summary.id &&
-                          activeArtifact?.version === msg.artifact_summary.version
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                            : "border-primary/30 hover:border-primary hover:bg-muted/30"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-primary/10 text-primary">
-                            v{msg.artifact_summary.version}
-                          </span>
-                          <span className="font-semibold text-foreground text-[11px] group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-[280px]">
-                            {msg.artifact_summary.title}
-                          </span>
-                          {activeArtifact?.id === msg.artifact_summary.id &&
-                            activeArtifact?.version === msg.artifact_summary.version && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full shrink-0">
-                                Active on Canvas
-                              </span>
-                            )}
-                        </div>
-                        <span className="text-[10px] text-primary font-medium flex items-center gap-0.5 shrink-0">
-                          {isLoadingCanvasArtifact === msg.artifact_summary.id ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              <span>Loading...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>View on Canvas</span>
-                              <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                            </>
-                          )}
-                        </span>
-                      </button>
-                    )}
-
-                    {/* Inline Agent Pipeline Execution Card */}
-                    {msg.agentPipeline && (
-                      <div className="rounded-xl border border-violet-500/30 bg-card p-3.5 shadow-md space-y-3">
-                        <div className="flex items-center justify-between pb-2 border-b border-border/60">
-                          <div className="flex items-center gap-2">
-                            {msg.agentPipeline.status === "in_progress" ? (
-                              <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-ping" />
-                            ) : msg.agentPipeline.status === "completed" ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                            ) : (
-                              <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                            )}
-                            <span className="font-semibold text-xs tracking-wide uppercase text-foreground">
-                              {msg.agentPipeline.status === "in_progress"
-                                ? "Multi-Agent Engine in Progress..."
-                                : msg.agentPipeline.status === "completed"
-                                ? "Engine Execution Complete • 6 Agents Synthesized"
-                                : "Pipeline Issue"}
-                            </span>
-                          </div>
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            {msg.agentPipeline.status === "in_progress"
-                              ? `Step ${msg.agentPipeline.activeStep + 1} of 6`
-                              : "100% Done"}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          {AGENT_STEPS.map((step, idx) => {
-                            const Icon = step.icon;
-                            const isDone =
-                              msg.agentPipeline!.status === "completed" ||
-                              idx < msg.agentPipeline!.activeStep;
-                            const isActive =
-                              msg.agentPipeline!.status === "in_progress" &&
-                              idx === msg.agentPipeline!.activeStep;
-
-                            const customDetail = msg.agentPipeline!.stepDetails?.[step.id];
-
-                            return (
-                              <div
-                                key={step.id}
-                                className={`flex items-start gap-2.5 p-1.5 rounded-lg text-xs transition-all ${
-                                  isActive
-                                    ? "bg-violet-500/10 border border-violet-500/30 text-foreground"
-                                    : isDone
-                                    ? "bg-muted/30 text-foreground"
-                                    : "text-muted-foreground opacity-60"
-                                }`}
-                              >
-                                <div className="mt-0.5">
-                                  {isDone ? (
-                                    <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                                      <Check className="w-2 h-2 stroke-[3]" />
-                                    </div>
-                                  ) : isActive ? (
-                                    <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
-                                  ) : (
-                                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                  )}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 font-medium text-[11px]">
-                                    <Icon className="w-3 h-3 text-primary" />
-                                    <span>
-                                      Agent {idx + 1}: {step.name}
-                                    </span>
-                                  </div>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                                    {customDetail || step.desc}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {msg.agentPipeline.status === "error" && (
-                          <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
-                            {msg.agentPipeline.errorMessage}
-                          </div>
-                        )}
-
-                        {msg.agentPipeline.status === "completed" && msg.agentPipeline.result && (
-                          <div className="mt-2 p-3 rounded-xl bg-gradient-to-br from-violet-600/10 via-background to-indigo-600/10 border border-violet-500/40 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-bold text-xs text-foreground truncate">
-                                {msg.agentPipeline.result.campaignName}
-                              </h3>
-                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                🛡️ {(() => {
-                                  const s = msg.agentPipeline.result.complianceScore ?? 95;
-                                  return s <= 1 ? Math.round(s * 100) : Math.round(s);
-                                })()}% Compliant
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-                              <span className="text-[11px] text-muted-foreground">
-                                📦 {msg.agentPipeline.result.deliverablesCount} Deliverables Architected
-                              </span>
-                              <button
-                                onClick={() =>
-                                  router.push(
-                                    `/campaign-plans?clientId=${selectedClientId}&campaignId=${msg.agentPipeline?.result?.campaignId}`
-                                  )
-                                }
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold text-[11px] transition-all shadow-xs cursor-pointer"
-                              >
-                                <span>Open Plan & Convert</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* User Avatar */}
-                  {isUser && (
-                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="w-3.5 h-3.5" />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {isChatLoading && !chatMessages.some((m) => m.isStreaming) && (
-              <div className="flex gap-2.5 justify-start text-sm">
-                <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 ${currentAgent.avatarBg}`}>
-                  <currentAgent.icon className="w-3.5 h-3.5" />
-                </div>
-                <div className="px-3.5 py-2 rounded-2xl bg-muted/60 border border-border/80 rounded-bl-none text-muted-foreground text-xs flex items-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                  <span>{currentAgent.name} is thinking...</span>
-                </div>
+            {/* Specialist Switcher Strip */}
+            <div className="p-2.5 border-t border-[#30303D] bg-[#101014]/40 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] block px-1 mb-1.5">
+                Specialist Agents
+              </span>
+              <div className="grid grid-cols-2 gap-1 text-[11px]">
+                {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSpecialistId(agent.id);
+                      setStudioMode("specialists");
+                    }}
+                    className={`px-2 py-1 rounded text-left truncate transition-colors cursor-pointer border ${
+                      activeSpecialistId === agent.id && studioMode === "specialists"
+                        ? "bg-[#20202A] text-[#F2F0F7] border-[#A78BFA]/50 font-bold"
+                        : "bg-transparent text-[#A3A0B0] hover:text-[#F2F0F7] border-transparent"
+                    }`}
+                  >
+                    {agent.shortName}
+                  </button>
+                ))}
               </div>
-            )}
-
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Prompt Starters */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none shrink-0 border-t border-border/20">
-            <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
-              <Flame className="w-3 h-3 text-amber-500" />
-              <span className="hidden sm:inline">Try:</span>
-            </span>
-            {currentAgent.starters.map((starter, i) => (
-              <button
-                key={i}
-                onClick={() => handleSendMessage(starter)}
-                className="text-[11px] px-2.5 py-0.5 rounded-full bg-muted/60 hover:bg-muted border border-border/80 text-foreground transition-colors shrink-0 whitespace-nowrap cursor-pointer"
-              >
-                {starter}
-              </button>
-            ))}
-          </div>
-
-          {/* Strategy & Generate Bar */}
-          {(suggestedObjective || isReadyToGenerate) && (
-            <div className="my-1 py-1 px-3 rounded-lg bg-violet-500/10 border border-violet-500/25 flex items-center justify-between gap-2 shrink-0 text-xs shadow-2xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                <p className="text-[11px] text-foreground font-medium truncate">
-                  <span className="font-bold text-violet-600 dark:text-violet-400 mr-1.5">
-                    {durationDays ? `${durationDays}-Day Sprint:` : "Strategy:"}
-                  </span>
-                  {suggestedObjective || suggestedCustomBrief}
-                </p>
-              </div>
-
-              <button
-                onClick={handleRunPipeline}
-                disabled={isPipelineRunning}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-[11px] shadow-xs transition-all disabled:opacity-50 cursor-pointer shrink-0"
-              >
-                {isPipelineRunning ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span>Running...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3 h-3" />
-                    <span>Generate Sprint ✨</span>
-                  </>
-                )}
-              </button>
             </div>
-          )}
+          </aside>
+        )}
 
-          {/* Input Footer */}
-          <footer className="pt-1.5 border-t border-border/40 shrink-0">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="relative flex items-center"
-            >
-              <input
-                ref={chatInputRef}
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                disabled={isPipelineRunning}
-                placeholder={
-                  isPipelineRunning
-                    ? "Autonomous engine is running, please wait..."
-                    : isChatLoading
-                    ? `${currentAgent.name} is thinking...`
-                    : studioMode === "workflow"
-                    ? "Ask Campaign Director questions, set timeline, or brainstorm..."
-                    : `Chat with ${currentAgent.name} (${currentAgent.roleTitle})...`
-                }
-                className="w-full bg-muted/50 border border-border rounded-xl px-3.5 py-2.5 pr-20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50 transition-all"
-                autoFocus
-              />
-
-              <div className="absolute right-1.5 flex items-center gap-1">
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim() || isChatLoading || isPipelineRunning}
-                  className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium text-xs flex items-center gap-1 hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer"
-                >
-                  {isChatLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-3 h-3" />
-                      <span>Send</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </footer>
-        </div>
-
-        {/* Right Column: Contextual Canvas */}
-        <div
-          className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden rounded-xl border border-border/60 bg-card/20 shadow-xs ${
+        {/* ── CENTRE REGION: Primary Creative Workspace & Canvas ── */}
+        <main
+          className={`flex-1 min-w-0 flex flex-col h-full bg-[#101014] border border-[#30303D] rounded-xl overflow-hidden shadow-xs ${
             mobileTab === "canvas" ? "flex" : "hidden lg:flex"
           }`}
         >
@@ -1665,11 +1485,346 @@ function CampaignStudioContent() {
               setActiveSpecialistId(agentId);
               setStudioMode("specialists");
               handleSendMessage(promptText);
-              setMobileTab("chat");
+              setMobileTab("intel");
             }}
             onCloseCanvas={() => setActiveArtifact(null)}
           />
-        </div>
+        </main>
+
+        {/* ── RIGHT REGION: Contextual Intelligence & Agent Stream ── */}
+        {(isRightIntelOpen || mobileTab === "intel") && (
+          <aside
+            className={`w-full lg:w-80 xl:w-96 shrink-0 flex flex-col h-full bg-[#17171E] border border-[#30303D] rounded-xl overflow-hidden ${
+              mobileTab === "intel" ? "flex" : "hidden lg:flex"
+            }`}
+          >
+            {/* 6-Agent Execution Status Roster */}
+            <div className="p-3 border-b border-[#30303D] bg-[#101014]/50 shrink-0 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1">
+                  <Bot className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <span>Agent Intelligence (6 Agents)</span>
+                </span>
+                <span className="text-[10px] font-mono text-[#A3A0B0]">
+                  {isPipelineRunning ? (
+                    <span className="text-[#A78BFA] flex items-center gap-1 font-semibold">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Engine Active
+                    </span>
+                  ) : (
+                    "Ready"
+                  )}
+                </span>
+              </div>
+
+              {/* 6 Agents Micro Matrix */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: "brand_intelligence", name: "Brand Intel", icon: ShieldCheck },
+                  { id: "market_research", name: "Market Trends", icon: Search },
+                  { id: "historical_performance", name: "Performance", icon: BarChart3 },
+                  { id: "campaign_strategist", name: "Strategist", icon: Cpu },
+                  { id: "content_architect", name: "Architect", icon: Layers2 },
+                  { id: "quality_evaluator", name: "Quality Gate", icon: FileCheck },
+                ].map((item) => {
+                  const stat = getAgentStatus(item.id);
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border text-[10.5px] ${
+                        stat.state === "running"
+                          ? "bg-[#A78BFA]/10 border-[#A78BFA]/30 text-[#A78BFA] animate-pulse"
+                          : stat.state === "completed"
+                          ? "bg-[#45B88A]/10 border-[#45B88A]/30 text-[#45B88A]"
+                          : "bg-[#17171E] border-[#30303D] text-[#A3A0B0]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Icon className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      <span className="text-[9px] font-mono uppercase shrink-0">
+                        {stat.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Stream Messages Container */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 pr-2 min-h-0">
+              {displayedMessages.map((msg) => {
+                const isUser = msg.role === "user";
+                const msgAgentId = msg.agent_id || "director";
+                const agentInfo = SPECIALIST_AGENTS.find((a) => a.id === msgAgentId) || SPECIALIST_AGENTS[0];
+                const AgentIcon = agentInfo.icon;
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-2 text-xs ${isUser ? "justify-end" : "justify-start"}`}
+                  >
+                    {!isUser && (
+                      <div
+                        className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 mt-0.5 bg-[#20202A] text-[#A78BFA] border-[#30303D]`}
+                        title={agentInfo.name}
+                      >
+                        <AgentIcon className="w-3 h-3" />
+                      </div>
+                    )}
+
+                    <div className="max-w-[88%] space-y-1">
+                      {!isUser && (
+                        <div className="flex items-center gap-1.5 pl-1">
+                          <span className="text-[10px] font-bold text-[#A78BFA]">
+                            {msg.agent_name || agentInfo.name}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Streaming status pill */}
+                      {msg.streamingStatus && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[11px] text-[#A78BFA] animate-pulse mb-1 w-fit">
+                          <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                          <span>{msg.streamingStatus}</span>
+                        </div>
+                      )}
+
+                      {/* Message Bubble */}
+                      <div
+                        className={`px-3 py-2 rounded-xl text-xs leading-relaxed ${
+                          isUser
+                            ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] rounded-br-none"
+                            : "bg-[#101014] text-[#F2F0F7] border border-[#30303D] rounded-bl-none"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap">
+                          {msg.content || (msg.isStreaming ? (
+                            <span className="text-[#A3A0B0] italic text-[11px] flex items-center gap-1.5 py-0.5">
+                              <Sparkles className="w-3 h-3 text-[#A78BFA] animate-pulse shrink-0" />
+                              <span>Gathering intelligence & synthesizing...</span>
+                            </span>
+                          ) : null)}
+                        </div>
+                        <span className={`block mt-1 text-[9px] font-mono ${isUser ? "text-[#A3A0B0] text-right" : "text-[#A3A0B0]"}`}>
+                          {msg.timestamp}
+                        </span>
+                      </div>
+
+                      {/* Activity Logs Breadcrumbs */}
+                      {msg.activity_logs && msg.activity_logs.length > 0 && (
+                        <div className="space-y-1 pl-1 pt-0.5">
+                          {msg.activity_logs.map((log: any, i: number) => {
+                            const logText = typeof log === "string" ? log : log.message || JSON.stringify(log);
+                            const isPending = logText.startsWith("⏳");
+                            return (
+                              <div
+                                key={i}
+                                className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border w-fit max-w-full truncate ${
+                                  isPending
+                                    ? "bg-[#E5AA58]/10 border-[#E5AA58]/30 text-[#E5AA58] animate-pulse"
+                                    : "bg-[#20202A] border-[#30303D] text-[#A3A0B0]"
+                                }`}
+                              >
+                                {isPending ? (
+                                  <Loader2 className="w-2.5 h-2.5 text-[#E5AA58] animate-spin shrink-0" />
+                                ) : (
+                                  <Sparkles className="w-2.5 h-2.5 text-[#A78BFA] shrink-0" />
+                                )}
+                                <span className="truncate">{logText.replace(/^⏳\s*/, "")}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Inline Artifact Summary Card */}
+                      {msg.artifact_summary && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleViewOnCanvas(msg.artifact_summary!);
+                            setMobileTab("canvas");
+                          }}
+                          className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                            activeArtifact?.id === msg.artifact_summary.id
+                              ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7]"
+                              : "bg-[#101014] hover:bg-[#20202A] border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#20202A] text-[#A78BFA] border border-[#30303D]">
+                              v{msg.artifact_summary.version}
+                            </span>
+                            <span className="font-medium text-[11px] truncate text-[#F2F0F7]">
+                              {msg.artifact_summary.title}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-[#A78BFA] font-mono shrink-0 flex items-center gap-0.5">
+                            Canvas →
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Inline Agent Pipeline Progress Card */}
+                      {msg.agentPipeline && (
+                        <div className="rounded-xl border border-[#30303D] bg-[#101014] p-3 space-y-2.5">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-[#30303D]">
+                            <span className="font-bold text-xs text-[#F2F0F7]">
+                              {msg.agentPipeline.status === "in_progress"
+                                ? "Multi-Agent Engine Running..."
+                                : msg.agentPipeline.status === "completed"
+                                ? "6 Agents Synthesized • 100% Complete"
+                                : "Pipeline Error"}
+                            </span>
+                            <span className="text-[10px] font-mono text-[#A3A0B0]">
+                              {msg.agentPipeline.status === "in_progress"
+                                ? `Step ${msg.agentPipeline.activeStep + 1}/6`
+                                : "Done"}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1">
+                            {AGENT_STEPS.map((step, idx) => {
+                              const isDone =
+                                msg.agentPipeline!.status === "completed" ||
+                                idx < msg.agentPipeline!.activeStep;
+                              const isActive =
+                                msg.agentPipeline!.status === "in_progress" &&
+                                idx === msg.agentPipeline!.activeStep;
+
+                              return (
+                                <div
+                                  key={step.id}
+                                  className={`flex items-center gap-2 p-1.5 rounded-lg text-xs ${
+                                    isActive
+                                      ? "bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[#F2F0F7]"
+                                      : isDone
+                                      ? "text-[#F2F0F7]"
+                                      : "text-[#A3A0B0]/60"
+                                  }`}
+                                >
+                                  {isDone ? (
+                                    <Check className="w-3 h-3 text-[#45B88A] shrink-0" />
+                                  ) : isActive ? (
+                                    <Loader2 className="w-3 h-3 text-[#A78BFA] animate-spin shrink-0" />
+                                  ) : (
+                                    <Clock className="w-3 h-3 text-[#A3A0B0]/60 shrink-0" />
+                                  )}
+                                  <span className="truncate text-[11px] font-medium">
+                                    {idx + 1}. {step.name}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {isUser && (
+                      <div className="w-6 h-6 rounded-full bg-[#20202A] text-[#A78BFA] border border-[#30303D] flex items-center justify-center shrink-0 mt-0.5">
+                        <User className="w-3 h-3" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Prompt Starters */}
+            <div className="p-2 border-t border-[#30303D] bg-[#101014]/40 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+              <span className="text-[10px] font-bold text-[#A3A0B0] shrink-0 flex items-center gap-1">
+                <Flame className="w-3 h-3 text-[#E5AA58]" />
+              </span>
+              {currentAgent.starters.map((starter, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSendMessage(starter)}
+                  className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] transition-colors shrink-0 whitespace-nowrap cursor-pointer"
+                >
+                  {starter}
+                </button>
+              ))}
+            </div>
+
+            {/* Strategy Evolving Bar & Generate Action */}
+            {(suggestedObjective || isReadyToGenerate) && (
+              <div className="p-2.5 bg-[#A78BFA]/10 border-t border-[#A78BFA]/20 flex items-center justify-between gap-2 shrink-0 text-xs">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sparkles className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+                  <p className="text-[11px] text-[#F2F0F7] truncate font-medium">
+                    {durationDays ? `${durationDays}-Day Sprint:` : "Strategy:"} {suggestedObjective || suggestedCustomBrief}
+                  </p>
+                </div>
+                <button
+                  onClick={handleRunPipeline}
+                  disabled={isPipelineRunning}
+                  className="flex items-center gap-1 px-3 py-1 rounded-md bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-[11px] shadow-xs cursor-pointer shrink-0 transition-all disabled:opacity-50"
+                >
+                  {isPipelineRunning ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Running...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      <span>Generate Sprint ✨</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Input Box Footer */}
+            <footer className="p-2.5 border-t border-[#30303D] bg-[#101014]/60 shrink-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
+                }}
+                className="relative flex items-center"
+              >
+                <input
+                  ref={chatInputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  disabled={isPipelineRunning}
+                  placeholder={
+                    isPipelineRunning
+                      ? "Engine is running..."
+                      : isChatLoading
+                      ? `${currentAgent.name} is thinking...`
+                      : `Message ${currentAgent.shortName}...`
+                  }
+                  className="w-full bg-[#101014] border border-[#30303D] rounded-xl px-3.5 py-2 pr-16 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/60 focus:outline-none focus:border-[#A78BFA] disabled:opacity-50 transition-all"
+                  autoFocus
+                />
+
+                <div className="absolute right-1.5 flex items-center gap-1">
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim() || isChatLoading || isPipelineRunning}
+                    className="px-2.5 py-1 rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-xs flex items-center gap-1 disabled:opacity-40 transition-opacity cursor-pointer"
+                  >
+                    {isChatLoading ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="w-3 h-3" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </footer>
+          </aside>
+        )}
       </div>
 
       <ExportPreviewModal

@@ -39,10 +39,10 @@ interface QueueItem {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: React.ElementType }> = {
-  client_review:    { label: "Awaiting Your Review",  badge: "bg-amber-50 text-amber-700 border-amber-200",       icon: Clock },
-  changes_requested:{ label: "Changes Requested",     badge: "bg-rose-50 text-rose-700 border-rose-200",           icon: AlertCircle },
-  approved:         { label: "Approved",              badge: "bg-emerald-50 text-emerald-700 border-emerald-200",   icon: CheckCircle2 },
-  published:        { label: "Published",             badge: "bg-blue-50 text-blue-700 border-blue-200",            icon: CheckCircle2 },
+  client_review:    { label: "Awaiting Your Review",  badge: "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30",   icon: Clock },
+  changes_requested:{ label: "Changes Requested",     badge: "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30",   icon: AlertCircle },
+  approved:         { label: "Approved",              badge: "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30",   icon: CheckCircle2 },
+  published:        { label: "Published",             badge: "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30",   icon: CheckCircle2 },
 };
 
 function PortalHomeContent() {
@@ -106,10 +106,10 @@ function PortalHomeContent() {
 
   if (authLoading || (loading && deliverables.length === 0 && !error)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+      <div className="min-h-screen flex items-center justify-center bg-[#101014] text-[#F2F0F7]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-purple-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-500">Loading your review queue…</p>
+          <div className="w-8 h-8 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-[#71717A]">Loading your review queue…</p>
         </div>
       </div>
     );
@@ -118,27 +118,27 @@ function PortalHomeContent() {
   const primaryClient = clients.length > 0 ? clients[0] : null;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#101014] text-[#F2F0F7]">
       {/* Top Nav (Client Specific) */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 shadow-2xs">
+      <header className="sticky top-0 z-30 bg-[#17171E] border-b border-[#30303D]">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-xs">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-[#20202A] border border-[#30303D] flex items-center justify-center text-[#A78BFA]">
+              <Sparkles className="w-4 h-4 text-[#A78BFA]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black tracking-tight text-slate-900">
+                <span className="text-xs font-bold tracking-tight text-[#F2F0F7]">
                   {primaryClient ? primaryClient.business_name : "AgencyOS"}
                 </span>
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200/60">
+                <span className="text-[10px] font-mono font-bold text-[#A78BFA] bg-[#A78BFA]/10 px-2 py-0.5 rounded-full border border-[#A78BFA]/30">
                   Client Review Portal
                 </span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-semibold hidden sm:block">
+            <span className="text-xs text-[#A3A0B0] font-medium hidden sm:block">
               {user?.full_name || user?.email}
             </span>
             <button
@@ -146,7 +146,7 @@ function PortalHomeContent() {
                 logout();
                 router.push("/login");
               }}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#A3A0B0] hover:text-[#E16F7B] bg-[#20202A] hover:bg-[#E16F7B]/10 border border-[#30303D] px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               Sign Out
@@ -159,18 +159,18 @@ function PortalHomeContent() {
         {/* Welcome Banner */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
               Welcome, {user?.full_name?.split(" ")[0] || "Reviewer"} 👋
             </h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
+            <p className="text-xs text-[#A3A0B0] mt-1 font-medium">
               Review and approve your upcoming social media content before it gets published.
             </p>
           </div>
           <button
             onClick={load}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl shadow-2xs self-start sm:self-auto transition-all"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F2F0F7] bg-[#17171E] hover:bg-[#20202A] border border-[#30303D] px-3 py-2 rounded-xl self-start sm:self-auto transition-all cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+            <RefreshCw className="w-3.5 h-3.5 text-[#71717A]" />
             <span>Refresh</span>
           </button>
         </div>
@@ -180,10 +180,10 @@ function PortalHomeContent() {
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <button
               onClick={() => setSelectedClientId(null)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
                 !selectedClientId
-                  ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
+                  ? "bg-[#20202A] text-[#F2F0F7] border-[#30303D] font-bold"
+                  : "bg-[#17171E] text-[#71717A] border-[#30303D] hover:text-[#F2F0F7]"
               }`}
             >
               All Brands
@@ -192,10 +192,10 @@ function PortalHomeContent() {
               <button
                 key={c.id}
                 onClick={() => setSelectedClientId(c.id)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
                   selectedClientId === c.id
-                    ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-purple-300"
+                    ? "bg-[#20202A] text-[#F2F0F7] border-[#30303D] font-bold"
+                    : "bg-[#17171E] text-[#71717A] border-[#30303D] hover:text-[#F2F0F7]"
                 }`}
               >
                 {c.business_name}
@@ -205,22 +205,22 @@ function PortalHomeContent() {
         )}
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-200/80 pb-3">
+        <div className="flex items-center gap-2 mb-6 border-b border-[#30303D] pb-3">
           <button
             onClick={() => setStatusTab("pending")}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               statusTab === "pending"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-bold"
+                : "bg-[#17171E] text-[#71717A] border border-[#30303D] hover:text-[#F2F0F7]"
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
             <span>Pending Review</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
                 statusTab === "pending"
-                  ? "bg-white/20 text-white"
-                  : "bg-slate-100 text-slate-700"
+                  ? "bg-[#101014] text-[#A78BFA]"
+                  : "bg-[#101014] text-[#71717A]"
               }`}
             >
               {pendingItems.length}
@@ -229,19 +229,19 @@ function PortalHomeContent() {
 
           <button
             onClick={() => setStatusTab("approved")}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               statusTab === "approved"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-bold"
+                : "bg-[#17171E] text-[#71717A] border border-[#30303D] hover:text-[#F2F0F7]"
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Approved & Ready</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
                 statusTab === "approved"
-                  ? "bg-white/20 text-white"
-                  : "bg-slate-100 text-slate-700"
+                  ? "bg-[#101014] text-[#45B88A]"
+                  : "bg-[#101014] text-[#71717A]"
               }`}
             >
               {approvedItems.length}
@@ -250,10 +250,10 @@ function PortalHomeContent() {
 
           <button
             onClick={() => setStatusTab("all")}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               statusTab === "all"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-bold"
+                : "bg-[#17171E] text-[#71717A] border border-[#30303D] hover:text-[#F2F0F7]"
             }`}
           >
             <span>All Content ({clientFiltered.length})</span>
@@ -261,14 +261,14 @@ function PortalHomeContent() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700 flex items-center justify-between">
+          <div className="mb-6 p-4 bg-[#E16F7B]/10 border border-[#E16F7B]/30 rounded-xl text-xs font-medium text-[#E16F7B] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
             <button
               onClick={load}
-              className="px-2.5 py-1 bg-white border border-rose-300 text-rose-800 rounded-lg text-[11px] font-bold"
+              className="px-2.5 py-1 bg-[#17171E] border border-[#30303D] text-[#F2F0F7] rounded-lg text-[11px] font-semibold"
             >
               Retry
             </button>
@@ -277,20 +277,20 @@ function PortalHomeContent() {
 
         {/* Deliverables Grid */}
         {displayedItems.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-14 text-center shadow-2xs">
-            <CheckCircle2 className="w-12 h-12 text-emerald-300 mx-auto mb-4" />
-            <h3 className="text-sm font-bold text-slate-800">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-14 text-center">
+            <CheckCircle2 className="w-12 h-12 text-[#45B88A] mx-auto mb-4" />
+            <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">
               {statusTab === "pending"
                 ? "All caught up! No content pending review."
                 : statusTab === "approved"
                 ? "No approved content yet."
                 : "No content available."}
             </h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            <p className="text-xs text-[#A3A0B0] mt-1 max-w-sm mx-auto">
               {statusTab === "pending" && approvedItems.length > 0 ? (
                 <>
                   You have{" "}
-                  <span className="font-bold text-slate-700">
+                  <span className="font-semibold text-[#F2F0F7]">
                     {approvedItems.length} approved deliverable(s)
                   </span>
                   . Switch to the Approved tab to view them.
@@ -302,7 +302,7 @@ function PortalHomeContent() {
             {statusTab === "pending" && approvedItems.length > 0 && (
               <button
                 onClick={() => setStatusTab("approved")}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 font-bold text-xs rounded-xl border border-purple-200 hover:bg-purple-100 transition-colors"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#20202A] text-[#A78BFA] font-semibold text-xs rounded-xl border border-[#30303D] hover:bg-[#262630] transition-colors"
               >
                 <span>View Approved Deliverables ({approvedItems.length})</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -325,15 +325,15 @@ function PortalHomeContent() {
                 <Link
                   key={item.id}
                   href={`/portal/${item.id}`}
-                  className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-purple-300/60 transition-all group flex flex-col"
+                  className="bg-[#17171E] rounded-2xl border border-[#30303D] hover:border-[#A78BFA]/40 transition-all group flex flex-col overflow-hidden"
                 >
                   {/* Media preview area */}
-                  <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200/60 rounded-t-2xl flex items-center justify-center relative overflow-hidden">
-                    <div className="text-slate-300">
+                  <div className="h-32 bg-[#101014] rounded-t-2xl flex items-center justify-center relative overflow-hidden">
+                    <div className="text-[#30303D]">
                       {isVideo ? <Film className="w-12 h-12" /> : <ImageIcon className="w-12 h-12" />}
                     </div>
                     {latestVersion && (
-                      <span className="absolute top-3 right-3 text-[10px] font-black text-slate-600 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-slate-200 shadow-2xs">
+                      <span className="absolute top-3 right-3 text-[10px] font-mono font-bold text-[#A78BFA] bg-[#17171E] px-2 py-0.5 rounded-full border border-[#30303D]">
                         v{latestVersion.version_number}
                       </span>
                     )}
@@ -342,34 +342,34 @@ function PortalHomeContent() {
                   {/* Info */}
                   <div className="p-4 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-700 transition-colors leading-snug line-clamp-2">
+                      <h3 className="text-sm font-semibold text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors leading-snug line-clamp-2">
                         {item.title}
                       </h3>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 transition-colors shrink-0 mt-0.5" />
+                      <ChevronRight className="w-4 h-4 text-[#71717A] group-hover:text-[#A78BFA] transition-colors shrink-0 mt-0.5" />
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${st.badge}`}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${st.badge}`}
                       >
                         <StatusIcon className="w-2.5 h-2.5" />
                         {st.label}
                       </span>
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-slate-50 text-slate-600 border-slate-200">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border bg-[#101014] text-[#A3A0B0] border-[#30303D]">
                         {item.platform}
                       </span>
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-slate-50 text-slate-600 border-slate-200">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border bg-[#101014] text-[#A3A0B0] border-[#30303D]">
                         {item.deliverable_type}
                       </span>
                     </div>
 
-                    <div className="mt-auto flex items-center justify-between pt-2 border-t border-slate-100">
-                      <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-                        <Building2 className="w-3 h-3 text-slate-400" />
+                    <div className="mt-auto flex items-center justify-between pt-2 border-t border-[#30303D]">
+                      <span className="text-[11px] text-[#A3A0B0] font-medium flex items-center gap-1">
+                        <Building2 className="w-3 h-3 text-[#71717A]" />
                         {item.client_name}
                       </span>
                       {item.planned_date && (
-                        <span className="text-[11px] text-slate-400 font-medium">
+                        <span className="text-[11px] font-mono text-[#71717A]">
                           📅 {item.planned_date}
                         </span>
                       )}
@@ -389,7 +389,7 @@ export default function PortalPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center text-xs text-slate-400">
+        <div className="min-h-screen flex items-center justify-center text-xs text-[#71717A] bg-[#101014]">
           Loading…
         </div>
       }

@@ -27,16 +27,16 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
   return (
     <div className="space-y-6">
       {/* ── Brand Header ── */}
-      <div className="p-4 rounded-xl bg-card border border-border shadow-xs space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+      <div className="p-5 rounded-2xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/20 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-foreground">
+            <h3 className="font-bold text-base text-[#F2F0F7]">
               {payload.brand_name || "Brand Intelligence & Truth Classification"}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#A3A0B0]">
               4-tier epistemology: Verified Facts vs Inferences vs Hypotheses vs Missing Data
             </p>
           </div>
@@ -47,7 +47,7 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
       <div className="space-y-4">
         {/* Tier 1: Verified Facts */}
         <div className="space-y-2">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-[#45B88A] flex items-center gap-1.5 px-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Tier 1: Verified Facts ({verified.length})</span>
           </h4>
@@ -55,19 +55,19 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
             {verified.map((item, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-xs space-y-1"
+                className="p-3.5 rounded-xl bg-[#17171E] border border-[#45B88A]/30 text-xs space-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-800 dark:text-emerald-300">
+                  <span className="font-bold text-[#45B88A]">
                     {item.attribute_key}
                   </span>
                   {item.source_ref && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[10px] text-[#A3A0B0]">
                       Source: {item.source_ref}
                     </span>
                   )}
                 </div>
-                <p className="text-foreground text-[11px] leading-relaxed">
+                <p className="text-[#F2F0F7] text-[11px] leading-relaxed">
                   {item.content}
                 </p>
               </div>
@@ -78,7 +78,7 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
         {/* Tier 2: Inferred Patterns */}
         {inferred.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
+            <h4 className="text-xs uppercase font-bold tracking-wider text-[#69A9D8] flex items-center gap-1.5 px-1">
               <Lightbulb className="w-3.5 h-3.5" />
               <span>Tier 2: Inferred Patterns ({inferred.length})</span>
             </h4>
@@ -86,12 +86,12 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
               {inferred.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-lg bg-sky-500/5 border border-sky-500/20 text-xs space-y-1"
+                  className="p-3.5 rounded-xl bg-[#17171E] border border-[#69A9D8]/30 text-xs space-y-1"
                 >
-                  <span className="font-bold text-sky-800 dark:text-sky-300">
+                  <span className="font-bold text-[#69A9D8]">
                     {item.attribute_key}
                   </span>
-                  <p className="text-foreground text-[11px] leading-relaxed">
+                  <p className="text-[#F2F0F7] text-[11px] leading-relaxed">
                     {item.content}
                   </p>
                 </div>
@@ -103,7 +103,7 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
         {/* Tier 3: Hypotheses */}
         {hypotheses.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <h4 className="text-xs uppercase font-bold tracking-wider text-[#E5AA58] flex items-center gap-1.5 px-1">
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Tier 3: Strategic Hypotheses ({hypotheses.length})</span>
             </h4>
@@ -111,12 +111,12 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
               {hypotheses.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs space-y-1"
+                  className="p-3.5 rounded-xl bg-[#17171E] border border-[#E5AA58]/30 text-xs space-y-1"
                 >
-                  <span className="font-bold text-amber-800 dark:text-amber-300">
+                  <span className="font-bold text-[#E5AA58]">
                     {item.attribute_key}
                   </span>
-                  <p className="text-foreground text-[11px] leading-relaxed">
+                  <p className="text-[#F2F0F7] text-[11px] leading-relaxed">
                     {item.content}
                   </p>
                 </div>
@@ -128,7 +128,7 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
         {/* Tier 4: Missing Critical Info */}
         {missing.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+            <h4 className="text-xs uppercase font-bold tracking-wider text-[#E16F7B] flex items-center gap-1.5 px-1">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>Tier 4: Missing Critical Data ({missing.length})</span>
             </h4>
@@ -136,12 +136,12 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
               {missing.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-lg bg-rose-500/5 border border-rose-500/20 text-xs space-y-1"
+                  className="p-3.5 rounded-xl bg-[#17171E] border border-[#E16F7B]/30 text-xs space-y-1"
                 >
-                  <span className="font-bold text-rose-800 dark:text-rose-300">
+                  <span className="font-bold text-[#E16F7B]">
                     {item.attribute_key}
                   </span>
-                  <p className="text-foreground text-[11px] leading-relaxed">
+                  <p className="text-[#F2F0F7] text-[11px] leading-relaxed">
                     {item.content}
                   </p>
                 </div>
@@ -153,15 +153,15 @@ export function BrandPositioningPanel({ payload }: BrandPositioningPanelProps) {
 
       {/* ── Clarifying Questions ── */}
       {questions.length > 0 && (
-        <div className="p-4 rounded-xl bg-card border border-border shadow-xs space-y-2.5">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <QuestionIcon className="w-3.5 h-3.5 text-primary" />
+        <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-2.5">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
+            <QuestionIcon className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Clarifying Questions for Client</span>
           </h4>
-          <ul className="space-y-1.5 text-xs text-foreground">
+          <ul className="space-y-1.5 text-xs text-[#F2F0F7]">
             {questions.map((q, i) => (
-              <li key={i} className="flex items-start gap-2 bg-muted/30 p-2 rounded-lg border border-border/50">
-                <span className="font-bold text-primary">{i + 1}.</span>
+              <li key={i} className="flex items-start gap-2 bg-[#20202A] p-2.5 rounded-lg border border-[#30303D]/60">
+                <span className="font-bold text-[#A78BFA]">{i + 1}.</span>
                 <span>{q}</span>
               </li>
             ))}

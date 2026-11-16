@@ -492,7 +492,7 @@ function ClientWorkspaceContent() {
       <main className="flex-1 overflow-y-auto p-8 max-w-7xl mx-auto flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-500">Loading client workspace...</p>
+          <p className="text-sm font-semibold text-[#A3A0B0]">Loading client workspace...</p>
         </div>
       </main>
     );
@@ -501,15 +501,15 @@ function ClientWorkspaceContent() {
   if (!client) {
     return (
       <main className="flex-1 overflow-y-auto p-8 max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-md mx-auto shadow-sm">
-          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
-          <h2 className="text-base font-bold text-slate-900">Client Not Found</h2>
-          <p className="text-xs text-slate-500 mt-1 mb-4">
+        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-8 text-center max-w-md mx-auto shadow-sm">
+          <AlertCircle className="w-10 h-10 text-rose-400 mx-auto mb-3" />
+          <h2 className="text-base font-bold text-[#F2F0F7]">Client Not Found</h2>
+          <p className="text-xs text-[#A3A0B0] mt-1 mb-4">
             The requested client workspace does not exist or you do not have permission to access it.
           </p>
           <Link
             href="/clients"
-            className="inline-flex items-center gap-2 bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl"
+            className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold px-4 py-2 rounded-xl transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Clients</span>
@@ -520,40 +520,32 @@ function ClientWorkspaceContent() {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto">
+    <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Breadcrumb & Navigation */}
-      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-4">
-        <Link href="/clients" className="hover:text-purple-600 flex items-center gap-1 transition-colors">
+      <div className="flex items-center gap-2 text-xs font-medium text-[#6E6D7A]">
+        <Link href="/clients" className="hover:text-[#A78BFA] flex items-center gap-1 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Clients</span>
         </Link>
         <span>/</span>
-        <span className="text-slate-800 font-bold">{client.business_name}</span>
+        <span className="text-[#F2F0F7] font-semibold">{client.business_name}</span>
       </div>
 
       {/* Client Header Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs mb-6">
+      <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 text-white font-black text-xl flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-lg bg-[#20202A] border border-[#30303D] text-[#F2F0F7] font-bold text-lg flex items-center justify-center shrink-0">
               {client.business_name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">{client.business_name}</h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-lg font-semibold text-[#F2F0F7] tracking-tight">{client.business_name}</h1>
                 <select
                   value={client.status}
                   disabled={updatingStatus}
                   onChange={(e) => handleUpdateStatus(e.target.value as Client["status"])}
-                  className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all ${
-                    client.status === "active"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : client.status === "onboarding"
-                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : client.status === "paused"
-                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                      : "bg-slate-100 text-slate-700 border-slate-200"
-                  }`}
+                  className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border cursor-pointer focus:outline-none bg-[#20202A] text-[#F2F0F7] border-[#30303D]"
                   title="Click to change client status"
                 >
                   <option value="onboarding">🔵 Onboarding</option>
@@ -562,20 +554,20 @@ function ClientWorkspaceContent() {
                   <option value="offboarded">⚪ Offboarded</option>
                 </select>
                 {isConfirmed && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[rgba(69,184,138,0.12)] text-[#45B88A] border border-[#45B88A]/20">
                     <ShieldCheck className="w-3 h-3" />
                     <span>Brand Locked</span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 font-medium mt-1">
+              <p className="text-xs text-[#A3A0B0] font-normal mt-1">
                 {client.industry || "General Industry"} &bull; {client.location || "Location not set"}
                 {client.website && (
                   <a
                     href={client.website.startsWith("http") ? client.website : `https://${client.website}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 ml-3 text-purple-600 hover:underline font-semibold"
+                    className="inline-flex items-center gap-1 ml-3 text-[#A78BFA] hover:text-[#B69BFF] font-medium"
                   >
                     <span>Website</span>
                     <ExternalLink className="w-3 h-3" />
@@ -585,10 +577,10 @@ function ClientWorkspaceContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#E16F7B] bg-[rgba(225,111,123,0.12)] hover:bg-[rgba(225,111,123,0.2)] border border-[#E16F7B]/30 transition-all cursor-pointer"
               title="Permanently delete this client workspace"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -596,40 +588,40 @@ function ClientWorkspaceContent() {
             </button>
             <Link
               href={`/campaigns?clientId=${client.id}`}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all"
             >
-              <Sparkles className="w-4 h-4 text-purple-200" />
-              <span>Generate AI Plan ✨</span>
+              <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>AI Plan</span>
             </Link>
           </div>
         </div>
 
         {/* Offboarded Banner */}
         {client.status === "offboarded" && (
-          <div className="mt-5 p-4 rounded-xl bg-slate-100 border border-slate-300 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
+          <div className="mt-4 p-3.5 rounded-lg bg-[#20202A] border border-[#30303D] flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-slate-600" />
-                <span className="text-xs font-bold text-slate-900">This Client Workspace is Offboarded</span>
+                <AlertCircle className="w-4 h-4 text-[#A3A0B0]" />
+                <span className="text-xs font-medium text-[#F2F0F7]">Client Workspace is Offboarded</span>
               </div>
-              <p className="text-[11px] text-slate-600">
-                This client has ended retainer services. You can reactivate them or delete this workspace permanently from the client space.
+              <p className="text-[11px] text-[#A3A0B0]">
+                Retainer services ended. You can reactivate or permanently delete this workspace.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => handleUpdateStatus("active")}
                 disabled={updatingStatus}
-                className="px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
+                className="px-3 py-1 text-xs font-medium bg-[#17171E] border border-[#30303D] text-[#F2F0F7] hover:bg-[#262630] rounded-lg transition-all cursor-pointer"
               >
                 Reactivate Workspace
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-[#E16F7B] hover:bg-[#E16F7B]/90 text-white rounded-lg transition-all cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Permanently</span>
+                <span>Delete</span>
               </button>
             </div>
           </div>
@@ -637,30 +629,30 @@ function ClientWorkspaceContent() {
 
         {/* Onboarding Checklist Banner (shown while in onboarding) */}
         {client.status === "onboarding" && (
-          <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 border border-blue-200/70 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="mt-4 p-3.5 rounded-lg bg-[#20202A] border border-[#30303D] flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-bold text-slate-900">Client Onboarding in Progress</span>
+                <Clock className="w-4 h-4 text-[#69A9D8]" />
+                <span className="text-xs font-semibold text-[#F2F0F7]">Client Onboarding in Progress</span>
               </div>
-              <p className="text-[11px] text-slate-600">
-                Complete the milestones below to complete onboarding and activate retainer delivery.
+              <p className="text-[11px] text-[#A3A0B0]">
+                Complete milestones to activate automated retainer delivery.
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px]">
-                <span className="flex items-center gap-1 font-semibold text-emerald-700">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="flex items-center gap-1 font-medium text-[#45B88A]">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
                   Profile Details
                 </span>
-                <span className={`flex items-center gap-1 font-semibold ${isConfirmed ? "text-emerald-700" : "text-slate-500"}`}>
-                  {isConfirmed ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+                <span className={`flex items-center gap-1 font-medium ${isConfirmed ? "text-[#45B88A]" : "text-[#6E6D7A]"}`}>
+                  {isConfirmed ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#6E6D7A]" />}
                   Brand Guidelines Locked
                 </span>
-                <span className={`flex items-center gap-1 font-semibold ${contracts.length > 0 ? "text-emerald-700" : "text-slate-500"}`}>
-                  {contracts.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+                <span className={`flex items-center gap-1 font-medium ${contracts.length > 0 ? "text-[#45B88A]" : "text-[#6E6D7A]"}`}>
+                  {contracts.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#6E6D7A]" />}
                   Contract & Quotas ({contracts.length})
                 </span>
-                <span className={`flex items-center gap-1 font-semibold ${campaigns.length > 0 ? "text-emerald-700" : "text-slate-500"}`}>
-                  {campaigns.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+                <span className={`flex items-center gap-1 font-medium ${campaigns.length > 0 ? "text-[#45B88A]" : "text-[#6E6D7A]"}`}>
+                  {campaigns.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#6E6D7A]" />}
                   First Campaign ({campaigns.length})
                 </span>
               </div>
@@ -669,69 +661,69 @@ function ClientWorkspaceContent() {
             <button
               onClick={() => handleUpdateStatus("active")}
               disabled={updatingStatus}
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs shadow-emerald-600/30 transition-all shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-1.5 bg-[#45B88A] hover:bg-[#45B88A]/90 text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all shrink-0 cursor-pointer"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-              <span>Complete Onboarding & Activate 🚀</span>
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Complete Onboarding</span>
             </button>
           </div>
         )}
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 mt-6 border-t border-slate-100 pt-4">
+        <div className="flex items-center gap-1 mt-5 border-t border-[#30303D] pt-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab("brand")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === "brand"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
+            <ShieldCheck className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Brand Voice & Guidelines</span>
           </button>
           <button
             onClick={() => setActiveTab("contracts")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === "contracts"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
             }`}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-3.5 h-3.5 text-[#69A9D8]" />
             <span>Retainer Contracts & Quotas ({contracts.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("campaigns")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === "campaigns"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3.5 h-3.5 text-[#E5AA58]" />
             <span>Campaign Plans ({campaigns.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("reviewers")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === "reviewers"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
             }`}
           >
-            <UserCheck className="w-4 h-4" />
+            <UserCheck className="w-3.5 h-3.5 text-[#45B88A]" />
             <span>Client Reviewers ({reviewers.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("social")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === "social"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
             }`}
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Social & Publishing ({socialAccounts.length})</span>
           </button>
           <button
@@ -739,13 +731,13 @@ function ClientWorkspaceContent() {
               setActiveTab("reports");
               fetchMonthlyReport();
             }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeTab === "reports"
-                ? "bg-purple-600 text-white shadow-xs"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
+            <BarChart3 className="w-3.5 h-3.5 text-[#69A9D8]" />
             <span>Delivery Report</span>
           </button>
         </div>
@@ -776,26 +768,24 @@ function ClientWorkspaceContent() {
 
       {/* TAB 1: BRAND GUIDELINES */}
       {activeTab === "brand" && (
-        <div className="space-y-6">
-          <div className="bg-purple-50/70 border border-purple-200/70 rounded-2xl p-4 flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+        <div className="space-y-5">
+          <div className="bg-[rgba(167,139,250,0.08)] border border-[#A78BFA]/20 rounded-xl p-4 flex items-start gap-3">
+            <Sparkles className="w-4 h-4 text-[#A78BFA] shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-purple-950">Why Brand Guidelines Matter in AgencyOS</h4>
-              <p className="text-[12px] text-purple-800/90 mt-0.5 leading-relaxed">
-                When you save and confirm this profile, AgencyOS injects these rules directly into the Groq AI Campaign Planner
-                and Content Version approvals. Any prohibited claims or off-brand phrases will be automatically flagged before
-                content goes to client review.
+              <h4 className="text-xs font-semibold text-[#F2F0F7]">Brand Guidelines in AgencyOS</h4>
+              <p className="text-[11px] text-[#A3A0B0] mt-0.5 leading-relaxed">
+                When confirmed and locked, AgencyOS injects these rules directly into the Multi-Agent Campaign Strategist and Content Evaluator. Prohibited claims or off-brand phrases are automatically flagged during pipeline generation.
               </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 shadow-2xs space-y-5">
             {/* Brand Voice */}
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                Brand Voice & Personality <span className="text-purple-600">*</span>
+              <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">
+                Brand Voice & Personality <span className="text-[#A78BFA]">*</span>
               </label>
-              <p className="text-[11px] text-slate-400 mb-2">
+              <p className="text-[11px] text-[#A3A0B0] mb-2">
                 Describe how the brand speaks to its audience (e.g. &quot;Authoritative yet approachable, relatable Hinglish blend, witty hook-driven&quot;).
               </p>
               <textarea
@@ -803,94 +793,94 @@ function ClientWorkspaceContent() {
                 value={brandVoice}
                 onChange={(e) => setBrandVoice(e.target.value)}
                 placeholder="e.g. Confident, modern Indian conversational tone with smart humor and zero corporate jargon."
-                className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+                className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#6E6D7A] p-3 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA] transition-all"
               />
             </div>
 
             {/* Tone Examples */}
             <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">Tone & Copy Examples (1 per line)</label>
-              <p className="text-[11px] text-slate-400 mb-2">Sample sentences or caption hooks that capture the brand vibe perfectly.</p>
+              <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Tone & Copy Examples (1 per line)</label>
+              <p className="text-[11px] text-[#A3A0B0] mb-2">Sample sentences or caption hooks that capture the brand vibe perfectly.</p>
               <textarea
                 rows={3}
                 value={toneExamplesText}
                 onChange={(e) => setToneExamplesText(e.target.value)}
-                placeholder={"&quot;Chai isn&apos;t just tea, it&apos;s our 4 PM therapy session.&quot;\n&quot;No fake promises, only pure organic brew.&quot;"}
-                className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all font-mono"
+                placeholder={"\"Chai isn't just tea, it's our 4 PM therapy session.\"\n\"No fake promises, only pure organic brew.\""}
+                className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#6E6D7A] p-3 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA] transition-all font-mono"
               />
             </div>
 
             {/* 2-Column Grid: Content Pillars & Target Audience */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">Content Pillars (1 per line)</label>
-                <p className="text-[11px] text-slate-400 mb-2">The key themes repeated in 30-day sprints.</p>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Content Pillars (1 per line)</label>
+                <p className="text-[11px] text-[#A3A0B0] mb-2">The key themes repeated in 30-day sprints.</p>
                 <textarea
                   rows={4}
                   value={contentPillarsText}
                   onChange={(e) => setContentPillarsText(e.target.value)}
                   placeholder={"Industry Insights & Busting Myths\nRelatable Work Humor & Trends\nBehind The Scenes\nCustomer Transformation Stories\nQuick Tips & Frameworks"}
-                  className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#6E6D7A] p-3 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA] transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">Target Audience</label>
-                <p className="text-[11px] text-slate-400 mb-2">Who are we talking to? Demographics, geography, pain points.</p>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Target Audience</label>
+                <p className="text-[11px] text-[#A3A0B0] mb-2">Who are we talking to? Demographics, geography, pain points.</p>
                 <textarea
                   rows={4}
                   value={targetAudienceText}
                   onChange={(e) => setTargetAudienceText(e.target.value)}
                   placeholder={"Urban Indian professionals aged 22-38 in tier 1 & 2 cities\nInterested in fitness, premium lifestyle, and productivity\nActive primarily on Instagram Reels & LinkedIn"}
-                  className="w-full bg-slate-50 text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#6E6D7A] p-3 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA] transition-all"
                 />
               </div>
             </div>
 
             {/* 2-Column Grid: Prohibited Claims & Approved Phrases */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100">
-                <div className="flex items-center gap-1.5 text-rose-700 font-bold text-xs mb-1">
-                  <AlertCircle className="w-4 h-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="bg-[rgba(225,111,123,0.06)] p-4 rounded-lg border border-[#E16F7B]/20">
+                <div className="flex items-center gap-1.5 text-[#E16F7B] font-semibold text-xs mb-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
                   <span>Prohibited Claims & Forbidden Words (1 per line)</span>
                 </div>
-                <p className="text-[11px] text-rose-600/80 mb-2">AgencyOS will flag and block any draft containing these.</p>
+                <p className="text-[11px] text-[#A3A0B0] mb-2">AgencyOS will flag and block any draft containing these.</p>
                 <textarea
                   rows={3}
                   value={prohibitedClaimsText}
                   onChange={(e) => setProhibitedClaimsText(e.target.value)}
                   placeholder={"100% guaranteed results\nCheapest in India\nInstant cure\nUnverified clinical claims"}
-                  className="w-full bg-white text-xs text-slate-800 p-3 rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#6E6D7A] p-2.5 rounded-lg border border-[#E16F7B]/30 focus:outline-none focus:border-[#E16F7B] transition-all"
                 />
               </div>
 
-              <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs mb-1">
-                  <CheckCircle2 className="w-4 h-4" />
+              <div className="bg-[rgba(69,184,138,0.06)] p-4 rounded-lg border border-[#45B88A]/20">
+                <div className="flex items-center gap-1.5 text-[#45B88A] font-semibold text-xs mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Approved Taglines & Required Phrases</span>
                 </div>
-                <p className="text-[11px] text-emerald-600/80 mb-2">Mandatory disclaimers or client-approved slogans.</p>
+                <p className="text-[11px] text-[#A3A0B0] mb-2">Mandatory disclaimers or client-approved slogans.</p>
                 <textarea
                   rows={3}
                   value={approvedPhrasesText}
                   onChange={(e) => setApprovedPhrasesText(e.target.value)}
                   placeholder={"Brewed with Real Passion\nAvailable exclusively at artisanstores.in\nT&C Apply"}
-                  className="w-full bg-white text-xs text-slate-800 p-3 rounded-xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#6E6D7A] p-2.5 rounded-lg border border-[#45B88A]/30 focus:outline-none focus:border-[#45B88A] transition-all"
                 />
               </div>
             </div>
 
             {/* Save Action Buttons */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+            <div className="pt-4 border-t border-[#30303D] flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="confirmCheck"
                   checked={isConfirmed}
                   onChange={(e) => setIsConfirmed(e.target.checked)}
-                  className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                  className="rounded border-[#30303D] bg-[#101014] text-[#A78BFA] focus:ring-[#A78BFA]"
                 />
-                <label htmlFor="confirmCheck" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                <label htmlFor="confirmCheck" className="text-xs font-medium text-[#F2F0F7] cursor-pointer">
                   Mark as Confirmed by Client
                 </label>
               </div>
@@ -900,7 +890,7 @@ function ClientWorkspaceContent() {
                   type="button"
                   disabled={savingBrand}
                   onClick={() => handleSaveBrandProfile(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] bg-[#20202A] hover:bg-[#262630] border border-[#30303D] rounded-lg transition-all"
                 >
                   Save Draft
                 </button>
@@ -908,9 +898,9 @@ function ClientWorkspaceContent() {
                   type="button"
                   disabled={savingBrand}
                   onClick={() => handleSaveBrandProfile(true)}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-lg transition-all"
                 >
-                  <Save className="w-4 h-4" />
+                  <Save className="w-3.5 h-3.5" />
                   <span>{savingBrand ? "Saving..." : "Lock & Confirm Guidelines"}</span>
                 </button>
               </div>
@@ -921,85 +911,87 @@ function ClientWorkspaceContent() {
 
       {/* TAB 2: CONTRACTS & SCOPE QUOTAS */}
       {activeTab === "contracts" && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
+        <div className="space-y-5">
+          <div className="flex items-center justify-between pb-2 border-b border-[#30303D]/60">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Retainer Contracts & Monthly Deliverable Quotas</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h3 className="text-sm font-semibold text-[#F2F0F7]">Retainer Contracts & Monthly Deliverable Quotas</h3>
+              <p className="text-xs text-[#A3A0B0] mt-0.5">
                 AgencyOS enforces hard caps on deliverables so your agency never executes out-of-scope work for free.
               </p>
             </div>
             <button
               onClick={() => setShowContractModal(true)}
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>+ New Retainer Contract</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Retainer Contract</span>
             </button>
           </div>
 
           {contracts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
-              <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-bold text-slate-800">No active contracts</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-12 text-center">
+              <Layers className="w-8 h-8 text-[#6E6D7A] mx-auto mb-3" />
+              <h4 className="text-sm font-medium text-[#F2F0F7]">No active contracts</h4>
+              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
                 Create a retainer contract defining the monthly retainer fee and contracted deliverables (e.g. 30 Reels / month).
               </p>
               <button
                 onClick={() => setShowContractModal(true)}
-                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                <span>Create First Contract</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Contract</span>
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5">
+            <div className="grid grid-cols-1 gap-4">
               {contracts.map((ct) => (
-                <div key={ct.id} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div key={ct.id} className="bg-[#17171E] rounded-xl border border-[#30303D] p-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#30303D]">
                     <div>
                       <div className="flex items-center gap-2.5">
-                        <h4 className="text-base font-bold text-slate-900">{ct.name}</h4>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <h4 className="text-sm font-semibold text-[#F2F0F7]">{ct.name}</h4>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-[rgba(69,184,138,0.12)] text-[#45B88A] border border-[#45B88A]/20">
                           {ct.status}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-[#A3A0B0] mt-1">
                         Effective from {ct.start_date} &bull; {ct.revision_allowance} Revisions Included
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <div className="text-xs text-slate-400 font-semibold">Monthly Retainer Fee</div>
-                      <div className="text-lg font-black text-slate-900">
+                      <div className="text-[11px] text-[#6E6D7A]">Monthly Retainer Fee</div>
+                      <div className="text-lg font-bold text-[#F2F0F7] tabular-nums">
                         ₹{(ct.monthly_fee_inr || 0).toLocaleString("en-IN")}
-                        <span className="text-xs font-normal text-slate-500"> / month</span>
+                        <span className="text-xs font-normal text-[#A3A0B0]"> / mo</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Scope Items Breakdown */}
                   <div className="pt-4">
-                    <h5 className="text-xs font-bold text-slate-700 mb-3">Contracted Deliverables & Quota Cap</h5>
+                    <h5 className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-2.5">
+                      Contracted Deliverables & Quota Cap
+                    </h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                       {ct.scope_items && ct.scope_items.length > 0 ? (
                         ct.scope_items.map((item, idx) => (
-                          <div key={idx} className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center justify-between">
+                          <div key={idx} className="bg-[#20202A] rounded-lg p-3 border border-[#30303D] flex items-center justify-between">
                             <div>
-                              <div className="text-xs font-bold text-slate-800 capitalize">
+                              <div className="text-xs font-medium text-[#F2F0F7] capitalize">
                                 {item.deliverable_type}s
                               </div>
-                              <div className="text-[10px] text-slate-400 font-semibold uppercase">{item.platform}</div>
+                              <div className="text-[10px] text-[#A3A0B0] uppercase">{item.platform}</div>
                             </div>
                             <div className="text-right">
-                              <span className="text-base font-black text-purple-600">{item.monthly_quantity}</span>
-                              <span className="text-[10px] text-slate-400 font-bold block">per month</span>
+                              <span className="text-base font-bold text-[#A78BFA] tabular-nums">{item.monthly_quantity}</span>
+                              <span className="text-[10px] text-[#6E6D7A] block">/ month</span>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="text-xs text-slate-400">Standard 30 reels/month active.</div>
+                        <div className="text-xs text-[#A3A0B0]">Standard 30 reels/month active.</div>
                       )}
                     </div>
                   </div>
@@ -1012,59 +1004,59 @@ function ClientWorkspaceContent() {
 
       {/* TAB 3: CAMPAIGNS */}
       {activeTab === "campaigns" && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
+        <div className="space-y-5">
+          <div className="flex items-center justify-between pb-2 border-b border-[#30303D]/60">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Campaign Sprints for {client.business_name}</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h3 className="text-sm font-semibold text-[#F2F0F7]">Campaign Sprints for {client.business_name}</h3>
+              <p className="text-xs text-[#A3A0B0] mt-0.5">
                 Every month has an AI-generated plan containing 30 day-by-day deliverables and hooks.
               </p>
             </div>
             <Link
               href={`/campaigns?clientId=${client.id}`}
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-1.5 rounded-lg transition-colors"
             >
-              <Sparkles className="w-4 h-4 text-purple-200" />
-              <span>+ Generate New Sprint</span>
+              <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>Generate Sprint</span>
             </Link>
           </div>
 
           {campaigns.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
-              <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-bold text-slate-800">No campaigns created yet</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-12 text-center">
+              <Calendar className="w-8 h-8 text-[#6E6D7A] mx-auto mb-3" />
+              <h4 className="text-sm font-medium text-[#F2F0F7]">No campaigns created yet</h4>
+              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
                 Generate your first 30-day content calendar using Groq AI. All reels will be mapped to the brand tone.
               </p>
               <Link
                 href={`/campaigns?clientId=${client.id}`}
-                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Generate Plan with AI ✨</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Generate Plan with AI</span>
               </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {campaigns.map((camp) => (
-                <div key={camp.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
+                <div key={camp.id} className="bg-[#17171E] rounded-xl border border-[#30303D] p-4 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">
+                      <span className="text-[10px] font-semibold text-[#A78BFA] uppercase tracking-wider">
                         {camp.period_month && camp.period_year ? `${camp.period_month}/${camp.period_year}` : "Sprint"}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200/50">
+                      <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium uppercase bg-[#20202A] text-[#A3A0B0] border border-[#30303D]">
                         {camp.status}
                       </span>
                     </div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">{camp.name}</h4>
-                    <p className="text-xs text-slate-500 line-clamp-2">{camp.objective || "Standard monthly content sprint."}</p>
+                    <h4 className="text-xs font-semibold text-[#F2F0F7] mb-1">{camp.name}</h4>
+                    <p className="text-xs text-[#A3A0B0] line-clamp-2">{camp.objective || "Standard monthly content sprint."}</p>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">Created {new Date(camp.created_at).toLocaleDateString()}</span>
+                  <div className="pt-3 mt-3 border-t border-[#30303D] flex items-center justify-between">
+                    <span className="text-[10px] text-[#6E6D7A]">Created {new Date(camp.created_at).toLocaleDateString()}</span>
                     <Link
                       href={`/campaigns?campaignId=${camp.id}`}
-                      className="text-xs font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                      className="text-xs font-medium text-[#A78BFA] hover:text-[#B69BFF] flex items-center gap-1"
                     >
                       <span>View Content Calendar</span>
                       <ExternalLink className="w-3 h-3" />
@@ -1080,63 +1072,63 @@ function ClientWorkspaceContent() {
       {/* REVIEWERS TAB */}
       {activeTab === "reviewers" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pb-2 border-b border-[#30303D]/60">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Client Reviewers</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Reviewers can log into <span className="font-semibold text-purple-600">/portal</span> to preview deliverables, leave comments, and approve or request changes.
+              <h3 className="text-sm font-semibold text-[#F2F0F7]">Client Reviewers</h3>
+              <p className="text-xs text-[#A3A0B0] mt-0.5">
+                Reviewers log into <span className="text-[#A78BFA] font-medium">/portal</span> to preview deliverables, comment, and sign off.
               </p>
             </div>
             <button
               onClick={() => setShowInviteModal(true)}
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Invite Reviewer</span>
             </button>
           </div>
 
           {reviewers.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
-              <UserCheck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-bold text-slate-800">No reviewers yet</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
-                Invite your client's point-of-contact to review and approve content in a clean, distraction-free portal.
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-12 text-center">
+              <UserCheck className="w-8 h-8 text-[#6E6D7A] mx-auto mb-3" />
+              <h4 className="text-sm font-medium text-[#F2F0F7]">No reviewers yet</h4>
+              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
+                Invite your client point-of-contact to review and approve content in a clean, distraction-free portal.
               </p>
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>Invite First Reviewer</span>
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
-              <div className="divide-y divide-slate-100">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] overflow-hidden">
+              <div className="divide-y divide-[#30303D]/60">
                 {reviewers.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between p-4">
+                  <div key={r.id} className="flex items-center justify-between p-3.5 hover:bg-[#20202A]/50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-500 text-white font-bold text-sm flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-md bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-semibold text-xs flex items-center justify-center shrink-0">
                         {(r.full_name || r.email).charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">{r.full_name || "—"}</p>
-                        <p className="text-xs text-slate-500 flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
+                        <p className="text-xs font-medium text-[#F2F0F7]">{r.full_name || "—"}</p>
+                        <p className="text-[11px] text-[#A3A0B0] flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-[#6E6D7A]" />
                           {r.email}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border border-[#A78BFA]/20">
                         <UserCheck className="w-3 h-3" />
                         Client Reviewer
                       </span>
                       <a
                         href="/portal"
                         target="_blank"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-purple-600 bg-slate-100 hover:bg-purple-50 rounded-lg transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[#A3A0B0] hover:text-[#F2F0F7] bg-[#20202A] hover:bg-[#262630] border border-[#30303D] rounded-lg transition-colors"
                       >
                         <Eye className="w-3 h-3" />
                         Portal
@@ -1152,15 +1144,15 @@ function ClientWorkspaceContent() {
 
       {/* TAB 5: SOCIAL ACCOUNTS & PUBLISHING */}
       {activeTab === "social" && (
-        <div className="space-y-6">
-          <div className="bg-purple-50/70 border border-purple-200/70 rounded-2xl p-4 flex items-start justify-between gap-4">
+        <div className="space-y-5">
+          <div className="bg-[rgba(167,139,250,0.08)] border border-[#A78BFA]/20 rounded-xl p-4 flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <Share2 className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+              <Share2 className="w-4 h-4 text-[#A78BFA] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-purple-950">Multi-Client Social Publishing Integration</h4>
-                <p className="text-[12px] text-purple-800/90 mt-0.5 leading-relaxed">
+                <h4 className="text-xs font-semibold text-[#F2F0F7]">Multi-Client Social Publishing Integration</h4>
+                <p className="text-[11px] text-[#A3A0B0] mt-0.5 leading-relaxed">
                   Connect Instagram Business and Facebook accounts strictly for <strong>{client?.business_name}</strong>.
-                  All credentials and access tokens are isolated per client. Approved deliverables can be published directly to Meta Graph API or logged with live links.
+                  All credentials and access tokens are isolated per client.
                 </p>
               </div>
             </div>
@@ -1171,18 +1163,18 @@ function ClientWorkspaceContent() {
                 setVerifyResult(null);
                 setShowConnectModal(true);
               }}
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shrink-0"
+              className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors shrink-0 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Connect Account</span>
             </button>
           </div>
 
           {socialAccounts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs">
-              <InstagramIcon className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-bold text-slate-800">No Social Accounts Connected</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-12 text-center">
+              <InstagramIcon className="w-8 h-8 text-[#6E6D7A] mx-auto mb-3" />
+              <h4 className="text-sm font-medium text-[#F2F0F7]">No Social Accounts Connected</h4>
+              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
                 Connect {client?.business_name}&apos;s Instagram Business Account or Facebook Page to enable automated 1-click publishing.
               </p>
               <button
@@ -1191,10 +1183,10 @@ function ClientWorkspaceContent() {
                   setVerifyResult(null);
                   setShowConnectModal(true);
                 }}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                <span>Connect First Social Account</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Connect Social Account</span>
               </button>
             </div>
           ) : (
@@ -1202,58 +1194,58 @@ function ClientWorkspaceContent() {
               {socialAccounts.map((account) => {
                 const isIg = account.platform === "instagram";
                 return (
-                  <div key={account.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
+                  <div key={account.id} className="bg-[#17171E] rounded-xl border border-[#30303D] p-4 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white border border-[#30303D] ${
                             isIg ? "bg-gradient-to-tr from-purple-600 to-pink-500" : "bg-blue-600"
                           }`}>
                             {isIg ? <InstagramIcon className="w-4 h-4" /> : <FacebookIcon className="w-4 h-4" />}
                           </div>
                           <div>
-                            <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                            <h4 className="text-xs font-semibold text-[#F2F0F7] flex items-center gap-1.5">
                               {account.account_handle || account.account_name || "Connected Profile"}
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                              <CheckCircle2 className="w-3 h-3 text-[#45B88A]" />
                             </h4>
-                            <p className="text-[11px] text-slate-400 capitalize">
+                            <p className="text-[10px] text-[#A3A0B0] capitalize">
                               {account.platform} Business Account
                             </p>
                           </div>
                         </div>
 
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full uppercase">
+                        <span className="text-[9px] font-medium text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/20 px-2 py-0.5 rounded uppercase">
                           Active
                         </span>
                       </div>
 
-                      <div className="space-y-1 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                      <div className="space-y-1 text-xs text-[#A3A0B0] pt-2 border-t border-[#30303D]">
                         {account.instagram_business_id && (
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-400">Instagram Business ID:</span>
-                            <span className="font-mono font-semibold text-slate-800">{account.instagram_business_id}</span>
+                            <span className="text-[#6E6D7A]">Instagram Business ID:</span>
+                            <span className="font-mono text-[#F2F0F7]">{account.instagram_business_id}</span>
                           </div>
                         )}
                         {account.facebook_page_id && (
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-400">Facebook Page ID:</span>
-                            <span className="font-mono font-semibold text-slate-800">{account.facebook_page_id}</span>
+                            <span className="text-[#6E6D7A]">Facebook Page ID:</span>
+                            <span className="font-mono text-[#F2F0F7]">{account.facebook_page_id}</span>
                           </div>
                         )}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400">Tenant Client:</span>
-                          <span className="font-semibold text-purple-700">{client?.business_name}</span>
+                          <span className="text-[#6E6D7A]">Tenant Client:</span>
+                          <span className="text-[#A78BFA]">{client?.business_name}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400">
+                    <div className="pt-3 mt-3 border-t border-[#30303D] flex items-center justify-between">
+                      <span className="text-[10px] text-[#6E6D7A]">
                         Token securely stored
                       </span>
                       <button
                         onClick={() => handleDeleteSocial(account.id)}
-                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline"
+                        className="text-xs font-medium text-[#E16F7B] hover:underline cursor-pointer"
                       >
                         Disconnect
                       </button>
@@ -1268,14 +1260,14 @@ function ClientWorkspaceContent() {
 
       {/* TAB 6: DELIVERY & MONTHLY PERFORMANCE REPORT */}
       {activeTab === "reports" && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-5">
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-purple-600" />
+              <h3 className="text-sm font-semibold text-[#F2F0F7] flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-[#A78BFA]" />
                 Monthly Campaign Delivery Report
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[#A3A0B0] mt-0.5">
                 Audit contract quota fulfillment and summarize published campaign assets for {client?.business_name}.
               </p>
             </div>
@@ -1288,7 +1280,7 @@ function ClientWorkspaceContent() {
                   setReportMonth(m);
                   fetchMonthlyReport(m, reportYear);
                 }}
-                className="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer focus:outline-none"
+                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>
@@ -1304,7 +1296,7 @@ function ClientWorkspaceContent() {
                   setReportYear(y);
                   fetchMonthlyReport(reportMonth, y);
                 }}
-                className="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer focus:outline-none"
+                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none"
               >
                 <option value={2026}>2026</option>
                 <option value={2025}>2025</option>
@@ -1312,107 +1304,107 @@ function ClientWorkspaceContent() {
 
               <button
                 onClick={() => fetchMonthlyReport()}
-                className="p-2 text-slate-600 hover:text-purple-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors"
+                className="p-1.5 text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-lg border border-[#30303D] transition-colors"
                 title="Refresh Report"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-purple-600" : ""}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-[#A78BFA]" : ""}`} />
               </button>
             </div>
           </div>
 
           {loadingReport ? (
-            <div className="py-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center">
-              <RefreshCw className="w-6 h-6 animate-spin text-purple-600 mb-2" />
+            <div className="py-12 text-center text-[#A3A0B0] text-xs flex flex-col items-center justify-center">
+              <RefreshCw className="w-5 h-5 animate-spin text-[#A78BFA] mb-2" />
               <span>Generating monthly performance audit...</span>
             </div>
           ) : monthlyReport ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* 4 Metric Summary Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contract Quota</span>
-                  <div className="text-2xl font-extrabold text-slate-900 mt-2">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-[#17171E] p-4 rounded-xl border border-[#30303D]">
+                  <span className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider">Contract Quota</span>
+                  <div className="text-xl font-bold text-[#F2F0F7] mt-1 tabular-nums">
                     {monthlyReport.deliverables_delivered} / {monthlyReport.total_scope_quota}
                   </div>
-                  <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
+                  <span className="text-[10px] text-[#45B88A] font-medium mt-0.5 inline-block">
                     {monthlyReport.quota_fulfillment_rate}% fulfilled
                   </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Published Live</span>
-                  <div className="text-2xl font-extrabold text-purple-700 mt-2">
+                <div className="bg-[#17171E] p-4 rounded-xl border border-[#30303D]">
+                  <span className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider">Published Live</span>
+                  <div className="text-xl font-bold text-[#A78BFA] mt-1 tabular-nums">
                     {monthlyReport.deliverables_published}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
-                    With public permalinks
+                  <span className="text-[10px] text-[#A3A0B0] mt-0.5 inline-block">
+                    With public links
                   </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Impressions</span>
-                  <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                <div className="bg-[#17171E] p-4 rounded-xl border border-[#30303D]">
+                  <span className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider">Total Impressions</span>
+                  <div className="text-xl font-bold text-[#F2F0F7] mt-1 tabular-nums">
                     {monthlyReport.total_views > 0 ? monthlyReport.total_views.toLocaleString("en-IN") : "—"}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
+                  <span className="text-[10px] text-[#A3A0B0] mt-0.5 inline-block">
                     {monthlyReport.total_likes.toLocaleString("en-IN")} total likes
                   </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Engagement Rate</span>
-                  <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+                <div className="bg-[#17171E] p-4 rounded-xl border border-[#30303D]">
+                  <span className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider">Engagement Rate</span>
+                  <div className="text-xl font-bold text-[#45B88A] mt-1 tabular-nums">
                     {monthlyReport.avg_engagement_rate}%
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium mt-1 inline-block">
+                  <span className="text-[10px] text-[#A3A0B0] mt-0.5 inline-block">
                     Likes & comments ratio
                   </span>
                 </div>
               </div>
 
               {/* Executive Summary Card */}
-              <div className="bg-gradient-to-r from-purple-50/80 to-indigo-50/80 border border-purple-200/70 p-6 rounded-2xl shadow-2xs">
+              <div className="bg-[#17171E] border border-[#30303D] p-5 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-purple-600" />
-                  <h4 className="text-xs font-extrabold text-purple-950 uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <h4 className="text-[10px] font-semibold text-[#A78BFA] uppercase tracking-wider">
                     Executive Delivery Wrap-Up
                   </h4>
                 </div>
-                <p className="text-xs text-purple-900 leading-relaxed font-medium">
+                <p className="text-xs text-[#F2F0F7] leading-relaxed">
                   {monthlyReport.executive_summary}
                 </p>
               </div>
 
               {/* Top Deliverables Table */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
-                <h4 className="text-sm font-bold text-slate-900 mb-4">Top Performing Content Assets</h4>
+              <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5">
+                <h4 className="text-xs font-semibold text-[#F2F0F7] mb-3">Top Performing Content Assets</h4>
                 {monthlyReport.top_deliverables.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-4 text-center">No deliverables published yet for this period.</p>
+                  <p className="text-xs text-[#A3A0B0] py-4 text-center">No deliverables published yet for this period.</p>
                 ) : (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-[#30303D]/60">
                     {monthlyReport.top_deliverables.map((item) => (
-                      <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+                      <div key={item.id} className="py-2.5 flex items-center justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
-                          <p className="text-[11px] text-slate-400 capitalize">
+                          <p className="text-xs font-medium text-[#F2F0F7] truncate">{item.title}</p>
+                          <p className="text-[10px] text-[#A3A0B0] capitalize">
                             {item.deliverable_type} &bull; {item.platform}
                           </p>
                         </div>
-                        <div className="flex items-center gap-4 shrink-0 text-xs">
+                        <div className="flex items-center gap-3 shrink-0 text-xs">
                           {item.views_count > 0 && (
-                            <span className="text-slate-600 font-semibold">{item.views_count.toLocaleString("en-IN")} views</span>
+                            <span className="text-[#A3A0B0] font-medium">{item.views_count.toLocaleString("en-IN")} views</span>
                           )}
                           {item.live_post_url ? (
                             <a
                               href={item.live_post_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-purple-600 hover:text-purple-700 font-bold inline-flex items-center gap-1 bg-purple-50 px-2.5 py-1 rounded-lg"
+                              className="text-[#A78BFA] hover:text-[#B69BFF] font-medium inline-flex items-center gap-1 bg-[#20202A] px-2 py-1 rounded border border-[#30303D]"
                             >
                               View Live <ExternalLink className="w-3 h-3" />
                             </a>
                           ) : (
-                            <span className="text-slate-400 text-[11px]">Approved</span>
+                            <span className="text-[#6E6D7A] text-[10px]">Approved</span>
                           )}
                         </div>
                       </div>
@@ -1427,25 +1419,25 @@ function ClientWorkspaceContent() {
 
       {/* CONNECT SOCIAL ACCOUNT MODAL */}
       {showConnectModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-[#30303D] mb-5">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Connect Social Account</h3>
-                <p className="text-xs text-slate-500">Configure Meta Graph API credentials for {client?.business_name}.</p>
+                <h3 className="text-sm font-semibold text-[#F2F0F7]">Connect Social Account</h3>
+                <p className="text-xs text-[#A3A0B0]">Configure Meta Graph API credentials for {client?.business_name}.</p>
               </div>
-              <button onClick={() => setShowConnectModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+              <button onClick={() => setShowConnectModal(false)} className="text-[#6E6D7A] hover:text-[#F2F0F7] p-1 rounded hover:bg-[#20202A]">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleConnectSocial} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">Platform</label>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Platform</label>
                 <select
                   value={socialPlatform}
                   onChange={(e) => setSocialPlatform(e.target.value as "instagram" | "facebook")}
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 cursor-pointer focus:outline-none"
+                  className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 cursor-pointer focus:outline-none focus:border-[#A78BFA]"
                 >
                   <option value="instagram">Instagram Professional / Business</option>
                   <option value="facebook">Facebook Page</option>
@@ -1453,19 +1445,19 @@ function ClientWorkspaceContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">Account Handle / Name</label>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Account Handle / Name</label>
                 <input
                   type="text"
                   value={socialHandle}
                   onChange={(e) => setSocialHandle(e.target.value)}
                   placeholder="@hotelshauryawada"
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
 
               {socialPlatform === "instagram" ? (
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">
                     Instagram Business Account ID *
                   </label>
                   <input
@@ -1474,13 +1466,13 @@ function ClientWorkspaceContent() {
                     value={igBusinessId}
                     onChange={(e) => setIgBusinessId(e.target.value)}
                     placeholder="e.g. 17841400012345"
-                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                    className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Found in your Meta App Dashboard or Graph API Explorer.</p>
+                  <p className="text-[10px] text-[#A3A0B0] mt-1">Found in your Meta App Dashboard or Graph API Explorer.</p>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">
                     Facebook Page ID *
                   </label>
                   <input
@@ -1489,18 +1481,18 @@ function ClientWorkspaceContent() {
                     value={fbPageId}
                     onChange={(e) => setFbPageId(e.target.value)}
                     placeholder="e.g. 1052300012345"
-                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono"
+                    className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono"
                   />
                 </div>
               )}
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-800">Access Token (User or Page) *</label>
+                  <label className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider">Access Token (User or Page) *</label>
                   <button
                     type="button"
                     onClick={() => setShowTokenHelper(!showTokenHelper)}
-                    className="text-[11px] text-purple-600 hover:text-purple-700 font-bold"
+                    className="text-[11px] text-[#A78BFA] hover:text-[#B69BFF] font-medium"
                   >
                     {showTokenHelper ? "Hide Token Helper" : "Generate 60-Day Token?"}
                   </button>
@@ -1511,15 +1503,15 @@ function ClientWorkspaceContent() {
                   value={socialAccessToken}
                   onChange={(e) => setSocialAccessToken(e.target.value)}
                   placeholder="Paste Meta Access Token (EAAG...)"
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 font-mono resize-none"
+                  className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono resize-none"
                 />
               </div>
 
               {/* 60-Day Token Exchange Accordion */}
               {showTokenHelper && (
-                <div className="p-3.5 rounded-xl bg-purple-50/80 border border-purple-200 space-y-3">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-purple-950">
-                    <Key className="w-3.5 h-3.5 text-purple-600" />
+                <div className="p-3.5 rounded-lg bg-[#20202A] border border-[#30303D] space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#F2F0F7]">
+                    <Key className="w-3.5 h-3.5 text-[#A78BFA]" />
                     <span>60-Day Long-Lived Token Exchange</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1528,14 +1520,14 @@ function ClientWorkspaceContent() {
                       placeholder="Meta App ID"
                       value={appId}
                       onChange={(e) => setAppId(e.target.value)}
-                      className="text-xs p-2 rounded-lg bg-white border border-purple-200"
+                      className="text-xs p-2 rounded-lg bg-[#101014] text-[#F2F0F7] border border-[#30303D]"
                     />
                     <input
                       type="password"
                       placeholder="Meta App Secret"
                       value={appSecret}
                       onChange={(e) => setAppSecret(e.target.value)}
-                      className="text-xs p-2 rounded-lg bg-white border border-purple-200"
+                      className="text-xs p-2 rounded-lg bg-[#101014] text-[#F2F0F7] border border-[#30303D]"
                     />
                   </div>
                   <input
@@ -1543,13 +1535,13 @@ function ClientWorkspaceContent() {
                     placeholder="Short-Lived User Token (from Graph API Explorer)"
                     value={shortToken}
                     onChange={(e) => setShortToken(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg bg-white border border-purple-200 font-mono"
+                    className="w-full text-xs p-2 rounded-lg bg-[#101014] text-[#F2F0F7] border border-[#30303D] font-mono"
                   />
                   <button
                     type="button"
                     onClick={handleExchangeToken}
                     disabled={exchangingToken}
-                    className="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-colors"
+                    className="w-full py-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-lg transition-colors"
                   >
                     {exchangingToken ? "Exchanging..." : "Exchange for 60-Day Token"}
                   </button>
@@ -1563,13 +1555,13 @@ function ClientWorkspaceContent() {
                     type="button"
                     onClick={handleVerifySocial}
                     disabled={verifyingToken}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A78BFA] bg-[#20202A] hover:bg-[#262630] px-3 py-1.5 rounded-lg border border-[#30303D] transition-colors"
                   >
                     <RefreshCw className={`w-3 h-3 ${verifyingToken ? "animate-spin" : ""}`} />
                     <span>Test & Verify with Meta</span>
                   </button>
                   {verifyResult && (
-                    <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                    <span className="text-[11px] font-medium text-[#45B88A] flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Verified @{verifyResult.username}
                     </span>
@@ -1577,18 +1569,18 @@ function ClientWorkspaceContent() {
                 </div>
               )}
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-4 border-t border-[#30303D] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowConnectModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={connectingSocial}
-                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs"
+                  className="px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-lg shadow-xs"
                 >
                   {connectingSocial ? "Saving..." : "Save Account"}
                 </button>
@@ -1600,66 +1592,66 @@ function ClientWorkspaceContent() {
 
       {/* INVITE REVIEWER MODAL */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[#30303D] mb-5">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Invite Client Reviewer</h3>
-                <p className="text-xs text-slate-500">Create a secure login for your client to review and approve content.</p>
+                <h3 className="text-sm font-semibold text-[#F2F0F7]">Invite Client Reviewer</h3>
+                <p className="text-xs text-[#A3A0B0]">Create a secure login for your client to review and approve content.</p>
               </div>
-              <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+              <button onClick={() => setShowInviteModal(false)} className="text-[#6E6D7A] hover:text-[#F2F0F7] p-1 rounded hover:bg-[#20202A]">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleInviteReviewer} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">Reviewer Email *</label>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Reviewer Email *</label>
                 <input
                   type="email"
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="raj@clientbrand.com"
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">Full Name (optional)</label>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Full Name (optional)</label>
                 <input
                   type="text"
                   value={inviteFullName}
                   onChange={(e) => setInviteFullName(e.target.value)}
                   placeholder="Raj Mehta"
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">Temporary Password</label>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Temporary Password</label>
                 <input
                   type="text"
                   value={invitePassword}
                   onChange={(e) => setInvitePassword(e.target.value)}
                   placeholder="Temporary password"
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full text-xs text-[#F2F0F7] placeholder-[#6E6D7A] bg-[#101014] border border-[#30303D] rounded-lg p-2.5 focus:outline-none focus:border-[#A78BFA]"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">Share this with your client. They'll use it to log into the review portal.</p>
+                <p className="text-[11px] text-[#A3A0B0] mt-1">Share this with your client. They'll use it to log into the review portal.</p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-3 border-t border-[#30303D] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={inviting}
-                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs disabled:opacity-50"
+                  className="px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-lg shadow-xs disabled:opacity-50"
                 >
                   {inviting ? "Inviting..." : "Invite Reviewer"}
                 </button>
@@ -1671,64 +1663,64 @@ function ClientWorkspaceContent() {
 
       {/* CREATE CONTRACT MODAL */}
       {showContractModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[#30303D] mb-5">
               <div>
-                <h3 className="text-base font-bold text-slate-900">New Retainer Contract</h3>
-                <p className="text-xs text-slate-500">Define the monthly retainer fee and deliverable quota cap.</p>
+                <h3 className="text-sm font-semibold text-[#F2F0F7]">New Retainer Contract</h3>
+                <p className="text-xs text-[#A3A0B0]">Define the monthly retainer fee and deliverable quota cap.</p>
               </div>
-              <button onClick={() => setShowContractModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
-                &times;
+              <button onClick={() => setShowContractModal(false)} className="text-[#6E6D7A] hover:text-[#F2F0F7] p-1 rounded hover:bg-[#20202A]">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleCreateContract} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">Contract Name</label>
+                <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Contract Name</label>
                 <input
                   type="text"
                   required
                   value={contractName}
                   onChange={(e) => setContractName(e.target.value)}
-                  className="w-full bg-slate-50 text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2.5 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">Monthly Fee (₹ INR)</label>
+                  <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Monthly Fee (₹ INR)</label>
                   <input
                     type="number"
                     required
                     value={monthlyFee}
                     onChange={(e) => setMonthlyFee(e.target.value)}
-                    className="w-full bg-slate-50 text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                    className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2.5 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">Start Date</label>
+                  <label className="block text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider mb-1">Start Date</label>
                   <input
                     type="date"
                     required
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-slate-50 text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                    className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2.5 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA]"
                   />
                 </div>
               </div>
 
               {/* Scope Quota Inputs */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
-                <span className="text-xs font-bold text-slate-800 block">Deliverable Scope Quota</span>
+              <div className="bg-[#20202A] p-3.5 rounded-lg border border-[#30303D] space-y-2.5">
+                <span className="text-[10px] font-semibold text-[#6E6D7A] uppercase tracking-wider block">Deliverable Scope Quota</span>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Type</label>
+                    <label className="block text-[10px] font-medium text-[#A3A0B0] mb-1">Type</label>
                     <select
                       value={scopeType}
                       onChange={(e) => setScopeType(e.target.value)}
-                      className="w-full bg-white text-xs text-slate-800 p-2 rounded-lg border border-slate-200"
+                      className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2 rounded-lg border border-[#30303D]"
                     >
                       <option value="reel">Reel / Video</option>
                       <option value="carousel">Carousel</option>
@@ -1738,11 +1730,11 @@ function ClientWorkspaceContent() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Platform</label>
+                    <label className="block text-[10px] font-medium text-[#A3A0B0] mb-1">Platform</label>
                     <select
                       value={scopePlatform}
                       onChange={(e) => setScopePlatform(e.target.value)}
-                      className="w-full bg-white text-xs text-slate-800 p-2 rounded-lg border border-slate-200"
+                      className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2 rounded-lg border border-[#30303D]"
                     >
                       <option value="instagram">Instagram</option>
                       <option value="youtube_shorts">YouTube Shorts</option>
@@ -1752,30 +1744,30 @@ function ClientWorkspaceContent() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Qty / Month</label>
+                    <label className="block text-[10px] font-medium text-[#A3A0B0] mb-1">Qty / Month</label>
                     <input
                       type="number"
                       min="1"
                       value={scopeQuantity}
                       onChange={(e) => setScopeQuantity(e.target.value)}
-                      className="w-full bg-white text-xs text-slate-800 p-2 rounded-lg border border-slate-200"
+                      className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2 rounded-lg border border-[#30303D]"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-4 border-t border-[#30303D] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowContractModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingContract}
-                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs"
+                  className="px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-lg shadow-xs"
                 >
                   {creatingContract ? "Activating..." : "Activate Retainer"}
                 </button>
@@ -1787,32 +1779,32 @@ function ClientWorkspaceContent() {
 
       {/* Delete Client Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-100 scale-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 ring-8 ring-rose-50/50">
-              <Trash2 className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-[#17171E] rounded-xl shadow-2xl max-w-md w-full p-6 border border-[#30303D] scale-in-95 duration-150">
+            <div className="w-9 h-9 rounded-md bg-[rgba(225,111,123,0.12)] text-[#E16F7B] flex items-center justify-center mb-3 border border-[#E16F7B]/30">
+              <Trash2 className="w-4 h-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">
-              Permanently Delete Workspace?
+            <h3 className="text-sm font-semibold text-[#F2F0F7] mb-1">
+              Delete Client Workspace?
             </h3>
-            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Are you sure you want to permanently delete <span className="font-bold text-slate-800">{client.business_name}</span>?
+            <p className="text-xs text-[#A3A0B0] mb-4 leading-relaxed">
+              Are you sure you want to permanently delete <span className="font-semibold text-[#F2F0F7]">{client.business_name}</span>?
               This will remove all associated campaigns, deliverables, brand profiles, client reviewers, and contracts from your agency space. This action cannot be undone.
             </p>
-            <div className="flex items-center justify-end gap-2.5">
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={deletingClient}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteClient}
                 disabled={deletingClient}
-                className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                className="px-4 py-1.5 text-xs font-semibold bg-[#E16F7B] hover:bg-[#E16F7B]/90 text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {deletingClient ? "Deleting Workspace..." : "Yes, Delete Client Workspace"}
+                {deletingClient ? "Deleting..." : "Delete Permanently"}
               </button>
             </div>
           </div>

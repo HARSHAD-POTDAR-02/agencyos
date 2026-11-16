@@ -89,7 +89,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, effectiveAgencyId]);
+  }, [token, effectiveAgencyId, isSpecialist]);
 
   useEffect(() => {
     setLoading(true);
@@ -121,74 +121,79 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="p-8 space-y-8 max-w-7xl mx-auto">
-      {/* Welcome Banner & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <main className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* ──────────────────────────────────────────────
+          Header & Primary Operational Actions
+      ────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#30303D]/60">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            Welcome back, {user?.full_name?.split(" ")[0] || "there"}! 
-            <span className="text-xl">👋</span>
+          <h1 className="text-xl md:text-2xl font-semibold text-[#F2F0F7] tracking-tight">
+            Agency Command Centre
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Real-time operational metrics across your clients, tasks, and deliverable pipeline.
+          <p className="text-xs text-[#A3A0B0] mt-1">
+            Real-time telemetry across clients, production pipeline, and deliverable SLAs.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => { setLoading(true); fetchStats(); }}
-            title="Refresh dashboard data"
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200/80 shadow-2xs transition-all"
+            title="Refresh dashboard metrics"
+            className="inline-flex items-center gap-1.5 bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] text-xs font-medium px-3 py-1.5 rounded-lg border border-[#30303D] transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-purple-600" : "text-slate-400"}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#A78BFA]" : "text-[#6E6D7A]"}`} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <Link
             href="/clients"
-            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-2xs transition-all"
+            className="inline-flex items-center gap-1.5 bg-[#17171E] hover:bg-[#20202A] text-[#F2F0F7] text-xs font-medium px-3 py-1.5 rounded-lg border border-[#30303D] transition-colors"
           >
-            <Plus className="w-3.5 h-3.5 text-slate-500" />
+            <Plus className="w-3.5 h-3.5 text-[#A3A0B0]" />
             <span>Add Client</span>
           </Link>
           <Link
             href="/campaigns"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm shadow-purple-500/25 transition-all"
+            className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] text-xs font-medium px-3 py-1.5 rounded-lg border border-[#A78BFA]/30 transition-colors"
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+            <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Plan with AI</span>
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+        <div className="p-3.5 rounded-lg bg-[rgba(225,111,123,0.12)] border border-[#E16F7B]/30 text-[#E16F7B] text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>Error loading live dashboard metrics: {error}</span>
         </div>
       )}
 
-      {/* 4 Essential KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* ──────────────────────────────────────────────
+          4 Linear-Style Operational KPI Cards
+      ────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Active Clients */}
         <Link 
           href="/clients"
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:border-purple-300 hover:shadow-md hover:-translate-y-0.5 transition-all group block cursor-pointer"
+          className="bg-[#17171E] rounded-xl p-4 border border-[#30303D] hover:border-[#4A4A5A] hover:bg-[#1A1A22] transition-all group block cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-purple-600 transition-colors">Active Clients</span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Users className="w-4 h-4" />
+            <span className="text-[11px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#A78BFA] transition-colors">
+              Active Clients
+            </span>
+            <div className="w-7 h-7 rounded-md bg-[#20202A] text-[#A3A0B0] group-hover:text-[#A78BFA] group-hover:bg-[rgba(167,139,250,0.12)] flex items-center justify-center transition-colors border border-[#30303D]">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-[#F2F0F7] tracking-tight tabular-nums">
               {loading ? "..." : (stats?.clients_active ?? 0)}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-              <ArrowUpRight className="w-3 h-3 mr-0.5" /> View Clients
+            <span className="inline-flex items-center text-[10px] font-medium text-[#45B88A] bg-[rgba(69,184,138,0.12)] px-1.5 py-0.5 rounded border border-[#45B88A]/20">
+              <ArrowUpRight className="w-3 h-3 mr-0.5" /> View
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5">
             {loading ? (
               "Loading clients..."
             ) : (
@@ -200,23 +205,25 @@ export default function DashboardPage() {
         {/* Tasks Pending */}
         <Link
           href="/tasks"
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5 transition-all group block cursor-pointer"
+          className="bg-[#17171E] rounded-xl p-4 border border-[#30303D] hover:border-[#4A4A5A] hover:bg-[#1A1A22] transition-all group block cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors">Tasks Pending</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="text-[11px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#69A9D8] transition-colors">
+              Tasks Pending
+            </span>
+            <div className="w-7 h-7 rounded-md bg-[#20202A] text-[#A3A0B0] group-hover:text-[#69A9D8] group-hover:bg-[rgba(105,169,216,0.12)] flex items-center justify-center transition-colors border border-[#30303D]">
+              <CheckCircle2 className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-[#F2F0F7] tracking-tight tabular-nums">
               {loading ? "..." : (stats?.tasks_remaining ?? 0)}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
-              {loading ? "..." : `${stats?.tasks_high_priority ?? 0} high priority`}
+            <span className="inline-flex items-center text-[10px] font-medium text-[#E5AA58] bg-[rgba(229,170,88,0.12)] px-1.5 py-0.5 rounded border border-[#E5AA58]/20">
+              {loading ? "..." : `${stats?.tasks_high_priority ?? 0} urgent`}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5">
             {loading ? (
               "Calculating..."
             ) : (
@@ -228,26 +235,28 @@ export default function DashboardPage() {
         {/* Deliverables Done */}
         <Link
           href="/approvals"
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5 transition-all group block cursor-pointer"
+          className="bg-[#17171E] rounded-xl p-4 border border-[#30303D] hover:border-[#4A4A5A] hover:bg-[#1A1A22] transition-all group block cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">Deliverables Done</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Calendar className="w-4 h-4" />
+            <span className="text-[11px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#45B88A] transition-colors">
+              Deliverables Done
+            </span>
+            <div className="w-7 h-7 rounded-md bg-[#20202A] text-[#A3A0B0] group-hover:text-[#45B88A] group-hover:bg-[rgba(69,184,138,0.12)] flex items-center justify-center transition-colors border border-[#30303D]">
+              <Calendar className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-[#F2F0F7] tracking-tight tabular-nums">
               {loading ? "..." : `${stats?.deliverables_done ?? 0} / ${stats?.deliverables_total ?? 0}`}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-              {deliverablePercent}% complete
+            <span className="inline-flex items-center text-[10px] font-medium text-[#45B88A] bg-[rgba(69,184,138,0.12)] px-1.5 py-0.5 rounded border border-[#45B88A]/20">
+              {deliverablePercent}%
             </span>
           </div>
-          {/* Progress bar */}
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2.5 overflow-hidden">
+          {/* Subtle Progress Bar */}
+          <div className="w-full bg-[#20202A] rounded-full h-1 mt-2 overflow-hidden border border-[#30303D]/60">
             <div 
-              className="bg-gradient-to-r from-purple-600 to-emerald-500 h-1.5 rounded-full transition-all duration-500" 
+              className="bg-[#45B88A] h-1 rounded-full transition-all duration-500" 
               style={{ width: `${deliverablePercent}%` }}
             />
           </div>
@@ -256,23 +265,25 @@ export default function DashboardPage() {
         {/* Retainer Revenue */}
         <Link
           href="/clients"
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:border-violet-300 hover:shadow-md hover:-translate-y-0.5 transition-all group block cursor-pointer"
+          className="bg-[#17171E] rounded-xl p-4 border border-[#30303D] hover:border-[#4A4A5A] hover:bg-[#1A1A22] transition-all group block cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-violet-600 transition-colors">Monthly Retainers</span>
-            <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-4 h-4" />
+            <span className="text-[11px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#A78BFA] transition-colors">
+              Monthly Retainers
+            </span>
+            <div className="w-7 h-7 rounded-md bg-[#20202A] text-[#A3A0B0] group-hover:text-[#A78BFA] group-hover:bg-[rgba(167,139,250,0.12)] flex items-center justify-center transition-colors border border-[#30303D]">
+              <TrendingUp className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-[#F2F0F7] tracking-tight tabular-nums">
               {loading ? "..." : formatCurrencyINR(stats?.total_monthly_retainer_inr ?? 0)}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-              <ArrowUpRight className="w-3 h-3 mr-0.5" /> Contracts
+            <span className="inline-flex items-center text-[10px] font-medium text-[#A78BFA] bg-[rgba(167,139,250,0.12)] px-1.5 py-0.5 rounded border border-[#A78BFA]/20">
+              Contracts
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5">
             {loading ? (
               "Fetching contracts..."
             ) : (
@@ -282,70 +293,73 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Main Section: Pipeline Production Overview + Upcoming Deadlines */}
+      {/* ──────────────────────────────────────────────
+          Middle: Production Pipeline & Upcoming Deadlines
+      ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Real Production Pipeline Breakdown (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        {/* Production Pipeline Breakdown (2 cols) */}
+        <div className="lg:col-span-2 bg-[#17171E] rounded-xl p-5 border border-[#30303D] flex flex-col justify-between">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-[#30303D]/60">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-slate-900">Operations & Production Pipeline</h2>
-                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                    Live Status
+                  <h2 className="text-sm font-semibold text-[#F2F0F7]">Production Pipeline Status</h2>
+                  <span className="px-1.5 py-0.2 text-[10px] font-medium rounded bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border border-[#A78BFA]/20">
+                    Live Telemetry
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Actual progress breakdown of deliverables and task workflows across all active clients
+                <p className="text-xs text-[#A3A0B0] mt-0.5">
+                  Actual progress breakdown across deliverables and team task queues.
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-medium">
+              {/* Segment Toggle */}
+              <div className="flex items-center gap-1 p-0.5 bg-[#101014] rounded-lg border border-[#30303D] text-xs font-medium">
                 <button 
                   onClick={() => setPipelineView("deliverables")}
-                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-xs ${
                     pipelineView === "deliverables" 
-                      ? "bg-white text-purple-700 font-bold shadow-2xs" 
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]" 
+                      : "text-[#6E6D7A] hover:text-[#A3A0B0]"
                   }`}
                 >
-                  <FileCheck className="w-3.5 h-3.5" />
+                  <FileCheck className="w-3.5 h-3.5 text-[#45B88A]" />
                   Deliverables ({stats?.deliverables_total ?? 0})
                 </button>
                 <button 
                   onClick={() => setPipelineView("tasks")}
-                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-xs ${
                     pipelineView === "tasks" 
-                      ? "bg-white text-purple-700 font-bold shadow-2xs" 
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]" 
+                      : "text-[#6E6D7A] hover:text-[#A3A0B0]"
                   }`}
                 >
-                  <Layers className="w-3.5 h-3.5" />
+                  <Layers className="w-3.5 h-3.5 text-[#69A9D8]" />
                   Tasks ({stats?.tasks_total ?? 0})
                 </button>
               </div>
             </div>
 
             {loading ? (
-              <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs">
-                <RefreshCw className="w-6 h-6 animate-spin text-purple-500 mb-2" />
-                <span>Aggregating production data...</span>
+              <div className="h-44 flex flex-col items-center justify-center text-[#A3A0B0] text-xs">
+                <RefreshCw className="w-5 h-5 animate-spin text-[#A78BFA] mb-2" />
+                <span>Aggregating production telemetry...</span>
               </div>
             ) : pipelineView === "deliverables" ? (
               /* Deliverables Pipeline Details */
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {/* Visual Status Segments Bar */}
                 <div>
-                  <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                    <span className="text-slate-700">Production Completion</span>
-                    <span className="text-purple-600 font-bold">{deliverablePercent}% Done</span>
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-[#A3A0B0]">Deliverables SLA Completion</span>
+                    <span className="text-[#45B88A] font-semibold tabular-nums">{deliverablePercent}% Done</span>
                   </div>
-                  <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                  <div className="h-2 w-full bg-[#101014] rounded-full overflow-hidden flex border border-[#30303D]/60">
                     {/* Approved / Published */}
                     <div 
                       title={`Approved: ${stats?.deliverables_done ?? 0}`}
                       style={{ width: `${deliverablePercent}%` }} 
-                      className="bg-emerald-500 h-full transition-all duration-500"
+                      className="bg-[#45B88A] h-full transition-all duration-500"
                     />
                     {/* In Review */}
                     <div 
@@ -355,7 +369,7 @@ export default function DashboardPage() {
                           ? `${Math.round((((stats.deliverables_by_status?.client_review ?? 0) + (stats.deliverables_by_status?.internal_review ?? 0) + (stats.deliverables_by_status?.changes_requested ?? 0)) / stats.deliverables_total) * 100)}%`
                           : "0%" 
                       }} 
-                      className="bg-amber-400 h-full transition-all duration-500"
+                      className="bg-[#E5AA58] h-full transition-all duration-500"
                     />
                     {/* In Production */}
                     <div 
@@ -365,71 +379,79 @@ export default function DashboardPage() {
                           ? `${Math.round(((stats.deliverables_by_status?.in_production ?? 0) / stats.deliverables_total) * 100)}%`
                           : "0%" 
                       }} 
-                      className="bg-purple-500 h-full transition-all duration-500"
+                      className="bg-[#A78BFA] h-full transition-all duration-500"
                     />
                   </div>
                 </div>
 
                 {/* Status Breakdown Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <Link 
                     href="/approvals"
-                    className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-100 hover:border-emerald-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider group-hover:text-emerald-900 transition-colors">Approved / Live</div>
-                    <div className="text-xl font-extrabold text-emerald-950 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#45B88A] transition-colors">
+                      Approved / Live
+                    </div>
+                    <div className="text-lg font-bold text-[#45B88A] mt-1 tabular-nums">
                       {stats?.deliverables_done ?? 0}
                     </div>
-                    <div className="text-[10px] text-emerald-600 mt-0.5 font-medium">Ready for broadcast →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Ready for release →</div>
                   </Link>
 
                   <Link 
                     href="/approvals"
-                    className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-100 hover:border-amber-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-amber-800 uppercase tracking-wider group-hover:text-amber-900 transition-colors">In Client Review</div>
-                    <div className="text-xl font-extrabold text-amber-950 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#E5AA58] transition-colors">
+                      In Review
+                    </div>
+                    <div className="text-lg font-bold text-[#E5AA58] mt-1 tabular-nums">
                       {(stats?.deliverables_by_status?.client_review ?? 0) + (stats?.deliverables_by_status?.changes_requested ?? 0)}
                     </div>
-                    <div className="text-[10px] text-amber-600 mt-0.5 font-medium">Awaiting portal signoff →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Awaiting sign-off →</div>
                   </Link>
 
                   <Link 
                     href="/campaigns"
-                    className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-100 hover:border-purple-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-purple-800 uppercase tracking-wider group-hover:text-purple-900 transition-colors">In Production</div>
-                    <div className="text-xl font-extrabold text-purple-950 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#A78BFA] transition-colors">
+                      In Production
+                    </div>
+                    <div className="text-lg font-bold text-[#A78BFA] mt-1 tabular-nums">
                       {(stats?.deliverables_by_status?.in_production ?? 0) + (stats?.deliverables_by_status?.internal_review ?? 0)}
                     </div>
-                    <div className="text-[10px] text-purple-600 mt-0.5 font-medium">Assets being created →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Creative drafting →</div>
                   </Link>
 
                   <Link 
                     href="/campaigns"
-                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-800 transition-colors">Not Started</div>
-                    <div className="text-xl font-extrabold text-slate-800 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#F2F0F7] transition-colors">
+                      Not Started
+                    </div>
+                    <div className="text-lg font-bold text-[#F2F0F7] mt-1 tabular-nums">
                       {stats?.deliverables_by_status?.not_started ?? 0}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Queued in campaign →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Sprint queue →</div>
                   </Link>
                 </div>
               </div>
             ) : (
               /* Tasks Pipeline Details */
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div>
-                  <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                    <span className="text-slate-700">Tasks Completion</span>
-                    <span className="text-purple-600 font-bold">{tasksPercent}% Resolved</span>
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-[#A3A0B0]">Tasks Resolved</span>
+                    <span className="text-[#69A9D8] font-semibold tabular-nums">{tasksPercent}% Done</span>
                   </div>
-                  <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                  <div className="h-2 w-full bg-[#101014] rounded-full overflow-hidden flex border border-[#30303D]/60">
                     <div 
                       title={`Completed / Approved: ${(stats?.tasks_total ?? 0) - (stats?.tasks_remaining ?? 0)}`}
                       style={{ width: `${tasksPercent}%` }} 
-                      className="bg-emerald-500 h-full transition-all duration-500"
+                      className="bg-[#45B88A] h-full transition-all duration-500"
                     />
                     <div 
                       title={`In Review: ${stats?.tasks_in_review ?? 0}`}
@@ -438,7 +460,7 @@ export default function DashboardPage() {
                           ? `${Math.round(((stats.tasks_in_review ?? 0) / stats.tasks_total) * 100)}%`
                           : "0%" 
                       }} 
-                      className="bg-amber-400 h-full transition-all duration-500"
+                      className="bg-[#E5AA58] h-full transition-all duration-500"
                     />
                     <div 
                       title={`To-Do & In Progress: ${(stats?.tasks_todo ?? 0) + (stats?.tasks_by_status?.in_progress ?? 0)}`}
@@ -447,115 +469,123 @@ export default function DashboardPage() {
                           ? `${Math.round((((stats.tasks_todo ?? 0) + (stats.tasks_by_status?.in_progress ?? 0)) / stats.tasks_total) * 100)}%`
                           : "0%" 
                       }} 
-                      className="bg-blue-500 h-full transition-all duration-500"
+                      className="bg-[#69A9D8] h-full transition-all duration-500"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <Link 
                     href="/tasks"
-                    className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-100 hover:border-emerald-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider group-hover:text-emerald-900 transition-colors">Done & Approved</div>
-                    <div className="text-xl font-extrabold text-emerald-950 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#45B88A] transition-colors">
+                      Done
+                    </div>
+                    <div className="text-lg font-bold text-[#45B88A] mt-1 tabular-nums">
                       {(stats?.tasks_by_status?.done ?? 0) + (stats?.tasks_by_status?.approved ?? 0)}
                     </div>
-                    <div className="text-[10px] text-emerald-600 mt-0.5 font-medium">Finished work items →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Completed items →</div>
                   </Link>
 
                   <Link 
                     href="/tasks"
-                    className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 hover:border-blue-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-blue-800 uppercase tracking-wider group-hover:text-blue-900 transition-colors">In Progress</div>
-                    <div className="text-xl font-extrabold text-blue-950 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#69A9D8] transition-colors">
+                      In Progress
+                    </div>
+                    <div className="text-lg font-bold text-[#69A9D8] mt-1 tabular-nums">
                       {stats?.tasks_by_status?.in_progress ?? 0}
                     </div>
-                    <div className="text-[10px] text-blue-600 mt-0.5 font-medium">Actively working →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Active execution →</div>
                   </Link>
 
                   <Link 
                     href="/tasks"
-                    className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-100 hover:border-amber-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-amber-800 uppercase tracking-wider group-hover:text-amber-900 transition-colors">Under Review</div>
-                    <div className="text-xl font-extrabold text-amber-950 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#E5AA58] transition-colors">
+                      Under Review
+                    </div>
+                    <div className="text-lg font-bold text-[#E5AA58] mt-1 tabular-nums">
                       {stats?.tasks_in_review ?? 0}
                     </div>
-                    <div className="text-[10px] text-amber-600 mt-0.5 font-medium">Internal & client checks →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Quality check →</div>
                   </Link>
 
                   <Link 
                     href="/tasks"
-                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 hover:shadow-xs hover:-translate-y-0.5 transition-all block cursor-pointer group"
+                    className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                   >
-                    <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider group-hover:text-slate-800 transition-colors">To-Do / Backlog</div>
-                    <div className="text-xl font-extrabold text-slate-800 mt-1">
+                    <div className="text-[10px] font-medium text-[#6E6D7A] uppercase tracking-wider group-hover:text-[#F2F0F7] transition-colors">
+                      Backlog
+                    </div>
+                    <div className="text-lg font-bold text-[#F2F0F7] mt-1 tabular-nums">
                       {(stats?.tasks_todo ?? 0) + (stats?.tasks_by_status?.backlog ?? 0)}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Awaiting execution →</div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Pending assignment →</div>
                   </Link>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-500 font-medium pt-4 mt-6 border-t border-slate-100">
-            <span>Production status synced across all campaigns</span>
-            <Link href="/approvals" className="text-purple-600 hover:text-purple-700 font-bold flex items-center gap-1">
+          <div className="flex items-center justify-between text-xs text-[#A3A0B0] pt-4 mt-5 border-t border-[#30303D]">
+            <span>Synced automatically across active campaigns</span>
+            <Link href="/approvals" className="text-[#A78BFA] hover:text-[#B69BFF] font-medium flex items-center gap-1 transition-colors">
               Review Pending Approvals <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
 
         {/* Upcoming Deadlines Widget */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="bg-[#17171E] rounded-xl p-5 border border-[#30303D] flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-slate-900">Upcoming Deadlines</h2>
-              <Link href="/tasks" className="text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-0.5">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#30303D]/60">
+              <h2 className="text-sm font-semibold text-[#F2F0F7]">Upcoming Deadlines</h2>
+              <Link href="/tasks" className="text-xs font-medium text-[#A78BFA] hover:text-[#B69BFF] flex items-center gap-0.5 transition-colors">
                 View All <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
             {loading ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                Checking task deadlines...
+              <div className="py-8 text-center text-[#A3A0B0] text-xs">
+                Checking task milestones...
               </div>
             ) : stats?.upcoming_deadlines && stats.upcoming_deadlines.length > 0 ? (
-              <div className="space-y-3.5">
+              <div className="space-y-2.5">
                 {stats.upcoming_deadlines.map((deadline) => {
                   let badgeText = `Due in ${deadline.days_remaining}d`;
-                  let badgeClass = "bg-blue-50 text-blue-700 border-blue-200";
+                  let badgeClass = "bg-[#20202A] text-[#69A9D8] border-[#30303D]";
                   if (deadline.days_remaining < 0) {
                     badgeText = "Overdue";
-                    badgeClass = "bg-rose-50 text-rose-600 border-rose-200";
+                    badgeClass = "bg-[rgba(225,111,123,0.12)] text-[#E16F7B] border-[#E16F7B]/30";
                   } else if (deadline.days_remaining === 0) {
                     badgeText = "Due Today";
-                    badgeClass = "bg-rose-50 text-rose-600 border-rose-200";
+                    badgeClass = "bg-[rgba(225,111,123,0.12)] text-[#E16F7B] border-[#E16F7B]/30";
                   } else if (deadline.days_remaining === 1) {
                     badgeText = "Due Tomorrow";
-                    badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+                    badgeClass = "bg-[rgba(229,170,88,0.12)] text-[#E5AA58] border-[#E5AA58]/30";
                   }
 
                   return (
                     <Link 
                       href="/tasks"
                       key={deadline.id}
-                      className="p-3 rounded-xl bg-slate-50/70 hover:bg-slate-100/90 hover:border-slate-300 hover:shadow-2xs transition-all border border-slate-100 block cursor-pointer group"
+                      className="p-3 rounded-lg bg-[#20202A] hover:bg-[#262630] border border-[#30303D] transition-colors block cursor-pointer group"
                     >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-purple-700 transition-colors">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-[#F2F0F7] line-clamp-1 group-hover:text-[#A78BFA] transition-colors">
                           {deadline.title}
                         </span>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border uppercase shrink-0 ${badgeClass}`}>
+                        <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded border uppercase shrink-0 ${badgeClass}`}>
                           {badgeText}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <div className="flex items-center justify-between text-[11px] text-[#A3A0B0]">
                         <span>Client: {deadline.client_name}</span>
-                        <span className="font-semibold text-slate-600">
+                        <span className="text-[#6E6D7A]">
                           {deadline.task_type || "Task"}
                         </span>
                       </div>
@@ -565,50 +595,52 @@ export default function DashboardPage() {
               </div>
             ) : (
               /* Clean Empty State */
-              <div className="py-8 px-4 rounded-xl border border-dashed border-slate-200 text-center flex flex-col items-center justify-center">
-                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mb-2">
-                  <Calendar className="w-5 h-5 text-slate-400" />
+              <div className="py-8 px-4 rounded-lg border border-dashed border-[#30303D] text-center flex flex-col items-center justify-center">
+                <div className="w-8 h-8 rounded-md bg-[#20202A] flex items-center justify-center text-[#6E6D7A] mb-2 border border-[#30303D]">
+                  <Calendar className="w-4 h-4 text-[#A3A0B0]" />
                 </div>
-                <p className="text-xs font-bold text-slate-700">No upcoming deadlines scheduled</p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
-                  All active tasks are either completed or don&apos;t have a scheduled due date.
+                <p className="text-xs font-medium text-[#F2F0F7]">No urgent deadlines</p>
+                <p className="text-[11px] text-[#A3A0B0] mt-1 max-w-[200px]">
+                  All tasks are either completed or don&apos;t have an impending due date.
                 </p>
               </div>
             )}
           </div>
 
-          <div className="pt-4 mt-4 border-t border-slate-100">
+          <div className="pt-4 mt-4 border-t border-[#30303D]">
             <Link
               href="/tasks"
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-1.5 bg-[#20202A] hover:bg-[#262630] text-[#F2F0F7] text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-colors border border-[#30303D]"
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
-              <span>Go to Task Kanban Board</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>Go to Task Board</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Bottom Section: Recent Activity + AI Assistant Banner */}
+      {/* ──────────────────────────────────────────────
+          Bottom Section: Recent Activity + AI Assistant
+      ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Feed (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center justify-between mb-5">
+        <div className="lg:col-span-2 bg-[#17171E] rounded-xl p-5 border border-[#30303D]">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#30303D]/60">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Recent Agency Activity</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Live updates from your team and client portal</p>
+              <h2 className="text-sm font-semibold text-[#F2F0F7]">Recent Activity</h2>
+              <p className="text-xs text-[#A3A0B0] mt-0.5">Live operational event stream from team and portal</p>
             </div>
-            <Link href="/approvals" className="text-xs font-bold text-purple-600 hover:text-purple-700">
+            <Link href="/approvals" className="text-xs font-medium text-[#A78BFA] hover:text-[#B69BFF] transition-colors">
               View Approvals
             </Link>
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-slate-400 text-xs">
-              Loading recent activity...
+            <div className="py-8 text-center text-[#A3A0B0] text-xs">
+              Loading recent activity stream...
             </div>
           ) : stats?.recent_activity && stats.recent_activity.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-1">
               {stats.recent_activity.map((item) => {
                 const isApproved = item.status.toLowerCase().includes("approved") || item.status.toLowerCase().includes("done");
                 const isReview = item.status.toLowerCase().includes("review");
@@ -623,37 +655,37 @@ export default function DashboardPage() {
                   <Link 
                     href={linkHref}
                     key={item.id} 
-                    className="flex items-start gap-3.5 pb-3.5 border-b border-slate-100 last:border-b-0 last:pb-0 hover:bg-slate-50/80 -mx-2 px-2 py-1.5 rounded-xl transition-all group cursor-pointer"
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[#20202A] transition-colors group cursor-pointer"
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform ${
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
                       isApproved 
-                        ? "bg-emerald-50 text-emerald-600" 
+                        ? "bg-[rgba(69,184,138,0.12)] text-[#45B88A] border-[#45B88A]/20" 
                         : isReview 
-                        ? "bg-amber-50 text-amber-600" 
-                        : "bg-purple-50 text-purple-600"
+                        ? "bg-[rgba(229,170,88,0.12)] text-[#E5AA58] border-[#E5AA58]/20" 
+                        : "bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border-[#A78BFA]/20"
                     }`}>
                       {isApproved ? (
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       ) : isReview ? (
-                        <Clock className="w-4 h-4" />
+                        <Clock className="w-3.5 h-3.5" />
                       ) : (
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-3.5 h-3.5" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-900 truncate group-hover:text-purple-700 transition-colors">
+                      <p className="text-xs font-medium text-[#F2F0F7] truncate group-hover:text-[#A78BFA] transition-colors">
                         {item.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-[11px] text-[#A3A0B0] truncate">
                         {item.subtitle} • {formatRelativeTime(item.timestamp)}
                       </p>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium border shrink-0 ${
                       isApproved 
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                        ? "bg-[rgba(69,184,138,0.12)] text-[#45B88A] border-[#45B88A]/20" 
                         : isReview 
-                        ? "bg-amber-50 text-amber-700 border-amber-200" 
-                        : "bg-purple-50 text-purple-700 border-purple-200"
+                        ? "bg-[rgba(229,170,88,0.12)] text-[#E5AA58] border-[#E5AA58]/20" 
+                        : "bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border-[#A78BFA]/20"
                     }`}>
                       {item.status}
                     </span>
@@ -662,39 +694,39 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <div className="py-8 px-4 rounded-xl border border-dashed border-slate-200 text-center">
-              <p className="text-xs font-bold text-slate-700">No recent activity recorded yet</p>
-              <p className="text-[11px] text-slate-400 mt-1">
+            <div className="py-8 px-4 rounded-lg border border-dashed border-[#30303D] text-center">
+              <p className="text-xs font-medium text-[#F2F0F7]">No recent activity recorded yet</p>
+              <p className="text-[11px] text-[#A3A0B0] mt-1">
                 Activity will appear here as deliverables, tasks, and client approvals progress.
               </p>
             </div>
           )}
         </div>
 
-        {/* AI Copilot Card */}
-        <div className="rounded-2xl bg-gradient-to-br from-[#0B0D14] via-[#121526] to-[#1E1538] text-white p-6 border border-purple-500/30 shadow-lg relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-purple-600/30 rounded-full blur-2xl pointer-events-none" />
+        {/* Compact AI Strategy Card (Raycast Contextual Style) */}
+        <div className="rounded-xl bg-[#17171E] p-5 border border-[#30303D] relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[rgba(167,139,250,0.08)] rounded-full blur-2xl pointer-events-none" />
 
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold uppercase tracking-wider mb-4">
-              <Sparkles className="w-3 h-3 text-purple-400" />
-              AI Agent Orchestrator
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border border-[#A78BFA]/20 text-[10px] font-medium uppercase tracking-wider mb-3">
+              <Sparkles className="w-3 h-3 text-[#A78BFA]" />
+              Campaign Studio
             </div>
 
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              Plan Next Month&apos;s Campaign in Seconds
+            <h3 className="text-sm font-semibold text-[#F2F0F7] tracking-tight">
+              AI Multi-Agent Campaign Strategist
             </h3>
-            <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-              Ground your campaign strategy in verified client brand tone, contract quotas, and viral reel hooks without guessing.
+            <p className="text-xs text-[#A3A0B0] mt-1.5 leading-relaxed">
+              Synthesize client brand tone, market competition, and historical reel hooks with 6 autonomous agents.
             </p>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-white/10 space-y-2">
+          <div className="mt-5 pt-4 border-t border-[#30303D]">
             <Link
               href="/campaigns"
-              className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-600/40 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-2 px-3 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 font-medium text-xs rounded-lg flex items-center justify-center gap-1.5 transition-colors"
             >
-              <span>Launch AI Planner</span>
+              <span>Launch Campaign Studio</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

@@ -101,149 +101,75 @@ export default function PublishModal({
   const [publishProgress, setPublishProgress] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // Scheduling state
-  const userTimezone = typeof Intl !== "undefined" && Intl.DateTimeFormat
-    ? Intl.DateTimeFormat().resolvedOptions().timeZone
-    : "UTC";
-
-  // Default to 10 hours from now (the user's scenario) or current scheduled time
+  // Scheduling State
   const [scheduledDateTime, setScheduledDateTime] = useState<string>(() => {
     if (currentScheduledAt) {
-      try {
-        return formatLocalDateTime(new Date(currentScheduledAt));
-      } catch {
-        // fallback
-      }
+      return formatLocalDateTime(new Date(currentScheduledAt));
     }
-    const defaultDate = new Date(Date.now() + 10 * 3600 * 1000);
-    return formatLocalDateTime(defaultDate);
+    const defaultTime = new Date(Date.now() + 60 * 60 * 1000);
+    return formatLocalDateTime(defaultTime);
   });
 
-  useEffect(() => {
-    if (caption) setCaptionText(caption);
-  }, [caption]);
+  const [userTimezone, setUserTimezone] = useState<string>("");
 
   useEffect(() => {
-    if (isRescheduling) {
-      setActionIntent("schedule");
-    } else if (initialIntent) {
-      setActionIntent(initialIntent);
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setUserTimezone(tz || "Local Time");
+    } catch {
+      setUserTimezone("Local Time");
     }
-  }, [initialIntent, isRescheduling, isOpen]);
+  }, []);
 
-  // Sync selectedPlatform with deliverable's platform prop if valid
   useEffect(() => {
-    if (platform) {
-      const p = platform.toLowerCase();
-      if (p === "both" || p === "all") {
-        setSelectedPlatform("both");
-      } else if (p.includes("facebook") || p === "fb") {
-        setSelectedPlatform("facebook");
-      } else if (p.includes("instagram") || p === "ig") {
-        setSelectedPlatform("instagram");
+    const p = (platform || "").toLowerCase();
+    if (p.includes("facebook") || p.includes("fb")) {
+      setSelectedPlatform("facebook");
+    } else {
+      setSelectedPlatform("instagram");
+    }
+  }, [platform]);
+
+  useEffect(() => {
+    async function fetchAccounts() {
+      if (!token || !effectiveAgencyId || !clientId) return;
+      setLoadingAccounts(true);
+      try {
+        const list = (await socialApi.list(
+          effectiveAgencyId,
+          clientId,
+          token
+        )) as SocialAccount[];
+        setAccounts(list || []);
+      } catch (err: any) {
+        console.error("Failed to load connected social accounts:", err);
+      } finally {
+        setLoadingAccounts(false);
       }
     }
-  }, [platform, isOpen]);
-
-  useEffect(() => {
-    if (isOpen && effectiveAgencyId && clientId && token) {
-      setLoadingAccounts(true);
-      setError(null);
-      socialApi
-        .list(effectiveAgencyId, clientId, token)
-        .then((data) => {
-          setAccounts(data);
-          const hasIg = data.some((a) => a.platform === "instagram" && a.is_active);
-          const hasFb = data.some((a) => a.platform === "facebook" && a.is_active);
-
-          const p = (platform || "").toLowerCase();
-          if (p === "both" && hasIg && hasFb) {
-            setSelectedPlatform("both");
-            setMode("automated");
-          } else if (p.includes("facebook") && hasFb) {
-            setSelectedPlatform("facebook");
-            setMode("automated");
-          } else if (p.includes("instagram") && hasIg) {
-            setSelectedPlatform("instagram");
-            setMode("automated");
-          } else if (hasIg) {
-            setSelectedPlatform("instagram");
-            setMode("automated");
-          } else if (hasFb) {
-            setSelectedPlatform("facebook");
-            setMode("automated");
-          } else {
-            setMode("manual");
-          }
-        })
-        .catch((err) => {
-          console.error("Error loading social accounts:", err);
-        })
-        .finally(() => setLoadingAccounts(false));
+    if (isOpen) {
+      fetchAccounts();
     }
-  }, [isOpen, effectiveAgencyId, clientId, token, platform]);
+  }, [token, effectiveAgencyId, clientId, isOpen]);
 
   if (!isOpen) return null;
 
-  const igAccount = accounts.find((a) => a.platform === "instagram" && a.is_active);
-  const fbAccount = accounts.find((a) => a.platform === "facebook" && a.is_active);
-  const isBoth = selectedPlatform === "both";
-  const currentAccount = isBoth ? (igAccount || fbAccount) : (selectedPlatform === "facebook" ? fbAccount : igAccount);
-  const isVideoOrReel = deliverableType.toLowerCase().includes("reel") || deliverableType.toLowerCase().includes("video");
+  const isVideoOrReel =
+    deliverableType?.toLowerCase().includes("video") ||
+    deliverableType?.toLowerCase().includes("reel");
 
-  // Calculate live countdown text & AM/PM detection
-  let countdownText = "";
-  let isPastTime = false;
-  let amPmSuggestion: string | null = null;
-  let targetPMString: string | null = null;
+  const igAccount = accounts.find((a) => a.platform === "instagram" && a.instagram_business_id);
+  const fbAccount = accounts.find((a) => a.platform === "facebook" && a.facebook_page_id);
 
-  try {
-    const target = parseLocalDateTime(scheduledDateTime);
-    const now = new Date();
-    const diffMs = target.getTime() - now.getTime();
+  const currentAccount =
+    selectedPlatform === "both"
+      ? igAccount || fbAccount
+      : selectedPlatform === "facebook"
+      ? fbAccount
+      : igAccount;
 
-    const formattedTarget = target.toLocaleString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-
-    if (diffMs < 60000) {
-      isPastTime = true;
-      if (diffMs <= 0) {
-        // Check if user chose AM instead of PM
-        const targetPM = new Date(target.getTime() + 12 * 3600 * 1000);
-        if (targetPM.getTime() - now.getTime() >= 60000 && target.getHours() < 12) {
-          amPmSuggestion = targetPM.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
-          targetPMString = formatLocalDateTime(targetPM);
-          countdownText = `Selected time (${formattedTarget}) has already passed. Did you mean ${amPmSuggestion}?`;
-        } else {
-          countdownText = `Selected time (${formattedTarget}) is in the past. Must be at least 1 minute in the future.`;
-        }
-      } else {
-        const secs = Math.ceil(diffMs / 1000);
-        countdownText = `Selected time is in ${secs}s. Must be at least 1 minute in the future.`;
-      }
-    } else {
-      if (diffMs < 3600 * 1000) {
-        const diffMinutes = Math.floor(diffMs / (60 * 1000));
-        const diffSeconds = Math.floor((diffMs % (60 * 1000)) / 1000);
-        countdownText = `Will publish on ${formattedTarget} (in ${diffMinutes}m ${diffSeconds}s) [${userTimezone}]`;
-      } else {
-        const diffHours = Math.floor(diffMs / (3600 * 1000));
-        const diffMinutes = Math.floor((diffMs % (3600 * 1000)) / (60 * 1000));
-        countdownText = `Will publish on ${formattedTarget} (in ${diffHours}h ${diffMinutes}m) [${userTimezone}]`;
-      }
-    }
-  } catch {
-    countdownText = "";
-  }
-
-  // Quick preset helper
-  const applyPreset = (preset: "2m" | "5m" | "15m" | "1h" | "2h" | "10h" | "tomorrow9am" | "tomorrow6pm") => {
+  // Preset button helper
+  const applyPreset = (preset: "2m" | "5m" | "15m" | "1h" | "10h" | "tomorrow9am") => {
     const now = new Date();
     let target = new Date();
     if (preset === "2m") {
@@ -253,21 +179,56 @@ export default function PublishModal({
     } else if (preset === "15m") {
       target = new Date(now.getTime() + 15 * 60 * 1000);
     } else if (preset === "1h") {
-      target = new Date(now.getTime() + 3600 * 1000);
-    } else if (preset === "2h") {
-      target = new Date(now.getTime() + 2 * 3600 * 1000);
+      target = new Date(now.getTime() + 60 * 60 * 1000);
     } else if (preset === "10h") {
-      target = new Date(now.getTime() + 10 * 3600 * 1000);
+      target = new Date(now.getTime() + 10 * 60 * 60 * 1000);
     } else if (preset === "tomorrow9am") {
-      target.setDate(target.getDate() + 1);
+      target.setDate(now.getDate() + 1);
       target.setHours(9, 0, 0, 0);
-    } else if (preset === "tomorrow6pm") {
-      target.setDate(target.getDate() + 1);
-      target.setHours(18, 0, 0, 0);
     }
     setScheduledDateTime(formatLocalDateTime(target));
     setError(null);
   };
+
+  // Compute live relative countdown string
+  let countdownText = "";
+  let isPastTime = false;
+  let amPmSuggestion: string | null = null;
+  let targetPMString: string | null = null;
+
+  if (scheduledDateTime) {
+    const selectedDate = parseLocalDateTime(scheduledDateTime);
+    const now = new Date();
+    const diffMs = selectedDate.getTime() - now.getTime();
+    if (diffMs <= 0) {
+      isPastTime = true;
+      const hoursAgo = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
+      countdownText = `Selected time has already passed (${hoursAgo}h ago). Pick a future time.`;
+
+      // Smart AM -> PM suggestion
+      if (selectedDate.getHours() < 12) {
+        const pmCandidate = new Date(selectedDate.getTime() + 12 * 60 * 60 * 1000);
+        if (pmCandidate.getTime() > now.getTime()) {
+          amPmSuggestion = pmCandidate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+          targetPMString = formatLocalDateTime(pmCandidate);
+        }
+      }
+    } else {
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const hours = Math.floor(diffMins / 60);
+      const days = Math.floor(hours / 24);
+      const remHours = hours % 24;
+      const remMins = diffMins % 60;
+
+      if (days > 0) {
+        countdownText = `Fires in ${days}d ${remHours}h ${remMins}m from now`;
+      } else if (hours > 0) {
+        countdownText = `Fires in ${hours}h ${remMins}m from now`;
+      } else {
+        countdownText = `Fires in ${diffMins} minute${diffMins === 1 ? "" : "s"} from now`;
+      }
+    }
+  }
 
   const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,124 +238,73 @@ export default function PublishModal({
     setPublishing(true);
 
     try {
-      // 1. SCHEDULE FOR LATER
       if (actionIntent === "schedule") {
-        const targetDate = parseLocalDateTime(scheduledDateTime);
-        if (isNaN(targetDate.getTime()) || targetDate.getTime() <= Date.now() + 60000) {
-          setError("Scheduled time must be at least 1 minute in the future.");
-          setPublishing(false);
-          return;
+        const selectedDate = parseLocalDateTime(scheduledDateTime);
+        if (selectedDate.getTime() <= Date.now()) {
+          throw new Error("Scheduled time must be in the future.");
         }
 
-        setPublishProgress("Setting up automated publication schedule...");
+        const scheduledIso = selectedDate.toISOString();
 
-        if (isRescheduling) {
-          const res = await publishingApi.reschedule(
-            effectiveAgencyId,
-            deliverableId,
-            {
-              new_scheduled_at: targetDate.toISOString(),
-              scheduled_timezone: userTimezone,
-            },
-            token
-          );
-          onSuccess(res);
-          onClose();
-        } else {
-          const res = await publishingApi.schedule(
-            effectiveAgencyId,
-            deliverableId,
-            {
-              scheduled_at: targetDate.toISOString(),
-              scheduled_timezone: userTimezone,
-              platform: selectedPlatform,
-              caption_override: captionText.trim() || undefined,
-              share_to_feed: shareToFeed,
-            },
-            token
-          );
-          onSuccess(res);
-          onClose();
-        }
+        setPublishProgress("Setting up scheduled queue entry...");
+        const result = (await publishingApi.schedule(
+          effectiveAgencyId,
+          deliverableId,
+          {
+            platform: selectedPlatform,
+            scheduled_at: scheduledIso,
+            share_to_feed: shareToFeed,
+            caption_override: captionText.trim() || undefined,
+          },
+          token
+        )) as ScheduleResponse;
+
+        onSuccess(result);
+        onClose();
         return;
       }
 
-      // 2. IMMEDIATE PUBLISH (AUTOMATED OR MANUAL)
+      // PUBLISH NOW LOGIC
       if (mode === "automated") {
-        if (selectedPlatform === "both") {
-          setPublishProgress("Publishing to Instagram and Facebook Page simultaneously...");
-        } else if (selectedPlatform === "facebook") {
-          setPublishProgress(
-            isVideoOrReel 
-              ? "Step 1/2: Uploading video to Facebook Page..." 
-              : "Step 1/2: Publishing post to Facebook Page..."
-          );
-        } else {
-          setPublishProgress("Step 1/3: Preparing media upload to Instagram...");
-          await new Promise((r) => setTimeout(r, 400));
-
-          if (isVideoOrReel) {
-            setPublishProgress("Step 2/3: Streaming video directly to Meta upload servers...");
-          } else {
-            setPublishProgress("Step 2/3: Verifying media container with Meta...");
-          }
-        }
-
-        const res = await publishingApi.publish(
+        setPublishProgress("Checking Meta API connection...");
+        const result = (await publishingApi.publish(
           effectiveAgencyId,
           deliverableId,
           {
             mode: "automated",
             platform: selectedPlatform,
-            caption_override: captionText,
-            media_url_override: mediaUrlOverride.trim() || undefined,
             share_to_feed: shareToFeed,
+            media_url_override: mediaUrlOverride.trim() || undefined,
+            caption_override: captionText.trim() || undefined,
           },
           token
-        );
+        )) as PublishResult;
 
-        if (selectedPlatform === "both" && res.platform_results) {
-          const ig = res.platform_results.instagram;
-          const fb = res.platform_results.facebook;
-          if (ig?.success && fb?.success) {
-            setPublishProgress("Successfully published to both Instagram and Facebook Page!");
-          } else if (fb?.success && !ig?.success) {
-            alert(`Facebook: Published successfully!\nInstagram: Failed (${ig?.error || "Error"})\n\nThe deliverable is now marked as published.`);
-          } else if (ig?.success && !fb?.success) {
-            alert(`Instagram: Published successfully!\nFacebook: Failed (${fb?.error || "Error"})\n\nThe deliverable is now marked as published.`);
-          }
-        } else {
-          setPublishProgress(
-            selectedPlatform === "facebook"
-              ? "Step 2/2: Published successfully to Facebook Page!"
-              : "Step 3/3: Published successfully to Instagram!"
-          );
+        if (result.status === "failed") {
+          throw new Error(result.message || "Meta API returned a publishing error");
         }
-        onSuccess(res);
+
+        onSuccess(result);
         onClose();
       } else {
-        if (!manualUrl.trim()) {
-          setError("Please paste the live post URL.");
-          setPublishing(false);
-          return;
-        }
-
-        const res = await publishingApi.publish(
+        // Manual mode
+        setPublishProgress("Recording live post link...");
+        const result = await publishingApi.publish(
           effectiveAgencyId,
           deliverableId,
           {
             mode: "manual",
-            platform: selectedPlatform,
             live_post_url: manualUrl.trim(),
+            platform: selectedPlatform,
           },
           token
         );
-        onSuccess(res);
+        onSuccess(result);
         onClose();
       }
     } catch (err: any) {
       console.error("Publishing error:", err);
-      setError(err?.message || "Failed to process request.");
+      setError(err.message || "Failed to complete action");
     } finally {
       setPublishing(false);
       setPublishProgress("");
@@ -408,32 +318,32 @@ export default function PublishModal({
     (actionIntent === "publish" && mode === "manual" && !manualUrl.trim());
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+      <div className="bg-[#17171E] rounded-2xl shadow-2xl border border-[#30303D] w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh] text-[#F2F0F7]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-6 py-4 border-b border-[#30303D] flex items-center justify-between bg-[#101014]">
           <div className="flex items-center gap-2.5">
             {actionIntent === "schedule" ? (
-              <div className="p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-xl shadow-xs shadow-indigo-600/30">
+              <div className="p-2 bg-[#20202A] text-[#A78BFA] border border-[#30303D] rounded-xl">
                 <Clock className="w-4 h-4" />
               </div>
             ) : selectedPlatform === "both" ? (
-              <div className="p-2 bg-gradient-to-tr from-purple-600 via-pink-600 to-blue-600 text-white rounded-xl shadow-xs shadow-purple-600/30 flex items-center gap-1">
+              <div className="p-2 bg-[#20202A] text-[#A78BFA] border border-[#30303D] rounded-xl flex items-center gap-1">
                 <InstagramIcon className="w-3.5 h-3.5" />
                 <span className="text-[10px] font-bold">+</span>
                 <FacebookIcon className="w-3.5 h-3.5" />
               </div>
             ) : selectedPlatform === "facebook" ? (
-              <div className="p-2 bg-gradient-to-tr from-blue-700 to-sky-500 text-white rounded-xl shadow-xs shadow-blue-600/30">
+              <div className="p-2 bg-[#20202A] text-[#69A9D8] border border-[#30303D] rounded-xl">
                 <FacebookIcon className="w-4 h-4" />
               </div>
             ) : (
-              <div className="p-2 bg-gradient-to-tr from-purple-600 to-pink-500 text-white rounded-xl shadow-xs shadow-purple-600/30">
+              <div className="p-2 bg-[#20202A] text-[#E16F7B] border border-[#30303D] rounded-xl">
                 <InstagramIcon className="w-4 h-4" />
               </div>
             )}
             <div>
-              <h2 className="text-sm font-bold text-slate-900 tracking-tight">
+              <h2 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight">
                 {actionIntent === "schedule"
                   ? isRescheduling
                     ? "Reschedule Content"
@@ -448,7 +358,7 @@ export default function PublishModal({
                     }`
                   : "Publish Deliverable"}
               </h2>
-              <p className="text-[11px] text-slate-500 truncate max-w-[280px]">
+              <p className="text-[11px] text-[#A3A0B0] truncate max-w-[280px]">
                 {deliverableTitle} &bull; {clientName}
               </p>
             </div>
@@ -456,7 +366,7 @@ export default function PublishModal({
           <button
             onClick={onClose}
             disabled={publishing}
-            className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+            className="text-[#71717A] hover:text-[#F2F0F7] text-lg leading-none p-1 rounded-lg hover:bg-[#20202A] cursor-pointer"
           >
             &times;
           </button>
@@ -465,29 +375,29 @@ export default function PublishModal({
         {/* Action Intent Switcher (Publish Now vs. Schedule for Later) */}
         {!isRescheduling && (
           <div className="px-6 pt-4 pb-0">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+            <div className="flex items-center gap-1.5 p-1 bg-[#101014] border border-[#30303D] rounded-xl">
               <button
                 type="button"
                 onClick={() => setActionIntent("publish")}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   actionIntent === "publish"
-                    ? "bg-white text-purple-700 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-bold"
+                    : "text-[#71717A] hover:text-[#F2F0F7]"
                 }`}
               >
-                <Send className="w-3.5 h-3.5 text-purple-600" />
+                <Send className="w-3.5 h-3.5 text-[#A78BFA]" />
                 <span>Publish Now</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActionIntent("schedule")}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   actionIntent === "schedule"
-                    ? "bg-white text-indigo-700 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-bold"
+                    : "text-[#71717A] hover:text-[#F2F0F7]"
                 }`}
               >
-                <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                <Clock className="w-3.5 h-3.5 text-[#A78BFA]" />
                 <span>Schedule for Later</span>
               </button>
             </div>
@@ -497,70 +407,70 @@ export default function PublishModal({
         {/* Body */}
         <form onSubmit={handleAction} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="p-3.5 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-[#E16F7B] shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {/* SCHEDULE MODE SPECIFIC CONTROLS */}
           {actionIntent === "schedule" && (
-            <div className="space-y-3.5 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+            <div className="space-y-3.5 p-4 bg-[#101014] rounded-2xl border border-[#30303D]">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                <label className="text-[11px] font-semibold text-[#A78BFA] uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#A78BFA]" />
                   <span>Scheduled Publication Time</span>
                 </label>
-                <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#20202A] px-2 py-0.5 rounded border border-[#30303D]">
                   {userTimezone}
                 </span>
               </div>
 
               {/* Quick Presets */}
               <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                <span className="text-[10px] font-semibold text-[#71717A] uppercase tracking-wider block">
                   Quick Presets
                 </span>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                   <button
                     type="button"
                     onClick={() => applyPreset("2m")}
-                    className="py-1.5 px-2 text-center text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    className="py-1.5 px-2 text-center text-xs font-mono font-bold bg-[#E5AA58]/10 border border-[#E5AA58]/30 text-[#E5AA58] hover:bg-[#E5AA58]/20 rounded-lg transition-all cursor-pointer"
                   >
                     ⚡ +2 Min
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("5m")}
-                    className="py-1.5 px-2 text-center text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    className="py-1.5 px-2 text-center text-xs font-mono font-bold bg-[#E5AA58]/10 border border-[#E5AA58]/30 text-[#E5AA58] hover:bg-[#E5AA58]/20 rounded-lg transition-all cursor-pointer"
                   >
                     ⚡ +5 Min
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("15m")}
-                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    className="py-1.5 px-2 text-center text-xs font-mono font-semibold bg-[#20202A] border border-[#30303D] hover:border-[#A78BFA] text-[#A3A0B0] hover:text-[#F2F0F7] rounded-lg transition-all cursor-pointer"
                   >
                     +15 Min
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("1h")}
-                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    className="py-1.5 px-2 text-center text-xs font-mono font-semibold bg-[#20202A] border border-[#30303D] hover:border-[#A78BFA] text-[#A3A0B0] hover:text-[#F2F0F7] rounded-lg transition-all cursor-pointer"
                   >
                     +1 Hour
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("10h")}
-                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    className="py-1.5 px-2 text-center text-xs font-mono font-semibold bg-[#20202A] border border-[#30303D] hover:border-[#A78BFA] text-[#A3A0B0] hover:text-[#F2F0F7] rounded-lg transition-all cursor-pointer"
                   >
                     +10 Hours
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("tomorrow9am")}
-                    className="py-1.5 px-2 text-center text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    className="py-1.5 px-2 text-center text-xs font-mono font-semibold bg-[#20202A] border border-[#30303D] hover:border-[#A78BFA] text-[#A3A0B0] hover:text-[#F2F0F7] rounded-lg transition-all cursor-pointer"
                   >
                     Tmrw 9 AM
                   </button>
@@ -577,19 +487,19 @@ export default function PublishModal({
                     setScheduledDateTime(e.target.value);
                     setError(null);
                   }}
-                  className="w-full text-xs font-bold text-slate-800 p-2.5 rounded-xl border border-indigo-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                  className="w-full text-xs font-mono font-bold text-[#F2F0F7] p-2.5 rounded-xl border border-[#30303D] bg-[#17171E] focus:outline-none focus:border-[#A78BFA] cursor-pointer"
                 />
               </div>
 
-              {/* Dynamic countdown, timezone confirmation, and AM/PM switch suggestion banner */}
+              {/* Dynamic countdown banner */}
               {countdownText && (
-                <div className={`p-2.5 rounded-xl text-[11px] font-semibold flex items-center justify-between gap-2 ${
+                <div className={`p-2.5 rounded-xl text-[11px] font-medium flex items-center justify-between gap-2 border ${
                   isPastTime
-                    ? "bg-rose-100 text-rose-800 border border-rose-200"
-                    : "bg-indigo-100/80 text-indigo-900 border border-indigo-200"
+                    ? "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
+                    : "bg-[#20202A] text-[#A3A0B0] border-[#30303D]"
                 }`}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Clock className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                  <div className="flex items-center gap-2 min-w-0 font-mono">
+                    <Clock className="w-3.5 h-3.5 shrink-0 text-[#A78BFA]" />
                     <span className="truncate">{countdownText}</span>
                   </div>
                   {isPastTime && amPmSuggestion && targetPMString && (
@@ -599,7 +509,7 @@ export default function PublishModal({
                         setScheduledDateTime(targetPMString!);
                         setError(null);
                       }}
-                      className="px-2.5 py-1 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-2xs transition-colors shrink-0 cursor-pointer"
+                      className="px-2.5 py-1 text-[10px] font-bold bg-[#E5AA58] text-[#101014] rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
                     >
                       Switch to {amPmSuggestion}
                     </button>
@@ -611,29 +521,29 @@ export default function PublishModal({
 
           {/* Mode Switcher (only in Publish Now mode) */}
           {actionIntent === "publish" && (
-            <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
+            <div className="flex items-center gap-2 p-1 bg-[#101014] border border-[#30303D] rounded-xl">
               <button
                 type="button"
                 onClick={() => setMode("automated")}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === "automated"
-                    ? "bg-white text-purple-700 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-[#20202A] text-[#A78BFA] border border-[#30303D] font-bold"
+                    : "text-[#71717A] hover:text-[#F2F0F7]"
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
                 <span>Direct Meta API</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMode("manual")}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === "manual"
-                    ? "bg-white text-purple-700 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-[#20202A] text-[#A78BFA] border border-[#30303D] font-bold"
+                    : "text-[#71717A] hover:text-[#F2F0F7]"
                 }`}
               >
-                <Link2 className="w-3.5 h-3.5 text-slate-500" />
+                <Link2 className="w-3.5 h-3.5 text-[#71717A]" />
                 <span>Manual Tracking</span>
               </button>
             </div>
@@ -642,7 +552,7 @@ export default function PublishModal({
           {/* Platform Selector (Automated or Schedule mode) */}
           {(actionIntent === "schedule" || mode === "automated") && (
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              <label className="text-[11px] font-semibold text-[#A3A0B0] uppercase tracking-wider block">
                 Target Platform
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -652,25 +562,19 @@ export default function PublishModal({
                   onClick={() => setSelectedPlatform("instagram")}
                   className={`p-2.5 rounded-xl border text-left flex flex-col items-start gap-1.5 transition-all cursor-pointer ${
                     selectedPlatform === "instagram"
-                      ? "border-purple-500 bg-purple-50/60 ring-2 ring-purple-500/20 shadow-2xs"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                      ? "border-[#A78BFA] bg-[#A78BFA]/10 ring-2 ring-[#A78BFA]/20 shadow-xs"
+                      : "border-[#30303D] bg-[#101014] hover:bg-[#20202A]"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div
-                      className={`p-1.5 rounded-lg text-white shrink-0 ${
-                        selectedPlatform === "instagram"
-                          ? "bg-gradient-to-tr from-purple-600 to-pink-500 shadow-xs shadow-purple-500/30"
-                          : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
+                    <div className="p-1.5 rounded-lg bg-[#20202A] border border-[#30303D] text-[#E16F7B]">
                       <InstagramIcon className="w-3.5 h-3.5" />
                     </div>
-                    {igAccount && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                    {igAccount && <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A] shrink-0" />}
                   </div>
                   <div className="min-w-0 w-full">
-                    <span className="text-xs font-bold text-slate-900 block truncate">Instagram</span>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                    <span className="text-xs font-bold text-[#F2F0F7] block truncate">Instagram</span>
+                    <p className="text-[10px] text-[#71717A] truncate mt-0.5">
                       {igAccount ? (igAccount.account_handle || "Connected") : "Not connected"}
                     </p>
                   </div>
@@ -682,25 +586,19 @@ export default function PublishModal({
                   onClick={() => setSelectedPlatform("facebook")}
                   className={`p-2.5 rounded-xl border text-left flex flex-col items-start gap-1.5 transition-all cursor-pointer ${
                     selectedPlatform === "facebook"
-                      ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/20 shadow-2xs"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                      ? "border-[#69A9D8] bg-[#69A9D8]/10 ring-2 ring-[#69A9D8]/20 shadow-xs"
+                      : "border-[#30303D] bg-[#101014] hover:bg-[#20202A]"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div
-                      className={`p-1.5 rounded-lg text-white shrink-0 ${
-                        selectedPlatform === "facebook"
-                          ? "bg-gradient-to-tr from-blue-600 to-sky-500 shadow-xs shadow-blue-500/30"
-                          : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
+                    <div className="p-1.5 rounded-lg bg-[#20202A] border border-[#30303D] text-[#69A9D8]">
                       <FacebookIcon className="w-3.5 h-3.5" />
                     </div>
-                    {fbAccount && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                    {fbAccount && <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A] shrink-0" />}
                   </div>
                   <div className="min-w-0 w-full">
-                    <span className="text-xs font-bold text-slate-900 block truncate">Facebook</span>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                    <span className="text-xs font-bold text-[#F2F0F7] block truncate">Facebook</span>
+                    <p className="text-[10px] text-[#71717A] truncate mt-0.5">
                       {fbAccount ? (fbAccount.account_name || "Connected") : "Not connected"}
                     </p>
                   </div>
@@ -712,26 +610,20 @@ export default function PublishModal({
                   onClick={() => setSelectedPlatform("both")}
                   className={`p-2.5 rounded-xl border text-left flex flex-col items-start gap-1.5 transition-all cursor-pointer ${
                     selectedPlatform === "both"
-                      ? "border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-500/20 shadow-2xs"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                      ? "border-[#A78BFA] bg-[#A78BFA]/10 ring-2 ring-[#A78BFA]/20 shadow-xs"
+                      : "border-[#30303D] bg-[#101014] hover:bg-[#20202A]"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div
-                      className={`p-1.5 rounded-lg text-white shrink-0 flex items-center gap-0.5 ${
-                        selectedPlatform === "both"
-                          ? "bg-gradient-to-tr from-purple-600 via-pink-600 to-blue-600 shadow-xs shadow-indigo-500/30"
-                          : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
+                    <div className="p-1.5 rounded-lg bg-[#20202A] border border-[#30303D] text-[#A78BFA] flex items-center gap-0.5">
                       <InstagramIcon className="w-3 h-3" />
                       <FacebookIcon className="w-3 h-3" />
                     </div>
-                    {igAccount && fbAccount && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                    {igAccount && fbAccount && <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A] shrink-0" />}
                   </div>
                   <div className="min-w-0 w-full">
-                    <span className="text-xs font-bold text-slate-900 block truncate">Both (IG + FB)</span>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                    <span className="text-xs font-bold text-[#F2F0F7] block truncate">Both (IG + FB)</span>
+                    <p className="text-[10px] text-[#71717A] truncate mt-0.5">
                       {igAccount && fbAccount ? "Both ready" : igAccount || fbAccount ? "1 connected" : "None"}
                     </p>
                   </div>
@@ -743,69 +635,69 @@ export default function PublishModal({
           {/* Connected Profile Details */}
           {(actionIntent === "schedule" || mode === "automated") && (
             <div className="space-y-4">
-              <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+              <div className="p-3.5 rounded-xl border border-[#30303D] bg-[#101014]">
+                <div className="text-[11px] font-semibold text-[#A3A0B0] uppercase tracking-wider mb-2">
                   Connected Profile ({clientName})
                 </div>
 
                 {loadingAccounts ? (
-                  <div className="text-xs text-slate-400 flex items-center gap-2">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                  <div className="text-xs text-[#71717A] flex items-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#A78BFA]" />
                     <span>Checking connected client accounts...</span>
                   </div>
                 ) : selectedPlatform === "both" ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                      <div className="p-3 bg-[#17171E] rounded-xl border border-[#30303D] space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <div className="p-1 rounded-md bg-gradient-to-tr from-purple-600 to-pink-500 text-white">
+                            <div className="p-1 rounded-md bg-[#20202A] text-[#E16F7B]">
                               <InstagramIcon className="w-3 h-3" />
                             </div>
-                            <span className="text-xs font-bold text-slate-900">Instagram</span>
+                            <span className="text-xs font-semibold text-[#F2F0F7]">Instagram</span>
                           </div>
                           {igAccount ? (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-[10px] font-mono font-bold text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <CheckCircle2 className="w-2.5 h-2.5" /> Ready
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-2 py-0.5 rounded-full">
                               Missing
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-600 truncate font-medium">
+                        <p className="text-[11px] text-[#A3A0B0] truncate font-medium">
                           {igAccount ? (igAccount.account_handle || igAccount.account_name || "Connected") : "No account connected"}
                         </p>
                       </div>
 
-                      <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                      <div className="p-3 bg-[#17171E] rounded-xl border border-[#30303D] space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <div className="p-1 rounded-md bg-gradient-to-tr from-blue-600 to-sky-500 text-white">
+                            <div className="p-1 rounded-md bg-[#20202A] text-[#69A9D8]">
                               <FacebookIcon className="w-3 h-3" />
                             </div>
-                            <span className="text-xs font-bold text-slate-900">Facebook Page</span>
+                            <span className="text-xs font-semibold text-[#F2F0F7]">Facebook Page</span>
                           </div>
                           {fbAccount ? (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-[10px] font-mono font-bold text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <CheckCircle2 className="w-2.5 h-2.5" /> Ready
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-2 py-0.5 rounded-full">
                               Missing
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-600 truncate font-medium">
+                        <p className="text-[11px] text-[#A3A0B0] truncate font-medium">
                           {fbAccount ? (fbAccount.account_name || "Connected") : "No page connected"}
                         </p>
                       </div>
                     </div>
 
                     {(!igAccount || !fbAccount) && (
-                      <p className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                      <p className="text-[11px] text-[#E5AA58] bg-[#E5AA58]/10 p-2.5 rounded-xl border border-[#E5AA58]/30 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-[#E5AA58]" />
                         <span>
                           {igAccount && !fbAccount && "Facebook Page is not connected. This will post to Instagram only."}
                           {!igAccount && fbAccount && "Instagram account is not connected. This will post to Facebook Page only."}
@@ -818,27 +710,27 @@ export default function PublishModal({
                   igAccount ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 text-white flex items-center justify-center font-bold text-xs">
+                        <div className="w-8 h-8 rounded-full bg-[#20202A] border border-[#30303D] text-[#E16F7B] flex items-center justify-center font-bold text-xs">
                           {igAccount.account_handle ? igAccount.account_handle[1]?.toUpperCase() : "IG"}
                         </div>
                         <div>
-                          <div className="text-xs font-extrabold text-slate-900 flex items-center gap-1">
+                          <div className="text-xs font-semibold text-[#F2F0F7] flex items-center gap-1">
                             {igAccount.account_handle || igAccount.account_name || "Instagram Account"}
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-[#71717A] font-mono">
                             Business ID: {igAccount.instagram_business_id} &bull; Connected
                           </div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-mono font-bold text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 px-2 py-0.5 rounded-full">
                         Ready
                       </span>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2 text-xs text-[#E5AA58] bg-[#E5AA58]/10 p-2.5 rounded-lg border border-[#E5AA58]/30">
+                        <AlertCircle className="w-4 h-4 text-[#E5AA58] shrink-0 mt-0.5" />
                         <span>
                           No Instagram Business account connected for <strong>{clientName}</strong>.
                         </span>
@@ -849,27 +741,27 @@ export default function PublishModal({
                   fbAccount ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white flex items-center justify-center font-bold text-xs">
+                        <div className="w-8 h-8 rounded-full bg-[#20202A] border border-[#30303D] text-[#69A9D8] flex items-center justify-center font-bold text-xs">
                           {fbAccount.account_name ? fbAccount.account_name[0]?.toUpperCase() : "FB"}
                         </div>
                         <div>
-                          <div className="text-xs font-extrabold text-slate-900 flex items-center gap-1">
+                          <div className="text-xs font-semibold text-[#F2F0F7] flex items-center gap-1">
                             {fbAccount.account_name || "Facebook Page"}
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-[#71717A] font-mono">
                             Page ID: {fbAccount.facebook_page_id} &bull; Connected
                           </div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-mono font-bold text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 px-2 py-0.5 rounded-full">
                         Ready
                       </span>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2 text-xs text-[#E5AA58] bg-[#E5AA58]/10 p-2.5 rounded-lg border border-[#E5AA58]/30">
+                        <AlertCircle className="w-4 h-4 text-[#E5AA58] shrink-0 mt-0.5" />
                         <span>
                           No Facebook Page connected for <strong>{clientName}</strong>.
                         </span>
@@ -881,11 +773,11 @@ export default function PublishModal({
 
               {/* Caption & Feed Option */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <label className="text-xs font-semibold text-[#A3A0B0] flex items-center justify-between">
                   <span>
                     {selectedPlatform === "facebook" ? "Facebook Post Message / Caption" : "Approved Caption & Tags"}
                   </span>
-                  <span className="text-[10px] font-normal text-slate-400">
+                  <span className="text-[10px] font-mono text-[#71717A]">
                     Snapshotted for scheduled execution
                   </span>
                 </label>
@@ -894,7 +786,7 @@ export default function PublishModal({
                   onChange={(e) => setCaptionText(e.target.value)}
                   rows={4}
                   placeholder="Enter caption with #hashtags..."
-                  className="w-full text-xs text-slate-800 p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+                  className="w-full text-xs text-[#F2F0F7] p-3 rounded-xl border border-[#30303D] bg-[#101014] focus:outline-none focus:border-[#A78BFA] resize-none font-mono"
                 />
               </div>
 
@@ -906,9 +798,9 @@ export default function PublishModal({
                     id="share_to_feed"
                     checked={shareToFeed}
                     onChange={(e) => setShareToFeed(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                    className="w-4 h-4 rounded text-[#A78BFA] bg-[#101014] border-[#30303D] focus:ring-0 cursor-pointer"
                   />
-                  <label htmlFor="share_to_feed" className="text-xs font-medium text-slate-700 cursor-pointer">
+                  <label htmlFor="share_to_feed" className="text-xs font-medium text-[#A3A0B0] cursor-pointer">
                     Share Reel to main Profile Grid (recommended)
                   </label>
                 </div>
@@ -920,11 +812,11 @@ export default function PublishModal({
           {actionIntent === "publish" && mode === "manual" && (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Platform</label>
+                <label className="text-xs font-semibold text-[#A3A0B0]">Platform</label>
                 <select
                   value={selectedPlatform}
                   onChange={(e) => setSelectedPlatform(e.target.value)}
-                  className="w-full text-xs font-semibold text-slate-800 p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 cursor-pointer"
+                  className="w-full text-xs font-medium text-[#F2F0F7] p-2.5 rounded-xl border border-[#30303D] bg-[#101014] focus:outline-none focus:border-[#A78BFA] cursor-pointer"
                 >
                   <option value="facebook">Facebook</option>
                   <option value="instagram">Instagram</option>
@@ -934,14 +826,14 @@ export default function PublishModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Live Post URL</label>
+                <label className="text-xs font-semibold text-[#A3A0B0]">Live Post URL</label>
                 <input
                   type="url"
                   required
                   value={manualUrl}
                   onChange={(e) => setManualUrl(e.target.value)}
                   placeholder="https://www.instagram.com/p/..."
-                  className="w-full text-xs text-slate-800 p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full text-xs text-[#F2F0F7] p-2.5 rounded-xl border border-[#30303D] bg-[#101014] focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
             </div>
@@ -949,34 +841,26 @@ export default function PublishModal({
 
           {/* Progress Banner */}
           {publishing && (
-            <div className="p-3.5 rounded-xl border bg-indigo-50 border-indigo-200 text-indigo-800 flex items-center gap-2.5 text-xs font-semibold">
-              <RefreshCw className="w-4 h-4 animate-spin shrink-0 text-indigo-600" />
+            <div className="p-3.5 rounded-xl border bg-[#101014] border-[#30303D] text-[#A78BFA] flex items-center gap-2.5 text-xs font-medium">
+              <RefreshCw className="w-4 h-4 animate-spin shrink-0 text-[#A78BFA]" />
               <span>{publishProgress || "Processing..."}</span>
             </div>
           )}
 
           {/* Footer Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <div className="pt-3 border-t border-[#30303D] flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={publishing}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitDisabled}
-              className={`inline-flex items-center gap-2 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer ${
-                actionIntent === "schedule"
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-600/30"
-                  : selectedPlatform === "both"
-                  ? "bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:opacity-90 shadow-indigo-600/30"
-                  : selectedPlatform === "facebook"
-                  ? "bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 shadow-blue-600/30"
-                  : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-600/30"
-              }`}
+              className="inline-flex items-center gap-2 text-[#101014] text-xs font-bold px-5 py-2.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] shadow-xs transition-all disabled:opacity-40 cursor-pointer"
             >
               {actionIntent === "schedule" ? (
                 <>

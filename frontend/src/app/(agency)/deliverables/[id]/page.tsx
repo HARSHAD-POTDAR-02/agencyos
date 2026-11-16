@@ -495,56 +495,56 @@ function DeliverableDetailContent() {
     switch (status) {
       case "not_started":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#20202A] text-[#A3A0B0] border border-[#30303D]">
+            <Clock className="w-3.5 h-3.5 text-[#A3A0B0]" />
             Not Started
           </span>
         );
       case "in_production":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            <Film className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+            <Film className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
             In Production
           </span>
         );
       case "internal_review":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#A78BFA]" />
             Internal Review
           </span>
         );
       case "client_review":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            <Clock className="w-3.5 h-3.5 text-blue-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30">
+            <Clock className="w-3.5 h-3.5 text-sky-400" />
             Client Review
           </span>
         );
       case "changes_requested":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
             Changes Requested
           </span>
         );
       case "approved":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             Approved
           </span>
         );
       case "published":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             Published
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#20202A] text-[#A3A0B0] border border-[#30303D]">
             {status}
           </span>
         );
@@ -553,10 +553,10 @@ function DeliverableDetailContent() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+      <div className="flex-1 flex items-center justify-center min-h-[60vh] bg-[#101014]">
         <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 animate-spin text-purple-600 mx-auto" />
-          <p className="text-xs font-bold text-slate-500">Loading deliverable workspace & media...</p>
+          <RefreshCw className="w-8 h-8 animate-spin text-[#A78BFA] mx-auto" />
+          <p className="text-xs font-bold text-[#A3A0B0]">Loading deliverable workspace & media...</p>
         </div>
       </div>
     );
@@ -585,15 +585,15 @@ function DeliverableDetailContent() {
 
   if (error || !deliverable) {
     return (
-      <div className="p-8 max-w-xl mx-auto text-center space-y-4">
-        <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl inline-block">
+      <div className="p-8 max-w-xl mx-auto text-center space-y-4 bg-[#101014] text-[#F2F0F7] min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="p-3 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-2xl inline-block">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-lg font-bold text-slate-900">Deliverable Not Found</h2>
-        <p className="text-xs text-slate-500">{error || "Unable to locate this deliverable record."}</p>
+        <h2 className="text-lg font-bold text-[#F2F0F7]">Deliverable Not Found</h2>
+        <p className="text-xs text-[#A3A0B0]">{error || "Unable to locate this deliverable record."}</p>
         <Link
           href={backLink.href}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl shadow-xs"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold rounded-xl shadow-xs"
         >
           <ArrowLeft className="w-4 h-4" /> Back to {backLink.label}
         </Link>
@@ -631,38 +631,38 @@ function DeliverableDetailContent() {
     : null;
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 bg-[#101014] text-[#F2F0F7] min-h-screen">
       {/* Navigation & Breadcrumbs */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-          <Link href={backLink.href} className="hover:text-purple-600 flex items-center gap-1 font-semibold transition-colors">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#A3A0B0]">
+          <Link href={backLink.href} className="hover:text-[#A78BFA] flex items-center gap-1 font-semibold transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> {backLink.label}
           </Link>
-          <ChevronRight className="w-3 h-3 text-slate-300" />
-          <span className="text-slate-900 font-bold truncate max-w-xs">{deliverable.title}</span>
+          <ChevronRight className="w-3 h-3 text-[#30303D]" />
+          <span className="text-[#F2F0F7] font-bold truncate max-w-xs">{deliverable.title}</span>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Status Quick-Select */}
-          <div className="flex items-center gap-1.5 bg-white border border-slate-200/80 rounded-xl px-3 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-semibold text-slate-400">Pipeline Status:</span>
+          <div className="flex items-center gap-1.5 bg-[#17171E] border border-[#30303D] rounded-xl px-3 py-1.5 shadow-2xs">
+            <span className="text-[11px] font-semibold text-[#A3A0B0]">Pipeline Status:</span>
             <select
               value={deliverable.status}
               onChange={(e) => handleUpdateStatus(e.target.value)}
-              className="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              className="text-xs font-bold text-[#F2F0F7] bg-transparent focus:outline-none cursor-pointer"
             >
-              <option value="not_started">Not Started</option>
-              <option value="in_production">In Production</option>
-              <option value="internal_review">Internal Review</option>
-              <option value="client_review">Client Review</option>
-              <option value="changes_requested">Changes Requested</option>
-              <option value="approved">Approved</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="publishing">Publishing...</option>
-              <option value="partially_published">Partially Published</option>
-              <option value="published">Published</option>
-              <option value="needs_reconnection">Needs Reconnection</option>
-              <option value="ambiguous">Reconciling</option>
+              <option value="not_started" className="bg-[#17171E] text-[#F2F0F7]">Not Started</option>
+              <option value="in_production" className="bg-[#17171E] text-[#F2F0F7]">In Production</option>
+              <option value="internal_review" className="bg-[#17171E] text-[#F2F0F7]">Internal Review</option>
+              <option value="client_review" className="bg-[#17171E] text-[#F2F0F7]">Client Review</option>
+              <option value="changes_requested" className="bg-[#17171E] text-[#F2F0F7]">Changes Requested</option>
+              <option value="approved" className="bg-[#17171E] text-[#F2F0F7]">Approved</option>
+              <option value="scheduled" className="bg-[#17171E] text-[#F2F0F7]">Scheduled</option>
+              <option value="publishing" className="bg-[#17171E] text-[#F2F0F7]">Publishing...</option>
+              <option value="partially_published" className="bg-[#17171E] text-[#F2F0F7]">Partially Published</option>
+              <option value="published" className="bg-[#17171E] text-[#F2F0F7]">Published</option>
+              <option value="needs_reconnection" className="bg-[#17171E] text-[#F2F0F7]">Needs Reconnection</option>
+              <option value="ambiguous" className="bg-[#17171E] text-[#F2F0F7]">Reconciling</option>
             </select>
           </div>
 
@@ -675,9 +675,9 @@ function DeliverableDetailContent() {
                   setIsRescheduling(false);
                   setShowPublishModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs shadow-indigo-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] text-xs font-bold px-3.5 py-2 rounded-xl transition-all hover:scale-[1.02] cursor-pointer"
               >
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 text-[#A78BFA]" />
                 <span>{deliverable.status === "partially_published" ? "Schedule Remaining" : "Schedule Post"}</span>
               </button>
               <button
@@ -686,7 +686,7 @@ function DeliverableDetailContent() {
                   setIsRescheduling(false);
                   setShowPublishModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-xs font-bold px-3.5 py-2 rounded-xl transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{deliverable.status === "partially_published" ? "Publish Remaining Live" : "Publish Live"}</span>
@@ -702,9 +702,9 @@ function DeliverableDetailContent() {
                   setIsRescheduling(true);
                   setShowPublishModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#20202A] border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
               >
-                <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Reschedule</span>
               </button>
               <button
@@ -713,7 +713,7 @@ function DeliverableDetailContent() {
                   setIsRescheduling(false);
                   setShowPublishModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Publish Now</span>
@@ -721,9 +721,9 @@ function DeliverableDetailContent() {
               <button
                 onClick={handleCancelSchedule}
                 disabled={cancellingSchedule}
-                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#20202A] hover:bg-rose-500/10 text-[#A3A0B0] hover:text-rose-400 border border-[#30303D] text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
               >
-                <Undo2 className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+                <Undo2 className="w-3.5 h-3.5 text-[#A3A0B0]" />
                 <span>{cancellingSchedule ? "Cancelling..." : "Cancel"}</span>
               </button>
             </div>
@@ -735,7 +735,7 @@ function DeliverableDetailContent() {
               href={deliverable.live_post_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-indigo-600/20 transition-all hover:scale-[1.02]"
+              className="inline-flex items-center gap-2 bg-[#20202A] hover:bg-[#262630] border border-indigo-500/40 text-indigo-300 text-xs font-bold px-4 py-2 rounded-xl transition-all hover:scale-[1.02]"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Live Post</span>
@@ -747,9 +747,9 @@ function DeliverableDetailContent() {
             <button
               onClick={handleUnpublish}
               title="Remove from Published Live"
-              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200/80 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#20202A] hover:bg-rose-500/15 text-rose-400 border border-[#30303D] text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer"
             >
-              <Undo2 className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+              <Undo2 className="w-3.5 h-3.5 text-rose-400" />
               <span>Unpublish</span>
             </button>
           )}
@@ -760,7 +760,7 @@ function DeliverableDetailContent() {
               setUploadTaskId(selectedTaskId !== "all" ? selectedTaskId : "none");
               setShowUploadModal(true);
             }}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold px-4 py-2 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload New Version</span>
@@ -769,43 +769,43 @@ function DeliverableDetailContent() {
       </div>
 
       {/* Deliverable Meta Header */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-purple-50 text-purple-600">
+            <span className="p-2 rounded-xl bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
               <Film className="w-5 h-5" />
             </span>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-extrabold text-[#F2F0F7] tracking-tight">
               {deliverable.title}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-[#A3A0B0]">
             {deliverable.client_name && (
               <>
-                <span className="font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200/60">
+                <span className="font-bold text-[#A78BFA] bg-[#A78BFA]/10 px-2.5 py-0.5 rounded-md border border-[#A78BFA]/30">
                   {deliverable.client_name}
                 </span>
                 <span>&bull;</span>
               </>
             )}
-            <span className="capitalize font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+            <span className="capitalize font-semibold text-[#F2F0F7] bg-[#20202A] border border-[#30303D] px-2 py-0.5 rounded-md">
               {deliverable.platform}
             </span>
             <span>&bull;</span>
-            <span className="capitalize font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+            <span className="capitalize font-semibold text-[#F2F0F7] bg-[#20202A] border border-[#30303D] px-2 py-0.5 rounded-md">
               {deliverable.deliverable_type}
             </span>
             {deliverable.planned_date && (
               <>
                 <span>&bull;</span>
-                <span className="flex items-center gap-1 text-slate-600">
-                  <Calendar className="w-3 h-3 text-slate-400" />
+                <span className="flex items-center gap-1 text-[#A3A0B0]">
+                  <Calendar className="w-3 h-3 text-[#A3A0B0]" />
                   Planned: {deliverable.planned_date}
                 </span>
               </>
             )}
             <span>&bull;</span>
-            <span>{deliverable.content_versions.length} versions tracked</span>
+            <span className="text-[#A3A0B0]">{deliverable.content_versions.length} versions tracked</span>
           </div>
         </div>
 
@@ -814,10 +814,10 @@ function DeliverableDetailContent() {
 
       {/* Live Publishing & Performance Banner (when published or partially published) */}
       {(deliverable.status === "published" || deliverable.status === "partially_published") && (
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-2xl p-5 shadow-lg border border-indigo-500/30 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+        <div className="bg-[#17171E] text-white rounded-2xl p-5 border border-indigo-500/30 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#30303D]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
@@ -826,21 +826,21 @@ function DeliverableDetailContent() {
                     <span className={`w-2 h-2 rounded-full ${deliverable.status === "partially_published" ? "bg-amber-400" : "bg-emerald-400 animate-ping"} inline-block`} />
                     {deliverable.status === "partially_published" ? "Partially Published Live" : "Published Live"}
                   </span>
-                  <span className="text-xs text-slate-500">&bull;</span>
-                  <span className="text-xs text-indigo-200 capitalize font-medium">
+                  <span className="text-xs text-[#A3A0B0]">&bull;</span>
+                  <span className="text-xs text-indigo-300 capitalize font-medium">
                     {deliverable.publishing_platform || deliverable.platform}
                   </span>
                   {deliverable.published_at && (
                     <>
-                      <span className="text-xs text-slate-500">&bull;</span>
-                      <span className="text-xs text-slate-300 font-mono">
+                      <span className="text-xs text-[#A3A0B0]">&bull;</span>
+                      <span className="text-xs text-[#A3A0B0] font-mono">
                         {formatDate(deliverable.published_at)}
                       </span>
                     </>
                   )}
                 </div>
                 {deliverable.external_post_id && (
-                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  <p className="text-[11px] text-[#A3A0B0] font-mono mt-0.5">
                     Post ID: {deliverable.external_post_id}
                   </p>
                 )}
@@ -853,7 +853,7 @@ function DeliverableDetailContent() {
                   onClick={handleSyncLiveMetrics}
                   disabled={syncingMetrics}
                   title="Query Meta Graph API for real-time likes, views, comments"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/30 hover:bg-indigo-500/50 border border-indigo-400/40 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 text-indigo-300 ${syncingMetrics ? "animate-spin" : ""}`} />
                   <span>{syncingMetrics ? "Syncing..." : "Sync Live Stats"}</span>
@@ -861,7 +861,7 @@ function DeliverableDetailContent() {
               )}
               <button
                 onClick={openMetricsModal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 <BarChart2 className="w-3.5 h-3.5 text-indigo-300" />
                 <span>Edit Manual</span>
@@ -869,7 +869,7 @@ function DeliverableDetailContent() {
               <button
                 onClick={handleUnpublish}
                 title="Remove deliverable from Published Live"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-400/40 text-rose-200 hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 <Undo2 className="w-3.5 h-3.5 text-rose-300" />
                 <span>Unpublish</span>
@@ -890,43 +890,43 @@ function DeliverableDetailContent() {
 
           {/* Metrics summary row */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+            <div className="bg-[#101014] border border-[#30303D] rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-[#A3A0B0] text-[10px] font-bold uppercase tracking-wider">
                 <Eye className="w-3 h-3 text-indigo-300" /> Views
               </div>
-              <p className="text-lg font-black text-white mt-1">
+              <p className="text-lg font-black text-[#F2F0F7] mt-1">
                 {(deliverable.views_count || 0).toLocaleString()}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                <Heart className="w-3 h-3 text-rose-300" /> Likes
+            <div className="bg-[#101014] border border-[#30303D] rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-[#A3A0B0] text-[10px] font-bold uppercase tracking-wider">
+                <Heart className="w-3 h-3 text-rose-400" /> Likes
               </div>
-              <p className="text-lg font-black text-white mt-1">
+              <p className="text-lg font-black text-[#F2F0F7] mt-1">
                 {(deliverable.likes_count || 0).toLocaleString()}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                <MessageSquare className="w-3 h-3 text-amber-300" /> Comments
+            <div className="bg-[#101014] border border-[#30303D] rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-[#A3A0B0] text-[10px] font-bold uppercase tracking-wider">
+                <MessageSquare className="w-3 h-3 text-amber-400" /> Comments
               </div>
-              <p className="text-lg font-black text-white mt-1">
+              <p className="text-lg font-black text-[#F2F0F7] mt-1">
                 {(deliverable.comments_count || 0).toLocaleString()}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                <Share2 className="w-3 h-3 text-emerald-300" /> Shares
+            <div className="bg-[#101014] border border-[#30303D] rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-[#A3A0B0] text-[10px] font-bold uppercase tracking-wider">
+                <Share2 className="w-3 h-3 text-emerald-400" /> Shares
               </div>
-              <p className="text-lg font-black text-white mt-1">
+              <p className="text-lg font-black text-[#F2F0F7] mt-1">
                 {(deliverable.shares_count || 0).toLocaleString()}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 col-span-2 sm:col-span-1">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                <Sparkles className="w-3 h-3 text-purple-300" /> Engagement
+            <div className="bg-[#101014] border border-[#30303D] rounded-xl p-3 col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-1.5 text-[#A3A0B0] text-[10px] font-bold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-[#A78BFA]" /> Engagement
               </div>
-              <p className="text-lg font-black text-purple-300 mt-1">
+              <p className="text-lg font-black text-[#A78BFA] mt-1">
                 {(((deliverable.likes_count || 0) + (deliverable.comments_count || 0) + (deliverable.shares_count || 0)) /
                   Math.max(deliverable.views_count || 1, 1) *
                   100).toFixed(1)}
@@ -939,13 +939,13 @@ function DeliverableDetailContent() {
 
       {/* Production Stage & Task Isolation Switcher */}
       {tasksList.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-2.5">
+        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-4 space-y-2.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
-            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-purple-600" />
+            <span className="text-[11px] font-bold text-[#F2F0F7] uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>Production Stage &amp; Task Media Scoping</span>
             </span>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-[#A3A0B0]">
               Each task has its own isolated assets so stages don&apos;t mix
             </span>
           </div>
@@ -962,14 +962,14 @@ function DeliverableDetailContent() {
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 selectedTaskId === "all"
-                  ? "bg-purple-600 text-white shadow-2xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+                  ? "bg-[#A78BFA] text-[#101014]"
+                  : "bg-[#20202A] text-[#A3A0B0] hover:bg-[#262630] hover:text-[#F2F0F7] border border-[#30303D]"
               }`}
             >
               <span>All Versions</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  selectedTaskId === "all" ? "bg-purple-700 text-white" : "bg-slate-200 text-slate-700"
+                  selectedTaskId === "all" ? "bg-[#8B5CF6] text-white" : "bg-[#17171E] text-[#A3A0B0]"
                 }`}
               >
                 {deliverable.content_versions.length}
@@ -995,14 +995,14 @@ function DeliverableDetailContent() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
-                      ? "bg-purple-600 text-white shadow-2xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+                      ? "bg-[#A78BFA] text-[#101014]"
+                      : "bg-[#20202A] text-[#A3A0B0] hover:bg-[#262630] hover:text-[#F2F0F7] border border-[#30303D]"
                   }`}
                 >
                   <span className="truncate max-w-[170px]">{t.title.split("(")[0].trim()}</span>
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                      isSelected ? "bg-purple-700 text-white" : "bg-slate-200 text-slate-700"
+                      isSelected ? "bg-[#8B5CF6] text-white" : "bg-[#17171E] text-[#A3A0B0]"
                     }`}
                   >
                     {count}
@@ -1019,20 +1019,20 @@ function DeliverableDetailContent() {
         {/* Left Column (8 cols): Media Player + Caption & Notes */}
         <div className="lg:col-span-8 space-y-6">
           {/* Media Player Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-4">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold text-slate-900 tracking-tight">
+                <span className="text-xs font-extrabold text-[#F2F0F7] tracking-tight">
                   Media Preview
                 </span>
                 {currentPreviewVersion && (
-                  <span className="text-[11px] font-black text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] font-black text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/20 px-2 py-0.5 rounded-full">
                     Version {currentPreviewVersion.version_number}
                     {currentPreviewVersion.id === latestVersion?.id && " (Latest)"}
                   </span>
                 )}
                 {activeTask && (
-                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold text-[#A3A0B0] bg-[#20202A] border border-[#30303D] px-2 py-0.5 rounded-full">
                     Stage: {activeTask.title.split("(")[0].trim()}
                   </span>
                 )}
@@ -1043,7 +1043,7 @@ function DeliverableDetailContent() {
                   href={mediaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-slate-500 hover:text-purple-600 flex items-center gap-1 font-semibold"
+                  className="text-xs text-[#A3A0B0] hover:text-[#A78BFA] flex items-center gap-1 font-semibold"
                 >
                   Open Original <ExternalLink className="w-3 h-3" />
                 </a>
@@ -1052,7 +1052,7 @@ function DeliverableDetailContent() {
 
             {/* Actual Player, Document Viewer, Image, or Empty State */}
             {currentPreviewVersion && mediaUrl ? (
-              <div className="relative rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[380px] max-h-[560px]">
+              <div className="relative rounded-2xl overflow-hidden bg-[#101014] border border-[#30303D] flex items-center justify-center min-h-[380px] max-h-[560px]">
                 {isVideo ? (
                   <video
                     key={currentPreviewVersion.id}
@@ -1062,17 +1062,17 @@ function DeliverableDetailContent() {
                     className="w-full max-h-[500px] object-contain rounded-xl"
                   />
                 ) : isPdf ? (
-                  <div className="w-full h-[520px] bg-slate-900 rounded-xl overflow-hidden flex flex-col">
-                    <div className="bg-slate-800/90 px-4 py-2 flex items-center justify-between text-xs text-slate-200 border-b border-slate-700/80">
+                  <div className="w-full h-[520px] bg-[#101014] rounded-xl overflow-hidden flex flex-col">
+                    <div className="bg-[#20202A] px-4 py-2 flex items-center justify-between text-xs text-[#F2F0F7] border-b border-[#30303D]">
                       <span className="font-semibold truncate flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-purple-400" />
+                        <FileText className="w-4 h-4 text-[#A78BFA]" />
                         {currentPreviewVersion.file_name}
                       </span>
                       <div className="flex items-center gap-2">
                         <a
                           href={mediaUrl}
                           download={currentPreviewVersion.file_name}
-                          className="text-[11px] bg-white/10 hover:bg-white/20 text-slate-200 font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                          className="text-[11px] bg-[#17171E] hover:bg-[#262630] text-[#A3A0B0] hover:text-[#F2F0F7] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-[#30303D]"
                         >
                           <Download className="w-3 h-3" /> Download
                         </a>
@@ -1080,7 +1080,7 @@ function DeliverableDetailContent() {
                           href={mediaUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] bg-purple-600 hover:bg-purple-500 text-white font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                          className="text-[11px] bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
                         >
                           <ExternalLink className="w-3 h-3" /> Open in New Tab
                         </a>
@@ -1093,15 +1093,15 @@ function DeliverableDetailContent() {
                     />
                   </div>
                 ) : isDoc || isTxt ? (
-                  <div className="w-full min-h-[380px] p-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-950/30 rounded-xl flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shadow-inner">
+                  <div className="w-full min-h-[380px] p-8 bg-[#101014] rounded-xl flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[#A78BFA]/10 border border-[#A78BFA]/20 flex items-center justify-center text-[#A78BFA] shadow-inner">
                       <FileText className="w-8 h-8" />
                     </div>
                     <div className="max-w-md space-y-1">
-                      <h4 className="text-sm font-bold text-white tracking-wide truncate">
+                      <h4 className="text-sm font-bold text-[#F2F0F7] tracking-wide truncate">
                         {currentPreviewVersion.file_name}
                       </h4>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-[#A3A0B0]">
                         {isTxt ? "Plain Text Script / Notes" : "Word Document (.docx) Script"} &bull; {formatBytes(currentPreviewVersion.file_size_bytes)}
                       </p>
                     </div>
@@ -1110,7 +1110,7 @@ function DeliverableDetailContent() {
                         href={mediaUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold rounded-xl transition-colors cursor-pointer"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Open Document</span>
@@ -1118,7 +1118,7 @@ function DeliverableDetailContent() {
                       <a
                         href={mediaUrl}
                         download={currentPreviewVersion.file_name}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#20202A] hover:bg-[#262630] text-[#A3A0B0] hover:text-[#F2F0F7] border border-[#30303D] text-xs font-bold rounded-xl transition-colors cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Download</span>
@@ -1135,16 +1135,16 @@ function DeliverableDetailContent() {
                 )}
               </div>
             ) : (
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center space-y-3 bg-slate-50/50">
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+              <div className="border border-dashed border-[#30303D] rounded-2xl p-10 text-center space-y-3 bg-[#101014]">
+                <div className="w-12 h-12 rounded-2xl bg-[#A78BFA]/10 text-[#A78BFA] flex items-center justify-center mx-auto border border-[#A78BFA]/20">
                   <Upload className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-[#F2F0F7]">
                   {activeTask
                     ? `No assets uploaded for "${activeTask.title.split("(")[0].trim()}"`
                     : "No assets uploaded yet"}
                 </h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto">
                   {activeTask
                     ? `This task has no files attached. Upload a script (.txt/.docx/.pdf) or media asset for the ${activeTask.task_type || "task"} stage.`
                     : "Upload your video cut, script, or creative asset to initiate the review pipeline."}
@@ -1154,7 +1154,7 @@ function DeliverableDetailContent() {
                     setUploadTaskId(selectedTaskId !== "all" ? selectedTaskId : "none");
                     setShowUploadModal(true);
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>
@@ -1168,37 +1168,37 @@ function DeliverableDetailContent() {
 
             {/* Asset Metadata Bar */}
             {currentPreviewVersion && (
-              <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="pt-3 border-t border-[#30303D] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">File Name</span>
-                  <span className="font-semibold text-slate-800 truncate block mt-0.5">
+                  <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block">File Name</span>
+                  <span className="font-semibold text-[#F2F0F7] truncate block mt-0.5">
                     {currentPreviewVersion.file_name}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">File Size</span>
-                  <span className="font-semibold text-slate-800 block mt-0.5">
+                  <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block">File Size</span>
+                  <span className="font-semibold text-[#F2F0F7] block mt-0.5">
                     {formatBytes(currentPreviewVersion.file_size_bytes)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Uploaded On</span>
-                  <span className="font-semibold text-slate-800 block mt-0.5">
+                  <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block">Uploaded On</span>
+                  <span className="font-semibold text-[#F2F0F7] block mt-0.5">
                     {formatDate(currentPreviewVersion.created_at)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">SHA-256 Hash</span>
+                  <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block">SHA-256 Hash</span>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <span className="font-mono text-[11px] text-slate-600 truncate max-w-[90px]">
+                    <span className="font-mono text-[11px] text-[#A3A0B0] truncate max-w-[90px]">
                       {currentPreviewVersion.checksum_sha256}
                     </span>
                     <button
                       onClick={handleCopyChecksum}
                       title="Copy full SHA-256 hash"
-                      className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
+                      className="p-1 hover:bg-[#20202A] rounded text-[#A3A0B0] hover:text-[#F2F0F7]"
                     >
-                      {copiedChecksum ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      {copiedChecksum ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     </button>
                   </div>
                 </div>
@@ -1207,14 +1207,14 @@ function DeliverableDetailContent() {
           </div>
 
           {/* Caption & Post Copy Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-3">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold text-slate-900 tracking-tight">
+                <span className="text-xs font-extrabold text-[#F2F0F7] tracking-tight">
                   Approved Caption & Copy
                 </span>
                 {currentPreviewVersion?.caption && (
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                     Ready to publish
                   </span>
                 )}
@@ -1222,11 +1222,11 @@ function DeliverableDetailContent() {
               {currentPreviewVersion?.caption && (
                 <button
                   onClick={handleCopyCaption}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100/80 px-2.5 py-1 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A78BFA] hover:text-[#B69BFF] bg-[#20202A] hover:bg-[#262630] border border-[#30303D] px-2.5 py-1 rounded-lg transition-colors"
                 >
                   {copiedCaption ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Copied!
+                      <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied!
                     </>
                   ) : (
                     <>
@@ -1238,22 +1238,22 @@ function DeliverableDetailContent() {
             </div>
 
             {currentPreviewVersion?.caption ? (
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/70 text-xs text-slate-800 font-mono whitespace-pre-wrap leading-relaxed">
+              <div className="bg-[#101014] rounded-xl p-4 border border-[#30303D] text-xs text-[#F2F0F7] font-mono whitespace-pre-wrap leading-relaxed">
                 {currentPreviewVersion.caption}
               </div>
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">
+              <div className="text-xs text-[#A3A0B0] italic py-2">
                 No caption has been entered for this version yet.
               </div>
             )}
 
             {/* Revision Notes */}
             {currentPreviewVersion?.notes && (
-              <div className="pt-3 border-t border-slate-100">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <div className="pt-3 border-t border-[#30303D]">
+                <span className="text-[11px] font-bold text-[#A3A0B0] uppercase tracking-wider block mb-1">
                   Editor Revision Notes:
                 </span>
-                <p className="text-xs text-slate-700 bg-amber-50/50 border border-amber-200/50 rounded-xl p-3">
+                <p className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
                   {currentPreviewVersion.notes}
                 </p>
               </div>
@@ -1261,23 +1261,23 @@ function DeliverableDetailContent() {
           </div>
 
           {/* Feedback & Collaboration Thread Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-4">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-slate-100 text-slate-700">
+                <span className="p-1.5 rounded-lg bg-[#20202A] text-[#A78BFA] border border-[#30303D]">
                   <MessageSquare className="w-4 h-4" />
                 </span>
-                <h3 className="text-xs font-extrabold text-slate-900 tracking-tight">
+                <h3 className="text-xs font-extrabold text-[#F2F0F7] tracking-tight">
                   Client & Team Feedback
                 </h3>
               </div>
-              <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-black text-[#A3A0B0] bg-[#20202A] border border-[#30303D] px-2 py-0.5 rounded-full">
                 {deliverable.comments?.length || 0}
               </span>
             </div>
 
             {(!deliverable.comments || deliverable.comments.length === 0) ? (
-              <p className="text-xs text-slate-400 italic text-center py-4">
+              <p className="text-xs text-[#A3A0B0] italic text-center py-4">
                 No feedback recorded yet. Client review comments and revisions will appear here.
               </p>
             ) : (
@@ -1289,31 +1289,31 @@ function DeliverableDetailContent() {
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
                           isClient
-                            ? "bg-purple-100 text-purple-700 border border-purple-200"
-                            : "bg-slate-100 text-slate-700"
+                            ? "bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30"
+                            : "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
                         }`}
                       >
                         {(c.author_name || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-slate-900">
+                          <span className="text-[11px] font-bold text-[#F2F0F7]">
                             {c.author_name || "Reviewer"}
                           </span>
                           <span
                             className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase ${
                               isClient
-                                ? "bg-purple-50 text-purple-700 border border-purple-200/50"
-                                : "bg-slate-100 text-slate-600"
+                                ? "bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20"
+                                : "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
                             }`}
                           >
                             {isClient ? "Client" : "Agency Team"}
                           </span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[10px] text-[#A3A0B0]">
                             {formatDate(c.created_at)}
                           </span>
                         </div>
-                        <div className="text-xs text-slate-800 bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2 leading-relaxed mt-0.5">
+                        <div className="text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 leading-relaxed mt-0.5">
                           {c.message}
                         </div>
                       </div>
@@ -1324,19 +1324,19 @@ function DeliverableDetailContent() {
             )}
 
             {/* Post comment */}
-            <form onSubmit={handlePostComment} className="pt-2 border-t border-slate-100 flex gap-2">
+            <form onSubmit={handlePostComment} className="pt-2 border-t border-[#30303D] flex gap-2">
               <input
                 ref={commentInputRef}
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Reply to client or add internal note..."
-                className="flex-1 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                className="flex-1 text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] placeholder-[#A3A0B0]/60"
               />
               <button
                 type="submit"
                 disabled={submittingComment || !newComment.trim()}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl disabled:opacity-40 transition-colors"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold rounded-xl disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Reply</span>
@@ -1348,22 +1348,22 @@ function DeliverableDetailContent() {
         {/* Right Column (4 cols): Version History Timeline & Review Decision */}
         <div className="lg:col-span-4 space-y-6">
           {/* Approval / Review Action Card */}
-          <div className="bg-gradient-to-br from-white to-purple-50/40 rounded-2xl border border-purple-200/80 p-5 shadow-2xs space-y-4">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-5 space-y-4">
             <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-purple-100 text-purple-700">
+              <span className="p-1.5 rounded-lg bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
                 <ShieldCheck className="w-4 h-4" />
               </span>
-              <h3 className="text-xs font-extrabold text-slate-900 tracking-tight">
+              <h3 className="text-xs font-extrabold text-[#F2F0F7] tracking-tight">
                 Review & Approvals
               </h3>
             </div>
 
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-[#A3A0B0] leading-relaxed">
               Verify video pacing, audio loudness, color grading, brand tone, and Indian market suitability before client presentation.
             </p>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-700 block">
+              <label className="text-[11px] font-bold text-[#F2F0F7] block">
                 Review Feedback / Revision Notes
               </label>
               <textarea
@@ -1371,7 +1371,7 @@ function DeliverableDetailContent() {
                 onChange={(e) => setReviewComment(e.target.value)}
                 placeholder="Optional feedback: e.g. 'Hook looks great! Increase music volume slightly in first 3s.'"
                 rows={2}
-                className="w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] placeholder-[#A3A0B0]/60"
               />
             </div>
 
@@ -1380,7 +1380,7 @@ function DeliverableDetailContent() {
                 type="button"
                 disabled={submittingReview || !currentPreviewVersion}
                 onClick={() => handleSubmitApproval("changes_requested")}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-xl border border-rose-500/30 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <AlertCircle className="w-3.5 h-3.5" />
                 <span>Request Changes</span>
@@ -1389,7 +1389,7 @@ function DeliverableDetailContent() {
                 type="button"
                 disabled={submittingReview || !currentPreviewVersion}
                 onClick={() => handleSubmitApproval("approved")}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl border border-emerald-500/30 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Approve Cut</span>
@@ -1398,12 +1398,12 @@ function DeliverableDetailContent() {
 
             {/* If approved, show Publish and Schedule triggers */}
             {deliverable.status === "approved" && (
-              <div className="pt-3 border-t border-purple-200/60 space-y-2">
-                <div className="flex items-center gap-1.5 text-emerald-800 text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <div className="pt-3 border-t border-[#30303D] space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span>Approved & Ready for Delivery</span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
+                <p className="text-[11px] text-[#A3A0B0] leading-tight">
                   This deliverable has passed review. Publish now or set an automated schedule.
                 </p>
                 <div className="grid grid-cols-2 gap-2 pt-1">
@@ -1414,9 +1414,9 @@ function DeliverableDetailContent() {
                       setIsRescheduling(false);
                       setShowPublishModal(true);
                     }}
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] text-xs font-bold rounded-xl transition-all cursor-pointer"
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-3.5 h-3.5 text-[#A78BFA]" />
                     <span>Schedule</span>
                   </button>
                   <button
@@ -1426,7 +1426,7 @@ function DeliverableDetailContent() {
                       setIsRescheduling(false);
                       setShowPublishModal(true);
                     }}
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl transition-all cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Publish Now</span>
@@ -1437,22 +1437,22 @@ function DeliverableDetailContent() {
 
             {/* If scheduled, show active schedule details card */}
             {deliverable.status === "scheduled" && (
-              <div className="pt-3 border-t border-indigo-200/60 space-y-2.5">
+              <div className="pt-3 border-t border-[#30303D] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-indigo-900 text-xs font-bold">
-                    <Clock className="w-4 h-4 text-indigo-600" />
+                  <div className="flex items-center gap-1.5 text-indigo-300 text-xs font-bold">
+                    <Clock className="w-4 h-4 text-indigo-400" />
                     <span>Scheduled for Publication</span>
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 rounded-full">
                     Queued
                   </span>
                 </div>
-                <div className="p-2.5 bg-indigo-50/70 rounded-xl border border-indigo-100 text-xs text-indigo-900 space-y-1">
+                <div className="p-2.5 bg-[#101014] rounded-xl border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
                   <div className="font-bold flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
                     <span>{deliverable.scheduled_at ? formatDate(deliverable.scheduled_at) : "Target time set"}</span>
                   </div>
-                  <div className="text-[10px] text-indigo-600/80">
+                  <div className="text-[10px] text-[#A3A0B0]">
                     Timezone: {deliverable.scheduled_timezone || "UTC"}
                   </div>
                 </div>
@@ -1464,18 +1464,18 @@ function DeliverableDetailContent() {
                       setIsRescheduling(true);
                       setShowPublishModal(true);
                     }}
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2.5 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2.5 bg-[#20202A] border border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Reschedule</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleCancelSchedule}
                     disabled={cancellingSchedule}
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2.5 bg-[#20202A] hover:bg-rose-500/10 text-[#A3A0B0] hover:text-rose-400 border border-[#30303D] text-xs font-bold rounded-xl transition-all cursor-pointer"
                   >
-                    <Undo2 className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+                    <Undo2 className="w-3.5 h-3.5 text-[#A3A0B0]" />
                     <span>Cancel</span>
                   </button>
                 </div>
@@ -1484,23 +1484,23 @@ function DeliverableDetailContent() {
           </div>
 
           {/* Version History List Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-4">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-slate-100 text-slate-700">
+                <span className="p-1.5 rounded-lg bg-[#20202A] text-[#A78BFA] border border-[#30303D]">
                   <History className="w-4 h-4" />
                 </span>
-                <h3 className="text-xs font-extrabold text-slate-900 tracking-tight">
+                <h3 className="text-xs font-extrabold text-[#F2F0F7] tracking-tight">
                   Version Timeline
                 </h3>
               </div>
-              <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-black text-[#A3A0B0] bg-[#20202A] border border-[#30303D] px-2 py-0.5 rounded-full">
                 {filteredVersions.length}
               </span>
             </div>
 
             {filteredVersions.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400">
+              <div className="text-center py-6 text-xs text-[#A3A0B0]">
                 {activeTask
                   ? `No versions uploaded for "${activeTask.title.split("(")[0].trim()}" yet.`
                   : "No versions uploaded yet."}
@@ -1518,8 +1518,8 @@ function DeliverableDetailContent() {
                       onClick={() => setSelectedVersionId(v.id)}
                       className={`p-3.5 rounded-xl border transition-all cursor-pointer space-y-2 ${
                         isSelected
-                          ? "bg-purple-50/60 border-purple-300 ring-2 ring-purple-500/20 shadow-2xs"
-                          : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300"
+                          ? "bg-[#20202A] border-[#A78BFA] ring-1 ring-[#A78BFA]/50"
+                          : "bg-[#101014] border-[#30303D] hover:bg-[#20202A]/50 hover:border-[#404050]"
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -1527,21 +1527,21 @@ function DeliverableDetailContent() {
                           <span
                             className={`text-xs font-black px-2 py-0.5 rounded-md ${
                               isSelected
-                                ? "bg-purple-600 text-white"
-                                : "bg-slate-100 text-slate-700"
+                                ? "bg-[#A78BFA] text-[#101014]"
+                                : "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
                             }`}
                           >
                             v{v.version_number}
                           </span>
                           {isLatest && (
-                            <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded">
+                            <span className="text-[10px] font-bold text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/30 px-1.5 py-0.2 rounded">
                               Latest
                             </span>
                           )}
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-400 font-medium">
+                          <span className="text-[10px] text-[#A3A0B0] font-medium">
                             {formatBytes(v.file_size_bytes)}
                           </span>
                           {!isLatest && (
@@ -1551,7 +1551,7 @@ function DeliverableDetailContent() {
                                 handleDeleteVersion(v.id);
                               }}
                               title="Delete draft version"
-                              className="p-1 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600"
+                              className="p-1 hover:bg-rose-500/10 rounded text-[#A3A0B0] hover:text-rose-400"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -1559,13 +1559,13 @@ function DeliverableDetailContent() {
                         </div>
                       </div>
 
-                      <div className="text-[11px] font-semibold text-slate-700 truncate flex items-center gap-1.5">
+                      <div className="text-[11px] font-semibold text-[#F2F0F7] truncate flex items-center gap-1.5">
                         {v.file_name?.match(/\.(pdf|docx|doc|txt)$/i) || v.file_type?.startsWith("text/") || v.file_type?.includes("word") || v.file_type?.includes("pdf") ? (
-                          <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          <FileText className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
                         ) : v.file_name?.match(/\.(mp4|mov|webm)$/i) || v.file_type?.startsWith("video/") ? (
-                          <Film className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <Film className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                         ) : (
-                          <FileImage className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <FileImage className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         )}
                         <span className="truncate">{v.file_name}</span>
                       </div>
@@ -1573,27 +1573,27 @@ function DeliverableDetailContent() {
                       {/* Task association badge */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                         {v.task_id ? (
-                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                            <Layers className="w-2.5 h-2.5 text-indigo-500" />
+                          <span className="text-[10px] font-bold text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <Layers className="w-2.5 h-2.5 text-[#A78BFA]" />
                             <span>{taskObj ? taskObj.title.split("(")[0].trim() : "Task Asset"}</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-semibold text-[#A3A0B0] bg-[#20202A] border border-[#30303D] px-2 py-0.5 rounded-md">
                             Deliverable Asset
                           </span>
                         )}
                       </div>
 
                       {v.notes && (
-                        <p className="text-[11px] text-slate-500 line-clamp-2 italic bg-white/80 p-1.5 rounded border border-slate-100">
+                        <p className="text-[11px] text-[#A3A0B0] line-clamp-2 italic bg-[#101014] p-1.5 rounded border border-[#30303D]">
                           &ldquo;{v.notes}&rdquo;
                         </p>
                       )}
 
-                      <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1">
+                      <div className="text-[10px] text-[#A3A0B0] flex items-center justify-between pt-1">
                         <span>{formatDate(v.created_at)}</span>
                         {isSelected && (
-                          <span className="text-purple-600 font-bold">Active in preview &rarr;</span>
+                          <span className="text-[#A78BFA] font-bold">Active in preview &rarr;</span>
                         )}
                       </div>
                     </div>
@@ -1607,27 +1607,27 @@ function DeliverableDetailContent() {
 
       {/* Upload New Version Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-[#101014]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95 text-[#F2F0F7]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#30303D]">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-purple-50 text-purple-600">
+                <span className="p-1.5 rounded-lg bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
                   <Upload className="w-4 h-4" />
                 </span>
-                <h3 className="text-sm font-extrabold text-slate-900">
+                <h3 className="text-sm font-extrabold text-[#F2F0F7]">
                   Upload Version v{(deliverable.content_versions.length || 0) + 1}
                 </h3>
               </div>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold p-1 rounded-lg hover:bg-slate-100"
+                className="text-[#A3A0B0] hover:text-[#F2F0F7] text-xs font-bold p-1 rounded-lg hover:bg-[#20202A] cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {uploadError && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3 rounded-xl flex items-center gap-2">
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs p-3 rounded-xl flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{uploadError}</span>
               </div>
@@ -1636,13 +1636,13 @@ function DeliverableDetailContent() {
             <form onSubmit={handleUploadVersion} className="space-y-4">
               {/* Task Scope Selector */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <label className="text-xs font-bold text-[#F2F0F7] block mb-1.5">
                   Attach to Stage / Task (optional)
                 </label>
                 <select
                   value={uploadTaskId}
                   onChange={(e) => setUploadTaskId(e.target.value)}
-                  className="w-full text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 cursor-pointer"
+                  className="w-full text-xs font-semibold text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
                 >
                   <option value="none">Deliverable Master Asset (General)</option>
                   {tasksList.map((t) => (
@@ -1651,14 +1651,14 @@ function DeliverableDetailContent() {
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-[10px] text-[#A3A0B0] mt-1">
                   Tagging a specific task isolates this media to that stage so other tasks won&apos;t share it.
                 </p>
               </div>
 
               {/* File Dropzone / Picker */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <label className="text-xs font-bold text-[#F2F0F7] block mb-1.5">
                   Select Reel File, Script, or Creative Asset *
                 </label>
                 <input
@@ -1676,32 +1676,32 @@ function DeliverableDetailContent() {
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
                     uploadFile
-                      ? "border-purple-300 bg-purple-50/40"
-                      : "border-slate-200 hover:border-purple-300 hover:bg-slate-50"
+                      ? "border-[#A78BFA] bg-[#A78BFA]/10"
+                      : "border-[#30303D] hover:border-[#A78BFA]/60 bg-[#101014]"
                   }`}
                 >
                   {uploadFile ? (
                     <div className="space-y-1">
                       {uploadFile.name.match(/\.(pdf|docx|doc|txt)$/i) || uploadFile.type.startsWith("text/") || uploadFile.type.includes("pdf") || uploadFile.type.includes("word") ? (
-                        <FileText className="w-6 h-6 text-purple-600 mx-auto" />
+                        <FileText className="w-6 h-6 text-[#A78BFA] mx-auto" />
                       ) : uploadFile.type.startsWith("image/") || uploadFile.name.match(/\.(png|jpe?g|webp|gif)$/i) ? (
-                        <FileImage className="w-6 h-6 text-purple-600 mx-auto" />
+                        <FileImage className="w-6 h-6 text-[#A78BFA] mx-auto" />
                       ) : (
-                        <FileVideo className="w-6 h-6 text-purple-600 mx-auto" />
+                        <FileVideo className="w-6 h-6 text-[#A78BFA] mx-auto" />
                       )}
-                      <p className="text-xs font-bold text-slate-900">{uploadFile.name}</p>
-                      <p className="text-[11px] text-slate-500">{formatBytes(uploadFile.size)}</p>
-                      <span className="text-[10px] text-purple-600 font-semibold underline block pt-1">
+                      <p className="text-xs font-bold text-[#F2F0F7]">{uploadFile.name}</p>
+                      <p className="text-[11px] text-[#A3A0B0]">{formatBytes(uploadFile.size)}</p>
+                      <span className="text-[10px] text-[#A78BFA] font-semibold underline block pt-1">
                         Click to change file
                       </span>
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <Upload className="w-6 h-6 text-slate-400 mx-auto" />
-                      <p className="text-xs font-bold text-slate-700">
+                      <Upload className="w-6 h-6 text-[#A3A0B0] mx-auto" />
+                      <p className="text-xs font-bold text-[#F2F0F7]">
                         Click to browse or drop file here
                       </p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-[#A3A0B0]">
                         Supports MP4, MOV, WEBM, PNG, JPG, PDF, DOCX, TXT (up to 500MB)
                       </p>
                     </div>
@@ -1711,7 +1711,7 @@ function DeliverableDetailContent() {
 
               {/* Caption */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <label className="text-xs font-bold text-[#F2F0F7] block mb-1.5">
                   Caption & Hashtags (optional)
                 </label>
                 <textarea
@@ -1719,13 +1719,13 @@ function DeliverableDetailContent() {
                   value={uploadCaption}
                   onChange={(e) => setUploadCaption(e.target.value)}
                   placeholder="Paste Instagram/YouTube caption, hooks, and hashtags..."
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 font-mono"
+                  className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl p-3 focus:outline-none focus:border-[#A78BFA] font-mono placeholder-[#A3A0B0]/60"
                 />
               </div>
 
               {/* Revision Notes */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <label className="text-xs font-bold text-[#F2F0F7] block mb-1.5">
                   Revision Notes (optional)
                 </label>
                 <input
@@ -1733,22 +1733,22 @@ function DeliverableDetailContent() {
                   value={uploadNotes}
                   onChange={(e) => setUploadNotes(e.target.value)}
                   placeholder="e.g. 'Trimmed hook, added Marathi subtitle track and upbeat BGM'"
-                  className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] placeholder-[#A3A0B0]/60"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#30303D]">
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-bold text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={uploading || !uploadFile}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-xs disabled:opacity-50 transition-all"
+                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs disabled:opacity-50 transition-all cursor-pointer"
                 >
                   {uploading ? (
                     <>
@@ -1768,20 +1768,20 @@ function DeliverableDetailContent() {
 
       {/* Metrics Modal */}
       {showMetricsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-[#101014]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95 text-[#F2F0F7]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#30303D]">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   <BarChart2 className="w-4 h-4" />
                 </span>
-                <h3 className="text-sm font-extrabold text-slate-900">
+                <h3 className="text-sm font-extrabold text-[#F2F0F7]">
                   Update Performance Metrics
                 </h3>
               </div>
               <button
                 onClick={() => setShowMetricsModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold p-1 rounded-lg hover:bg-slate-100"
+                className="text-[#A3A0B0] hover:text-[#F2F0F7] text-xs font-bold p-1 rounded-lg hover:bg-[#20202A] cursor-pointer"
               >
                 ✕
               </button>
@@ -1790,7 +1790,7 @@ function DeliverableDetailContent() {
             <form onSubmit={handleSaveMetrics} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                  <label className="text-xs font-bold text-[#F2F0F7] block mb-1">
                     Views / Impressions
                   </label>
                   <input
@@ -1798,11 +1798,11 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsViews}
                     onChange={(e) => setMetricsViews(Number(e.target.value))}
-                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                    className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                  <label className="text-xs font-bold text-[#F2F0F7] block mb-1">
                     Likes
                   </label>
                   <input
@@ -1810,11 +1810,11 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsLikes}
                     onChange={(e) => setMetricsLikes(Number(e.target.value))}
-                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                    className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                  <label className="text-xs font-bold text-[#F2F0F7] block mb-1">
                     Comments
                   </label>
                   <input
@@ -1822,11 +1822,11 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsComments}
                     onChange={(e) => setMetricsComments(Number(e.target.value))}
-                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                    className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                  <label className="text-xs font-bold text-[#F2F0F7] block mb-1">
                     Shares
                   </label>
                   <input
@@ -1834,23 +1834,23 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsShares}
                     onChange={(e) => setMetricsShares(Number(e.target.value))}
-                    className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold"
+                    className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#30303D]">
                 <button
                   type="button"
                   onClick={() => setShowMetricsModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-bold text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingMetrics}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs disabled:opacity-50 transition-all cursor-pointer"
                 >
                   {savingMetrics ? "Saving..." : "Save Metrics"}
                 </button>
@@ -1892,7 +1892,7 @@ export default function DeliverableDetailPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-xs text-slate-400">Loading deliverable pipeline...</div>
+        <div className="p-8 text-center text-xs text-[#A3A0B0] bg-[#101014] min-h-screen">Loading deliverable pipeline...</div>
       }
     >
       <DeliverableDetailContent />

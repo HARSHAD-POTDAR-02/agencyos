@@ -21,17 +21,17 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
   return (
     <div className="space-y-6">
       {/* ── Campaign Master Theme Header ── */}
-      <div className="p-4 rounded-xl bg-card border border-border shadow-xs space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+      <div className="p-5 rounded-2xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 flex items-center justify-center shrink-0">
             <Cpu className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-foreground">
+            <h3 className="font-bold text-base text-[#F2F0F7]">
               {payload.campaign_theme || "Strategic Campaign Blueprint"}
             </h3>
             {payload.master_slogan && (
-              <p className="text-xs italic text-primary font-medium mt-0.5">
+              <p className="text-xs italic text-[#A78BFA] font-medium mt-0.5">
                 &ldquo;{payload.master_slogan}&rdquo;
               </p>
             )}
@@ -41,44 +41,47 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
 
       {/* ── Multi-Stage Narrative Arc ── */}
       <div className="space-y-3.5">
-        <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <Calendar className="w-4 h-4 text-primary" />
-          <span>Sprint Narrative Pacing & Stages ({stages.length} Phases)</span>
-        </h4>
+        <div className="flex items-center justify-between px-1">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-[#A78BFA]" />
+            <span>Sprint Narrative Pacing & Stages ({stages.length} Phases)</span>
+          </h4>
+          <span className="text-[11px] font-mono text-[#A3A0B0]">Pacing Breakdown</span>
+        </div>
 
         <div className="space-y-3">
           {stages.map((stage, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-xl border border-border bg-card shadow-xs space-y-2.5"
+              className="p-4 rounded-xl border border-[#30303D] bg-[#17171E] shadow-sm space-y-2.5"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center border border-indigo-500/30">
+                  <span className="w-6 h-6 rounded-full bg-[#A78BFA]/20 text-[#A78BFA] font-bold text-xs flex items-center justify-center border border-[#A78BFA]/30">
                     {idx + 1}
                   </span>
-                  <span className="font-bold text-xs text-foreground">
+                  <span className="font-bold text-sm text-[#F2F0F7]">
                     {stage.stage_name}
                   </span>
                 </div>
-                <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-muted text-foreground border border-border">
+                <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[#20202A] text-[#F2F0F7] border border-[#30303D]">
                   {stage.days_range}
                 </span>
               </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 p-2.5 rounded-lg border border-border/50">
+              <p className="text-xs text-[#A3A0B0] leading-relaxed bg-[#20202A] p-2.5 rounded-lg border border-[#30303D]/60">
                 {stage.core_message}
               </p>
 
               {stage.deliverable_focus && stage.deliverable_focus.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground mr-1">
+                  <span className="text-[10px] uppercase font-bold text-[#A3A0B0] mr-1">
                     Deliverables:
                   </span>
                   {stage.deliverable_focus.map((focus, i) => (
                     <span
                       key={i}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-medium"
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 font-medium"
                     >
                       {focus}
                     </span>
@@ -92,9 +95,9 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
 
       {/* ── Recommended Format Mix ── */}
       {Object.keys(formatRatios).length > 0 && (
-        <div className="p-4 rounded-xl bg-card border border-border shadow-xs space-y-3">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <PieChart className="w-3.5 h-3.5 text-primary" />
+        <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-3">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
+            <PieChart className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Recommended Deliverable Distribution</span>
           </h4>
 
@@ -102,12 +105,12 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
             {Object.entries(formatRatios).map(([fmt, pct]) => (
               <div
                 key={fmt}
-                className="p-2.5 rounded-lg bg-muted/40 border border-border/60 text-center"
+                className="p-2.5 rounded-lg bg-[#20202A] border border-[#30303D] text-center"
               >
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block">
                   {fmt}
                 </span>
-                <span className="text-lg font-bold text-foreground">
+                <span className="text-lg font-bold text-[#F2F0F7] font-mono">
                   {pct}%
                 </span>
               </div>

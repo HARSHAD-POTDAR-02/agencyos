@@ -187,17 +187,17 @@ function ReportsContent() {
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none">
       {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80 print:border-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#30303D] print:border-none">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-purple-50 text-purple-600 print:hidden">
+            <span className="p-2 rounded-xl bg-[#20202A] text-[#A78BFA] border border-[#30303D] print:hidden">
               <BarChart3 className="w-5 h-5" />
             </span>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
               Performance & Delivery Reports
             </h1>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[#A3A0B0] mt-1">
             Audit monthly retainer scope fulfillment, delivery status, and Meta social engagement.
           </p>
         </div>
@@ -207,9 +207,9 @@ function ReportsContent() {
             onClick={() => loadReport()}
             disabled={loadingReport || !selectedClientId}
             title="Refresh Report Data"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#F2F0F7] bg-[#17171E] border border-[#30303D] hover:bg-[#20202A] rounded-xl transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-purple-600" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-[#A78BFA]" : "text-[#71717A]"}`} />
             <span>Refresh</span>
           </button>
 
@@ -217,7 +217,7 @@ function ReportsContent() {
             onClick={handlePrint}
             disabled={!report}
             title="Print or Save as PDF"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl shadow-xs shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Export PDF / Print</span>
@@ -226,23 +226,23 @@ function ReportsContent() {
       </div>
 
       {/* Selector Filters Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4 print:border-slate-300">
+      <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-3 flex flex-wrap items-center justify-between gap-4 print:border-[#30303D]">
         <div className="flex flex-wrap items-center gap-3">
           {/* Client Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5 text-purple-600" />
+            <label className="text-xs font-semibold text-[#A3A0B0] flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>Client:</span>
             </label>
             {loadingClients ? (
-              <div className="h-9 w-44 bg-slate-100 animate-pulse rounded-xl" />
+              <div className="h-9 w-44 bg-[#101014] animate-pulse rounded-lg border border-[#30303D]" />
             ) : clients.length === 0 ? (
-              <span className="text-xs text-slate-400 italic">No clients registered</span>
+              <span className="text-xs text-[#71717A] italic">No clients registered</span>
             ) : (
               <select
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
-                className="text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
+                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
               >
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -255,14 +255,14 @@ function ReportsContent() {
 
           {/* Month Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-purple-600" />
+            <label className="text-xs font-semibold text-[#A3A0B0] flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>Period:</span>
             </label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
+              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
             >
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -275,7 +275,7 @@ function ReportsContent() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
+              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -288,11 +288,11 @@ function ReportsContent() {
 
         {/* Client quick link */}
         {selectedClientId && (
-          <div className="text-xs text-slate-500 flex items-center gap-2">
+          <div className="text-xs text-[#A3A0B0] flex items-center gap-2">
             <span>Viewing:</span>
             <Link
               href={`/clients/${selectedClientId}`}
-              className="font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200/60 inline-flex items-center gap-1 transition-colors"
+              className="font-semibold text-[#A78BFA] hover:text-[#B69BFF] bg-[#20202A] px-2.5 py-1 rounded-lg border border-[#30303D] inline-flex items-center gap-1 transition-colors"
             >
               <span>{selectedClient?.business_name || "Client Details"}</span>
               <ExternalLink className="w-3 h-3" />
@@ -303,20 +303,20 @@ function ReportsContent() {
 
       {/* Loading state */}
       {loadingReport && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs space-y-3">
-          <div className="w-10 h-10 border-[3px] border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-600">Generating monthly delivery report...</p>
-          <p className="text-[11px] text-slate-400">Auditing active contracts and aggregating live Meta stats</p>
+        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-12 text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-[#F2F0F7]">Generating monthly delivery report...</p>
+          <p className="text-[11px] text-[#71717A]">Auditing active contracts and aggregating live Meta stats</p>
         </div>
       )}
 
       {/* Error state */}
       {!loadingReport && reportError && (
-        <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+        <div className="p-5 rounded-2xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-[#E16F7B] shrink-0" />
           <div>
-            <p className="font-bold">Failed to load report</p>
-            <p className="text-rose-600 mt-0.5">{reportError}</p>
+            <p className="font-bold text-[#F2F0F7]">Failed to load report</p>
+            <p className="text-[#E16F7B] mt-0.5">{reportError}</p>
           </div>
         </div>
       )}
@@ -325,41 +325,41 @@ function ReportsContent() {
       {!loadingReport && report && (
         <div className="space-y-6">
           {/* Executive Summary Card */}
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white rounded-2xl p-6 shadow-lg border border-indigo-500/30 space-y-4 relative overflow-hidden print:bg-white print:text-slate-900 print:border-slate-300 print:shadow-none">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 print:border-slate-200">
+          <div className="bg-[#17171E] text-[#F2F0F7] rounded-2xl p-6 border border-[#30303D] space-y-4 relative overflow-hidden print:bg-white print:text-slate-900 print:border-slate-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#30303D] print:border-slate-200">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 print:bg-purple-100 print:text-purple-700">
+                <div className="w-8 h-8 rounded-xl bg-[#20202A] border border-[#30303D] flex items-center justify-center text-[#A78BFA] print:bg-purple-100 print:text-purple-700">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-purple-300 print:text-purple-700">
+                  <h2 className="text-sm font-heading font-bold uppercase tracking-wider text-[#A78BFA] print:text-purple-700">
                     Executive Summary &bull; {monthName} {report.year}
                   </h2>
-                  <p className="text-xs text-slate-400 print:text-slate-500">{report.client_name}</p>
+                  <p className="text-xs text-[#A3A0B0] print:text-slate-500">{report.client_name}</p>
                 </div>
               </div>
 
               <button
                 onClick={handleCopySummary}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer self-start sm:self-auto print:hidden"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] text-xs font-semibold rounded-xl transition-colors cursor-pointer self-start sm:self-auto print:hidden"
               >
-                {copiedSummary ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-300" />}
+                {copiedSummary ? <Check className="w-3.5 h-3.5 text-[#45B88A]" /> : <Copy className="w-3.5 h-3.5 text-[#A3A0B0]" />}
                 <span>{copiedSummary ? "Copied to Clipboard" : "Copy Summary"}</span>
               </button>
             </div>
 
-            <p className="text-sm text-slate-200 leading-relaxed font-normal print:text-slate-800">
+            <p className="text-sm text-[#F2F0F7] leading-relaxed font-normal print:text-slate-800">
               {report.executive_summary}
             </p>
 
             <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-              <span className="font-bold bg-white/10 px-2.5 py-1 rounded-lg border border-white/15 print:border-slate-200 print:bg-slate-100 print:text-slate-800">
+              <span className="font-mono font-medium bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-[#30303D] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
                 Scope Target: {report.total_scope_quota} items
               </span>
-              <span className="font-bold bg-white/10 px-2.5 py-1 rounded-lg border border-white/15 print:border-slate-200 print:bg-slate-100 print:text-slate-800">
+              <span className="font-mono font-medium bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-[#30303D] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
                 Delivered: {report.deliverables_delivered} approved
               </span>
-              <span className="font-bold bg-purple-500/30 text-purple-200 px-2.5 py-1 rounded-lg border border-purple-400/30 print:bg-purple-50 print:text-purple-800 print:border-purple-200">
+              <span className="font-mono font-semibold bg-[#A78BFA]/10 text-[#A78BFA] px-2.5 py-1 rounded-lg border border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800 print:border-purple-200">
                 Fulfillment: {report.quota_fulfillment_rate}%
               </span>
             </div>
@@ -368,18 +368,18 @@ function ReportsContent() {
           {/* 4 Key Metric KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* KPI 1: Contract Quota Fulfillment */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-3">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
                   Retainer Quota
                 </span>
                 <span
-                  className={`p-2 rounded-xl ${
+                  className={`p-2 rounded-xl border border-[#30303D] ${
                     report.quota_fulfillment_rate >= 100
-                      ? "bg-emerald-50 text-emerald-600"
+                      ? "bg-[#45B88A]/10 text-[#45B88A]"
                       : report.quota_fulfillment_rate >= 50
-                      ? "bg-amber-50 text-amber-600"
-                      : "bg-purple-50 text-purple-600"
+                      ? "bg-[#E5AA58]/10 text-[#E5AA58]"
+                      : "bg-[#A78BFA]/10 text-[#A78BFA]"
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -388,25 +388,25 @@ function ReportsContent() {
 
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-slate-900 tracking-tight">
+                  <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                     {report.quota_fulfillment_rate}%
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">fulfilled</span>
+                  <span className="text-xs font-medium text-[#71717A]">fulfilled</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
                   {report.deliverables_delivered} of {report.total_scope_quota} monthly deliverables delivered
                 </p>
               </div>
 
               {/* Progress bar */}
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-[#101014] overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     report.quota_fulfillment_rate >= 100
-                      ? "bg-emerald-500"
+                      ? "bg-[#45B88A]"
                       : report.quota_fulfillment_rate >= 50
-                      ? "bg-purple-600"
-                      : "bg-amber-500"
+                      ? "bg-[#A78BFA]"
+                      : "bg-[#E5AA58]"
                   }`}
                   style={{ width: `${Math.min(100, report.quota_fulfillment_rate)}%` }}
                 />
@@ -414,87 +414,87 @@ function ReportsContent() {
             </div>
 
             {/* KPI 2: Total Content Views / Impressions */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-3">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
                   Total Impressions
                 </span>
-                <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                <span className="p-2 rounded-xl bg-[#20202A] text-[#69A9D8] border border-[#30303D]">
                   <Eye className="w-4 h-4" />
                 </span>
               </div>
 
               <div>
-                <span className="text-2xl font-black text-slate-900 tracking-tight">
+                <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                   {report.total_views.toLocaleString()}
                 </span>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
                   Views across {report.deliverables_published} published posts
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <TrendingUp className="w-3 h-3" />
                 <span>Meta Live Reach</span>
               </div>
             </div>
 
             {/* KPI 3: Total Social Engagement */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-3">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
                   Total Engagement
                 </span>
-                <span className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                <span className="p-2 rounded-xl bg-[#20202A] text-[#E16F7B] border border-[#30303D]">
                   <Heart className="w-4 h-4" />
                 </span>
               </div>
 
               <div>
-                <span className="text-2xl font-black text-slate-900 tracking-tight">
+                <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                   {(report.total_likes + report.total_comments).toLocaleString()}
                 </span>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-[#A3A0B0] mt-1">
                   <span className="inline-flex items-center gap-1">
-                    <Heart className="w-3 h-3 text-rose-500" /> {report.total_likes.toLocaleString()}
+                    <Heart className="w-3 h-3 text-[#E16F7B]" /> {report.total_likes.toLocaleString()}
                   </span>
                   <span>&bull;</span>
                   <span className="inline-flex items-center gap-1">
-                    <MessageCircle className="w-3 h-3 text-blue-500" /> {report.total_comments.toLocaleString()}
+                    <MessageCircle className="w-3 h-3 text-[#69A9D8]" /> {report.total_comments.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <Share2 className="w-3 h-3" />
                 <span>Interactions</span>
               </div>
             </div>
 
             {/* KPI 4: Average Engagement Rate */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs space-y-3">
+            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
                   Avg Engagement Rate
                 </span>
-                <span className="p-2 rounded-xl bg-purple-50 text-purple-600">
+                <span className="p-2 rounded-xl bg-[#20202A] text-[#A78BFA] border border-[#30303D]">
                   <Sparkles className="w-4 h-4" />
                 </span>
               </div>
 
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-slate-900 tracking-tight">
+                  <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                     {report.avg_engagement_rate}%
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">rate</span>
+                  <span className="text-xs font-medium text-[#71717A]">rate</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
                   (Likes + Comments) &divide; Total Views
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <ArrowUpRight className="w-3 h-3" />
                 <span>Audience Response</span>
               </div>
@@ -502,67 +502,67 @@ function ReportsContent() {
           </div>
 
           {/* Delivery & Fulfillment Funnel Overview */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Layers className="w-4 h-4 text-purple-600" />
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-6 space-y-4">
+            <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#A78BFA]" />
               <span>Contract Scope & Delivery Breakdown</span>
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Monthly Quota</span>
-                <p className="text-xl font-black text-slate-800 mt-1">{report.total_scope_quota}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Contract Retainer Target</p>
+              <div className="p-4 rounded-xl bg-[#101014] border border-[#30303D]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#71717A]">Monthly Quota</span>
+                <p className="text-2xl font-bold font-mono text-[#F2F0F7] mt-1">{report.total_scope_quota}</p>
+                <p className="text-[11px] text-[#71717A] mt-0.5">Contract Retainer Target</p>
               </div>
-              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Approved Content</span>
-                <p className="text-xl font-black text-emerald-900 mt-1">{report.deliverables_delivered}</p>
-                <p className="text-[11px] text-emerald-700/80 mt-0.5">Ready or Published</p>
+              <div className="p-4 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/30">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#45B88A]">Approved Content</span>
+                <p className="text-2xl font-bold font-mono text-[#45B88A] mt-1">{report.deliverables_delivered}</p>
+                <p className="text-[11px] text-[#45B88A]/80 mt-0.5">Ready or Published</p>
               </div>
-              <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-100">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600">Published Live</span>
-                <p className="text-xl font-black text-purple-900 mt-1">{report.deliverables_published}</p>
-                <p className="text-[11px] text-purple-700/80 mt-0.5">Live on Social Media</p>
+              <div className="p-4 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#A78BFA]">Published Live</span>
+                <p className="text-2xl font-bold font-mono text-[#A78BFA] mt-1">{report.deliverables_published}</p>
+                <p className="text-[11px] text-[#A78BFA]/80 mt-0.5">Live on Social Media</p>
               </div>
-              <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-100">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Pending Quota</span>
-                <p className="text-xl font-black text-amber-900 mt-1">
+              <div className="p-4 rounded-xl bg-[#E5AA58]/10 border border-[#E5AA58]/30">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#E5AA58]">Pending Quota</span>
+                <p className="text-2xl font-bold font-mono text-[#E5AA58] mt-1">
                   {Math.max(0, report.total_scope_quota - report.deliverables_delivered)}
                 </p>
-                <p className="text-[11px] text-amber-700/80 mt-0.5">Remaining this month</p>
+                <p className="text-[11px] text-[#E5AA58]/80 mt-0.5">Remaining this month</p>
               </div>
             </div>
           </div>
 
           {/* Top Performing Content Leaderboard */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-[#17171E] rounded-xl border border-[#30303D] overflow-hidden">
+            <div className="p-5 border-b border-[#30303D] flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-purple-600" />
+                <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#A78BFA]" />
                   <span>Top Performing Content</span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-[#A3A0B0] mt-0.5">
                   Ranked by live impressions, audience likes, and comments on Meta
                 </p>
               </div>
-              <span className="text-xs font-semibold text-slate-400">
+              <span className="text-xs font-mono text-[#71717A]">
                 Top {report.top_deliverables.length} posts
               </span>
             </div>
 
             {report.top_deliverables.length === 0 ? (
               <div className="p-12 text-center space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <div className="w-10 h-10 rounded-xl bg-[#20202A] border border-[#30303D] text-[#71717A] flex items-center justify-center mx-auto">
                   <Film className="w-5 h-5" />
                 </div>
-                <p className="text-xs font-bold text-slate-700">No content published yet for this period</p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs font-semibold text-[#F2F0F7]">No content published yet for this period</p>
+                <p className="text-[11px] text-[#71717A]">
                   Publish posts to Instagram and Facebook to automatically track real-time impressions and engagement.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#30303D]/60">
                 {report.top_deliverables.map((item, idx) => {
                   const isVideo = item.deliverable_type?.toLowerCase().includes("video") || item.deliverable_type?.toLowerCase().includes("reel");
                   const platformStr = (item.platform || "").trim().toLowerCase();
@@ -579,26 +579,26 @@ function ReportsContent() {
                   return (
                     <div
                       key={item.id}
-                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#20202A]/40 transition-colors"
                     >
                       <div className="flex items-start sm:items-center gap-3.5 min-w-0">
                         {/* Rank Badge */}
                         <div
-                          className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
                             idx === 0
-                              ? "bg-amber-100 text-amber-800 border border-amber-300"
+                              ? "bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/40"
                               : idx === 1
-                              ? "bg-slate-200 text-slate-700 border border-slate-300"
+                              ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
                               : idx === 2
-                              ? "bg-amber-50 text-amber-900 border border-amber-200"
-                              : "bg-slate-100 text-slate-500"
+                              ? "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
+                              : "bg-[#101014] text-[#71717A]"
                           }`}
                         >
                           #{idx + 1}
                         </div>
 
                         {/* Format icon */}
-                        <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#20202A] border border-[#30303D] text-[#A78BFA] flex items-center justify-center shrink-0">
                           {isVideo ? <Film className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                         </div>
 
@@ -606,23 +606,23 @@ function ReportsContent() {
                         <div className="min-w-0">
                           <Link
                             href={`/deliverables/${item.id}`}
-                            className="text-sm font-bold text-slate-900 hover:text-purple-700 truncate block max-w-md group"
+                            className="text-sm font-semibold text-[#F2F0F7] hover:text-[#A78BFA] truncate block max-w-md group"
                           >
                             <span className="group-hover:underline">{item.title}</span>
                           </Link>
                           <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                             <span
-                              className={`font-extrabold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md border ${
+                              className={`font-mono font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md border ${
                                 isInstagram
-                                  ? "bg-pink-50 text-pink-700 border-pink-200"
+                                  ? "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
                                   : isFacebook
-                                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                                  : "bg-slate-100 text-slate-700 border-slate-200"
+                                  ? "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30"
+                                  : "bg-[#20202A] text-[#A3A0B0] border-[#30303D]"
                               }`}
                             >
                               {item.platform}
                             </span>
-                            <span className="capitalize text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">
+                            <span className="capitalize text-[#A3A0B0] font-medium bg-[#101014] border border-[#30303D] px-2 py-0.5 rounded-md font-mono text-[10px]">
                               {item.deliverable_type}
                             </span>
                           </div>
@@ -630,45 +630,39 @@ function ReportsContent() {
                       </div>
 
                       {/* Performance stats row */}
-                      <div className="flex items-center gap-4 sm:gap-6 self-end sm:self-auto">
+                      <div className="flex items-center gap-4 sm:gap-6 self-end sm:self-auto font-mono">
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-slate-700 text-xs font-black justify-end">
-                            <Eye className="w-3.5 h-3.5 text-indigo-500" />
+                          <div className="flex items-center gap-1 text-[#F2F0F7] text-xs font-bold justify-end">
+                            <Eye className="w-3.5 h-3.5 text-[#69A9D8]" />
                             <span>{item.views_count.toLocaleString()}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-medium">Views</span>
+                          <span className="text-[10px] text-[#71717A] font-medium">Views</span>
                         </div>
 
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-slate-700 text-xs font-black justify-end">
-                            <Heart className="w-3.5 h-3.5 text-rose-500" />
+                          <div className="flex items-center gap-1 text-[#F2F0F7] text-xs font-bold justify-end">
+                            <Heart className="w-3.5 h-3.5 text-[#E16F7B]" />
                             <span>{item.likes_count.toLocaleString()}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-medium">Likes</span>
+                          <span className="text-[10px] text-[#71717A] font-medium">Likes</span>
                         </div>
 
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-slate-700 text-xs font-black justify-end">
-                            <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
+                          <div className="flex items-center gap-1 text-[#F2F0F7] text-xs font-bold justify-end">
+                            <MessageCircle className="w-3.5 h-3.5 text-[#69A9D8]" />
                             <span>{item.comments_count.toLocaleString()}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-medium">Comments</span>
+                          <span className="text-[10px] text-[#71717A] font-medium">Comments</span>
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex items-center gap-1.5 pl-2">
+                        <div className="flex items-center gap-1.5 pl-2 font-sans">
                           {liveUrl ? (
                             <a
                               href={liveUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-xs transition-colors ${
-                                isInstagram
-                                  ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-                                  : isFacebook
-                                  ? "bg-blue-600 hover:bg-blue-500"
-                                  : "bg-indigo-600 hover:bg-indigo-500"
-                              }`}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-colors"
                             >
                               <span>Live</span>
                               <ExternalLink className="w-3 h-3" />
@@ -676,7 +670,7 @@ function ReportsContent() {
                           ) : (
                             <Link
                               href={`/deliverables/${item.id}`}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60 rounded-xl transition-colors"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#A78BFA] bg-[#20202A] hover:bg-[#262630] border border-[#30303D] rounded-xl transition-colors"
                             >
                               <span>View</span>
                               <ChevronRight className="w-3 h-3" />
@@ -695,17 +689,17 @@ function ReportsContent() {
 
       {/* Empty State: No clients in Agency */}
       {!loadingClients && clients.length === 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-2xs space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-[#20202A] border border-[#30303D] text-[#71717A] flex items-center justify-center mx-auto">
             <Building2 className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-800">No Clients Found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">No Clients Found</h3>
+          <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto">
             Add your agency clients and define monthly retainer contracts to start auditing deliverables and generating performance reports.
           </p>
           <Link
             href="/clients"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-purple-500 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] text-[#101014] text-xs font-bold rounded-xl shadow-xs hover:bg-[#B69BFF] transition-colors"
           >
             Go to Clients Workspace
           </Link>
@@ -719,7 +713,7 @@ export default function ReportsPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-xs text-slate-400">Loading performance reports...</div>
+        <div className="p-8 text-center text-xs text-[#71717A]">Loading performance reports...</div>
       }
     >
       <ReportsContent />

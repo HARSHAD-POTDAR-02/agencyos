@@ -187,32 +187,32 @@ export function ExportPreviewModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl rounded-2xl border border-[#30303D] bg-[#17171E] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-border/80 bg-muted/20">
+        <div className="flex items-center justify-between p-5 border-b border-[#30303D] bg-[#101014]/60">
           <div className="flex items-center gap-3">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs transition-colors ${
                 exportResult
-                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                  : "bg-primary/10 border border-primary/20 text-primary"
+                  ? "bg-[#45B88A]/10 border border-[#45B88A]/20 text-[#45B88A]"
+                  : "bg-[#A78BFA]/10 border border-[#A78BFA]/20 text-[#A78BFA]"
               }`}
             >
               {exportResult ? <CheckCircle2 className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
             </div>
             <div>
-              <h2 id="export-modal-title" className="font-bold text-base text-foreground">
+              <h2 id="export-modal-title" className="font-bold text-base text-[#F2F0F7]">
                 {exportResult ? "Production Export Complete" : "Export to Production Pipeline"}
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#A3A0B0]">
                 {exportResult
                   ? `Artifact v${artifact.version} was exported into deliverables & tasks.`
                   : `Convert approved studio draft v${artifact.version} into production Deliverable & Tasks.`}
@@ -222,7 +222,7 @@ export function ExportPreviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -233,15 +233,15 @@ export function ExportPreviewModal({
           {exportResult ? (
             /* Success View */
             <div className="space-y-6 text-center py-4">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-[#45B88A]/10 border border-[#45B88A]/20 text-[#45B88A] flex items-center justify-center mx-auto shadow-xs">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="font-bold text-lg text-foreground">
+                <h3 className="font-bold text-lg text-[#F2F0F7]">
                   {exportResult.is_replay ? "Export Recovered (Idempotent Replay)" : "Successfully Exported to Production!"}
                 </h3>
-                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                <p className="text-xs text-[#A3A0B0] max-w-md mx-auto">
                   {exportResult.is_replay
                     ? "An identical export request was already processed. Existing production records were retrieved safely without creating duplicates."
                     : "The creative draft was locked, the audit record was created, and production work items were spawned."}
@@ -249,22 +249,22 @@ export function ExportPreviewModal({
               </div>
 
               {/* Records Mapping Card */}
-              <div className="p-4 rounded-xl border border-border bg-muted/30 text-left space-y-3 max-w-lg mx-auto">
-                <div className="flex items-center justify-between text-xs pb-2 border-b border-border/60">
-                  <span className="text-muted-foreground font-medium">Production Deliverable</span>
-                  <span className="font-semibold text-foreground truncate max-w-[240px]">
+              <div className="p-4 rounded-xl border border-[#30303D] bg-[#20202A] text-left space-y-3 max-w-lg mx-auto">
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-[#30303D]/60">
+                  <span className="text-[#A3A0B0] font-medium">Production Deliverable</span>
+                  <span className="font-semibold text-[#F2F0F7] truncate max-w-[240px]">
                     {exportResult.deliverable_title}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs pb-2 border-b border-border/60">
-                  <span className="text-muted-foreground font-medium">Production Task</span>
-                  <span className="font-semibold text-foreground truncate max-w-[240px]">
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-[#30303D]/60">
+                  <span className="text-[#A3A0B0] font-medium">Production Task</span>
+                  <span className="font-semibold text-[#F2F0F7] truncate max-w-[240px]">
                     {exportResult.task_title}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Audit Export ID</span>
-                  <span className="font-mono text-[11px] text-muted-foreground">
+                  <span className="text-[#A3A0B0] font-medium">Audit Export ID</span>
+                  <span className="font-mono text-[11px] text-[#A3A0B0]">
                     {String(exportResult.export_id || exportResult.deliverable_id || "").substring(0, 8)}...
                   </span>
                 </div>
@@ -275,7 +275,7 @@ export function ExportPreviewModal({
                 {exportResult.deliverable_id && (
                   <Link
                     href={`/deliverables/${exportResult.deliverable_id}`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition-colors shadow-2xs"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-colors shadow-2xs"
                   >
                     <span>View Deliverable & Script</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -283,7 +283,7 @@ export function ExportPreviewModal({
                 )}
                 <Link
                   href="/tasks"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs transition-colors shadow-2xs"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] font-semibold text-xs transition-colors shadow-2xs"
                 >
                   <span>Go to Production Tasks</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -291,7 +291,7 @@ export function ExportPreviewModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-xl border border-border hover:bg-muted text-foreground font-medium text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-[#30303D] hover:bg-[#20202A] text-[#F2F0F7] font-medium text-xs transition-colors cursor-pointer"
                 >
                   Return to Studio
                 </button>
@@ -302,16 +302,16 @@ export function ExportPreviewModal({
             <form onSubmit={handleConfirmExport} className="space-y-5">
               {/* Approval status banner */}
               {isApproved ? (
-                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-medium">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/20 text-[#45B88A] text-xs font-medium">
+                  <ShieldCheck className="w-4 h-4 text-[#45B88A] shrink-0" />
                   <span>
                     Artifact v{artifact.version} is <strong>Approved</strong> and eligible for production export.
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs">
+                <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-[#E5AA58]/10 border border-[#E5AA58]/30 text-[#E5AA58] text-xs">
                   <div className="flex items-center gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <AlertTriangle className="w-4 h-4 text-[#E5AA58] shrink-0" />
                     <span>This artifact version is currently in <strong>Draft</strong> status. Approval is mandatory prior to export.</span>
                   </div>
                   {onApproveVersion && (
@@ -319,7 +319,7 @@ export function ExportPreviewModal({
                       type="button"
                       onClick={handleApproveInline}
                       disabled={isApproving}
-                      className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs"
+                      className="px-3 py-1 rounded-lg bg-[#45B88A] hover:bg-[#45B88A]/90 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs"
                     >
                       {isApproving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                       <span>Approve v{artifact.version}</span>
@@ -329,7 +329,7 @@ export function ExportPreviewModal({
               )}
 
               {errorMessage && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>{errorMessage}</span>
                 </div>
@@ -338,28 +338,28 @@ export function ExportPreviewModal({
               {/* Form inputs */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Deliverable Name <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-[#F2F0F7] mb-1.5">
+                    Deliverable Name <span className="text-[#E16F7B]">*</span>
                   </label>
                   <input
                     type="text"
                     value={deliverableName}
                     onChange={(e) => setDeliverableName(e.target.value)}
                     required
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-input bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all"
                     placeholder="e.g. Hero Pour ASMR Reel"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    <label className="block text-xs font-semibold text-[#F2F0F7] mb-1.5">
                       Target Format
                     </label>
                     <select
                       value={targetFormat}
                       onChange={(e) => setTargetFormat(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-input bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     >
                       <option value="reel_storyboard">Reel Storyboard / Short-Form Video</option>
                       <option value="carousel">Carousel Slide Deck</option>
@@ -370,13 +370,13 @@ export function ExportPreviewModal({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    <label className="block text-xs font-semibold text-[#F2F0F7] mb-1.5">
                       Platform Channel
                     </label>
                     <select
                       value={targetPlatform}
                       onChange={(e) => setTargetPlatform(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-input bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     >
                       <option value="instagram">Instagram</option>
                       <option value="tiktok">TikTok</option>
@@ -390,25 +390,25 @@ export function ExportPreviewModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    <label className="block text-xs font-semibold text-[#F2F0F7] mb-1.5">
                       Planned Due Date
                     </label>
                     <input
                       type="date"
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-input bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    <label className="block text-xs font-semibold text-[#F2F0F7] mb-1.5">
                       Production Assignee
                     </label>
                     <select
                       value={assigneeId}
                       onChange={(e) => setAssigneeId(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-input bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     >
                       <option value="">(Unassigned - Team Pool)</option>
                       {teamMembers.map((member) => (
@@ -422,32 +422,32 @@ export function ExportPreviewModal({
               </div>
 
               {/* Task Preview Card */}
-              <div className="p-3.5 rounded-xl border border-border/80 bg-muted/30 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <Film className="w-3.5 h-3.5 text-primary" />
+              <div className="p-3.5 rounded-xl border border-[#30303D] bg-[#20202A] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#F2F0F7]">
+                  <Film className="w-3.5 h-3.5 text-[#A78BFA]" />
                   <span>Production Task Preview</span>
                 </div>
-                <div className="text-xs text-muted-foreground space-y-1">
+                <div className="text-xs text-[#A3A0B0] space-y-1">
                   <div>
-                    <span className="font-medium text-foreground">Title: </span>
+                    <span className="font-medium text-[#F2F0F7]">Title: </span>
                     Produce: {deliverableName || "Untitled"}
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Type: </span>
-                    creative_production &bull; <span className="font-medium text-foreground">Status: </span>
-                    To Do &bull; <span className="font-medium text-foreground">Priority: </span>
+                    <span className="font-medium text-[#F2F0F7]">Type: </span>
+                    creative_production &bull; <span className="font-medium text-[#F2F0F7]">Status: </span>
+                    To Do &bull; <span className="font-medium text-[#F2F0F7]">Priority: </span>
                     Medium
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Production Notes: </span>
+                    <span className="font-medium text-[#F2F0F7]">Production Notes: </span>
                     {taskNotesPreview}
                   </div>
                 </div>
               </div>
 
               {/* Footer controls */}
-              <div className="flex items-center justify-between pt-3 border-t border-border">
-                <span className="text-[11px] text-muted-foreground font-mono">
+              <div className="flex items-center justify-between pt-3 border-t border-[#30303D]">
+                <span className="text-[11px] text-[#A3A0B0] font-mono">
                   Key: {idempotencyKey.substring(0, 16)}...
                 </span>
 
@@ -455,14 +455,14 @@ export function ExportPreviewModal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2 rounded-xl border border-border hover:bg-muted text-foreground font-medium text-xs transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-xl border border-[#30303D] hover:bg-[#20202A] text-[#F2F0F7] font-medium text-xs transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isExporting || !isApproved || !deliverableName.trim()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     {isExporting ? (
                       <>

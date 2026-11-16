@@ -222,12 +222,12 @@ export function DeliverableEditorModal({
         current.day_number,
         {
           instruction: instructionToSend,
-          current_deliverable: current as Record<string, unknown>,
+          current_deliverable: current as unknown as Record<string, unknown>,
         },
         token
       );
 
-      const revised = res.revised_deliverable as DeliverableItem;
+      const revised = res.revised_deliverable as unknown as DeliverableItem;
       setCurrent({
         ...current,
         title: revised.title || current.title,
@@ -303,23 +303,23 @@ export function DeliverableEditorModal({
       ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-6xl h-[92vh] bg-card border border-border/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-6xl h-[92vh] bg-[#17171E] border border-[#30303D] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* ── Modal Top Header ── */}
-        <div className="px-5 py-3.5 border-b border-border/60 bg-muted/30 flex items-center justify-between gap-3 shrink-0">
+        <div className="px-5 py-3.5 border-b border-[#30303D] bg-[#101014]/60 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25 shrink-0">
+            <div className="p-2 rounded-xl bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/25 shrink-0">
               {isReel ? <Film className="w-5 h-5" /> : <Layers2 className="w-5 h-5" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wide border border-primary/20">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#A78BFA]/15 text-[#A78BFA] uppercase tracking-wide border border-[#A78BFA]/30">
                   Day {current.day_number}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground uppercase border border-border">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#20202A] text-[#A3A0B0] uppercase border border-[#30303D]">
                   {current.platform}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground uppercase border border-border">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#20202A] text-[#A3A0B0] uppercase border border-[#30303D]">
                   {current.deliverable_type}
                 </span>
               </div>
@@ -327,7 +327,7 @@ export function DeliverableEditorModal({
                 type="text"
                 value={current.title || ""}
                 onChange={(e) => setCurrent({ ...current, title: e.target.value })}
-                className="font-bold text-sm text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-hidden px-0.5 py-0.5 mt-0.5 w-full max-w-md truncate"
+                className="font-bold text-sm text-[#F2F0F7] bg-transparent border-b border-transparent hover:border-[#30303D] focus:border-[#A78BFA] focus:outline-hidden px-0.5 py-0.5 mt-0.5 w-full max-w-md truncate"
                 placeholder="Deliverable Title"
               />
             </div>
@@ -337,7 +337,7 @@ export function DeliverableEditorModal({
             {history.length > 0 && (
               <button
                 onClick={handleUndo}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#30303D] bg-[#20202A] hover:bg-[#262630] text-xs text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer transition-all"
                 title="Undo last change"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -347,7 +347,7 @@ export function DeliverableEditorModal({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all"
+              className="p-1.5 rounded-lg text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] cursor-pointer transition-all"
             >
               <X className="w-5 h-5" />
             </button>
@@ -356,13 +356,13 @@ export function DeliverableEditorModal({
 
         {/* ── Status Banners ── */}
         {errorMsg && (
-          <div className="px-5 py-2 bg-rose-500/10 border-b border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2 shrink-0">
+          <div className="px-5 py-2 bg-[#E16F7B]/10 border-b border-[#E16F7B]/20 text-[#E16F7B] text-xs flex items-center gap-2 shrink-0">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
         {successMsg && (
-          <div className="px-5 py-2 bg-emerald-500/10 border-b border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 shrink-0">
+          <div className="px-5 py-2 bg-[#45B88A]/10 border-b border-[#45B88A]/20 text-[#45B88A] text-xs flex items-center gap-2 shrink-0">
             <Check className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
           </div>
@@ -508,14 +508,14 @@ export function DeliverableEditorModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Layers2 className="w-4 h-4 text-indigo-500" />
-                    <h3 className="font-bold text-xs uppercase tracking-wide text-foreground">
+                    <Layers2 className="w-4 h-4 text-[#A78BFA]" />
+                    <h3 className="font-bold text-xs uppercase tracking-wide text-[#F2F0F7]">
                       Carousel Slide Deck ({current.carousel_slides?.length || 0} Slides)
                     </h3>
                   </div>
                   <button
                     onClick={handleAddSlide}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold cursor-pointer transition-all"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] text-xs font-semibold cursor-pointer transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Slide</span>
@@ -526,11 +526,11 @@ export function DeliverableEditorModal({
                   {(current.carousel_slides || []).map((slide, idx) => (
                     <div
                       key={slide.slide_number || idx}
-                      className="p-3.5 rounded-xl border border-border/80 bg-card hover:border-indigo-500/40 transition-all shadow-2xs space-y-2.5 text-xs"
+                      className="p-3.5 rounded-xl border border-[#30303D] bg-[#20202A] hover:border-[#A78BFA]/40 transition-all shadow-2xs space-y-2.5 text-xs"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-foreground flex items-center gap-1.5">
-                          <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] flex items-center justify-center border border-indigo-500/30">
+                        <span className="font-bold text-[#F2F0F7] flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-[#A78BFA]/20 text-[#A78BFA] font-bold text-[10px] flex items-center justify-center border border-[#A78BFA]/30">
                             {slide.slide_number || idx + 1}
                           </span>
                           <span>Slide {slide.slide_number || idx + 1}</span>
@@ -538,7 +538,7 @@ export function DeliverableEditorModal({
                         {(current.carousel_slides?.length || 0) > 1 && (
                           <button
                             onClick={() => handleDeleteSlide(idx)}
-                            className="text-muted-foreground hover:text-rose-500 p-1 rounded hover:bg-rose-500/10 cursor-pointer transition-all"
+                            className="text-[#A3A0B0] hover:text-[#E16F7B] p-1 rounded hover:bg-[#E16F7B]/10 cursor-pointer transition-all"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -549,14 +549,14 @@ export function DeliverableEditorModal({
                         type="text"
                         value={slide.headline}
                         onChange={(e) => handleSlideChange(idx, "headline", e.target.value)}
-                        className="w-full font-semibold text-xs p-1.5 rounded-lg bg-muted/40 border border-border text-foreground"
+                        className="w-full font-semibold text-xs p-2 rounded-lg bg-[#101014] border border-[#30303D] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA]"
                         placeholder="Slide Headline"
                       />
                       <textarea
                         value={slide.body_copy}
                         onChange={(e) => handleSlideChange(idx, "body_copy", e.target.value)}
                         rows={2}
-                        className="w-full text-xs p-2 rounded-lg bg-muted/30 border border-border text-foreground resize-none"
+                        className="w-full text-xs p-2.5 rounded-lg bg-[#101014] border border-[#30303D] text-[#F2F0F7] resize-none focus:outline-hidden focus:border-[#A78BFA]"
                         placeholder="Slide Body Copy"
                       />
                     </div>
@@ -566,22 +566,22 @@ export function DeliverableEditorModal({
             )}
 
             {/* Caption & Call to Action */}
-            <div className="p-3.5 rounded-xl bg-card border border-border shadow-2xs space-y-3">
+            <div className="p-3.5 rounded-xl bg-[#20202A] border border-[#30303D] shadow-2xs space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                <label className="text-[11px] font-bold text-[#A3A0B0] uppercase tracking-wide">
                   Social Media Caption
                 </label>
                 <textarea
                   value={current.caption || ""}
                   onChange={(e) => setCurrent({ ...current, caption: e.target.value })}
                   rows={3}
-                  className="w-full text-xs p-2.5 rounded-lg bg-muted/40 border border-border text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary leading-relaxed resize-none"
+                  className="w-full text-xs p-2.5 rounded-lg bg-[#101014] border border-[#30303D] text-[#F2F0F7] focus:outline-hidden focus:ring-1 focus:ring-[#A78BFA] leading-relaxed resize-none"
                   placeholder="Post caption text..."
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                <label className="text-[11px] font-bold text-[#A3A0B0] uppercase tracking-wide">
                   Call to Action (CTA)
                 </label>
                 <input
@@ -594,7 +594,7 @@ export function DeliverableEditorModal({
                       call_to_action: e.target.value,
                     })
                   }
-                  className="w-full text-xs p-2 rounded-lg bg-muted/40 border border-border text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                  className="w-full text-xs p-2 rounded-lg bg-[#101014] border border-[#30303D] text-[#F2F0F7] focus:outline-hidden focus:ring-1 focus:ring-[#A78BFA]"
                   placeholder="e.g. Reserve your table via link in bio"
                 />
               </div>
@@ -602,21 +602,21 @@ export function DeliverableEditorModal({
           </div>
 
           {/* Right Column: Content Architect Scriptwriter AI Copilot (5 Cols) */}
-          <div className="lg:col-span-5 flex flex-col bg-muted/20 p-4 sm:p-5 space-y-4 overflow-y-auto">
+          <div className="lg:col-span-5 flex flex-col bg-[#101014] p-4 sm:p-5 space-y-4 overflow-y-auto">
             {/* AI Agent Header Card */}
-            <div className="p-3.5 rounded-xl bg-gradient-to-br from-purple-500/10 via-card to-indigo-500/10 border border-purple-500/30 shadow-xs space-y-2">
+            <div className="p-3.5 rounded-xl bg-[#17171E] border border-[#30303D] shadow-xs space-y-2">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                <div className="p-1.5 rounded-lg bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30">
                   <Wand2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                  <h4 className="font-bold text-xs text-[#F2F0F7] flex items-center gap-1.5">
                     <span>Scriptwriter & Content Architect AI</span>
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 uppercase">
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30 uppercase">
                       Specialist
                     </span>
                   </h4>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[11px] text-[#A3A0B0]">
                     Surgically revise scene beats, hooks, or timing in natural language.
                   </p>
                 </div>
@@ -625,18 +625,18 @@ export function DeliverableEditorModal({
 
             {/* AI Explanation / Activity Banner */}
             {aiExplanation && (
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 text-xs text-foreground space-y-1">
-                <div className="font-bold text-purple-600 dark:text-purple-400 text-[11px] flex items-center gap-1">
+              <div className="p-3 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/25 text-xs text-[#F2F0F7] space-y-1">
+                <div className="font-bold text-[#A78BFA] text-[11px] flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>AI Revision Summary</span>
                 </div>
-                <p className="leading-relaxed text-muted-foreground">{aiExplanation}</p>
+                <p className="leading-relaxed text-[#A3A0B0]">{aiExplanation}</p>
               </div>
             )}
 
             {/* Quick Inspiration Pills */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0]">
                 Quick Prompts
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -645,7 +645,7 @@ export function DeliverableEditorModal({
                     key={i}
                     onClick={() => handleReviseAI(p)}
                     disabled={isRevisingAI}
-                    className="text-left text-[11px] px-2.5 py-1 rounded-lg bg-card hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-50"
+                    className="text-left text-[11px] px-2.5 py-1 rounded-lg bg-[#17171E] hover:bg-[#20202A] border border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7] transition-all cursor-pointer disabled:opacity-50"
                   >
                     {p}
                   </button>
@@ -654,9 +654,9 @@ export function DeliverableEditorModal({
             </div>
 
             {/* Custom AI Instruction Bar */}
-            <div className="space-y-2 mt-auto pt-3 border-t border-border/50">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-primary" />
+            <div className="space-y-2 mt-auto pt-3 border-t border-[#30303D]">
+              <label className="text-xs font-semibold text-[#F2F0F7] flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-[#A78BFA]" />
                 <span>Tell the Scriptwriter what to change</span>
               </label>
               <textarea
@@ -664,18 +664,18 @@ export function DeliverableEditorModal({
                 onChange={(e) => setAiInstruction(e.target.value)}
                 rows={3}
                 disabled={isRevisingAI}
-                className="w-full text-xs p-3 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-hidden focus:ring-1 focus:ring-purple-500 leading-relaxed resize-none disabled:opacity-50"
+                className="w-full text-xs p-3 rounded-xl bg-[#17171E] border border-[#30303D] text-[#F2F0F7] placeholder:text-[#A3A0B0]/60 focus:outline-hidden focus:ring-1 focus:ring-[#A78BFA] leading-relaxed resize-none disabled:opacity-50"
                 placeholder='e.g., "I don&apos;t like scene 2. Make it focus on slow cooking in the clay oven, extend scene 3 to 15 seconds, and make the hook bolder."'
               />
 
               <button
                 onClick={() => handleReviseAI()}
                 disabled={!aiInstruction.trim() || isRevisingAI}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-rose-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isRevisingAI ? (
                   <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-[#101014]/30 border-t-[#101014] rounded-full animate-spin" />
                     <span>Scriptwriter is rewriting scenes...</span>
                   </>
                 ) : (
@@ -690,8 +690,8 @@ export function DeliverableEditorModal({
         </div>
 
         {/* ── Modal Footer ── */}
-        <div className="px-5 py-3 border-t border-border/60 bg-muted/30 flex items-center justify-between gap-3 shrink-0">
-          <p className="text-[11px] text-muted-foreground hidden sm:block">
+        <div className="px-5 py-3 border-t border-[#30303D] bg-[#101014]/60 flex items-center justify-between gap-3 shrink-0">
+          <p className="text-[11px] text-[#A3A0B0] hidden sm:block">
             💾 Changes will only update <strong>Day {current.day_number}</strong>. All other days in this campaign stay intact.
           </p>
 
@@ -699,7 +699,7 @@ export function DeliverableEditorModal({
             <button
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-1.5 rounded-lg border border-border hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer transition-all disabled:opacity-50"
+              className="px-4 py-1.5 rounded-lg border border-[#30303D] hover:bg-[#20202A] text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer transition-all disabled:opacity-50"
             >
               Cancel
             </button>
@@ -707,7 +707,7 @@ export function DeliverableEditorModal({
             <button
               onClick={handleSaveToPlan}
               disabled={isSaving}
-              className="px-5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all disabled:opacity-50"
+              className="px-5 py-1.5 rounded-lg bg-[#45B88A] hover:bg-[#45B88A]/90 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all disabled:opacity-50"
             >
               {isSaving ? (
                 <>
