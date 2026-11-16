@@ -1129,22 +1129,27 @@ function CampaignStudioContent() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.25rem)] w-full mx-auto px-2 sm:px-4 py-2 overflow-hidden bg-[#101014] text-[#F2F0F7]">
+    <div className="flex flex-col h-[calc(100vh-4.25rem)] w-full mx-auto px-2 sm:px-4 py-2 overflow-hidden bg-[#101014] text-[#F2F0F7] ambient-glow">
       {/* ── 1. Consolidated Sleek Header ── */}
-      <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-[#30303D] shrink-0">
+      <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-white/[0.08] shrink-0">
         {/* Left: Studio Brand & Client Selector */}
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 flex items-center justify-center shadow-[0_0_12px_rgba(167,139,250,0.2)]">
               <Sparkles className="w-4 h-4" />
             </div>
-            <span className="text-sm font-bold tracking-tight text-[#F2F0F7] hidden sm:inline">
-              Campaign Studio
-            </span>
+            <div>
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#A78BFA] block text-[9px] -mb-0.5">
+                Flagship Studio
+              </span>
+              <span className="text-sm font-semibold tracking-tight text-[#F2F0F7] hidden sm:inline">
+                Campaign Studio
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-[#17171E] hover:bg-[#20202A] px-2.5 py-1 rounded-lg border border-[#30303D] transition-colors">
-            <Building2 className="w-3.5 h-3.5 text-[#A3A0B0] shrink-0" />
+          <div className="flex items-center gap-1.5 surface-card px-2.5 py-1 rounded-lg transition-colors">
+            <Building2 className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
@@ -1160,13 +1165,13 @@ function CampaignStudioContent() {
         </div>
 
         {/* Center: Clean Segmented Mode Toggle */}
-        <div className="flex items-center p-0.5 bg-[#17171E] rounded-lg border border-[#30303D]">
+        <div className="flex items-center p-0.5 bg-[#101014] rounded-lg border border-white/[0.08]">
           <button
             type="button"
             onClick={() => setStudioMode("workflow")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
               studioMode === "workflow"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] shadow-xs"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs"
                 : "text-[#A3A0B0] hover:text-[#F2F0F7]"
             }`}
           >
@@ -1176,14 +1181,14 @@ function CampaignStudioContent() {
           <button
             type="button"
             onClick={() => setStudioMode("specialists")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
               studioMode === "specialists"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] shadow-xs"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs"
                 : "text-[#A3A0B0] hover:text-[#F2F0F7]"
             }`}
           >
             <Bot className="w-3.5 h-3.5 text-[#69A9D8]" />
-            <span>Specialists</span>
+            <span>Specialists (6)</span>
           </button>
         </div>
 
@@ -1194,10 +1199,10 @@ function CampaignStudioContent() {
             type="button"
             onClick={() => setIsLeftNavOpen((prev) => !prev)}
             title={isLeftNavOpen ? "Collapse Navigation" : "Expand Navigation"}
-            className={`hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
+            className={`hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
               isLeftNavOpen
-                ? "bg-[#20202A] border-[#30303D] text-[#F2F0F7]"
-                : "bg-transparent border-[#30303D]/60 text-[#A3A0B0] hover:text-[#F2F0F7]"
+                ? "surface-card text-[#F2F0F7]"
+                : "bg-transparent border-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7]"
             }`}
           >
             {isLeftNavOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
@@ -1209,10 +1214,10 @@ function CampaignStudioContent() {
             type="button"
             onClick={() => setIsRightIntelOpen((prev) => !prev)}
             title={isRightIntelOpen ? "Collapse Intelligence" : "Expand Intelligence"}
-            className={`hidden lg:flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
+            className={`hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
               isRightIntelOpen
-                ? "bg-[#20202A] border-[#30303D] text-[#F2F0F7]"
-                : "bg-transparent border-[#30303D]/60 text-[#A3A0B0] hover:text-[#F2F0F7]"
+                ? "surface-card text-[#F2F0F7]"
+                : "bg-transparent border-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7]"
             }`}
           >
             {isRightIntelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
@@ -1224,7 +1229,7 @@ function CampaignStudioContent() {
             type="button"
             onClick={() => setChatFilter((prev) => (prev === "all" ? "active" : "all"))}
             title={chatFilter === "all" ? "Filter to active agent only" : "Show all agents"}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg bg-[#17171E] hover:bg-[#20202A] border border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg surface-card text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
           >
             <MessagesSquare className="w-3 h-3 text-[#A78BFA]" />
             <span className="font-mono text-[11px]">
@@ -1236,7 +1241,7 @@ function CampaignStudioContent() {
           <button
             onClick={handleResetChat}
             title="Start fresh conversation"
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg hover:bg-white/[0.04] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline text-[11px]">Reset</span>
@@ -1245,7 +1250,7 @@ function CampaignStudioContent() {
           {/* Campaign Plans Link */}
           <Link
             href={selectedClientId ? `/campaign-plans?clientId=${selectedClientId}` : "/campaign-plans"}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#20202A] hover:bg-[#262630] text-[#F2F0F7] border border-[#30303D] transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg surface-card hover:bg-white/[0.04] text-[#F2F0F7] transition-colors"
           >
             <CalendarDays className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span className="hidden md:inline text-[11px]">Plans</span>
@@ -1291,19 +1296,19 @@ function CampaignStudioContent() {
         {/* ── LEFT REGION: Campaign Navigation & Workflow Stages ── */}
         {(isLeftNavOpen || mobileTab === "nav") && (
           <aside
-            className={`w-full lg:w-64 xl:w-72 shrink-0 flex flex-col h-full bg-[#17171E] border border-[#30303D] rounded-xl overflow-hidden ${
+            className={`w-full lg:w-64 xl:w-72 shrink-0 flex flex-col h-full surface-card rounded-2xl border border-white/[0.08] overflow-hidden ${
               mobileTab === "nav" ? "flex" : "hidden lg:flex"
             }`}
           >
             {/* Sprint Timeline Header Card */}
-            <div className="p-3 border-b border-[#30303D] bg-[#101014]/50 space-y-2 shrink-0">
+            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 space-y-2 shrink-0">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1">
-                  <CalendarDays className="w-3 h-3 text-[#A78BFA]" />
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5 text-[#A78BFA]" />
                   <span>Sprint Timeline</span>
                 </span>
                 {durationDays && durationDays > 0 ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 shadow-[0_0_8px_rgba(167,139,250,0.15)]">
                     {durationDays} Days
                   </span>
                 ) : (
@@ -1311,14 +1316,14 @@ function CampaignStudioContent() {
                 )}
               </div>
 
-              <div className="flex items-center gap-1 bg-[#17171E] px-2 py-1 rounded-lg border border-[#30303D]">
+              <div className="flex items-center gap-1 bg-[#101014] px-2.5 py-1.5 rounded-lg border border-white/[0.08] shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => handleDateChange(e.target.value, endDate)}
                   className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-full"
                 />
-                <span className="text-[#A3A0B0] text-[10px]">→</span>
+                <span className="text-[#A3A0B0] text-[10px] px-1 font-mono">→</span>
                 <input
                   type="date"
                   value={endDate}
@@ -1330,10 +1335,13 @@ function CampaignStudioContent() {
             </div>
 
             {/* Workflow Stages Vertical List */}
-            <div className="p-3 border-b border-[#30303D] space-y-2 shrink-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] block px-1">
-                Workflow Stages
-              </span>
+            <div className="p-3 border-b border-white/[0.06] space-y-2 shrink-0">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
+                  Workflow Stages
+                </span>
+                <span className="text-[9px] font-mono text-[#A3A0B0]/70">6 Steps</span>
+              </div>
               <div className="space-y-1">
                 {WORKFLOW_STAGES.map((stage) => {
                   const Icon = stage.icon;
@@ -1366,17 +1374,24 @@ function CampaignStudioContent() {
                           setIsExportModalOpen(true);
                         }
                       }}
-                      className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-all text-left cursor-pointer ${
+                      className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-all text-left cursor-pointer group ${
                         isCurrent
-                          ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-semibold"
-                          : "hover:bg-[#20202A]/50 text-[#A3A0B0] hover:text-[#F2F0F7] border border-transparent"
+                          ? "bg-white/[0.08] text-[#F2F0F7] border border-white/[0.12] shadow-xs font-semibold"
+                          : "hover:bg-white/[0.03] text-[#A3A0B0] hover:text-[#F2F0F7] border border-transparent"
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? "text-[#A78BFA]" : "text-[#A3A0B0]"}`} />
+                        {isCurrent ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] shadow-[0_0_8px_rgba(167,139,250,0.8)] shrink-0" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-transparent border border-white/[0.2] shrink-0 group-hover:border-white/[0.4]" />
+                        )}
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? "text-[#A78BFA]" : "text-[#A3A0B0] group-hover:text-[#F2F0F7]"}`} />
                         <span className="truncate">{stage.name}</span>
                       </div>
-                      <span className="font-mono text-[10px] text-[#A3A0B0] shrink-0">{stage.step}</span>
+                      <span className={`font-mono text-[10px] shrink-0 ${isCurrent ? "text-[#A78BFA] font-bold" : "text-[#A3A0B0]"}`}>
+                        {stage.step}
+                      </span>
                     </button>
                   );
                 })}
@@ -1386,18 +1401,19 @@ function CampaignStudioContent() {
             {/* Campaign Artifacts Stream */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
               <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
                   Campaign Artifacts
                 </span>
-                <span className="text-[10px] font-mono text-[#A78BFA]">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
                   {studioArtifacts.length}
                 </span>
               </div>
 
               {studioArtifacts.length === 0 ? (
-                <div className="p-3 rounded-lg bg-[#20202A]/40 border border-[#30303D]/60 text-center text-xs text-[#A3A0B0]">
-                  <FileText className="w-4 h-4 mx-auto mb-1 text-[#A3A0B0]/60" />
-                  <p className="text-[11px]">No artifacts generated yet</p>
+                <div className="p-4 rounded-xl bg-[#101014]/40 border border-white/[0.06] text-center text-xs text-[#A3A0B0] space-y-1">
+                  <FileText className="w-4 h-4 mx-auto text-[#A3A0B0]/50" />
+                  <p className="text-[11px] font-medium text-[#F2F0F7]/80">No artifacts generated</p>
+                  <p className="text-[10px] text-[#A3A0B0]">Run the multi-agent engine to draft scripts & decks</p>
                 </div>
               ) : (
                 <div className="space-y-1.5">
@@ -1411,23 +1427,24 @@ function CampaignStudioContent() {
                           handleViewOnCanvas(art);
                           setMobileTab("canvas");
                         }}
-                        className={`w-full p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer space-y-1 ${
+                        className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer space-y-1.5 ${
                           isActive
-                            ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-xs"
-                            : "bg-[#101014]/40 hover:bg-[#20202A] border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7]"
+                            ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-[0_0_12px_rgba(167,139,250,0.15)]"
+                            : "surface-card surface-card-hover border-white/[0.06] hover:border-white/[0.12] text-[#A3A0B0] hover:text-[#F2F0F7]"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#101014] text-[#A78BFA] border border-[#30303D]">
+                          <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
                             v{art.version}
                           </span>
                           <span
-                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full border ${
+                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${
                               art.status === "approved" || art.status === "exported"
                                 ? "bg-[#45B88A]/15 text-[#45B88A] border-[#45B88A]/30"
-                                : "bg-[#20202A] text-[#A3A0B0] border-[#30303D]"
+                                : "bg-white/[0.04] text-[#A3A0B0] border-white/[0.08]"
                             }`}
                           >
+                            <span className={`w-1 h-1 rounded-full ${art.status === "approved" || art.status === "exported" ? "bg-[#45B88A]" : "bg-[#A3A0B0]"}`} />
                             {art.status}
                           </span>
                         </div>
@@ -1442,9 +1459,9 @@ function CampaignStudioContent() {
             </div>
 
             {/* Specialist Switcher Strip */}
-            <div className="p-2.5 border-t border-[#30303D] bg-[#101014]/40 shrink-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] block px-1 mb-1.5">
-                Specialist Agents
+            <div className="p-2.5 border-t border-white/[0.06] bg-[#101014]/60 shrink-0">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] block px-1 mb-1.5">
+                Specialist Roster
               </span>
               <div className="grid grid-cols-2 gap-1 text-[11px]">
                 {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => (
@@ -1455,10 +1472,10 @@ function CampaignStudioContent() {
                       setActiveSpecialistId(agent.id);
                       setStudioMode("specialists");
                     }}
-                    className={`px-2 py-1 rounded text-left truncate transition-colors cursor-pointer border ${
+                    className={`px-2 py-1 rounded-md text-left truncate transition-colors cursor-pointer border ${
                       activeSpecialistId === agent.id && studioMode === "specialists"
-                        ? "bg-[#20202A] text-[#F2F0F7] border-[#A78BFA]/50 font-bold"
-                        : "bg-transparent text-[#A3A0B0] hover:text-[#F2F0F7] border-transparent"
+                        ? "bg-white/[0.08] text-[#F2F0F7] border-[#A78BFA]/50 font-semibold shadow-xs"
+                        : "bg-transparent text-[#A3A0B0] hover:text-[#F2F0F7] border-transparent hover:bg-white/[0.03]"
                     }`}
                   >
                     {agent.shortName}
@@ -1471,7 +1488,7 @@ function CampaignStudioContent() {
 
         {/* ── CENTRE REGION: Primary Creative Workspace & Canvas ── */}
         <main
-          className={`flex-1 min-w-0 flex flex-col h-full bg-[#101014] border border-[#30303D] rounded-xl overflow-hidden shadow-xs ${
+          className={`flex-1 min-w-0 flex flex-col h-full bg-[#101014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xs ${
             mobileTab === "canvas" ? "flex" : "hidden lg:flex"
           }`}
         >
@@ -1494,16 +1511,16 @@ function CampaignStudioContent() {
         {/* ── RIGHT REGION: Contextual Intelligence & Agent Stream ── */}
         {(isRightIntelOpen || mobileTab === "intel") && (
           <aside
-            className={`w-full lg:w-80 xl:w-96 shrink-0 flex flex-col h-full bg-[#17171E] border border-[#30303D] rounded-xl overflow-hidden ${
+            className={`w-full lg:w-80 xl:w-96 shrink-0 flex flex-col h-full surface-card rounded-2xl border border-white/[0.08] overflow-hidden ${
               mobileTab === "intel" ? "flex" : "hidden lg:flex"
             }`}
           >
             {/* 6-Agent Execution Status Roster */}
-            <div className="p-3 border-b border-[#30303D] bg-[#101014]/50 shrink-0 space-y-2">
+            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
                   <Bot className="w-3.5 h-3.5 text-[#A78BFA]" />
-                  <span>Agent Intelligence (6 Agents)</span>
+                  <span>Agent Matrix (6 Synced)</span>
                 </span>
                 <span className="text-[10px] font-mono text-[#A3A0B0]">
                   {isPipelineRunning ? (
@@ -1511,12 +1528,14 @@ function CampaignStudioContent() {
                       <Loader2 className="w-3 h-3 animate-spin" /> Engine Active
                     </span>
                   ) : (
-                    "Ready"
+                    <span className="text-[#45B88A] flex items-center gap-1 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] inline-block" /> Ready
+                    </span>
                   )}
                 </span>
               </div>
 
-              {/* 6 Agents Micro Matrix */}
+              {/* 6 Agents Micro Matrix with LED Diodes */}
               <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { id: "brand_intelligence", name: "Brand Intel", icon: ShieldCheck },
@@ -1531,19 +1550,26 @@ function CampaignStudioContent() {
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center justify-between p-1.5 rounded-lg border text-[10.5px] ${
+                      className={`flex items-center justify-between p-1.5 rounded-lg border text-[10.5px] transition-all ${
                         stat.state === "running"
-                          ? "bg-[#A78BFA]/10 border-[#A78BFA]/30 text-[#A78BFA] animate-pulse"
+                          ? "bg-[#A78BFA]/10 border-[#A78BFA]/40 text-[#A78BFA] shadow-[0_0_8px_rgba(167,139,250,0.2)]"
                           : stat.state === "completed"
                           ? "bg-[#45B88A]/10 border-[#45B88A]/30 text-[#45B88A]"
-                          : "bg-[#17171E] border-[#30303D] text-[#A3A0B0]"
+                          : "bg-[#101014] border-white/[0.06] text-[#A3A0B0]"
                       }`}
                     >
                       <div className="flex items-center gap-1.5 truncate">
+                        {stat.state === "running" ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-ping shrink-0" />
+                        ) : stat.state === "completed" ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] shrink-0" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#6E6D7A] shrink-0" />
+                        )}
                         <Icon className="w-3 h-3 shrink-0" />
                         <span className="truncate">{item.name}</span>
                       </div>
-                      <span className="text-[9px] font-mono uppercase shrink-0">
+                      <span className="text-[9px] font-mono uppercase shrink-0 font-medium">
                         {stat.label}
                       </span>
                     </div>
@@ -1567,7 +1593,7 @@ function CampaignStudioContent() {
                   >
                     {!isUser && (
                       <div
-                        className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 mt-0.5 bg-[#20202A] text-[#A78BFA] border-[#30303D]`}
+                        className="w-6 h-6 rounded-full border border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 bg-[#20202A] text-[#A78BFA] shadow-xs"
                         title={agentInfo.name}
                       >
                         <AgentIcon className="w-3 h-3" />
@@ -1577,7 +1603,7 @@ function CampaignStudioContent() {
                     <div className="max-w-[88%] space-y-1">
                       {!isUser && (
                         <div className="flex items-center gap-1.5 pl-1">
-                          <span className="text-[10px] font-bold text-[#A78BFA]">
+                          <span className="text-[10px] font-bold text-[#A78BFA] tracking-tight">
                             {msg.agent_name || agentInfo.name}
                           </span>
                         </div>
@@ -1585,7 +1611,7 @@ function CampaignStudioContent() {
 
                       {/* Streaming status pill */}
                       {msg.streamingStatus && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[11px] text-[#A78BFA] animate-pulse mb-1 w-fit">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[11px] text-[#A78BFA] animate-pulse mb-1 w-fit shadow-[0_0_8px_rgba(167,139,250,0.15)]">
                           <Loader2 className="w-3 h-3 animate-spin shrink-0" />
                           <span>{msg.streamingStatus}</span>
                         </div>
@@ -1593,10 +1619,10 @@ function CampaignStudioContent() {
 
                       {/* Message Bubble */}
                       <div
-                        className={`px-3 py-2 rounded-xl text-xs leading-relaxed ${
+                        className={`px-3.5 py-2.5 rounded-xl text-xs leading-relaxed ${
                           isUser
-                            ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] rounded-br-none"
-                            : "bg-[#101014] text-[#F2F0F7] border border-[#30303D] rounded-bl-none"
+                            ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.08] rounded-br-xs shadow-xs"
+                            : "surface-card text-[#F2F0F7] border border-white/[0.08] rounded-bl-xs shadow-xs"
                         }`}
                       >
                         <div className="whitespace-pre-wrap">
@@ -1621,10 +1647,10 @@ function CampaignStudioContent() {
                             return (
                               <div
                                 key={i}
-                                className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border w-fit max-w-full truncate ${
+                                className={`flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-md border w-fit max-w-full truncate ${
                                   isPending
                                     ? "bg-[#E5AA58]/10 border-[#E5AA58]/30 text-[#E5AA58] animate-pulse"
-                                    : "bg-[#20202A] border-[#30303D] text-[#A3A0B0]"
+                                    : "bg-[#101014] border-white/[0.06] text-[#A3A0B0]"
                                 }`}
                               >
                                 {isPending ? (
@@ -1649,19 +1675,19 @@ function CampaignStudioContent() {
                           }}
                           className={`flex items-center justify-between w-full p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
                             activeArtifact?.id === msg.artifact_summary.id
-                              ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7]"
-                              : "bg-[#101014] hover:bg-[#20202A] border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7]"
+                              ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-[0_0_12px_rgba(167,139,250,0.2)]"
+                              : "surface-card surface-card-hover border-white/[0.06] text-[#A3A0B0] hover:text-[#F2F0F7]"
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#20202A] text-[#A78BFA] border border-[#30303D]">
+                            <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
                               v{msg.artifact_summary.version}
                             </span>
                             <span className="font-medium text-[11px] truncate text-[#F2F0F7]">
                               {msg.artifact_summary.title}
                             </span>
                           </div>
-                          <span className="text-[10px] text-[#A78BFA] font-mono shrink-0 flex items-center gap-0.5">
+                          <span className="text-[10px] text-[#A78BFA] font-mono shrink-0 flex items-center gap-1 font-semibold">
                             Canvas →
                           </span>
                         </button>
@@ -1669,9 +1695,9 @@ function CampaignStudioContent() {
 
                       {/* Inline Agent Pipeline Progress Card */}
                       {msg.agentPipeline && (
-                        <div className="rounded-xl border border-[#30303D] bg-[#101014] p-3 space-y-2.5">
-                          <div className="flex items-center justify-between pb-1.5 border-b border-[#30303D]">
-                            <span className="font-bold text-xs text-[#F2F0F7]">
+                        <div className="rounded-xl border border-white/[0.08] surface-card p-3 space-y-2.5 shadow-xs">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
+                            <span className="font-semibold text-xs text-[#F2F0F7] tracking-tight">
                               {msg.agentPipeline.status === "in_progress"
                                 ? "Multi-Agent Engine Running..."
                                 : msg.agentPipeline.status === "completed"
@@ -1697,7 +1723,7 @@ function CampaignStudioContent() {
                               return (
                                 <div
                                   key={step.id}
-                                  className={`flex items-center gap-2 p-1.5 rounded-lg text-xs ${
+                                  className={`flex items-center gap-2 p-1.5 rounded-lg text-xs transition-colors ${
                                     isActive
                                       ? "bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[#F2F0F7]"
                                       : isDone
@@ -1724,7 +1750,7 @@ function CampaignStudioContent() {
                     </div>
 
                     {isUser && (
-                      <div className="w-6 h-6 rounded-full bg-[#20202A] text-[#A78BFA] border border-[#30303D] flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-6 h-6 rounded-full bg-[#20202A] text-[#A78BFA] border border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                         <User className="w-3 h-3" />
                       </div>
                     )}
@@ -1736,15 +1762,15 @@ function CampaignStudioContent() {
             </div>
 
             {/* Prompt Starters */}
-            <div className="p-2 border-t border-[#30303D] bg-[#101014]/40 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-              <span className="text-[10px] font-bold text-[#A3A0B0] shrink-0 flex items-center gap-1">
+            <div className="p-2 border-t border-white/[0.06] bg-[#101014]/60 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+              <span className="text-[10px] font-mono text-[#A3A0B0] shrink-0 flex items-center gap-1 px-1">
                 <Flame className="w-3 h-3 text-[#E5AA58]" />
               </span>
               {currentAgent.starters.map((starter, i) => (
                 <button
                   key={i}
                   onClick={() => handleSendMessage(starter)}
-                  className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] transition-colors shrink-0 whitespace-nowrap cursor-pointer"
+                  className="text-[11px] px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/[0.12] text-[#F2F0F7] transition-all shrink-0 whitespace-nowrap cursor-pointer shadow-2xs"
                 >
                   {starter}
                 </button>
@@ -1753,7 +1779,7 @@ function CampaignStudioContent() {
 
             {/* Strategy Evolving Bar & Generate Action */}
             {(suggestedObjective || isReadyToGenerate) && (
-              <div className="p-2.5 bg-[#A78BFA]/10 border-t border-[#A78BFA]/20 flex items-center justify-between gap-2 shrink-0 text-xs">
+              <div className="p-2.5 bg-[#A78BFA]/10 border-t border-[#A78BFA]/20 flex items-center justify-between gap-2 shrink-0 text-xs shadow-inner">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Sparkles className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
                   <p className="text-[11px] text-[#F2F0F7] truncate font-medium">
@@ -1763,7 +1789,7 @@ function CampaignStudioContent() {
                 <button
                   onClick={handleRunPipeline}
                   disabled={isPipelineRunning}
-                  className="flex items-center gap-1 px-3 py-1 rounded-md bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-[11px] shadow-xs cursor-pointer shrink-0 transition-all disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-[11px] shadow-[0_1px_8px_rgba(167,139,250,0.3)] cursor-pointer shrink-0 transition-all disabled:opacity-50"
                 >
                   {isPipelineRunning ? (
                     <>
@@ -1780,8 +1806,8 @@ function CampaignStudioContent() {
               </div>
             )}
 
-            {/* Input Box Footer */}
-            <footer className="p-2.5 border-t border-[#30303D] bg-[#101014]/60 shrink-0">
+            {/* Input Box Footer (Raycast-Style Floating Command Bar) */}
+            <footer className="p-2.5 border-t border-white/[0.06] bg-[#101014]/70 shrink-0">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1802,22 +1828,21 @@ function CampaignStudioContent() {
                       ? `${currentAgent.name} is thinking...`
                       : `Message ${currentAgent.shortName}...`
                   }
-                  className="w-full bg-[#101014] border border-[#30303D] rounded-xl px-3.5 py-2 pr-16 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/60 focus:outline-none focus:border-[#A78BFA] disabled:opacity-50 transition-all"
+                  className="w-full bg-[#101014] border border-white/[0.08] focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 rounded-xl px-3.5 py-2.5 pr-20 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/60 focus:outline-none disabled:opacity-50 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
                   autoFocus
                 />
 
-                <div className="absolute right-1.5 flex items-center gap-1">
+                <div className="absolute right-2 flex items-center gap-1.5">
+                  <span className="kbd-pill hidden sm:inline-flex text-[10px]">↵</span>
                   <button
                     type="submit"
                     disabled={!chatInput.trim() || isChatLoading || isPipelineRunning}
-                    className="px-2.5 py-1 rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-xs flex items-center gap-1 disabled:opacity-40 transition-opacity cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs flex items-center gap-1 disabled:opacity-40 transition-opacity cursor-pointer shadow-[0_1px_6px_rgba(167,139,250,0.3)]"
                   >
                     {isChatLoading ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
-                      <>
-                        <Send className="w-3 h-3" />
-                      </>
+                      <Send className="w-3 h-3" />
                     )}
                   </button>
                 </div>

@@ -33,7 +33,9 @@ export default function AgencyLayout({
       </div>
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
         <div className="print:hidden">
-          <Header />
+          <Suspense fallback={null}>
+            <Header />
+          </Suspense>
         </div>
         <div className="flex-1 overflow-y-auto relative print:overflow-visible bg-[#101014]">
           {(!isLoading && user?.is_client) && (

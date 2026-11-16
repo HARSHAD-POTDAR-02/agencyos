@@ -522,20 +522,22 @@ function ClientWorkspaceContent() {
   return (
     <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Breadcrumb & Navigation */}
-      <div className="flex items-center gap-2 text-xs font-medium text-[#6E6D7A]">
-        <Link href="/clients" className="hover:text-[#A78BFA] flex items-center gap-1 transition-colors">
+      <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
+        <Link href="/clients" className="hover:text-[#A78BFA] flex items-center gap-1.5 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Clients</span>
         </Link>
-        <span>/</span>
+        <span className="text-white/[0.2]">/</span>
         <span className="text-[#F2F0F7] font-semibold">{client.business_name}</span>
       </div>
 
-      {/* Client Header Card */}
-      <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 shadow-2xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Client Header Card with Arc Spatial Identity */}
+      <div className="surface-card rounded-2xl border border-white/[0.08] p-5 shadow-xs relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-40 bg-[radial-gradient(ellipse_at_top_right,rgba(167,139,250,0.1),transparent_70%)] pointer-events-none" />
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-lg bg-[#20202A] border border-[#30303D] text-[#F2F0F7] font-bold text-lg flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#262630] to-[#17171E] border border-white/[0.1] text-[#F2F0F7] font-mono font-bold text-lg flex items-center justify-center shrink-0 shadow-inner">
               {client.business_name.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -545,7 +547,7 @@ function ClientWorkspaceContent() {
                   value={client.status}
                   disabled={updatingStatus}
                   onChange={(e) => handleUpdateStatus(e.target.value as Client["status"])}
-                  className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border cursor-pointer focus:outline-none bg-[#20202A] text-[#F2F0F7] border-[#30303D]"
+                  className="text-[10px] font-mono font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-md border cursor-pointer focus:outline-none bg-[#101014] text-[#F2F0F7] border-white/[0.1]"
                   title="Click to change client status"
                 >
                   <option value="onboarding">🔵 Onboarding</option>
@@ -554,24 +556,29 @@ function ClientWorkspaceContent() {
                   <option value="offboarded">⚪ Offboarded</option>
                 </select>
                 {isConfirmed && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[rgba(69,184,138,0.12)] text-[#45B88A] border border-[#45B88A]/20">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-[rgba(69,184,138,0.12)] text-[#45B88A] border border-[#45B88A]/20">
                     <ShieldCheck className="w-3 h-3" />
                     <span>Brand Locked</span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#A3A0B0] font-normal mt-1">
-                {client.industry || "General Industry"} &bull; {client.location || "Location not set"}
+              <p className="text-xs text-[#A3A0B0] font-normal mt-1 flex items-center gap-2">
+                <span>{client.industry || "General Industry"}</span>
+                <span className="text-white/[0.2]">&bull;</span>
+                <span>{client.location || "Location not set"}</span>
                 {client.website && (
-                  <a
-                    href={client.website.startsWith("http") ? client.website : `https://${client.website}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 ml-3 text-[#A78BFA] hover:text-[#B69BFF] font-medium"
-                  >
-                    <span>Website</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  <>
+                    <span className="text-white/[0.2]">&bull;</span>
+                    <a
+                      href={client.website.startsWith("http") ? client.website : `https://${client.website}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[#A78BFA] hover:text-[#B69BFF] font-medium font-mono text-[11px]"
+                    >
+                      <span>Website</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </>
                 )}
               </p>
             </div>
@@ -580,7 +587,7 @@ function ClientWorkspaceContent() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#E16F7B] bg-[rgba(225,111,123,0.12)] hover:bg-[rgba(225,111,123,0.2)] border border-[#E16F7B]/30 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[#E16F7B] bg-[rgba(225,111,123,0.1)] hover:bg-[rgba(225,111,123,0.18)] border border-[#E16F7B]/30 transition-all cursor-pointer"
               title="Permanently delete this client workspace"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -588,9 +595,9 @@ function ClientWorkspaceContent() {
             </button>
             <Link
               href={`/campaigns?clientId=${client.id}`}
-              className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all"
+              className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-all shadow-[0_1px_8px_rgba(167,139,250,0.3)]"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#101014]" />
               <span>AI Plan</span>
             </Link>
           </div>
@@ -598,7 +605,7 @@ function ClientWorkspaceContent() {
 
         {/* Offboarded Banner */}
         {client.status === "offboarded" && (
-          <div className="mt-4 p-3.5 rounded-lg bg-[#20202A] border border-[#30303D] flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="mt-4 p-3.5 rounded-xl bg-[#101014] border border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-[#A3A0B0]" />
@@ -612,13 +619,13 @@ function ClientWorkspaceContent() {
               <button
                 onClick={() => handleUpdateStatus("active")}
                 disabled={updatingStatus}
-                className="px-3 py-1 text-xs font-medium bg-[#17171E] border border-[#30303D] text-[#F2F0F7] hover:bg-[#262630] rounded-lg transition-all cursor-pointer"
+                className="px-3 py-1 text-xs font-medium bg-[#17171E] border border-white/[0.08] text-[#F2F0F7] hover:bg-[#262630] rounded-lg transition-all cursor-pointer"
               >
                 Reactivate Workspace
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-[#E16F7B] hover:bg-[#E16F7B]/90 text-white rounded-lg transition-all cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-[#E16F7B] hover:bg-[#E16F7B]/90 text-white rounded-lg transition-all cursor-pointer shadow-xs"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete</span>
@@ -629,7 +636,7 @@ function ClientWorkspaceContent() {
 
         {/* Onboarding Checklist Banner (shown while in onboarding) */}
         {client.status === "onboarding" && (
-          <div className="mt-4 p-3.5 rounded-lg bg-[#20202A] border border-[#30303D] flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="mt-4 p-3.5 rounded-xl bg-[#101014] border border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-inner">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#69A9D8]" />
@@ -643,16 +650,16 @@ function ClientWorkspaceContent() {
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
                   Profile Details
                 </span>
-                <span className={`flex items-center gap-1 font-medium ${isConfirmed ? "text-[#45B88A]" : "text-[#6E6D7A]"}`}>
-                  {isConfirmed ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#6E6D7A]" />}
+                <span className={`flex items-center gap-1 font-medium ${isConfirmed ? "text-[#45B88A]" : "text-[#A3A0B0]/60"}`}>
+                  {isConfirmed ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#A3A0B0]/60" />}
                   Brand Guidelines Locked
                 </span>
-                <span className={`flex items-center gap-1 font-medium ${contracts.length > 0 ? "text-[#45B88A]" : "text-[#6E6D7A]"}`}>
-                  {contracts.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#6E6D7A]" />}
+                <span className={`flex items-center gap-1 font-medium ${contracts.length > 0 ? "text-[#45B88A]" : "text-[#A3A0B0]/60"}`}>
+                  {contracts.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#A3A0B0]/60" />}
                   Contract & Quotas ({contracts.length})
                 </span>
-                <span className={`flex items-center gap-1 font-medium ${campaigns.length > 0 ? "text-[#45B88A]" : "text-[#6E6D7A]"}`}>
-                  {campaigns.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#6E6D7A]" />}
+                <span className={`flex items-center gap-1 font-medium ${campaigns.length > 0 ? "text-[#45B88A]" : "text-[#A3A0B0]/60"}`}>
+                  {campaigns.length > 0 ? <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" /> : <Clock className="w-3.5 h-3.5 text-[#A3A0B0]/60" />}
                   First Campaign ({campaigns.length})
                 </span>
               </div>
@@ -661,7 +668,7 @@ function ClientWorkspaceContent() {
             <button
               onClick={() => handleUpdateStatus("active")}
               disabled={updatingStatus}
-              className="inline-flex items-center justify-center gap-1.5 bg-[#45B88A] hover:bg-[#45B88A]/90 text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all shrink-0 cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 bg-[#45B88A] hover:bg-[#45B88A]/90 text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-[0_1px_8px_rgba(69,184,138,0.3)]"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Complete Onboarding</span>
@@ -670,13 +677,13 @@ function ClientWorkspaceContent() {
         )}
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1 mt-5 border-t border-[#30303D] pt-3 overflow-x-auto">
+        <div className="flex items-center gap-1 mt-5 border-t border-white/[0.08] pt-3 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab("brand")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTab === "brand"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs font-semibold"
+                : "text-[#A3A0B0] hover:bg-white/[0.04] hover:text-[#F2F0F7]"
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-[#A78BFA]" />
@@ -684,10 +691,10 @@ function ClientWorkspaceContent() {
           </button>
           <button
             onClick={() => setActiveTab("contracts")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTab === "contracts"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs font-semibold"
+                : "text-[#A3A0B0] hover:bg-white/[0.04] hover:text-[#F2F0F7]"
             }`}
           >
             <Layers className="w-3.5 h-3.5 text-[#69A9D8]" />
@@ -695,10 +702,10 @@ function ClientWorkspaceContent() {
           </button>
           <button
             onClick={() => setActiveTab("campaigns")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTab === "campaigns"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs font-semibold"
+                : "text-[#A3A0B0] hover:bg-white/[0.04] hover:text-[#F2F0F7]"
             }`}
           >
             <Calendar className="w-3.5 h-3.5 text-[#E5AA58]" />
@@ -706,10 +713,10 @@ function ClientWorkspaceContent() {
           </button>
           <button
             onClick={() => setActiveTab("reviewers")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTab === "reviewers"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs font-semibold"
+                : "text-[#A3A0B0] hover:bg-white/[0.04] hover:text-[#F2F0F7]"
             }`}
           >
             <UserCheck className="w-3.5 h-3.5 text-[#45B88A]" />
@@ -717,10 +724,10 @@ function ClientWorkspaceContent() {
           </button>
           <button
             onClick={() => setActiveTab("social")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTab === "social"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs font-semibold"
+                : "text-[#A3A0B0] hover:bg-white/[0.04] hover:text-[#F2F0F7]"
             }`}
           >
             <Share2 className="w-3.5 h-3.5 text-[#A78BFA]" />
@@ -731,10 +738,10 @@ function ClientWorkspaceContent() {
               setActiveTab("reports");
               fetchMonthlyReport();
             }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTab === "reports"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                : "text-[#6E6D7A] hover:bg-[#20202A]/50 hover:text-[#A3A0B0]"
+                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs font-semibold"
+                : "text-[#A3A0B0] hover:bg-white/[0.04] hover:text-[#F2F0F7]"
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5 text-[#69A9D8]" />

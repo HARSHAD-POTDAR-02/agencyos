@@ -18,7 +18,10 @@ import {
   Building2,
   Plus,
   Briefcase,
-  UserCheck
+  UserCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Command
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -42,6 +45,42 @@ export function Sidebar() {
   const [showAgencyModal, setShowAgencyModal] = useState(false);
   const [newAgencyName, setNewAgencyName] = useState("");
   const [creatingAgency, setCreatingAgency] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Load and persist sidebar collapse state
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("agencyos_sidebar_collapsed");
+      if (saved === "true") setIsCollapsed(true);
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("agencyos_sidebar_collapsed", String(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
+  // Keyboard shortcut: [ to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "[" && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleCollapsed();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const currentAgency = agencies.find((a) => a.agency_id === (activeAgencyId || effectiveAgencyId));
@@ -93,91 +132,115 @@ export function Sidebar() {
     };
   }, [fetchBadgeCounts]);
 
-  // Dynamic persona navigation based on logged-in role
-  const navigation = isSpecialist
+  // Grouped navigation structure (Linear / Arc reference)
+  const navGroups = isSpecialist
     ? [
         {
-          name: "My Tasks & Workbench",
-          href: "/tasks",
-          icon: CheckSquare,
-          badge: taskCount !== null ? String(taskCount) : null,
+          group: "My Workbench",
+          items: [
+            {
+              name: "Tasks",
+              href: "/tasks",
+              icon: CheckSquare,
+              badge: taskCount !== null ? String(taskCount) : null,
+            },
+            {
+              name: "My Workspace",
+              href: "/workspace",
+              icon: Briefcase,
+              badge: null,
+            },
+            {
+              name: "Approvals",
+              href: "/approvals",
+              icon: FileCheck2,
+              badge: approvalCount !== null ? String(approvalCount) : null,
+            },
+          ],
         },
         {
-          name: "My Workspace",
-          href: "/workspace",
-          icon: Briefcase,
-          badge: null,
-        },
-        {
-          name: "Campaign Plans & Briefs",
-          href: "/campaign-plans",
-          icon: CalendarDays,
-          badge: null,
-        },
-        {
-          name: "Review Submissions",
-          href: "/approvals",
-          icon: FileCheck2,
-          badge: approvalCount !== null ? String(approvalCount) : null,
+          group: "Campaigns & Briefs",
+          items: [
+            {
+              name: "Campaign Plans",
+              href: "/campaign-plans",
+              icon: CalendarDays,
+              badge: null,
+            },
+          ],
         },
       ]
     : [
         {
-          name: "Dashboard",
-          href: "/dashboard",
-          icon: LayoutDashboard,
-          badge: null,
+          group: "Operations",
+          items: [
+            {
+              name: "Dashboard",
+              href: "/dashboard",
+              icon: LayoutDashboard,
+              badge: null,
+            },
+            {
+              name: "Clients",
+              href: "/clients",
+              icon: Users,
+              badge: null,
+            },
+            {
+              name: "Tasks",
+              href: "/tasks",
+              icon: CheckSquare,
+              badge: taskCount !== null ? String(taskCount) : null,
+            },
+            {
+              name: "Approvals",
+              href: "/approvals",
+              icon: FileCheck2,
+              badge: approvalCount !== null ? String(approvalCount) : null,
+            },
+            {
+              name: "Team",
+              href: "/team",
+              icon: UserCheck,
+              badge: null,
+            },
+          ],
         },
         {
-          name: "Clients",
-          href: "/clients",
-          icon: Users,
-          badge: null,
+          group: "Creative Studio",
+          items: [
+            {
+              name: "Campaign Studio",
+              href: "/campaigns",
+              icon: Sparkles,
+              badge: "AI",
+            },
+            {
+              name: "Campaign Plans",
+              href: "/campaign-plans",
+              icon: CalendarDays,
+              badge: null,
+            },
+            {
+              name: "Reports & ROI",
+              href: "/reports",
+              icon: BarChart3,
+              badge: null,
+            },
+          ],
         },
         {
-          name: "Team & Specialists",
-          href: "/team",
-          icon: UserCheck,
-          badge: null,
-        },
-        {
-          name: "Campaign Studio",
-          href: "/campaigns",
-          icon: Sparkles,
-          badge: "AI",
-        },
-        {
-          name: "Campaign Plans",
-          href: "/campaign-plans",
-          icon: CalendarDays,
-          badge: null,
-        },
-        {
-          name: "My Workspace",
-          href: "/workspace",
-          icon: Briefcase,
-          badge: null,
-        },
-        {
-          name: "Tasks",
-          href: "/tasks",
-          icon: CheckSquare,
-          badge: taskCount !== null ? String(taskCount) : null,
-        },
-        {
-          name: "Approvals",
-          href: "/approvals",
-          icon: FileCheck2,
-          badge: approvalCount !== null ? String(approvalCount) : null,
-        },
-        {
-          name: "Analytics",
-          href: "/reports",
-          icon: BarChart3,
-          badge: null,
+          group: "Personal",
+          items: [
+            {
+              name: "My Workspace",
+              href: "/workspace",
+              icon: Briefcase,
+              badge: null,
+            },
+          ],
         },
       ];
-
 
   const handleCreateAgency = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,176 +263,162 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-[240px] shrink-0 bg-[#17171E] text-[#A3A0B0] border-r border-[#30303D] flex flex-col h-screen select-none relative z-30">
-      {/* Brand & Agency Selector */}
-      <div className="p-3 border-b border-[#30303D]">
-        <div className="flex items-center justify-between gap-2">
+    <aside 
+      className={cn(
+        "shrink-0 bg-[#17171E] text-[#A3A0B0] border-r border-white/[0.08] flex flex-col h-screen select-none relative z-30 transition-all duration-200 ease-in-out",
+        isCollapsed ? "w-[72px]" : "w-[240px]"
+      )}
+    >
+      {/* ── Brand & Workspace Context Header ── */}
+      <div className={cn("border-b border-white/[0.08] p-3 flex flex-col justify-center", isCollapsed ? "h-14 items-center px-2" : "h-14")}>
+        <div className="flex items-center justify-between gap-2 w-full">
+          {/* Agency Monogram & Identity */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-lg bg-[#20202A] border border-[#30303D] flex items-center justify-center shrink-0 shadow-xs">
-              <span className="text-[#A78BFA] font-bold text-xs tracking-wider">A</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#262630] to-[#17171E] border border-white/[0.1] shadow-inner flex items-center justify-center shrink-0">
+              <span className="text-[#A78BFA] font-bold text-xs tracking-wider font-mono">
+                {currentAgency?.agency_name?.charAt(0).toUpperCase() || "A"}
+              </span>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-[#F2F0F7] text-xs tracking-tight truncate">
-                  {currentAgency?.agency_name || "Select Workspace"}
-                </span>
-                <ShieldCheck className="w-3 h-3 text-[#A78BFA] shrink-0 opacity-80" />
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {isSpecialist ? (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
-                    {currentRole === "writer" ? "⚡ Scriptwriter" : currentRole === "editor" ? "🎬 Video Editor" : "🎨 Designer"}
+
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <span className="font-semibold text-[#F2F0F7] text-xs tracking-tight truncate">
+                    {currentAgency?.agency_name || "Workspace"}
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-white/[0.06] text-[#F2F0F7] border border-white/10">
-                    👑 {currentRole || "Owner"}
-                  </span>
-                )}
-                <span className="text-[10px] text-[#6C697D] font-mono">
-                  {isSpecialist ? "Ops" : "Exec"}
-                </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#A3A0B0] font-mono">
+                  <span>{isSpecialist ? currentRole : "Owner"}</span>
+                  <span className="text-white/[0.2]">&bull;</span>
+                  <span className="text-[#45B88A]">Online</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {!isSpecialist && (
-            <button
-              onClick={() => setShowAgencyModal(true)}
-              title="Create New Agency Workspace"
-              className="p-1 rounded-md bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Agency Switcher if multiple */}
-        {agencies.length > 1 && (
-          <div className="mt-2.5">
-            <select
-              value={activeAgencyId || ""}
-              onChange={(e) => setActiveAgencyId(e.target.value)}
-              className="w-full text-[11px] font-medium bg-[#101014] hover:bg-[#20202A] border border-[#30303D] rounded-lg py-1.5 px-2 text-[#F2F0F7] focus:outline-none focus:border-[#A78BFA] transition-colors"
-            >
-              {agencies.map((agency) => (
-                <option key={agency.agency_id} value={agency.agency_id} className="bg-[#17171E] text-[#F2F0F7]">
-                  {agency.agency_name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {agencies.length === 0 && !isSpecialist && (
+          {/* Collapse Toggle Trigger */}
           <button
-            onClick={() => setShowAgencyModal(true)}
-            className="mt-2.5 w-full py-1.5 px-2.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all"
+            onClick={toggleCollapsed}
+            title={isCollapsed ? "Expand Sidebar ([)" : "Collapse Sidebar ([)"}
+            className="p-1 rounded-md text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04] transition-colors cursor-pointer shrink-0"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create Agency Workspace</span>
+            {isCollapsed ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Navigation Group Header */}
-      <div className="px-3 pt-3.5 pb-1">
-        <p className="px-2 text-[10px] font-mono font-medium text-[#6C697D] uppercase tracking-wider flex items-center justify-between">
-          <span>{isSpecialist ? "Specialist Workbench" : "Agency Operations"}</span>
-          {isSpecialist && (
-            <span className="text-[9px] text-amber-400 font-mono font-semibold uppercase bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20">
-              Tasks
-            </span>
-          )}
-        </p>
-      </div>
+      {/* ── Grouped Navigation Links (Linear Style) ── */}
+      <nav className="flex-1 px-2 py-3 space-y-4 overflow-y-auto scrollbar-none">
+        {navGroups.map((grp) => (
+          <div key={grp.group} className="space-y-1">
+            {!isCollapsed && (
+              <p className="px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]/60">
+                {grp.group}
+              </p>
+            )}
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-2.5 space-y-0.5 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
+            <div className="space-y-0.5">
+              {grp.items.map((item) => {
+                const isActive =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname.startsWith(item.href);
+                const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors group relative",
-                isActive
-                  ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
-                  : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A]/60"
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon
-                  className={cn(
-                    "w-4 h-4 shrink-0 transition-colors",
-                    isActive ? "text-[#A78BFA]" : "text-[#6C697D] group-hover:text-[#A3A0B0]"
-                  )}
-                />
-                <span className="truncate">{item.name}</span>
-              </div>
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    title={isCollapsed ? item.name : undefined}
+                    className={cn(
+                      "flex items-center rounded-lg text-xs font-medium transition-all group relative cursor-pointer",
+                      isCollapsed 
+                        ? "justify-center p-2" 
+                        : "justify-between px-2.5 py-1.5",
+                      isActive
+                        ? "bg-white/[0.08] text-[#F2F0F7] font-semibold shadow-xs"
+                        : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.03]"
+                    )}
+                  >
+                    {/* Active Left Pill */}
+                    {isActive && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-[#A78BFA]" />
+                    )}
 
-              {item.badge && (
-                <span
-                  className={cn(
-                    "px-1.5 py-0.2 text-[10px] font-mono font-medium rounded tracking-wide transition-colors shrink-0",
-                    item.badge === "AI"
-                      ? "bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20"
-                      : item.name === "Approvals" && Number(item.badge) > 0
-                      ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                      : "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
-                  )}
-                >
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon
+                        className={cn(
+                          "w-4 h-4 shrink-0 transition-colors",
+                          isActive ? "text-[#A78BFA]" : "text-[#A3A0B0] group-hover:text-[#F2F0F7]"
+                        )}
+                      />
+                      {!isCollapsed && (
+                        <span className="truncate">{item.name}</span>
+                      )}
+                    </div>
+
+                    {!isCollapsed && item.badge && (
+                      <span
+                        className={cn(
+                          "px-1.5 py-0.2 text-[9px] font-mono font-bold rounded tracking-wide transition-colors shrink-0",
+                          item.badge === "AI"
+                            ? "bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30"
+                            : item.name === "Approvals" && Number(item.badge) > 0
+                            ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                            : "bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08]"
+                        )}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Compact Contextual AI Studio Entry (Linear/Raycast style - replaces oversized promotional card) */}
-      {!isSpecialist && (
-        <div className="px-2.5 py-2 border-t border-[#30303D]">
+      {/* ── Compact AI Assistant Entry (Raycast Style) ── */}
+      {!isSpecialist && !isCollapsed && (
+        <div className="px-2.5 py-2 border-t border-white/[0.06] bg-[#101014]/40">
           <Link
             href="/campaigns"
-            className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-[#20202A]/70 hover:bg-[#20202A] border border-[#30303D] text-xs transition-colors group"
+            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg surface-card surface-card-hover border border-white/[0.08] text-xs transition-colors group cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
-              <span className="font-medium text-[#F2F0F7]">Campaign Studio</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+              <span className="font-semibold text-[#F2F0F7] truncate text-[11px]">AI Copilot</span>
             </div>
-            <span className="text-[10px] font-mono text-[#6C697D] group-hover:text-[#A3A0B0] bg-[#17171E] px-1.5 py-0.5 rounded border border-[#30303D]">
-              AI
-            </span>
+            <span className="kbd-pill text-[9px]">⌘P</span>
           </Link>
         </div>
       )}
 
-      {/* User profile & actions */}
-      <div className="p-2.5 border-t border-[#30303D] bg-[#14141A]">
+      {/* ── User Profile & Sign Out Footer ── */}
+      <div className={cn("border-t border-white/[0.08] bg-[#14141A]/60 p-2", isCollapsed ? "flex flex-col items-center" : "")}>
         {user ? (
-          <div className="flex items-center justify-between gap-2 p-1 rounded-lg hover:bg-[#20202A] transition-colors">
+          <div className={cn("flex items-center rounded-lg p-1 transition-colors w-full", isCollapsed ? "justify-center" : "justify-between gap-2 hover:bg-white/[0.03]")}>
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-[#20202A] border border-[#30303D] flex items-center justify-center text-[#F2F0F7] font-semibold text-xs shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#262630] to-[#17171E] border border-white/[0.1] shadow-inner flex items-center justify-center text-[#F2F0F7] font-semibold text-xs shrink-0 font-mono">
                 {user.full_name?.charAt(0).toUpperCase() || "A"}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-[#F2F0F7] truncate">{user.full_name}</p>
-                <p className="text-[10px] font-mono text-[#6C697D] truncate">{user.email}</p>
-              </div>
+              {!isCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-[#F2F0F7] truncate leading-tight">{user.full_name}</p>
+                  <p className="text-[10px] font-mono text-[#A3A0B0]/70 truncate">{user.email}</p>
+                </div>
+              )}
             </div>
-            <button
-              onClick={handleLogout}
-              title="Sign out"
-              className="p-1 text-[#6C697D] hover:text-[#E16F7B] hover:bg-[#E16F7B]/10 rounded-md transition-colors shrink-0"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+            {!isCollapsed && (
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                className="p-1 text-[#A3A0B0] hover:text-[#E16F7B] hover:bg-[#E16F7B]/10 rounded-md transition-colors shrink-0 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ) : (
           <Link
@@ -384,12 +433,12 @@ export function Sidebar() {
       {/* Create Agency Modal */}
       {showAgencyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#20202A] text-[#F2F0F7] rounded-2xl shadow-2xl max-w-sm w-full p-5 border border-[#30303D]">
+          <div className="surface-card text-[#F2F0F7] rounded-2xl shadow-2xl max-w-sm w-full p-5 border border-white/[0.1]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-[#F2F0F7]">Create Agency Workspace</h3>
               <button
                 onClick={() => setShowAgencyModal(false)}
-                className="text-[#6C697D] hover:text-[#F2F0F7] text-xs"
+                className="text-[#A3A0B0] hover:text-[#F2F0F7] text-xs cursor-pointer"
               >
                 ✕
               </button>
@@ -405,21 +454,21 @@ export function Sidebar() {
                   placeholder="e.g. Elevate Social"
                   value={newAgencyName}
                   onChange={(e) => setNewAgencyName(e.target.value)}
-                  className="w-full bg-[#17171E] border border-[#30303D] rounded-lg px-3 py-2 text-xs text-[#F2F0F7] placeholder:text-[#6C697D] focus:outline-none focus:border-[#A78BFA]"
+                  className="w-full bg-[#101014] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 focus:outline-none focus:border-[#A78BFA]/50"
                 />
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#30303D]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
                 <button
                   type="button"
                   onClick={() => setShowAgencyModal(false)}
-                  className="px-3 py-1.5 text-xs text-[#A3A0B0] hover:text-[#F2F0F7] font-medium"
+                  className="px-3 py-1.5 text-xs text-[#A3A0B0] hover:text-[#F2F0F7] font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingAgency}
-                  className="px-3.5 py-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-lg shadow-xs transition-all disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {creatingAgency ? "Creating..." : "Create Agency"}
                 </button>

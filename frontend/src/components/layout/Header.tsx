@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { 
   Search, 
   Bell, 
@@ -67,8 +67,24 @@ function formatRelativeTime(dateStr: string): string {
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
+  const currentAgency = agencies.find((a) => a.agency_id === (activeAgencyId || effectiveAgencyId));
+
+  const getPageTitle = (path: string) => {
+    if (path === "/dashboard") return "Dashboard";
+    if (path.startsWith("/clients")) return "Clients";
+    if (path.startsWith("/campaigns")) return "Campaign Studio";
+    if (path.startsWith("/campaign-plans")) return "Campaign Plans";
+    if (path.startsWith("/tasks")) return "Tasks";
+    if (path.startsWith("/approvals")) return "Approvals";
+    if (path.startsWith("/team")) return "Team";
+    if (path.startsWith("/reports")) return "Analytics";
+    if (path.startsWith("/workspace")) return "Workspace";
+    return "Operations";
+  };
+  const currentPageTitle = getPageTitle(pathname || "");
 
   // ──────────────────────────────────────────────
   // Period Selector State
@@ -306,52 +322,63 @@ export function Header() {
   ];
 
   return (
-    <header className="h-14 bg-[#17171E] border-b border-[#30303D] px-6 flex items-center justify-between shrink-0 relative z-30">
-      {/* ──────────────────────────────────────────────
-          Global Search Bar (Linear / Raycast Style)
-      ────────────────────────────────────────────── */}
-      <div ref={searchContainerRef} className="relative w-80 md:w-96">
-        <div className="relative w-full">
-          {isSearching ? (
-            <Loader2 className="w-4 h-4 text-[#A78BFA] animate-spin absolute left-3 top-1/2 -translate-y-1/2" />
-          ) : (
-            <Search className="w-4 h-4 text-[#6E6D7A] absolute left-3 top-1/2 -translate-y-1/2" />
-          )}
-
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchOpen(true)}
-            onKeyDown={handleSearchKeyDown}
-            placeholder="Search clients, deliverables, tasks..."
-            className="w-full bg-[#101014] hover:bg-[#13131A] focus:bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#6E6D7A] pl-9 pr-14 py-1.5 rounded-lg border border-[#30303D] focus:outline-none focus:border-[#A78BFA] transition-all"
-          />
-
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  searchInputRef.current?.focus();
-                }}
-                className="text-[#6E6D7A] hover:text-[#F2F0F7] p-0.5 rounded transition-colors"
-                title="Clear"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-            <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-mono font-medium text-[#A3A0B0] bg-[#20202A] border border-[#30303D] rounded">
-              ⌘K
-            </kbd>
-          </div>
+    <header className="h-14 bg-[#17171E] border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 relative z-30">
+      {/* ── Left: Breadcrumb & Workspace Spatial Context ── */}
+      <div className="flex items-center gap-2.5 min-w-0 shrink-0">
+        <div className="flex items-center gap-1.5 text-xs font-mono text-[#A3A0B0]">
+          <span className="text-[#A3A0B0]/60 hidden md:inline">Workspace</span>
+          <span className="text-white/[0.2] hidden md:inline">/</span>
+          <span className="text-[#F2F0F7] font-semibold truncate max-w-[110px] sm:max-w-[160px]">
+            {currentAgency?.agency_name || "Agency"}
+          </span>
+          <span className="text-white/[0.2]">/</span>
+          <span className="text-[#A78BFA] font-medium">{currentPageTitle}</span>
         </div>
+      </div>
+
+      {/* ── Global Search Bar (Linear / Raycast Style) ── */}
+        <div ref={searchContainerRef} className="relative w-48 sm:w-72 md:w-88">
+          <div className="relative w-full">
+            {isSearching ? (
+              <Loader2 className="w-3.5 h-3.5 text-[#A78BFA] animate-spin absolute left-3 top-1/2 -translate-y-1/2" />
+            ) : (
+              <Search className="w-3.5 h-3.5 text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2" />
+            )}
+
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchOpen(true)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search resources... (⌘K)"
+              className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-8.5 pr-14 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
+            />
+
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                  className="text-[#A3A0B0] hover:text-[#F2F0F7] p-0.5 rounded transition-colors cursor-pointer"
+                  title="Clear"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              <kbd className="hidden sm:inline-flex kbd-pill text-[9px]">
+                ⌘K
+              </kbd>
+            </div>
+          </div>
 
         {/* Global Search Results Dropdown */}
         {isSearchOpen && (
-          <div className="absolute left-0 top-full mt-2 w-[460px] max-w-[92vw] bg-[#17171E] rounded-xl shadow-2xl border border-[#30303D] overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute left-0 top-full mt-2 w-[460px] max-w-[92vw] surface-card rounded-2xl shadow-2xl border border-white/[0.1] overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
             {searchQuery.trim().length === 0 ? (
               // Empty search query: show quick shortcuts & recent
               <div className="p-3">
@@ -532,7 +559,7 @@ export function Header() {
 
           {/* Period Selection Popover */}
           {showPeriodModal && (
-            <div className="absolute right-0 mt-2 w-80 bg-[#17171E] rounded-xl shadow-2xl border border-[#30303D] p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute right-0 mt-2 w-80 surface-card rounded-2xl shadow-2xl border border-white/[0.1] p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="flex items-center justify-between pb-3 border-b border-[#30303D]">
                 <span className="text-xs font-semibold text-[#F2F0F7]">Period & Reporting</span>
                 <span className="text-[10px] text-[#6E6D7A]">Sprints & Delivery</span>
@@ -687,7 +714,7 @@ export function Header() {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-88 sm:w-96 bg-[#17171E] rounded-xl shadow-2xl border border-[#30303D] p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute right-0 mt-2 w-88 sm:w-96 surface-card rounded-2xl shadow-2xl border border-white/[0.1] p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="flex items-center justify-between pb-3 border-b border-[#30303D]">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-[#F2F0F7]">Activity Notifications</span>
