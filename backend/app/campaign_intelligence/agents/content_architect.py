@@ -18,7 +18,10 @@ from app.campaign_intelligence.schemas.deliverables import (
 )
 from app.campaign_intelligence.schemas.strategy import CampaignStrategy
 from app.campaign_intelligence.schemas.trace import AgentTelemetry
-from app.campaign_intelligence.tools.date_utils import extract_format_and_count_from_text
+from app.campaign_intelligence.tools.date_utils import (
+    extract_format_and_count_from_text,
+    extract_reel_duration_from_text,
+)
 from app.core.config import settings
 from app.core.llm import invoke_structured_llm
 
@@ -150,6 +153,23 @@ class ContentArchitectAgent:
             rev_items = "\n".join([f"  ! {item}" for item in revision_instructions])
             revision_section = f"\n### MANDATORY QUALITY REVISION INSTRUCTIONS (PREVIOUS DRAFT REJECTED):\n{rev_items}\nYou MUST strictly correct all of the above issues in this regenerated plan!\n"
 
+        # Extract requested video / reel duration from brief text or custom brief
+        text_for_duration = f"{brief.custom_brief or ''} {brief.objective or ''}"
+        reel_dur = extract_reel_duration_from_text(text_for_duration)
+        if reel_dur:
+            s_min, s_max = reel_dur
+            reel_dur_instruction = (
+                f"- TARGET VIDEO DURATION: EXACTLY {s_min} to {s_max} seconds!\n"
+                f"  * You MUST architect 4 to 7 distinct timestamped 'reel_scenes' spanning the entire {s_min}-{s_max} second length.\n"
+                f"  * Break down the narrative across sequential camera cuts (e.g. 0:00-0:03 Hook, 0:03-0:12 Context, 0:12-0:25 Demonstration, 0:25-0:38 Climax, 0:38-0:{s_max:02d} CTA Outro).\n"
+                f"  * The final scene MUST end at exactly 0:{s_max:02d}! NEVER output only 15-second scenes when the user explicitly requested {s_min}-{s_max} seconds!"
+            )
+        else:
+            reel_dur_instruction = (
+                "- Target Video Duration: 20-30 seconds standard.\n"
+                "- Must include 3-5 timestamped 'reel_scenes' (e.g. 0:00-0:03, 0:03-0:12, 0:12-0:25) detailing director action, on_screen_text, spoken voiceover, and B-roll."
+            )
+
         # 4. Construct Prompt for Content Architect
         prompt = f"""You are the Content Architect Agent for AgencyOS.
 Your job is to convert the approved Campaign Strategy into production-ready social media deliverables.
@@ -157,6 +177,7 @@ Your job is to convert the approved Campaign Strategy into production-ready soci
 ### CAMPAIGN STRATEGY & THEME
 - Campaign Theme: {strategy.campaign_theme}
 - Primary Objective: {strategy.primary_objective}
+- Client Instructions: {brief.custom_brief or 'None specified'}
 - Pacing: {strategy.pacing_and_cadence}
 {timeline_instruction}
 Strategic Angles:
@@ -178,7 +199,7 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
 ### PRODUCTION REQUIREMENTS PER FORMAT:
 1. REELS:
    - Must include 2-3 hook_options and 1 primary_hook (focused on 0-3s retention).
-   - Must include 3-5 timestamped 'reel_scenes' (e.g. 0:00-0:03, 0:03-0:10, etc.) detailing director action, on_screen_text, spoken voiceover, and B-roll.
+   {reel_dur_instruction}
    - Include audio_track_guidance and production_notes.
 2. CAROUSELS:
    - Must include 4-7 structured 'carousel_slides' (Slide 1: cover, Slides 2-5: content, Slide 6: takeaway/CTA).
@@ -274,11 +295,26 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
                             CarouselSlide(slide_number=2, headline="The Experience", body_copy="Authentic preparation and unforgettable taste.", visual_layout="Split highlight diagram", slide_type="content"),
                             CarouselSlide(slide_number=3, headline="Join Us Today", body_copy=cta, visual_layout="Bold CTA banner", slide_type="cta"),
                         ] if d_type == "carousel" else [],
-                        reel_scenes=[
-                            ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm lighting"),
-                            ReelScene(scene_number=2, timestamp_range="0:03 - 0:08", visual_action="Fast-paced kitchen / product showcase", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how we bring {strategy.campaign_theme} to life.", b_roll_notes="Action montage"),
-                            ReelScene(scene_number=3, timestamp_range="0:08 - 0:15", visual_action="Final table spread and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen"),
-                        ] if d_type == "reel" else [],
+                        reel_scenes=(
+                            [
+                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm dramatic lighting"),
+                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:12", visual_action="Behind-the-scenes authentic cooking and clay oven craft", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how our master chefs prepare {strategy.campaign_theme}.", b_roll_notes="Macro sizzle shots"),
+                                ReelScene(scene_number=3, timestamp_range="0:12 - 0:25", visual_action="Plating signature family feast and aromatic garnishing", on_screen_text="Signature Heritage Recipe", spoken_audio_or_voiceover="Fresh local spices ground daily for an unmatched flavour profile.", b_roll_notes="Slow motion steam rise"),
+                                ReelScene(scene_number=4, timestamp_range="0:25 - 0:38", visual_action="Dining experience and genuine reaction shot", on_screen_text="Unforgettable Dining Experience", spoken_audio_or_voiceover="Hearty portions designed to bring people together.", b_roll_notes="Warm ambient lighting"),
+                                ReelScene(scene_number=5, timestamp_range=f"0:38 - 0:{reel_dur[1]:02d}" if reel_dur[1] < 60 else "0:38 - 1:00", visual_action="Final table spread, location card, and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen with reservation handle"),
+                            ] if (reel_dur and reel_dur[1] >= 40) else
+                            [
+                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm lighting"),
+                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:14", visual_action="Dynamic kitchen action montage and sizzling dish reveal", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how we bring {strategy.campaign_theme} to life with authentic spices.", b_roll_notes="Action montage"),
+                                ReelScene(scene_number=3, timestamp_range="0:14 - 0:26", visual_action="Tasting shot with steam rising and table spread details", on_screen_text="Authentic Taste & Heritage", spoken_audio_or_voiceover="Slow-cooked perfection that turns every meal into a celebration.", b_roll_notes="Close-up bite"),
+                                ReelScene(scene_number=4, timestamp_range=f"0:26 - 0:{reel_dur[1]:02d}" if reel_dur else "0:26 - 0:30", visual_action="Final table spread and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen"),
+                            ] if (reel_dur and reel_dur[1] >= 25) else
+                            [
+                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm lighting"),
+                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:10", visual_action="Fast-paced kitchen / product showcase", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how we bring {strategy.campaign_theme} to life.", b_roll_notes="Action montage"),
+                                ReelScene(scene_number=3, timestamp_range=f"0:10 - 0:{reel_dur[1]:02d}" if reel_dur else "0:10 - 0:20", visual_action="Final table spread and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen"),
+                            ]
+                        ) if d_type == "reel" else [],
                     )
                     deliverables.append(synth_deliv)
 

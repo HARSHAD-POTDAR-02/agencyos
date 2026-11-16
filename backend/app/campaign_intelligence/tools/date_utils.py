@@ -239,3 +239,56 @@ def extract_format_and_count_from_text(text: str) -> tuple[list[str] | None, int
     return (formats if formats else None, extracted_count)
 
 
+def extract_reel_duration_from_text(text: str) -> tuple[int, int] | None:
+    """
+    Extracts requested reel / video duration from user prompt text.
+    Handles:
+    - '30 to 45 sec', '30 to 45 seconds', '30-45s', '30-45 sec' -> (30, 45)
+    - '45 to 60 sec', '45 to 60 seconds', '45-60s' -> (45, 60)
+    - '60 seconds', '60 sec', '60s' -> (60, 60)
+    - '1 minute', '2 min' -> (60, 60), (120, 120)
+    Returns (min_seconds, max_seconds) or None.
+    """
+    if not text:
+        return None
+
+    t = text.lower()
+
+    # 1. Range in seconds: "30 to 45 sec", "30-45s", "45 to 60 seconds", "30 - 45 secs"
+    range_match = re.search(
+        r"\b(\d+)\s*(?:to|-|–)\s*(\d+)\s*(?:seconds?|secs?|s)\b",
+        t,
+        re.IGNORECASE,
+    )
+    if range_match:
+        try:
+            s_min = int(range_match.group(1))
+            s_max = int(range_match.group(2))
+            if 5 <= s_min <= s_max <= 180:
+                return (s_min, s_max)
+        except ValueError:
+            pass
+
+    # 2. Single duration in minutes: "1 minute", "2 mins", "1.5 min"
+    min_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:minutes?|mins?)\b", t, re.IGNORECASE)
+    if min_match:
+        try:
+            val = float(min_match.group(1))
+            total_sec = max(5, min(180, int(val * 60)))
+            return (total_sec, total_sec)
+        except ValueError:
+            pass
+
+    # 3. Single duration in seconds: "60 seconds", "45 sec", "30s"
+    sec_match = re.search(r"\b(\d+)\s*(?:seconds?|secs?|s)\b", t, re.IGNORECASE)
+    if sec_match:
+        try:
+            s_val = int(sec_match.group(1))
+            if 5 <= s_val <= 180:
+                return (s_val, s_val)
+        except ValueError:
+            pass
+
+    return None
+
+
