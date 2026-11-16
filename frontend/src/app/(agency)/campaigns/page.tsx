@@ -513,6 +513,8 @@ function CampaignStudioContent() {
     setStartDate("");
     setEndDate("");
     setDurationDays(null);
+    setActiveCampaignId(null);
+    setActiveArtifact(null);
   };
 
   // Current active agent specification
@@ -679,6 +681,9 @@ function CampaignStudioContent() {
             );
           } else if (evt.type === "error") {
             const errorMsg = evt.error || "An error occurred while generating response.";
+            if (errorMsg.toLowerCase().includes("campaign not found")) {
+              setActiveCampaignId(null);
+            }
             setChatMessages((prev) =>
               prev.map((m) =>
                 m.id === aiMsgId
@@ -771,6 +776,9 @@ function CampaignStudioContent() {
         );
       } catch (err: any) {
         console.error("Chat brief fallback error:", err);
+        if (err?.message?.toLowerCase().includes("campaign not found")) {
+          setActiveCampaignId(null);
+        }
         const isNetworkErr = err?.message?.toLowerCase().includes("fetch") || err?.message?.toLowerCase().includes("network");
         const errorContent = isNetworkErr
           ? "Could not connect to the campaign server. Please check your network or server status and try again."

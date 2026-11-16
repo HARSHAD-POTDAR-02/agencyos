@@ -617,6 +617,7 @@ async def execute_chat_turn(
 
     # 2. Resolve Campaign & Studio Session (multi-tenant boundary)
     target_campaign_id = payload.campaign_id
+    campaign = None
     if target_campaign_id:
         camp_stmt = select(Campaign).where(
             Campaign.id == target_campaign_id,
@@ -625,11 +626,14 @@ async def execute_chat_turn(
         camp_res = await db.execute(camp_stmt)
         campaign = camp_res.scalars().first()
         if not campaign:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Campaign not found for this client.",
+            logger.warning(
+                "Stale or non-existent campaign_id %s passed for client %s. Gracefully falling back to client's latest campaign or new planning session.",
+                target_campaign_id,
+                client_id,
             )
-    else:
+            target_campaign_id = None
+
+    if not target_campaign_id:
         camp_stmt = (
             select(Campaign)
             .where(Campaign.client_id == client_id)
@@ -639,6 +643,7 @@ async def execute_chat_turn(
         existing_campaign = camp_res.scalars().first()
         if existing_campaign:
             target_campaign_id = existing_campaign.id
+            campaign = existing_campaign
         else:
             new_campaign = Campaign(
                 id=uuid.uuid4(),
@@ -651,6 +656,7 @@ async def execute_chat_turn(
             db.add(new_campaign)
             await db.flush()
             target_campaign_id = new_campaign.id
+            campaign = new_campaign
 
     session = await get_or_create_studio_session(
         db=db,
