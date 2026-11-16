@@ -1003,7 +1003,7 @@ function CampaignPlansContent() {
         onClose={() => setEditingDeliverable(null)}
         deliverable={editingDeliverable}
         campaignId={selectedCampaign?.id || ""}
-        clientId={selectedClientId}
+        clientId={selectedClientId || selectedCampaign?.client_id || ""}
         agencyId={effectiveAgencyId || ""}
         token={token || ""}
         onDeliverableUpdated={handleDeliverableUpdated}

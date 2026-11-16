@@ -95,10 +95,12 @@ export function DeliverableEditorModal({
   // Initialize editable state when deliverable opens
   useEffect(() => {
     if (deliverable) {
+      const dayNum = Number(deliverable.day_number || (deliverable as any).planned_day || 1);
       // Normalize deliverable fields
       const normalized: DeliverableItem = {
         ...deliverable,
-        title: deliverable.title || `Day ${deliverable.day_number} Deliverable`,
+        day_number: dayNum,
+        title: deliverable.title || `Day ${dayNum} Deliverable`,
         hook: deliverable.primary_hook || deliverable.hook || "",
         primary_hook: deliverable.primary_hook || deliverable.hook || "",
         caption: deliverable.caption || "",
@@ -202,6 +204,11 @@ export function DeliverableEditorModal({
     const instructionToSend = (customText || aiInstruction).trim();
     if (!instructionToSend || isRevisingAI) return;
 
+    if (!agencyId || !clientId || !campaignId || !token) {
+      setErrorMsg("Missing session or client context. Please refresh the page.");
+      return;
+    }
+
     setIsRevisingAI(true);
     setErrorMsg(null);
     setAiExplanation(null);
@@ -245,6 +252,12 @@ export function DeliverableEditorModal({
   // ── Save Changes to Plan Handler ──
   const handleSaveToPlan = async () => {
     if (isSaving) return;
+
+    if (!agencyId || !clientId || !campaignId || !token) {
+      setErrorMsg("Missing session or client context. Please refresh the page.");
+      return;
+    }
+
     setIsSaving(true);
     setErrorMsg(null);
 

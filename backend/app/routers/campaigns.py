@@ -1594,6 +1594,11 @@ async def revise_campaign_deliverable_ai(
     """
     client = await get_client_for_agency(client_id, agency_id, db)
     campaign = await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    if campaign.client_id != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign does not belong to client.",
+        )
 
     # Extract client brand profile for authentic voice & guardrails
     bp_stmt = (
@@ -1605,9 +1610,32 @@ async def revise_campaign_deliverable_ai(
     brand_profile = bp_res.scalars().first()
 
     brand_voice = brand_profile.brand_voice if brand_profile else "Professional, authentic, inviting"
-    tone_do = brand_profile.tone_examples.get("do", []) if (brand_profile and brand_profile.tone_examples) else []
-    tone_dont = brand_profile.tone_examples.get("dont", []) if (brand_profile and brand_profile.tone_examples) else []
-    prohibited_claims = brand_profile.prohibited_claims if brand_profile else []
+    
+    # Safely extract tone_examples (polymorphic: dict, list, str, or None)
+    raw_tone = brand_profile.tone_examples if brand_profile else None
+    if isinstance(raw_tone, dict):
+        tone_do = [str(x) for x in raw_tone.get("do", []) if x]
+        tone_dont = [str(x) for x in raw_tone.get("dont", []) if x]
+    elif isinstance(raw_tone, list):
+        tone_do = [str(x) for x in raw_tone if x]
+        tone_dont = []
+    elif isinstance(raw_tone, str):
+        tone_do = [raw_tone]
+        tone_dont = []
+    else:
+        tone_do = []
+        tone_dont = []
+
+    # Safely extract prohibited_claims (polymorphic: list, dict, str, or None)
+    raw_prohibited = brand_profile.prohibited_claims if brand_profile else []
+    if isinstance(raw_prohibited, list):
+        prohibited_claims = [str(x) for x in raw_prohibited if x]
+    elif isinstance(raw_prohibited, str):
+        prohibited_claims = [raw_prohibited]
+    elif isinstance(raw_prohibited, dict):
+        prohibited_claims = [str(x) for x in raw_prohibited.values() if x]
+    else:
+        prohibited_claims = []
 
     curr_deliv = dict(payload.current_deliverable)
     dtype = (curr_deliv.get("deliverable_type") or "reel").lower()
