@@ -654,7 +654,8 @@ async def execute_chat_turn(
                 period_year=ref_year,
             )
             db.add(new_campaign)
-            await db.flush()
+            await db.commit()
+            await db.refresh(new_campaign)
             target_campaign_id = new_campaign.id
             campaign = new_campaign
 

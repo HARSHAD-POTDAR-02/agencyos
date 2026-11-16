@@ -90,7 +90,8 @@ async def get_or_create_studio_session(
             title=f"Studio Session: {campaign.name}",
         )
         db.add(session)
-        await db.flush()
+        await db.commit()
+        await db.refresh(session)
 
     return session
 

@@ -35,7 +35,7 @@ engine_kwargs = {"echo": settings.APP_ENV == "development"}
 if not is_sqlite:
     engine_kwargs.update({"pool_pre_ping": True, "pool_size": 10, "max_overflow": 20})
 else:
-    engine_kwargs["connect_args"] = {"timeout": 30.0, "check_same_thread": False}
+    engine_kwargs["connect_args"] = {"timeout": 60.0, "check_same_thread": False}
 
 async_engine = create_async_engine(
     effective_db_url,
@@ -47,7 +47,8 @@ if is_sqlite:
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA busy_timeout=60000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
 AsyncSessionLocal = async_sessionmaker(
