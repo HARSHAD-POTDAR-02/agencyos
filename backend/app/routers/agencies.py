@@ -233,10 +233,11 @@ async def list_members(
     memberships = result.scalars().all()
     out: list[MembershipOut] = []
     for m in memberships:
+        if not m.user:
+            continue
         item = MembershipOut.model_validate(m)
-        if m.user:
-            item.user_full_name = m.user.full_name
-            item.user_email = m.user.email
+        item.user_full_name = m.user.full_name
+        item.user_email = m.user.email
         out.append(item)
     return out
 
