@@ -93,7 +93,7 @@ export default function TeamManagementPage() {
   const { user, token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const currentMembership = agencies.find((a) => a.agency_id === effectiveAgencyId);
-  const isManagerOrOwner = ["owner", "manager"].includes(currentMembership?.role || "");
+  const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(currentMembership?.role || "owner");
 
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [loading, setLoading] = useState(true);
