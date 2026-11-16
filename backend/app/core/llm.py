@@ -83,11 +83,31 @@ def _repair_truncated_json(raw: str) -> str:
     if in_string:
         repaired += '"'
 
-    open_braces = repaired.count("{") - repaired.count("}")
-    open_brackets = repaired.count("[") - repaired.count("]")
+    # If it ends with an unclosed colon (e.g. '"key":' or '"key": '), complete with null
+    repaired = re.sub(r':\s*$', ': null', repaired)
+    # Strip any trailing comma
+    repaired = re.sub(r',\s*$', '', repaired)
 
-    repaired += "]" * max(0, open_brackets)
-    repaired += "}" * max(0, open_braces)
+    stack = []
+    in_str = False
+    esc = False
+    for char in repaired:
+        if char == "\\" and not esc:
+            esc = True
+            continue
+        if char == '"' and not esc:
+            in_str = not in_str
+        elif not in_str:
+            if char in ("{", "["):
+                stack.append("}" if char == "{" else "]")
+            elif char in ("}", "]"):
+                if stack and stack[-1] == char:
+                    stack.pop()
+        esc = False
+
+    repaired += "".join(reversed(stack))
+    # Remove trailing commas right before closing brackets/braces
+    repaired = re.sub(r',\s*([}\]])', r'\1', repaired)
     return repaired
 
 
@@ -180,7 +200,20 @@ def extract_json_from_llm(raw_text: str) -> dict[str, Any] | list[Any]:
                 return json.loads(text[:exc.pos].strip(), strict=False)
             except Exception:
                 pass
-        return json.loads(_repair_truncated_json(text), strict=False)
+        try:
+            return json.loads(_repair_truncated_json(text), strict=False)
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        import ast
+        val = ast.literal_eval(text)
+        if isinstance(val, (dict, list)):
+            return val
+    except Exception:
+        pass
+
+    return json.loads(_repair_truncated_json(text), strict=False)
 
 
 def _is_transient_error(exc: Exception) -> bool:

@@ -1595,13 +1595,31 @@ async def delete_campaign(
     campaign = await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
 
     # Explicitly cascade delete deliverables and tasks for SQLite compatibility
+    from app.models.content_version import ContentVersion
+    from app.models.approval import Approval
+    from app.models.publication_job import PublicationJob
+    from app.models.studio_artifact import CampaignStudioSession, StudioArtifact, StudioExport
+
     deliv_res = await db.execute(
         select(Deliverable.id).where(Deliverable.campaign_id == campaign_id)
     )
     deliv_ids = list(deliv_res.scalars().all())
     if deliv_ids:
+        cv_res = await db.execute(
+            select(ContentVersion.id).where(ContentVersion.deliverable_id.in_(deliv_ids))
+        )
+        cv_ids = list(cv_res.scalars().all())
+        if cv_ids:
+            await db.execute(delete(Approval).where(Approval.content_version_id.in_(cv_ids)))
+            await db.execute(delete(PublicationJob).where(PublicationJob.content_version_id.in_(cv_ids)))
+            await db.execute(delete(ContentVersion).where(ContentVersion.id.in_(cv_ids)))
+
         await db.execute(delete(Task).where(Task.deliverable_id.in_(deliv_ids)))
         await db.execute(delete(Deliverable).where(Deliverable.campaign_id == campaign_id))
+
+    await db.execute(delete(StudioExport).where(StudioExport.campaign_id == campaign_id))
+    await db.execute(delete(StudioArtifact).where(StudioArtifact.campaign_id == campaign_id))
+    await db.execute(delete(CampaignStudioSession).where(CampaignStudioSession.campaign_id == campaign_id))
 
     await db.delete(campaign)
     await db.commit()

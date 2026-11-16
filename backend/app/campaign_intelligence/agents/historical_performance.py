@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.campaign_intelligence.orchestration.state import CampaignState
@@ -43,6 +43,33 @@ class PerformanceInterpretationOutput(BaseModel):
         default_factory=dict,
         description="Recommended format distribution (e.g. {'carousel': 4, 'reel': 2})"
     )
+
+    @field_validator("recommended_format_mix", mode="before")
+    @classmethod
+    def parse_format_mix(cls, v: Any) -> dict[str, int]:
+        if isinstance(v, dict):
+            res = {}
+            for k, val in v.items():
+                try:
+                    res[str(k)] = int(val)
+                except (ValueError, TypeError):
+                    pass
+            return res
+        if isinstance(v, str):
+            import ast, json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, dict):
+                    return {str(k): int(val) for k, val in parsed.items()}
+            except Exception:
+                pass
+            try:
+                parsed = ast.literal_eval(v)
+                if isinstance(parsed, dict):
+                    return {str(k): int(val) for k, val in parsed.items()}
+            except Exception:
+                pass
+        return {}
 
 
 class HistoricalPerformanceAgent:

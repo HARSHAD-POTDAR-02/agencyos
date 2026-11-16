@@ -52,8 +52,8 @@ class ContentVersion(Base):
     )
     uploaded_by: Mapped["User"] = relationship("User")  # noqa: F821
     approval: Mapped["Approval | None"] = relationship(  # noqa: F821
-        "Approval", back_populates="content_version", uselist=False
+        "Approval", back_populates="content_version", uselist=False, cascade="all, delete-orphan"
     )
     publication_jobs: Mapped[list["PublicationJob"]] = relationship(  # noqa: F821
-        "PublicationJob", back_populates="content_version"
+        "PublicationJob", back_populates="content_version", cascade="all, delete-orphan"
     )
