@@ -1,28 +1,32 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Users, 
-  UserPlus, 
-  ShieldCheck, 
-  Sparkles, 
-  Video, 
-  PenTool, 
-  Palette, 
-  Compass, 
-  Briefcase, 
-  CheckCircle2, 
-  AlertCircle, 
-  Trash2, 
-  Key, 
-  Mail, 
-  User, 
-  Clock, 
+import {
+  Users,
+  UserPlus,
+  ShieldCheck,
+  Sparkles,
+  Video,
+  PenTool,
+  Palette,
+  Compass,
+  Briefcase,
+  CheckCircle2,
+  AlertCircle,
+  Trash2,
+  Key,
+  Mail,
+  User,
+  Clock,
   Search,
   Check,
-  Copy
+  Copy,
+  X,
+  Layers,
+  Activity,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { agencyApi, taskApi } from "@/lib/api";
@@ -38,7 +42,10 @@ interface MemberItem {
   user_email?: string | null;
 }
 
-const ROLE_CONFIG: Record<string, { label: string; description: string; icon: any; color: string; bg: string }> = {
+const ROLE_CONFIG: Record<
+  string,
+  { label: string; description: string; icon: any; color: string; bg: string }
+> = {
   owner: {
     label: "Agency Owner",
     description: "Full control over agency, billing, and all client workspaces",
@@ -90,18 +97,37 @@ const ROLE_CONFIG: Record<string, { label: string; description: string; icon: an
   },
 };
 
+function getMonogram(name?: string | null, email?: string | null): string {
+  if (name && name.trim()) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.slice(0, 2).toUpperCase();
+  }
+  return "??";
+}
+
 export default function TeamManagementPage() {
   const router = useRouter();
   const { user, token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const currentMembership = agencies.find((a) => a.agency_id === effectiveAgencyId);
-  const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(currentMembership?.role || "owner");
+  const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(
+    currentMembership?.role || "owner"
+  );
 
   const [members, setMembers] = useState<MemberItem[]>([]);
+  const [taskCountsByMember, setTaskCountsByMember] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isLoading && isSpecialist) {
@@ -117,10 +143,14 @@ export default function TeamManagementPage() {
   const [password, setPassword] = useState("AgencyPass123!");
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; pass: string; role: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    pass: string;
+    role: string;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Load team members
+  // Load team members and active tasks workload
   const loadMembers = useCallback(async () => {
     if (!token || !effectiveAgencyId || isSpecialist) {
       setLoading(false);
@@ -131,6 +161,22 @@ export default function TeamManagementPage() {
     try {
       const data = (await agencyApi.listMembers(effectiveAgencyId, token)) as MemberItem[];
       setMembers(data || []);
+
+      // Fetch active task workload counts
+      try {
+        const taskList = (await taskApi.list(effectiveAgencyId, token, { limit: 200 })) as any[];
+        const counts: Record<string, number> = {};
+        if (Array.isArray(taskList)) {
+          taskList.forEach((t: any) => {
+            if (t.assignee_id && !["approved", "done"].includes(t.status)) {
+              counts[t.assignee_id] = (counts[t.assignee_id] || 0) + 1;
+            }
+          });
+        }
+        setTaskCountsByMember(counts);
+      } catch (e) {
+        // ignore task workload error
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to load agency members");
     } finally {
@@ -141,6 +187,46 @@ export default function TeamManagementPage() {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  // Keyboard navigation: '/' for search, ESC to clear/close, '1'..'6' for role filters, 'C' to open add modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || "").toLowerCase();
+      const isInput = activeTag === "input" || activeTag === "textarea" || activeTag === "select";
+
+      if (e.key === "/" && !isInput) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (showAddModal) {
+          setShowAddModal(false);
+        } else if (document.activeElement === searchInputRef.current) {
+          searchInputRef.current?.blur();
+        }
+        return;
+      }
+
+      if (!isInput) {
+        if (e.key === "1") setRoleFilter("all");
+        else if (e.key === "2") setRoleFilter("specialists");
+        else if (e.key === "3") setRoleFilter("management");
+        else if (e.key === "4") setRoleFilter("writer");
+        else if (e.key === "5") setRoleFilter("editor");
+        else if (e.key === "6") setRoleFilter("designer");
+        else if ((e.key === "c" || e.key === "C" || e.key === "a" || e.key === "A") && isManagerOrOwner) {
+          setModalError(null);
+          setCreatedCredentials(null);
+          setShowAddModal(true);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showAddModal, isManagerOrOwner]);
 
   // Handle Add Member
   const handleAddMember = async (e: React.FormEvent) => {
@@ -225,14 +311,19 @@ export default function TeamManagementPage() {
       if (!matchesSearch) return false;
       if (roleFilter === "all") return true;
       if (roleFilter === "specialists") return ["writer", "editor", "designer"].includes(m.role);
-      if (roleFilter === "management") return ["owner", "manager", "strategist", "account_manager"].includes(m.role);
+      if (roleFilter === "management")
+        return ["owner", "manager", "strategist", "account_manager"].includes(m.role);
       return m.role === roleFilter;
     });
   }, [members, searchQuery, roleFilter]);
 
   // Specialist counts
-  const specialistsCount = members.filter((m) => ["writer", "editor", "designer"].includes(m.role)).length;
-  const managersCount = members.filter((m) => ["owner", "manager", "strategist", "account_manager"].includes(m.role)).length;
+  const specialistsCount = members.filter((m) =>
+    ["writer", "editor", "designer"].includes(m.role)
+  ).length;
+  const managersCount = members.filter((m) =>
+    ["owner", "manager", "strategist", "account_manager"].includes(m.role)
+  ).length;
 
   if (!isLoading && isSpecialist) {
     return null;
@@ -263,15 +354,17 @@ export default function TeamManagementPage() {
               setCreatedCredentials(null);
               setShowAddModal(true);
             }}
+            title="Add specialist (Press C)"
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] rounded-xl text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Add Specialist</span>
+            <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#101014]">C</kbd>
           </button>
         )}
       </div>
 
-      {/* ── Editorial Telemetry Strip (Linear Style without oversized boxes) ── */}
+      {/* ── Linear 4-Segment Telemetry Strip ── */}
       <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/[0.06]">
         {/* Metric 1 */}
         <div className="flex flex-col justify-between pt-2 md:pt-0 md:px-3 first:px-0">
@@ -293,7 +386,9 @@ export default function TeamManagementPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{specialistsCount}</span>
-            <span className="text-[11px] text-[#69A9D8] font-mono font-medium">Writers, Editors & Designers</span>
+            <span className="text-[11px] text-[#69A9D8] font-mono font-medium">
+              Writers, Editors & Designers
+            </span>
           </div>
         </div>
 
@@ -305,7 +400,9 @@ export default function TeamManagementPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{managersCount}</span>
-            <span className="text-[11px] text-[#45B88A] font-mono font-medium">Supervision & Strategy</span>
+            <span className="text-[11px] text-[#45B88A] font-mono font-medium">
+              Supervision & Strategy
+            </span>
           </div>
         </div>
 
@@ -313,68 +410,98 @@ export default function TeamManagementPage() {
         <div className="flex flex-col justify-between pt-2 md:pt-0 md:px-4">
           <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
             <span>Auto-Routing</span>
-            <span className="w-2 h-2 rounded-full bg-[#45B88A] ring-2 ring-[#45B88A]/20" />
+            <span className="w-2 h-2 rounded-full bg-[#45B88A] ring-2 ring-[#45B88A]/20 animate-pulse" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xs font-semibold text-[#45B88A]">ACTIVE</span>
+            <span className="text-xs font-semibold text-[#45B88A] font-mono">ACTIVE</span>
             <span className="text-[11px] text-[#A3A0B0] font-mono">LangGraph pipeline sync</span>
           </div>
         </div>
       </div>
 
-      {/* ── Filter & Search Bar (Raycast / Linear Style) ── */}
+      {/* ── Filter & Search Toolstrip (Linear Style) ── */}
       <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
-        {/* Search Input */}
+        {/* Search Input with / Shortcut */}
         <div className="relative w-full md:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#A3A0B0]" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#A3A0B0] pointer-events-none" />
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Filter specialists by name or email..."
+            placeholder="Filter specialists... (Press / to focus)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#101014] border border-white/[0.08] rounded-lg pl-8.5 pr-3 py-1.5 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all"
+            className="w-full bg-[#101014] border border-white/[0.08] rounded-lg pl-8.5 pr-8 py-1.5 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all font-sans"
           />
+          {searchQuery ? (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#F2F0F7] cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono px-1 py-0.5 rounded bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08] pointer-events-none">
+              /
+            </kbd>
+          )}
         </div>
 
-        {/* Role Filters */}
+        {/* Role Filters with Count Pills */}
         <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto p-0.5">
           {[
-            { id: "all", label: "All Members" },
-            { id: "specialists", label: "Creative Specialists" },
-            { id: "management", label: "Management" },
-            { id: "writer", label: "Writers" },
-            { id: "editor", label: "Editors" },
-            { id: "designer", label: "Designers" },
+            { id: "all", label: "All Members", count: members.length },
+            { id: "specialists", label: "Specialists", count: specialistsCount },
+            { id: "management", label: "Management", count: managersCount },
+            {
+              id: "writer",
+              label: "Writers",
+              count: members.filter((m) => m.role === "writer").length,
+            },
+            {
+              id: "editor",
+              label: "Editors",
+              count: members.filter((m) => m.role === "editor").length,
+            },
+            {
+              id: "designer",
+              label: "Designers",
+              count: members.filter((m) => m.role === "designer").length,
+            },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setRoleFilter(tab.id)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                 roleFilter === tab.id
-                  ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs"
+                  ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs font-semibold"
                   : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.03]"
               }`}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              <span className="text-[10px] font-mono px-1 rounded bg-black/40 text-[#71717A]">
+                {tab.count}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Team Members Table (Linear Density 38px rows) ── */}
+      {/* ── Team Members Table (Linear Density 38-40px rows) ── */}
       <div className="surface-card rounded-2xl border border-white/[0.08] shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-[#A3A0B0] text-xs">
-            <div className="w-5 h-5 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            Loading agency members...
+          <div className="py-16 text-center text-[#A3A0B0] text-xs font-mono">
+            <RefreshCw className="w-5 h-5 text-[#A78BFA] animate-spin mx-auto mb-2" />
+            Loading agency members & active workloads...
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className="py-16 text-center space-y-3">
             <div className="w-10 h-10 rounded-xl bg-[#20202A] border border-white/[0.08] flex items-center justify-center mx-auto text-[#A3A0B0]">
               <Users className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-heading font-semibold text-[#F2F0F7]">No members match your criteria</h3>
-            <p className="text-[11px] text-[#A3A0B0] max-w-sm mx-auto">
+            <h3 className="text-xs font-heading font-semibold text-[#F2F0F7]">
+              No members match your criteria
+            </h3>
+            <p className="text-[11px] text-[#A3A0B0] max-w-sm mx-auto font-mono">
               Add your scriptwriter, video editor, or designer so AgencyOS can auto-route production tasks.
             </p>
             {isManagerOrOwner && (
@@ -383,7 +510,7 @@ export default function TeamManagementPage() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#A78BFA] text-[#101014] rounded-lg text-xs font-semibold hover:bg-[#B69BFF] transition-all shadow-xs cursor-pointer"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                Add Specialist
+                <span>Add Specialist</span>
               </button>
             )}
           </div>
@@ -394,6 +521,7 @@ export default function TeamManagementPage() {
                 <tr>
                   <th className="py-2.5 px-4 font-medium">Member</th>
                   <th className="py-2.5 px-4 font-medium">Role & Specialization</th>
+                  <th className="py-2.5 px-4 font-medium">Active Workload</th>
                   <th className="py-2.5 px-4 font-medium">Automatic Task Routing</th>
                   <th className="py-2.5 px-4 font-medium">Joined</th>
                   {isManagerOrOwner && <th className="py-2.5 px-4 text-right font-medium">Actions</th>}
@@ -410,6 +538,7 @@ export default function TeamManagementPage() {
                   };
                   const RoleIcon = roleMeta.icon;
                   const isSelf = user?.email === m.user_email;
+                  const activeTasks = taskCountsByMember[m.user_id] || 0;
 
                   return (
                     <tr key={m.id} className="hover:bg-white/[0.02] transition-colors group">
@@ -417,7 +546,7 @@ export default function TeamManagementPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-lg bg-[#20202A] border border-white/[0.08] flex items-center justify-center text-[#A78BFA] font-bold text-xs shrink-0 font-mono">
-                            {m.user_full_name?.charAt(0).toUpperCase() || m.user_email?.charAt(0).toUpperCase() || "U"}
+                            {getMonogram(m.user_full_name, m.user_email)}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
@@ -430,7 +559,9 @@ export default function TeamManagementPage() {
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-[#A3A0B0] font-mono truncate block">{m.user_email}</span>
+                            <span className="text-[10px] text-[#A3A0B0] font-mono truncate block">
+                              {m.user_email}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -442,7 +573,7 @@ export default function TeamManagementPage() {
                             <select
                               value={m.role}
                               onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                              className={`text-[11px] font-medium px-2 py-1 rounded-lg border border-white/[0.08] bg-[#101014] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50 ${roleMeta.color}`}
+                              className={`text-[11px] font-medium px-2 py-1 rounded-lg border border-white/[0.08] bg-[#101014] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50 transition-colors ${roleMeta.color}`}
                             >
                               <option value="editor">Video Editor</option>
                               <option value="writer">Scriptwriter / Copywriter</option>
@@ -453,16 +584,36 @@ export default function TeamManagementPage() {
                             </select>
                           </div>
                         ) : (
-                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-[11px] font-medium ${roleMeta.bg} ${roleMeta.color}`}>
+                          <div
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-[11px] font-medium ${roleMeta.bg} ${roleMeta.color}`}
+                          >
                             <RoleIcon className="w-3 h-3" />
                             <span>{roleMeta.label}</span>
                           </div>
                         )}
                       </td>
 
+                      {/* Workload Pill */}
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
+                            activeTasks > 5
+                              ? "bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30"
+                              : activeTasks > 0
+                              ? "bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30"
+                              : "bg-white/[0.04] text-[#71717A] border border-white/[0.06]"
+                          }`}
+                        >
+                          <Activity className="w-2.5 h-2.5" />
+                          <span>
+                            {activeTasks} active task{activeTasks === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                      </td>
+
                       {/* Auto Assignment Description */}
                       <td className="py-3 px-4">
-                        <span className="text-[#A3A0B0] text-xs">
+                        <span className="text-[#A3A0B0] text-xs leading-relaxed block max-w-xs truncate">
                           {roleMeta.description}
                         </span>
                       </td>
@@ -500,7 +651,7 @@ export default function TeamManagementPage() {
       </div>
 
       {/* ── Automatic Specialist Routing Guide (Cohesive Architecture Reference) ── */}
-      <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3">
+      <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
           <h2 className="text-xs font-heading font-semibold text-[#F2F0F7] uppercase tracking-wider">
@@ -550,8 +701,12 @@ export default function TeamManagementPage() {
                   <UserPlus className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#F2F0F7]">Add Specialist</h3>
-                  <p className="text-[11px] text-[#A3A0B0]">Register an employee for autonomous deliverable routing</p>
+                  <h3 className="text-sm font-heading font-semibold text-[#F2F0F7]">
+                    Add Specialist
+                  </h3>
+                  <p className="text-[11px] text-[#A3A0B0]">
+                    Register an employee for autonomous deliverable routing
+                  </p>
                 </div>
               </div>
               <button
@@ -573,10 +728,19 @@ export default function TeamManagementPage() {
                     Share these credentials with your team member so they can sign in to their workbench:
                   </p>
                   <div className="bg-[#101014] rounded-lg p-3 text-xs font-mono space-y-1 border border-white/[0.08] text-[#F2F0F7]">
-                    <div><strong className="text-[#A3A0B0]">Email:</strong> {createdCredentials.email}</div>
-                    <div><strong className="text-[#A3A0B0]">Password:</strong> {createdCredentials.pass}</div>
-                    <div><strong className="text-[#A3A0B0]">Role:</strong> {createdCredentials.role}</div>
-                    <div><strong className="text-[#A3A0B0]">Login URL:</strong> {window.location.origin}/login</div>
+                    <div>
+                      <strong className="text-[#A3A0B0]">Email:</strong> {createdCredentials.email}
+                    </div>
+                    <div>
+                      <strong className="text-[#A3A0B0]">Password:</strong> {createdCredentials.pass}
+                    </div>
+                    <div>
+                      <strong className="text-[#A3A0B0]">Role:</strong> {createdCredentials.role}
+                    </div>
+                    <div>
+                      <strong className="text-[#A3A0B0]">Login URL:</strong>{" "}
+                      {typeof window !== "undefined" ? window.location.origin : ""}/login
+                    </div>
                   </div>
                   <button
                     onClick={handleCopyCredentials}
@@ -651,13 +815,17 @@ export default function TeamManagementPage() {
                     className="w-full bg-[#101014] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs font-medium text-[#F2F0F7] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
                   >
                     <option value="editor">Video Editor (Filming, Editing, Sound Design)</option>
-                    <option value="writer">Scriptwriter / Copywriter (Hooks, Scripts, Captions)</option>
-                    <option value="designer">Graphic Designer (Thumbnails, Carousels, Static Ads)</option>
+                    <option value="writer">
+                      Scriptwriter / Copywriter (Hooks, Scripts, Captions)
+                    </option>
+                    <option value="designer">
+                      Graphic Designer (Thumbnails, Carousels, Static Ads)
+                    </option>
                     <option value="strategist">Content Strategist (Roadmaps & Research)</option>
                     <option value="account_manager">Account Manager (Client Relations)</option>
                     <option value="manager">Production Manager (Task Supervision)</option>
                   </select>
-                  <p className="text-[10px] text-[#A3A0B0] mt-1">
+                  <p className="text-[10px] text-[#A3A0B0] mt-1 font-mono">
                     Tasks requiring this specialty will be automatically routed to this specialist.
                   </p>
                 </div>
@@ -675,7 +843,7 @@ export default function TeamManagementPage() {
                       className="w-full bg-[#101014] border border-white/[0.08] rounded-lg pl-8.5 pr-3 py-1.5 text-xs font-mono text-[#F2F0F7] focus:outline-none focus:border-[#A78BFA]/50"
                     />
                   </div>
-                  <p className="text-[10px] text-[#A3A0B0] mt-1">
+                  <p className="text-[10px] text-[#A3A0B0] mt-1 font-mono">
                     If this specialist does not have an account yet, one will be created with this password.
                   </p>
                 </div>
