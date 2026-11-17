@@ -38,13 +38,13 @@ async def test_client_social_account_crud_and_isolation(
         client1 = Client(
             id=uuid.uuid4(),
             agency_id=agency.id,
-            business_name="Hotel Shauryawada",
+            business_name="Acme Enterprise",
             status="active",
         )
         client2 = Client(
             id=uuid.uuid4(),
             agency_id=agency.id,
-            business_name="Shorevada Cafe",
+            business_name="Apex Global",
             status="active",
         )
         db.add_all([client1, client2])
@@ -57,7 +57,7 @@ async def test_client_social_account_crud_and_isolation(
         f"/agencies/{agency.id}/clients/{c1_id}/social-accounts",
         json={
             "platform": "instagram",
-            "account_name": "Hotel Shauryawada Official",
+            "account_name": "Acme Enterprise Official",
             "account_handle": "@shauryawada",
             "instagram_business_id": "17841400012345",
             "access_token": "EAAG...test_token_1",
@@ -127,7 +127,7 @@ async def test_manual_publishing_workflow_and_task_sync(
         deliverable = Deliverable(
             id=uuid.uuid4(),
             campaign_id=campaign.id,
-            title="Spicy Mutton Raan",
+            title="Product Launch Showcase",
             deliverable_type="reel",
             platform="instagram",
             status=DeliverableStatus.approved,  # Approved!

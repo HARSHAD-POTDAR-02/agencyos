@@ -63,6 +63,50 @@ def _get_api_version() -> str:
     return getattr(settings, "META_GRAPH_API_VERSION", "v22.0")
 
 
+def format_meta_api_error(
+    action_name: str,
+    error_dict: dict[str, Any] | None,
+    media_url: str | None = None,
+) -> str:
+    """
+    Format Meta Graph API error dictionary into clear, human-readable guidance.
+    Specializes handling for code 9004 / subcode 2207052 (media download failure / localhost)
+    so users know immediately when their public base URL is unreachable.
+    """
+    if not isinstance(error_dict, dict):
+        return f"{action_name} failed due to an unknown Meta error."
+
+    code = error_dict.get("code")
+    subcode = error_dict.get("error_subcode")
+    raw_msg = str(error_dict.get("message", "")).strip()
+    user_title = error_dict.get("error_user_title")
+    user_msg = error_dict.get("error_user_msg")
+
+    if subcode == 2207052 or "only photo or video" in raw_msg.lower():
+        if media_url and any(h in media_url.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0")):
+            return (
+                f"Cannot publish photo to Instagram: Meta servers cannot reach localhost ({media_url}). "
+                "Instagram requires a publicly accessible HTTPS image URL. "
+                "Start a public tunnel (e.g. 'cloudflared tunnel --url http://127.0.0.1:8000') "
+                "and set PUBLIC_BASE_URL in your .env, or provide a public URL override."
+            )
+        target = f" from '{media_url}'" if media_url else ""
+        detail = user_msg or raw_msg
+        return (
+            f"Instagram failed to download media{target}. "
+            "Ensure the URL is publicly accessible via HTTPS and returns a valid image (JPEG in sRGB). "
+            f"(Meta: {detail})"
+        )
+
+    if user_title and user_msg:
+        return f"{action_name} failed: {user_title} — {user_msg}"
+    if user_msg:
+        return f"{action_name} failed: {user_msg}"
+    if raw_msg:
+        return f"{action_name} failed: {raw_msg}"
+    return f"{action_name} failed with Meta error code {code}."
+
+
 async def verify_instagram_account(access_token: str, instagram_business_id: str) -> dict[str, Any]:
     """
     Verify the Instagram Business ID and access token with Meta.
@@ -132,11 +176,12 @@ def ensure_instagram_compatible_image(
         from PIL import Image
 
         with Image.open(file_path) as img:
-            needs_conversion = suffix not in (".jpg", ".jpeg")
+            is_rgb = img.mode == "RGB"
+            needs_format_conversion = suffix not in (".jpg", ".jpeg") or not is_rgb
             ratio = img.width / max(1, img.height)
             needs_ratio_adjust = ratio < 0.79 or ratio > 1.92
 
-            if not needs_conversion and not needs_ratio_adjust:
+            if not needs_format_conversion and not needs_ratio_adjust:
                 return local_file_path, storage_key
 
             jpeg_name = f"{file_path.stem}_ig.jpg"
@@ -151,8 +196,10 @@ def ensure_instagram_compatible_image(
                 rgb_img = Image.new("RGB", img.size, (255, 255, 255))
                 mask = img.split()[-1] if img.mode in ("RGBA", "LA") else img.convert("RGBA").split()[-1]
                 rgb_img.paste(img.convert("RGBA"), mask=mask)
-            else:
+            elif img.mode != "RGB":
                 rgb_img = img.convert("RGB")
+            else:
+                rgb_img = img.copy()
 
             # 2. Aspect ratio adjustment (pad if outside 4:5 to 1.91:1)
             if ratio < 0.8:
@@ -190,6 +237,15 @@ async def publish_instagram_photo(
     Step 2: POST /{ig_user_id}/media_publish (creation_id) -> media_id
     Step 3: GET /{media_id}?fields=permalink -> live URL
     """
+    # Pre-flight check: Prevent submitting unreachable localhost URLs to Meta
+    if any(h in image_url.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0")):
+        raise MetaPublishingError(
+            f"Cannot publish photo to Instagram: Meta servers cannot reach localhost ({image_url}). "
+            "Instagram requires a publicly accessible HTTPS image URL. "
+            "Start a public tunnel (e.g. 'cloudflared tunnel --url http://127.0.0.1:8000') "
+            "and set PUBLIC_BASE_URL in your .env, or provide a public URL override."
+        )
+
     version = _get_api_version()
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Step 1: Create Container
@@ -202,8 +258,8 @@ async def publish_instagram_photo(
         res1 = await client.post(container_url, data=container_payload)
         data1 = res1.json()
         if res1.status_code != 200 or "id" not in data1:
-            err_msg = data1.get("error", {}).get("message", "Failed to create Instagram photo container.")
-            raise MetaPublishingError(f"Container creation failed: {err_msg}", data1.get("error"))
+            err_msg = format_meta_api_error("Instagram photo container creation", data1.get("error"), media_url=image_url)
+            raise MetaPublishingError(err_msg, data1.get("error"))
 
         creation_id = data1["id"]
 
@@ -222,7 +278,7 @@ async def publish_instagram_photo(
             if status_code == "FINISHED":
                 break
             elif status_code == "ERROR":
-                err_msg = status_data.get("status", "Meta photo processing error")
+                err_msg = status_data.get("status") or format_meta_api_error("Instagram photo processing", status_data.get("error"), media_url=image_url)
                 raise MetaPublishingError(f"Instagram photo processing error: {err_msg}", status_data)
             await asyncio.sleep(poll_interval)
             waited += poll_interval
@@ -236,8 +292,8 @@ async def publish_instagram_photo(
         res2 = await client.post(publish_url, data=publish_payload)
         data2 = res2.json()
         if res2.status_code != 200 or "id" not in data2:
-            err_msg = data2.get("error", {}).get("message", "Failed to publish Instagram photo.")
-            raise MetaPublishingError(f"Publishing failed: {err_msg}", data2.get("error"))
+            err_msg = format_meta_api_error("Instagram photo publishing", data2.get("error"), media_url=image_url)
+            raise MetaPublishingError(err_msg, data2.get("error"))
 
         media_id = data2["id"]
 

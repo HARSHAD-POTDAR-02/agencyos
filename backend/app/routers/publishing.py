@@ -52,6 +52,7 @@ from app.services.tenant_service import (
     assert_deliverable_belongs_to_agency,
     get_client_for_agency,
 )
+from app.services.tunnel_service import get_effective_media_url, get_effective_public_base_url
 
 router = APIRouter(prefix="/agencies/{agency_id}", tags=["publishing"])
 
@@ -117,7 +118,7 @@ async def publish_deliverable(
             )
 
         # Build public media URL (supports direct public URL or tunnel base URL)
-        media_url = payload.media_url_override or f"{settings.PUBLIC_BASE_URL}/uploads/{latest_version.storage_key}"
+        media_url = payload.media_url_override or get_effective_media_url(latest_version.storage_key)
         caption = payload.caption_override or latest_version.caption or deliverable.title
 
         # Check if local file exists on disk (avoids relying on external public URL fetch)
@@ -175,13 +176,14 @@ async def publish_deliverable(
                         ig_local_path, ig_storage_key = ensure_instagram_compatible_image(
                             local_file_str, latest_version.storage_key
                         )
-                        if ig_storage_key and not payload.media_url_override:
-                            media_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/uploads/{ig_storage_key.lstrip('/')}"
+                        ig_media_url = payload.media_url_override or (
+                            get_effective_media_url(ig_storage_key) if ig_storage_key else media_url
+                        )
 
                         result = await publish_instagram_photo(
                             access_token=social_account.access_token,
                             instagram_business_id=social_account.instagram_business_id,
-                            image_url=media_url,
+                            image_url=ig_media_url,
                             caption=caption,
                         )
 
@@ -302,10 +304,16 @@ async def publish_deliverable(
                             file_type=latest_version.file_type,
                         )
                     else:
+                        ig_local_path, ig_storage_key = ensure_instagram_compatible_image(
+                            local_file_str, latest_version.storage_key
+                        )
+                        ig_media_url = payload.media_url_override or (
+                            get_effective_media_url(ig_storage_key) if ig_storage_key else media_url
+                        )
                         ig_result = await publish_instagram_photo(
                             access_token=ig_account.access_token,
                             instagram_business_id=ig_account.instagram_business_id,
-                            image_url=media_url,
+                            image_url=ig_media_url,
                             caption=caption,
                         )
                     platform_results["instagram"] = {
@@ -948,7 +956,7 @@ async def schedule_deliverable(
             scheduled_timezone=payload.scheduled_timezone or "UTC",
             next_attempt_at=sched_at,
             caption_snapshot=payload.caption_override or latest_version.caption or deliverable.title,
-            media_url_snapshot=f"{settings.PUBLIC_BASE_URL.rstrip('/')}/uploads/{latest_version.storage_key.lstrip('/')}",
+            media_url_snapshot=get_effective_media_url(latest_version.storage_key),
             share_to_feed=payload.share_to_feed,
             max_attempts=3,
         )

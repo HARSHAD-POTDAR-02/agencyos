@@ -407,9 +407,21 @@ export default function PublishModal({
         {/* Body */}
         <form onSubmit={handleAction} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3.5 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-[#E16F7B] shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="p-3.5 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-[#E16F7B] shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{error}</span>
+              </div>
+              {(error.toLowerCase().includes("tunnel") || error.toLowerCase().includes("localhost") || error.toLowerCase().includes("cannot reach") || error.toLowerCase().includes("download media")) && (
+                <div className="pt-2 border-t border-[#E16F7B]/20 text-[11px] text-[#A3A0B0] space-y-1">
+                  <p>
+                    <strong className="text-[#F2F0F7]">Why this happens:</strong> Instagram&apos;s API servers must download your photo over the public internet. They cannot access <code className="text-[#E16F7B] bg-[#101014] px-1 py-0.5 rounded">localhost</code>.
+                  </p>
+                  <p>
+                    Ensure your Cloudflare tunnel is running or provide a public URL override in the options below.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -805,6 +817,27 @@ export default function PublishModal({
                   </label>
                 </div>
               )}
+
+              {/* Advanced: Public Media URL Override */}
+              <div className="pt-2 border-t border-[#30303D]/60 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-[#A3A0B0] flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <span>Public Media URL Override (Optional)</span>
+                  </label>
+                  <span className="text-[10px] text-[#71717A] font-mono">Auto-tunnels via Cloudflare</span>
+                </div>
+                <input
+                  type="url"
+                  value={mediaUrlOverride}
+                  onChange={(e) => setMediaUrlOverride(e.target.value)}
+                  placeholder="https://... (leave empty to use server default)"
+                  className="w-full text-xs text-[#F2F0F7] p-2.5 rounded-xl border border-[#30303D] bg-[#101014] focus:outline-none focus:border-[#A78BFA] font-mono"
+                />
+                <p className="text-[10px] text-[#71717A]">
+                  For screenshots &amp; PNGs, AgencyOS automatically converts to sRGB JPEG with Instagram-compliant aspect ratios.
+                </p>
+              </div>
             </div>
           )}
 

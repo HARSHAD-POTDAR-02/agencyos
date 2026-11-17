@@ -151,10 +151,19 @@ async def execute_publication_job(
             file_type = version.file_type
             file_name = version.file_name
 
+    from app.services.tunnel_service import get_effective_media_url, get_effective_public_base_url
+    effective_base = get_effective_public_base_url()
+
     # Ensure media_url is a fully qualified URL for external provider download
     media_url = job.media_url_snapshot or ""
     if media_url and not media_url.startswith(("http://", "https://")):
-        media_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/uploads/{media_url.lstrip('/')}"
+        media_url = f"{effective_base}/uploads/{media_url.lstrip('/')}"
+    elif any(h in media_url.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0")) and not any(
+        h in effective_base.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0")
+    ):
+        parsed_suffix = media_url.split("/uploads/")[-1] if "/uploads/" in media_url else ""
+        if parsed_suffix:
+            media_url = f"{effective_base}/uploads/{parsed_suffix.lstrip('/')}"
 
     # 2. Record attempt before external dispatch
     attempt_num = job.attempts_count or 1
@@ -203,7 +212,7 @@ async def execute_publication_job(
                     local_file_path, version.storage_key if version else None
                 )
                 if ig_storage_key:
-                    media_url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/uploads/{ig_storage_key.lstrip('/')}"
+                    media_url = get_effective_media_url(ig_storage_key)
 
                 result = await publish_instagram_photo(
                     access_token=social_acc.access_token,
