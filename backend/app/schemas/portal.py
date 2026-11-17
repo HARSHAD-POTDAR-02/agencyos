@@ -38,6 +38,11 @@ class PortalDeliverableOut(BaseModel):
     platform: str
     planned_date: date | None = None
     status: DeliverableStatus
+    scheduled_at: datetime | None = None
+    scheduled_timezone: str | None = None
+    live_post_url: str | None = None
+    publishing_platform: str | None = None
+    is_auto_scheduled: bool = False
     created_at: datetime
     updated_at: datetime
     content_versions: list[ContentVersionOut] = []
@@ -49,6 +54,20 @@ class PortalDeliverableOut(BaseModel):
 class PortalDecisionRequest(BaseModel):
     decision: ApprovalDecision
     comment: str | None = None
+
+
+class PortalBatchDecisionRequest(BaseModel):
+    deliverable_ids: list[uuid.UUID]
+    decision: ApprovalDecision
+    comment: str | None = None
+
+
+class PortalBatchDecisionOut(BaseModel):
+    total_processed: int
+    approved_count: int
+    scheduled_count: int
+    changes_requested_count: int
+    deliverables: list[PortalDeliverableOut]
 
 
 class ApprovalsQueueItemOut(BaseModel):

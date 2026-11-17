@@ -602,6 +602,24 @@ export const portalApi = {
       body: { decision, comment: comment || undefined },
       token,
     }),
+
+  batchDecide: (
+    deliverableIds: string[],
+    decision: "approved" | "changes_requested",
+    comment: string | undefined,
+    token: string
+  ) =>
+    apiFetch<{
+      total_processed: number;
+      approved_count: number;
+      scheduled_count: number;
+      changes_requested_count: number;
+      deliverables: any[];
+    }>(`/portal/deliverables/batch-decision`, {
+      method: "POST",
+      body: { deliverable_ids: deliverableIds, decision, comment: comment || undefined },
+      token,
+    }),
 };
 
 /* ── Social Account endpoints (Phase 5) ── */

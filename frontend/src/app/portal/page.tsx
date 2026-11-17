@@ -19,6 +19,10 @@ import {
   Check,
   Calendar,
   Layers,
+  ExternalLink,
+  CheckSquare,
+  Square,
+  Zap,
 } from "lucide-react";
 
 interface PortalClient {
@@ -32,10 +36,17 @@ interface QueueItem {
   title: string;
   client_id: string;
   client_name: string | null;
+  campaign_id?: string;
+  campaign_name?: string | null;
   deliverable_type: string;
   platform: string;
   status: string;
   planned_date: string | null;
+  scheduled_at: string | null;
+  scheduled_timezone: string | null;
+  live_post_url: string | null;
+  publishing_platform: string | null;
+  is_auto_scheduled?: boolean;
   updated_at: string;
   content_versions: { id: string; version_number: number; file_name: string }[];
 }
@@ -59,6 +70,21 @@ const STATUS_CONFIG: Record<
     badge: "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30",
     icon: CheckCircle2,
   },
+  scheduled: {
+    label: "Approved ✓ • Auto-Scheduled",
+    badge: "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30",
+    icon: Calendar,
+  },
+  publishing: {
+    label: "Publishing Live…",
+    badge: "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30",
+    icon: RefreshCw,
+  },
+  partially_published: {
+    label: "Partially Published",
+    badge: "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30",
+    icon: AlertCircle,
+  },
   published: {
     label: "Published Live",
     badge: "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30",
@@ -75,6 +101,20 @@ function getMonogram(name?: string | null): string {
   return parts[0].slice(0, 2).toUpperCase();
 }
 
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 function PortalHomeContent() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -85,6 +125,11 @@ function PortalHomeContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [statusTab, setStatusTab] = useState<"pending" | "approved" | "all">("pending");
+
+  // Multi-item batch approval state
+  const [selectedDeliverableIds, setSelectedDeliverableIds] = useState<Set<string>>(new Set());
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [batchSuccessMessage, setBatchSuccessMessage] = useState<string | null>(null);
 
   // Protect client portal: redirect to login if not authenticated
   useEffect(() => {
@@ -127,7 +172,12 @@ function PortalHomeContent() {
     (d) => d.status === "client_review" || d.status === "changes_requested"
   );
   const approvedItems = clientFiltered.filter(
-    (d) => d.status === "approved" || d.status === "published"
+    (d) =>
+      d.status === "approved" ||
+      d.status === "scheduled" ||
+      d.status === "publishing" ||
+      d.status === "partially_published" ||
+      d.status === "published"
   );
 
   const displayedItems =
@@ -136,6 +186,57 @@ function PortalHomeContent() {
       : statusTab === "approved"
       ? approvedItems
       : clientFiltered;
+
+  // Selection handlers
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedDeliverableIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAllPending = () => {
+    const allPendingIds = new Set(pendingItems.map((d) => d.id));
+    setSelectedDeliverableIds(allPendingIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedDeliverableIds(new Set());
+  };
+
+  const handleBatchApprove = async () => {
+    if (!token || selectedDeliverableIds.size === 0) return;
+    setBatchSubmitting(true);
+    setError(null);
+    try {
+      const ids = Array.from(selectedDeliverableIds);
+      const res = await portalApi.batchDecide(
+        ids,
+        "approved",
+        "Batch approved from client sprint portal.",
+        token
+      );
+      setBatchSuccessMessage(
+        `Successfully approved ${res.total_processed} deliverable(s)! ${
+          res.scheduled_count > 0 ? `(${res.scheduled_count} auto-scheduled for live publishing)` : ""
+        }`
+      );
+      clearSelection();
+      await load();
+      setTimeout(() => setBatchSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setError(err.message || "Failed to batch approve deliverables.");
+    } finally {
+      setBatchSubmitting(false);
+    }
+  };
 
   if (authLoading || (loading && deliverables.length === 0 && !error)) {
     return (
@@ -151,7 +252,7 @@ function PortalHomeContent() {
   const primaryClient = clients.length > 0 ? clients[0] : null;
 
   return (
-    <div className="min-h-screen bg-[#101014] text-[#F2F0F7]">
+    <div className="min-h-screen bg-[#101014] text-[#F2F0F7] pb-24">
       {/* ── Top Spatial Header ── */}
       <header className="sticky top-0 z-30 bg-[#17171E] border-b border-white/[0.08] shadow-sm">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -199,16 +300,35 @@ function PortalHomeContent() {
               Welcome, {user?.full_name?.split(" ")[0] || "Reviewer"} 👋
             </h1>
             <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
-              Review, comment on, and approve your upcoming creative deliverables before they go live on social channels.
+              Review, comment on, and approve your upcoming creative deliverables. Approved content is auto-scheduled and published straight to your connected channels.
             </p>
           </div>
-          <button
-            onClick={load}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#F2F0F7] bg-[#17171E] hover:bg-[#20202A] border border-white/[0.08] px-3 py-1.5 rounded-xl self-start sm:self-auto transition-colors cursor-pointer shadow-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-[#A3A0B0]" />
-            <span>Refresh</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {statusTab === "pending" && pendingItems.length > 1 && (
+              <button
+                onClick={
+                  selectedDeliverableIds.size === pendingItems.length
+                    ? clearSelection
+                    : selectAllPending
+                }
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A78BFA] bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 border border-[#A78BFA]/30 px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-xs"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>
+                  {selectedDeliverableIds.size === pendingItems.length
+                    ? "Deselect All"
+                    : `Select All (${pendingItems.length})`}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={load}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#F2F0F7] bg-[#17171E] hover:bg-[#20202A] border border-white/[0.08] px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-[#A3A0B0]" />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* Brand Switcher (if multiple accounts assigned) */}
@@ -272,7 +392,7 @@ function PortalHomeContent() {
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
-            <span>Approved & Ready</span>
+            <span>Approved & Scheduled</span>
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
                 statusTab === "approved"
@@ -295,6 +415,14 @@ function PortalHomeContent() {
             <span>All Content ({clientFiltered.length})</span>
           </button>
         </div>
+
+        {/* Feedback alerts */}
+        {batchSuccessMessage && (
+          <div className="p-4 bg-[#45B88A]/10 border border-[#45B88A]/30 rounded-xl text-xs font-medium text-[#45B88A] flex items-center gap-2 shadow-xs animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{batchSuccessMessage}</span>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-[#E16F7B]/10 border border-[#E16F7B]/30 rounded-xl text-xs font-medium text-[#E16F7B] flex items-center justify-between shadow-xs">
@@ -327,9 +455,9 @@ function PortalHomeContent() {
                 <>
                   You have{" "}
                   <span className="font-semibold text-[#F2F0F7]">
-                    {approvedItems.length} approved deliverable(s)
+                    {approvedItems.length} approved/scheduled deliverable(s)
                   </span>
-                  . Switch to the Approved tab to view them.
+                  . Switch to the Approved & Scheduled tab to track upcoming publication.
                 </>
               ) : (
                 "Content submitted by your agency creative team will appear here for your review and sign-off."
@@ -356,15 +484,38 @@ function PortalHomeContent() {
                   )[0]
                 : null;
               const isVideo = latestVersion?.file_name?.match(/\.(mp4|mov|webm)$/i);
+              const isSelected = selectedDeliverableIds.has(item.id);
+              const isPending =
+                item.status === "client_review" || item.status === "changes_requested";
 
               return (
                 <Link
                   key={item.id}
                   href={`/portal/${item.id}`}
-                  className="surface-card rounded-2xl border border-white/[0.08] hover:border-white/[0.2] transition-all group flex flex-col overflow-hidden shadow-xs hover:shadow-md"
+                  className={`surface-card rounded-2xl border transition-all group flex flex-col overflow-hidden shadow-xs hover:shadow-md ${
+                    isSelected
+                      ? "border-[#A78BFA] ring-2 ring-[#A78BFA]/20"
+                      : "border-white/[0.08] hover:border-white/[0.2]"
+                  }`}
                 >
                   {/* Media preview card header */}
                   <div className="h-36 bg-[#0D0D12] flex items-center justify-center relative overflow-hidden border-b border-white/[0.06]">
+                    {/* Multi-select checkbox on pending items */}
+                    {isPending && (
+                      <button
+                        type="button"
+                        onClick={(e) => toggleSelect(item.id, e)}
+                        className="absolute top-3 left-3 z-10 p-1.5 rounded-lg bg-[#17171E]/90 hover:bg-[#20202A] border border-white/[0.12] text-[#F2F0F7] shadow-sm transition-all"
+                        title={isSelected ? "Deselect item" : "Select item for batch approval"}
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-[#A78BFA]" />
+                        ) : (
+                          <Square className="w-4 h-4 text-[#71717A] hover:text-[#F2F0F7]" />
+                        )}
+                      </button>
+                    )}
+
                     <div className="text-[#30303D] group-hover:scale-105 transition-transform duration-300">
                       {isVideo ? (
                         <Film className="w-10 h-10 text-[#A78BFA]/40" />
@@ -376,6 +527,16 @@ function PortalHomeContent() {
                       <span className="absolute top-3 right-3 text-[10px] font-mono font-bold text-[#A78BFA] bg-[#17171E] px-2 py-0.5 rounded-full border border-white/[0.08] shadow-xs">
                         v{latestVersion.version_number}
                       </span>
+                    )}
+
+                    {/* Auto-scheduled banner inside preview */}
+                    {item.status === "scheduled" && item.scheduled_at && (
+                      <div className="absolute bottom-2 left-2 right-2 bg-[#17171E]/90 backdrop-blur-xs border border-[#A78BFA]/30 rounded-lg px-2.5 py-1 flex items-center justify-between text-[10px] font-mono text-[#A78BFA]">
+                        <span className="flex items-center gap-1 font-bold">
+                          <Calendar className="w-3 h-3" /> Auto-Scheduled
+                        </span>
+                        <span>{formatDate(item.scheduled_at)}</span>
+                      </div>
                     )}
                   </div>
 
@@ -396,7 +557,7 @@ function PortalHomeContent() {
                         {st.label}
                       </span>
                       <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border bg-[#101014] text-[#A3A0B0] border-white/[0.08]">
-                        {item.platform}
+                        {item.publishing_platform || item.platform}
                       </span>
                       <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border bg-[#101014] text-[#A3A0B0] border-white/[0.08]">
                         {item.deliverable_type}
@@ -408,12 +569,23 @@ function PortalHomeContent() {
                         <Building2 className="w-3.5 h-3.5 text-[#71717A]" />
                         <span>{item.client_name}</span>
                       </span>
-                      {item.planned_date && (
+                      {item.live_post_url ? (
+                        <a
+                          href={item.live_post_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-mono text-[#45B88A] hover:underline flex items-center gap-1"
+                        >
+                          <span>Live Post</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : item.planned_date ? (
                         <span className="font-mono text-[#71717A] flex items-center gap-1">
                           <Calendar className="w-3 h-3 text-[#71717A]" />
-                          <span>{item.planned_date}</span>
+                          <span>Planned: {item.planned_date}</span>
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </Link>
@@ -422,6 +594,47 @@ function PortalHomeContent() {
           </div>
         )}
       </div>
+
+      {/* ── Floating Batch Approval Action Bar ── */}
+      {selectedDeliverableIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#17171E] border border-white/[0.14] rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-[#A78BFA] text-[#101014] font-mono font-bold text-xs flex items-center justify-center">
+              {selectedDeliverableIds.size}
+            </span>
+            <span className="text-xs font-heading font-semibold text-[#F2F0F7]">
+              Deliverable{selectedDeliverableIds.size > 1 ? "s" : ""} Selected
+            </span>
+          </div>
+
+          <div className="h-4 w-px bg-white/[0.1]" />
+
+          <button
+            onClick={handleBatchApprove}
+            disabled={batchSubmitting}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#45B88A] hover:bg-[#52c595] text-[#101014] text-xs font-bold rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {batchSubmitting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Zap className="w-3.5 h-3.5 fill-[#101014]" />
+            )}
+            <span>
+              {batchSubmitting
+                ? "Approving & Scheduling…"
+                : `1-Click Approve Selected (${selectedDeliverableIds.size})`}
+            </span>
+          </button>
+
+          <button
+            onClick={clearSelection}
+            disabled={batchSubmitting}
+            className="text-xs text-[#A3A0B0] hover:text-[#F2F0F7] px-2 py-1 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

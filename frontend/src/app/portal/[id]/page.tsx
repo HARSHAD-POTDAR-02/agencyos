@@ -60,6 +60,11 @@ interface DeliverableDetail {
   platform: string;
   planned_date: string | null;
   status: string;
+  scheduled_at?: string | null;
+  scheduled_timezone?: string | null;
+  live_post_url?: string | null;
+  publishing_platform?: string | null;
+  is_auto_scheduled?: boolean;
   client_name: string | null;
   campaign_name: string | null;
   content_versions: ContentVersion[];
@@ -116,9 +121,24 @@ const STATUS_CONFIG: Record<
     badge: "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30",
     icon: CheckCircle2,
   },
+  scheduled: {
+    label: "Approved ✓ • Auto-Scheduled",
+    badge: "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30",
+    icon: Calendar,
+  },
+  publishing: {
+    label: "Publishing Live…",
+    badge: "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30",
+    icon: RefreshCw,
+  },
+  partially_published: {
+    label: "Partially Published",
+    badge: "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30",
+    icon: AlertCircle,
+  },
   published: {
     label: "Published Live",
-    badge: "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30",
+    badge: "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30",
     icon: CheckCircle2,
   },
 };
@@ -177,7 +197,11 @@ function PortalDeliverableContent() {
 
   const currentVersion =
     deliverable?.content_versions.find((v) => v.id === selectedVersionId) || null;
-  const isLocked = deliverable?.status === "approved" || deliverable?.status === "published";
+  const isLocked =
+    deliverable?.status === "approved" ||
+    deliverable?.status === "scheduled" ||
+    deliverable?.status === "published" ||
+    deliverable?.status === "publishing";
 
   const mediaUrl = currentVersion
     ? `${API_BASE}/uploads/${currentVersion.storage_key}`
@@ -676,7 +700,52 @@ function PortalDeliverableContent() {
                 </div>
               </div>
 
-              {isLocked ? (
+              {deliverable?.status === "scheduled" ? (
+                <div className="text-xs text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/30 rounded-xl p-4 leading-relaxed font-medium space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <Calendar className="w-4 h-4 text-[#A78BFA]" />
+                    <span>Approved & Auto-Scheduled</span>
+                  </div>
+                  <p className="text-[#F2F0F7]">
+                    This creative asset is locked and scheduled for automated publication to your connected social channels.
+                  </p>
+                  {deliverable.scheduled_at && (
+                    <div className="pt-2 border-t border-[#A78BFA]/20 flex items-center justify-between font-mono text-[11px]">
+                      <span className="text-[#A3A0B0]">Target Broadcast:</span>
+                      <span className="font-bold text-[#F2F0F7] bg-[#17171E] px-2 py-0.5 rounded border border-white/[0.08]">
+                        {formatDate(deliverable.scheduled_at)}
+                      </span>
+                    </div>
+                  )}
+                  {deliverable.publishing_platform && (
+                    <div className="flex items-center justify-between font-mono text-[11px]">
+                      <span className="text-[#A3A0B0]">Channels:</span>
+                      <span className="font-bold uppercase text-[#A78BFA]">
+                        {deliverable.publishing_platform}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : deliverable?.live_post_url ? (
+                <div className="text-xs text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 rounded-xl p-4 leading-relaxed font-medium space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-[#45B88A]" />
+                    <span>Published Live ✓</span>
+                  </div>
+                  <p>
+                    This deliverable has been broadcast live. View the active post on your social channel:
+                  </p>
+                  <a
+                    href={deliverable.live_post_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#45B88A] text-[#101014] font-bold rounded-xl shadow-xs hover:bg-[#52c595] transition-all"
+                  >
+                    <span>View Live Post</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              ) : isLocked ? (
                 <div className="text-xs text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 rounded-xl p-4 leading-relaxed font-medium space-y-2">
                   <div className="flex items-center gap-2 font-bold text-sm">
                     <CheckCircle2 className="w-4 h-4 text-[#45B88A]" />
