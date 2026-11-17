@@ -21,7 +21,10 @@ import {
   Film,
   PenTool,
   Scissors,
-  CheckSquare
+  CheckSquare,
+  Activity,
+  Zap,
+  Filter
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { agencyApi, taskApi, clientApi, DashboardStats } from "@/lib/api";
@@ -90,7 +93,7 @@ export default function DashboardPage() {
     try {
       const [statsData, taskList, membersList, clientsList] = await Promise.all([
         agencyApi.dashboardStats(effectiveAgencyId, token),
-        taskApi.list(effectiveAgencyId, token, { limit: 20 }),
+        taskApi.list(effectiveAgencyId, token, { limit: 25 }),
         agencyApi.listMembers(effectiveAgencyId, token).catch(() => []),
         clientApi.list(effectiveAgencyId, token).catch(() => []),
       ]);
@@ -137,12 +140,30 @@ export default function DashboardPage() {
     };
   }, [fetchStats]);
 
+  // Keyboard navigation shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        setLoading(true);
+        fetchStats();
+      } else if (e.key === "c" || e.key === "C") {
+        e.preventDefault();
+        router.push("/clients");
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === "p" || e.key === "P")) {
+        e.preventDefault();
+        router.push("/campaigns");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fetchStats, router]);
+
   const deliverablePercent = stats && stats.deliverables_total > 0
     ? Math.round((stats.deliverables_done / stats.deliverables_total) * 100)
-    : 0;
-
-  const tasksPercent = stats && stats.tasks_total > 0
-    ? Math.round(((stats.tasks_total - stats.tasks_remaining) / stats.tasks_total) * 100)
     : 0;
 
   const filteredTasks = tasks.filter((t) => {
@@ -153,14 +174,20 @@ export default function DashboardPage() {
     return true;
   });
 
+  // Calculate real-time counts for filter tabs
+  const allTasksCount = tasks.length;
+  const reviewTasksCount = tasks.filter((t) => t.status === "client_review" || t.status === "internal_review" || t.status === "changes_requested").length;
+  const inProgressTasksCount = tasks.filter((t) => t.status === "in_progress" || t.status === "todo").length;
+  const doneTasksCount = tasks.filter((t) => t.status === "done" || t.status === "approved").length;
+
   if (!isLoading && isSpecialist) {
     return null;
   }
 
   return (
-    <main className="p-5 md:p-8 space-y-6 max-w-7xl mx-auto ambient-glow min-h-screen">
+    <main className="p-5 md:p-8 space-y-6 max-w-7xl mx-auto min-h-screen">
       {/* ──────────────────────────────────────────────
-          1. Linear Header & Quick Action Dock
+          1. Operational Header & Quick Action Dock
       ────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
         <div>
@@ -169,23 +196,23 @@ export default function DashboardPage() {
             <span className="text-white/[0.2]">/</span>
             <span className="text-[#A78BFA] flex items-center gap-1.5 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] animate-pulse inline-block" />
-              Live Telemetry
+              Live Operations
             </span>
           </div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+          <h1 className="font-heading text-xl md:text-2xl font-semibold text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
             <span>Agency Command Centre</span>
           </h1>
           <p className="text-xs text-[#A3A0B0] mt-0.5">
-            Operational telemetry across client retainers, deliverable velocity, and agent pipelines.
+            Operational telemetry across client retainers, deliverable velocity, and specialist pipelines.
           </p>
         </div>
 
         {/* Action Command Bar with Keyboard Badges */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => { setLoading(true); fetchStats(); }}
-            title="Refresh dashboard metrics (R)"
-            className="surface-card surface-card-hover text-[#A3A0B0] hover:text-[#F2F0F7] text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer"
+            title="Sync live metrics (R)"
+            className="surface-card surface-card-hover text-[#A3A0B0] hover:text-[#F2F0F7] text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#A78BFA]" : "text-[#A3A0B0]"}`} />
             <span className="hidden sm:inline">Sync</span>
@@ -194,7 +221,7 @@ export default function DashboardPage() {
 
           <Link
             href="/clients"
-            className="surface-card surface-card-hover text-[#F2F0F7] text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer"
+            className="surface-card surface-card-hover text-[#F2F0F7] text-xs font-medium px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
           >
             <Plus className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>New Client</span>
@@ -203,7 +230,7 @@ export default function DashboardPage() {
 
           <Link
             href="/campaigns"
-            className="bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-[0_1px_8px_rgba(167,139,250,0.3)] hover:shadow-[0_2px_12px_rgba(167,139,250,0.4)] cursor-pointer"
+            className="bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] hover:shadow-[0_2px_14px_rgba(167,139,250,0.45)] cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#101014]" />
             <span>Plan with AI</span>
@@ -220,30 +247,31 @@ export default function DashboardPage() {
       )}
 
       {/* ──────────────────────────────────────────────
-          2. Editorial Metric Bar (Restrained, Linear Elegance)
+          2. Linear Coherent Telemetry Strip
+             Single unified surface with hairline dividers
       ────────────────────────────────────────────── */}
-      <div className="surface-card rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-white/[0.08] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-xs">
+      <div className="surface-card rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
         {/* Metric 1: Active Retainers */}
         <Link 
           href="/clients"
-          className="telemetry-cell p-4 hover:bg-white/[0.02] transition-colors block group cursor-pointer"
+          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors flex items-center gap-1.5">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-[#A78BFA]" />
               Active Retainers
             </span>
-            <span className="text-[9px] font-mono text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/20 px-1.5 py-0.2 rounded font-semibold">
-              +100% SLA
+            <span className="text-[9px] font-mono text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/25 px-1.5 py-0.5 rounded font-semibold">
+              100% SLA
             </span>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : (stats?.clients_active ?? 0)}
             </span>
             <span className="text-xs text-[#A3A0B0]">Accounts</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1 truncate">
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate">
             {loading ? "Loading clients..." : `${stats?.clients_onboarding ?? 0} onboarding · ${stats?.clients_offboarded ?? 0} offboarded`}
           </p>
         </Link>
@@ -251,24 +279,28 @@ export default function DashboardPage() {
         {/* Metric 2: Production Pipeline */}
         <Link
           href="/tasks"
-          className="telemetry-cell p-4 hover:bg-white/[0.02] transition-colors block group cursor-pointer"
+          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#69A9D8] transition-colors flex items-center gap-1.5">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#69A9D8] transition-colors flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#69A9D8]" />
               Production Pipeline
             </span>
-            <span className="text-[9px] font-mono text-[#E5AA58] bg-[rgba(229,170,88,0.12)] border border-[#E5AA58]/20 px-1.5 py-0.2 rounded font-semibold">
+            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold border ${
+              (stats?.tasks_high_priority ?? 0) > 0 
+                ? "text-[#E16F7B] bg-[rgba(225,111,123,0.12)] border-[#E16F7B]/30" 
+                : "text-[#45B88A] bg-[rgba(69,184,138,0.12)] border-[#45B88A]/25"
+            }`}>
               {loading ? "—" : `${stats?.tasks_high_priority ?? 0} Urgent`}
             </span>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : (stats?.tasks_remaining ?? 0)}
             </span>
             <span className="text-xs text-[#A3A0B0]">Active tasks</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1 truncate">
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate">
             {loading ? "Calculating..." : `${stats?.tasks_in_review ?? 0} in review · ${stats?.tasks_todo ?? 0} backlog`}
           </p>
         </Link>
@@ -276,24 +308,24 @@ export default function DashboardPage() {
         {/* Metric 3: Pending Approvals */}
         <Link
           href="/approvals"
-          className="telemetry-cell p-4 hover:bg-white/[0.02] transition-colors block group cursor-pointer"
+          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#45B88A] transition-colors flex items-center gap-1.5">
-              <FileCheck className="w-3.5 h-3.5 text-[#45B88A]" />
-              Pending Approvals
-            </span>
-            <span className="text-[9px] font-mono text-[#A78BFA] bg-[rgba(167,139,250,0.12)] border border-[#A78BFA]/20 px-1.5 py-0.2 rounded font-semibold">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#E5AA58] transition-colors flex items-center gap-1.5">
+              <FileCheck className="w-3.5 h-3.5 text-[#E5AA58]" />
               Review Queue
             </span>
+            <span className="text-[9px] font-mono text-[#A78BFA] bg-[rgba(167,139,250,0.12)] border border-[#A78BFA]/25 px-1.5 py-0.5 rounded font-semibold">
+              Quality Gate
+            </span>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : ((stats?.deliverables_by_status?.client_review ?? 0) + (stats?.deliverables_by_status?.internal_review ?? 0) + (stats?.deliverables_by_status?.changes_requested ?? 0))}
             </span>
             <span className="text-xs text-[#A3A0B0]">In review</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1 truncate">
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate">
             {loading ? "Loading queue..." : `${stats?.deliverables_by_status?.changes_requested ?? 0} changes requested · ${stats?.deliverables_by_status?.client_review ?? 0} client sign-off`}
           </p>
         </Link>
@@ -301,47 +333,48 @@ export default function DashboardPage() {
         {/* Metric 4: Scheduled Releases & MRR */}
         <Link
           href="/reports"
-          className="telemetry-cell p-4 hover:bg-white/[0.02] transition-colors block group cursor-pointer"
+          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-[#A78BFA]" />
-              Scheduled Releases
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#45B88A] transition-colors flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-[#45B88A]" />
+              Monthly Delivery
             </span>
-            <span className="text-[9px] font-mono text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/20 px-1.5 py-0.2 rounded font-semibold">
+            <span className="text-[9px] font-mono text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/25 px-1.5 py-0.5 rounded font-semibold">
               {deliverablePercent}% Target
             </span>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : `${stats?.deliverables_done ?? 0}/${stats?.deliverables_total ?? 0}`}
             </span>
             <span className="text-xs text-[#A3A0B0]">Delivered</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1 truncate">
-            {loading ? "Fetching MRR..." : `${formatCurrencyINR(stats?.total_monthly_retainer_inr ?? 0)} / mo verified MRR`}
+          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate font-mono">
+            {loading ? "Fetching MRR..." : `${formatCurrencyINR(stats?.total_monthly_retainer_inr ?? 0)}/mo contracted`}
           </p>
         </Link>
       </div>
 
       {/* ──────────────────────────────────────────────
           3. Dual-Pane Operational Matrix
-             Left: Linear Production Pipeline Table (Primary Operational Hero)
+             Left: Linear Production Pipeline (Hero)
              Right: Deadlines Radar & Audit Streams (Secondary)
       ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ── PRIMARY OPERATIONAL HERO: Linear Production Pipeline (8 cols) ── */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="surface-card rounded-2xl overflow-hidden shadow-xs">
+          <div className="surface-card rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-white/[0.08]">
             {/* Table Header Controls */}
-            <div className="p-4 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 md:px-5 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold text-[#F2F0F7] tracking-tight">
+                  <h2 className="font-heading text-sm font-semibold text-[#F2F0F7] tracking-tight">
                     Production Pipeline
                   </h2>
-                  <span className="px-1.5 py-0.2 text-[9px] font-mono rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
-                    Linear Matrix
+                  <span className="px-2 py-0.5 text-[10px] font-mono rounded-md bg-white/[0.04] text-[#A78BFA] border border-white/[0.08] inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-pulse" />
+                    Live Flow
                   </span>
                 </div>
                 <p className="text-xs text-[#A3A0B0] mt-0.5">
@@ -349,43 +382,55 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* Segmented Filter Pills */}
-              <div className="flex items-center p-0.5 bg-[#101014] rounded-lg border border-white/[0.08] text-xs font-medium shrink-0">
+              {/* Segmented Filter Pills with live counts */}
+              <div className="flex items-center p-0.5 bg-[#101014] rounded-xl border border-white/[0.08] text-xs font-medium shrink-0">
                 <button
                   type="button"
                   onClick={() => setTaskFilter("all")}
-                  className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                    taskFilter === "all" ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    taskFilter === "all" 
+                      ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold border border-white/[0.08]" 
+                      : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                   }`}
                 >
-                  All ({tasks.length})
+                  <span>All</span>
+                  <span className="font-mono text-[10px] text-[#A3A0B0]">{allTasksCount}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setTaskFilter("review")}
-                  className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                    taskFilter === "review" ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    taskFilter === "review" 
+                      ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold border border-white/[0.08]" 
+                      : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                   }`}
                 >
-                  Review
+                  <span>Review</span>
+                  <span className="font-mono text-[10px] text-[#E5AA58]">{reviewTasksCount}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setTaskFilter("in_progress")}
-                  className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                    taskFilter === "in_progress" ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    taskFilter === "in_progress" 
+                      ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold border border-white/[0.08]" 
+                      : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                   }`}
                 >
-                  Active
+                  <span>Active</span>
+                  <span className="font-mono text-[10px] text-[#69A9D8]">{inProgressTasksCount}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setTaskFilter("done")}
-                  className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                    taskFilter === "done" ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    taskFilter === "done" 
+                      ? "bg-[#20202A] text-[#F2F0F7] shadow-xs font-semibold border border-white/[0.08]" 
+                      : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                   }`}
                 >
-                  Done
+                  <span>Done</span>
+                  <span className="font-mono text-[10px] text-[#45B88A]">{doneTasksCount}</span>
                 </button>
               </div>
             </div>
@@ -397,16 +442,18 @@ export default function DashboardPage() {
                 <span>Loading active production pipeline...</span>
               </div>
             ) : filteredTasks.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#A3A0B0] space-y-1">
-                <CheckSquare className="w-6 h-6 mx-auto text-[#A3A0B0]/50 mb-1" />
-                <p className="font-semibold text-[#F2F0F7]">No tasks matching this filter</p>
-                <p className="text-[11px] text-[#A3A0B0]">All tasks in this category are clear or unassigned.</p>
+              <div className="p-12 text-center text-xs text-[#A3A0B0] space-y-2">
+                <CheckSquare className="w-8 h-8 mx-auto text-[#A3A0B0]/40 mb-1" />
+                <p className="font-semibold text-[#F2F0F7] text-sm">No tasks matching this filter</p>
+                <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto">
+                  All deliverables in this category are completed or currently unassigned.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-white/[0.08] bg-[#121217]/90 text-[#A3A0B0] text-[10px] font-mono uppercase tracking-wider">
+                    <tr className="border-b border-white/[0.08] bg-[#121217]/90 text-[#A3A0B0] text-[10.5px] font-mono uppercase tracking-wider">
                       <th className="py-2.5 px-4 font-semibold">Deliverable / Task</th>
                       <th className="py-2.5 px-4 font-semibold">Client</th>
                       <th className="py-2.5 px-4 font-semibold">Assignee</th>
@@ -420,12 +467,13 @@ export default function DashboardPage() {
                     {filteredTasks.slice(0, 10).map((t) => {
                       const isDone = t.status === "done" || t.status === "approved";
                       const isReview = t.status === "client_review" || t.status === "internal_review" || t.status === "changes_requested";
+                      const isChanges = t.status === "changes_requested";
                       const isUrgent = t.priority === "urgent" || t.priority === "high";
 
                       return (
                         <tr 
                           key={t.id}
-                          className="hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                          className="hover:bg-white/[0.035] transition-colors group cursor-pointer h-10"
                         >
                           {/* Task / Deliverable Title */}
                           <td className="py-2.5 px-4">
@@ -437,7 +485,7 @@ export default function DashboardPage() {
                               ) : (
                                 <Layers className="w-3.5 h-3.5 text-[#45B88A] shrink-0" />
                               )}
-                              <span className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors truncate max-w-[200px] sm:max-w-[240px]">
+                              <span className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors truncate max-w-[200px] sm:max-w-[260px]">
                                 {t.title}
                               </span>
                             </Link>
@@ -445,13 +493,18 @@ export default function DashboardPage() {
 
                           {/* Client */}
                           <td className="py-2.5 px-4 text-[11px] text-[#A3A0B0] truncate max-w-[120px]">
-                            {clientsMap[t.client_id] || "Client Account"}
+                            <span className="inline-flex items-center gap-1.5 truncate">
+                              <span className="w-3.5 h-3.5 rounded bg-white/[0.06] text-[9px] font-mono font-semibold flex items-center justify-center shrink-0 text-[#F2F0F7]">
+                                {(clientsMap[t.client_id] || "C").charAt(0).toUpperCase()}
+                              </span>
+                              <span className="truncate">{clientsMap[t.client_id] || "Client Account"}</span>
+                            </span>
                           </td>
 
                           {/* Assignee */}
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-1.5">
-                              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#262630] to-[#17171E] border border-white/[0.1] text-[#F2F0F7] font-mono text-[9px] font-semibold flex items-center justify-center shrink-0">
+                              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#262630] to-[#17171E] border border-white/[0.1] text-[#F2F0F7] font-mono text-[9px] font-semibold flex items-center justify-center shrink-0 shadow-inner">
                                 {t.assignee_id ? (membersMap[t.assignee_id]?.charAt(0).toUpperCase() || "S") : "—"}
                               </span>
                               <span className="text-[11px] text-[#A3A0B0] truncate max-w-[80px]">
@@ -462,15 +515,17 @@ export default function DashboardPage() {
 
                           {/* Status */}
                           <td className="py-2.5 px-4">
-                            <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium">
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium">
                               {isDone ? (
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] shrink-0" />
+                              ) : isChanges ? (
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#E16F7B] shrink-0" />
                               ) : isReview ? (
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#E5AA58] shrink-0" />
                               ) : (
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] shrink-0" />
                               )}
-                              <span className={isDone ? "text-[#45B88A]" : isReview ? "text-[#E5AA58]" : "text-[#A78BFA]"}>
+                              <span className={isDone ? "text-[#45B88A]" : isChanges ? "text-[#E16F7B]" : isReview ? "text-[#E5AA58]" : "text-[#A78BFA]"}>
                                 {t.status.replace(/_/g, " ")}
                               </span>
                             </span>
@@ -478,7 +533,7 @@ export default function DashboardPage() {
 
                           {/* Priority */}
                           <td className="py-2.5 px-4">
-                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-semibold border ${
+                            <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono uppercase font-semibold border ${
                               t.priority === "urgent"
                                 ? "bg-[rgba(225,111,123,0.12)] text-[#E16F7B] border-[#E16F7B]/30"
                                 : t.priority === "high"
@@ -498,7 +553,7 @@ export default function DashboardPage() {
                           <td className="py-2.5 px-4 text-right">
                             <Link
                               href={`/tasks/${t.id}`}
-                              className="p-1 rounded-md hover:bg-white/[0.08] text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors inline-block"
+                              className="p-1 rounded-md hover:bg-white/[0.08] text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors inline-block group-hover:translate-x-0.5"
                             >
                               <ArrowRight className="w-3.5 h-3.5" />
                             </Link>
@@ -510,16 +565,30 @@ export default function DashboardPage() {
                 </table>
               </div>
             )}
+
+            {/* Table Footer summary bar */}
+            <div className="p-3 px-5 border-t border-white/[0.06] bg-[#121217]/50 flex items-center justify-between text-xs text-[#A3A0B0]">
+              <span className="font-mono text-[11px]">
+                Showing {Math.min(10, filteredTasks.length)} of {filteredTasks.length} active deliverables
+              </span>
+              <Link 
+                href="/tasks" 
+                className="font-medium text-[#A78BFA] hover:text-[#B69BFF] flex items-center gap-1 transition-colors text-xs"
+              >
+                <span>View Complete Board</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* ── CONTEXTUAL SECONDARY PANE: Deadlines Radar & Audit (4 cols) ── */}
         <div className="lg:col-span-4 space-y-6">
           {/* Upcoming Deadlines Radar */}
-          <div className="surface-card rounded-2xl p-5 space-y-3.5 shadow-xs">
+          <div className="surface-card rounded-2xl p-5 space-y-3.5 shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-white/[0.08]">
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div>
-                <h2 className="text-sm font-semibold text-[#F2F0F7] tracking-tight">Deadlines Radar</h2>
+                <h2 className="font-heading text-sm font-semibold text-[#F2F0F7] tracking-tight">Deadlines Radar</h2>
                 <p className="text-[11px] text-[#A3A0B0]">Next 48h critical deliverables</p>
               </div>
               <Link href="/tasks" className="text-xs font-mono text-[#A78BFA] hover:text-[#B69BFF] flex items-center gap-0.5 transition-colors">
@@ -537,28 +606,33 @@ export default function DashboardPage() {
                 {stats.upcoming_deadlines.map((deadline) => {
                   let badgeText = `${deadline.days_remaining}d rem`;
                   let badgeClass = "bg-white/[0.04] text-[#69A9D8] border-white/[0.08]";
+                  let borderStyle = "border-l-2 border-l-[#69A9D8]";
+
                   if (deadline.days_remaining < 0) {
                     badgeText = "Overdue";
                     badgeClass = "bg-[rgba(225,111,123,0.12)] text-[#E16F7B] border-[#E16F7B]/30";
+                    borderStyle = "border-l-2 border-l-[#E16F7B] bg-[rgba(225,111,123,0.05)]";
                   } else if (deadline.days_remaining === 0) {
                     badgeText = "Today";
                     badgeClass = "bg-[rgba(225,111,123,0.12)] text-[#E16F7B] border-[#E16F7B]/30";
+                    borderStyle = "border-l-2 border-l-[#E16F7B]";
                   } else if (deadline.days_remaining === 1) {
                     badgeText = "Tomorrow";
                     badgeClass = "bg-[rgba(229,170,88,0.12)] text-[#E5AA58] border-[#E5AA58]/30";
+                    borderStyle = "border-l-2 border-l-[#E5AA58]";
                   }
 
                   return (
                     <Link 
                       href="/tasks"
                       key={deadline.id}
-                      className="p-2.5 rounded-xl bg-[#101014] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] transition-colors block cursor-pointer group"
+                      className={`p-3 rounded-xl bg-[#101014] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] transition-colors block cursor-pointer group ${borderStyle}`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-medium text-[#F2F0F7] truncate group-hover:text-[#A78BFA] transition-colors">
                           {deadline.title}
                         </span>
-                        <span className={`px-1.5 py-0.2 text-[9px] font-mono rounded border uppercase shrink-0 ${badgeClass}`}>
+                        <span className={`px-1.5 py-0.5 text-[9px] font-mono rounded border uppercase shrink-0 font-semibold ${badgeClass}`}>
                           {badgeText}
                         </span>
                       </div>
@@ -584,10 +658,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Operational Audit Stream */}
-          <div className="surface-card rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="surface-card rounded-2xl p-5 space-y-3 shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-white/[0.08]">
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div>
-                <h2 className="text-sm font-semibold text-[#F2F0F7] tracking-tight">Operational Audit Feed</h2>
+                <h2 className="font-heading text-sm font-semibold text-[#F2F0F7] tracking-tight">Operational Audit Feed</h2>
                 <p className="text-xs text-[#A3A0B0] mt-0.5">Continuous event log from specialist workflows.</p>
               </div>
               <Link href="/approvals" className="text-xs font-mono text-[#A78BFA] hover:text-[#B69BFF] transition-colors flex items-center gap-1">
@@ -616,9 +690,9 @@ export default function DashboardPage() {
                     <Link 
                       href={linkHref}
                       key={item.id} 
-                      className="flex items-center gap-3 py-2.5 px-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                      className="flex items-center gap-3 py-2.5 px-2 rounded-xl hover:bg-white/[0.035] transition-colors group cursor-pointer"
                     >
-                      <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 border text-xs ${
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border text-xs shadow-inner ${
                         isApproved 
                           ? "bg-[rgba(69,184,138,0.12)] text-[#45B88A] border-[#45B88A]/20" 
                           : isReview 
@@ -626,11 +700,11 @@ export default function DashboardPage() {
                           : "bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border-[#A78BFA]/20"
                       }`}>
                         {isApproved ? (
-                          <CheckCircle2 className="w-3 h-3" />
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                         ) : isReview ? (
-                          <Clock className="w-3 h-3" />
+                          <Clock className="w-3.5 h-3.5" />
                         ) : (
-                          <Sparkles className="w-3 h-3" />
+                          <Sparkles className="w-3.5 h-3.5" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -642,7 +716,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] font-mono text-[#A3A0B0]">
+                        <span className="text-[10px] font-mono text-[#A3A0B0]">
                           {formatRelativeTime(item.timestamp)}
                         </span>
                       </div>
