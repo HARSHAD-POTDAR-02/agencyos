@@ -108,24 +108,44 @@ export interface SpecialistAgent {
   starters: string[];
 }
 
+export const CAMPAIGN_DIRECTOR: SpecialistAgent = {
+  id: "director",
+  name: "Campaign Director",
+  shortName: "Director",
+  roleTitle: "Sprint Orchestrator & Creative Director",
+  icon: Sparkles,
+  color: "violet",
+  badgeBg: "bg-violet-500/15",
+  badgeText: "text-violet-400",
+  borderColor: "border-violet-500/30",
+  avatarBg: "bg-violet-600/10 text-violet-400 border-violet-500/30",
+  description: "Guides end-to-end sprint discovery, timeline planning, deliverable counts, and sprint generation.",
+  starters: [
+    "Create a 4-day campaign sprint from 8th Nov to 11th Nov with daily content",
+    "Plan a 30-day challenge sprint with viral Instagram Reels",
+    "Design an educational carousel sprint focused on authority & debunking myths",
+    "Craft a product launch campaign with exclusive offers",
+  ],
+};
+
 export const SPECIALIST_AGENTS: SpecialistAgent[] = [
   {
-    id: "director",
-    name: "Campaign Director",
-    shortName: "Director",
-    roleTitle: "Sprint Orchestrator & Creative Director",
-    icon: Sparkles,
-    color: "violet",
-    badgeBg: "bg-violet-500/15",
-    badgeText: "text-violet-600 dark:text-violet-400",
-    borderColor: "border-violet-500/30",
-    avatarBg: "bg-violet-600/10 text-violet-600 dark:text-violet-400 border-violet-500/30",
-    description: "Guides end-to-end sprint discovery, timeline planning, deliverable counts, and sprint generation.",
+    id: "brand_intelligence",
+    name: "Brand Identity Specialist",
+    shortName: "Brand Identity",
+    roleTitle: "Voice, Guidelines & Content Pillars",
+    icon: ShieldCheck,
+    color: "emerald",
+    badgeBg: "bg-emerald-500/15",
+    badgeText: "text-emerald-400",
+    borderColor: "border-emerald-500/30",
+    avatarBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+    description: "Defines brand voice guidelines, content pillars, audience personas, and guards against prohibited claims.",
     starters: [
-      "Create a 4-day campaign sprint from 8th Nov to 11th Nov with daily content",
-      "Plan a 30-day challenge sprint with viral Instagram Reels",
-      "Design an educational carousel sprint focused on authority & debunking myths",
-      "Craft a product launch campaign with exclusive offers",
+      "Audit our brand voice and suggest 3 high-authority content pillars",
+      "Craft a detailed Ideal Customer Persona (ICP) with pain points & desires",
+      "How do we frame our verified offer without sounding salesy?",
+      "Review our prohibited claims to ensure strict brand compliance",
     ],
   },
   {
@@ -136,34 +156,15 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
     icon: Search,
     color: "sky",
     badgeBg: "bg-sky-500/15",
-    badgeText: "text-sky-600 dark:text-sky-400",
+    badgeText: "text-sky-400",
     borderColor: "border-sky-500/30",
-    avatarBg: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30",
+    avatarBg: "bg-sky-500/10 text-sky-400 border-sky-500/30",
     description: "Identifies live market trends, competitor whitespace, viral hook archetypes, and algorithm dynamics.",
     starters: [
       "What are the top viral hooks for our industry right now?",
       "Suggest 3 high-arrest hooks for our upcoming seasonal promotion",
       "What competitor whitespace or angle gaps can we exploit?",
       "Which trending audio or meme archetypes fit our brand?",
-    ],
-  },
-  {
-    id: "brand_intelligence",
-    name: "Brand Identity Specialist",
-    shortName: "Brand Identity",
-    roleTitle: "Voice, Guidelines & Content Pillars",
-    icon: ShieldCheck,
-    color: "emerald",
-    badgeBg: "bg-emerald-500/15",
-    badgeText: "text-emerald-600 dark:text-emerald-400",
-    borderColor: "border-emerald-500/30",
-    avatarBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-    description: "Defines brand voice guidelines, content pillars, audience personas, and guards against prohibited claims.",
-    starters: [
-      "Audit our brand voice and suggest 3 high-authority content pillars",
-      "Craft a detailed Ideal Customer Persona (ICP) with pain points & desires",
-      "How do we frame our verified offer without sounding salesy?",
-      "Review our prohibited claims to ensure strict brand compliance",
     ],
   },
   {
@@ -174,9 +175,9 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
     icon: BarChart3,
     color: "amber",
     badgeBg: "bg-amber-500/15",
-    badgeText: "text-amber-600 dark:text-amber-400",
+    badgeText: "text-amber-400",
     borderColor: "border-amber-500/30",
-    avatarBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+    avatarBg: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     description: "Analyzes historical engagement stats, retention drop-off signals, and recommends format distribution.",
     starters: [
       "Analyze our past post performance and recommend optimal format ratio",
@@ -186,35 +187,16 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
     ],
   },
   {
-    id: "content_architect",
-    name: "Scriptwriter & Architect",
-    shortName: "Video Scripts",
-    roleTitle: "Scene-by-Scene Concepts & Shoot Storyboards",
-    icon: Layers2,
-    color: "purple",
-    badgeBg: "bg-purple-500/15",
-    badgeText: "text-purple-600 dark:text-purple-400",
-    borderColor: "border-purple-500/30",
-    avatarBg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
-    description: "Drafts timestamped Reel scripts (0:00-0:03 hook, beats, B-roll cues) and slide-by-slide Carousel decks.",
-    starters: [
-      "Write a 15-second Reel script with timestamped beats & B-roll directions",
-      "Give me 3 scene-by-scene video shoot concepts for our product",
-      "Draft a 7-slide educational carousel with high-retention slides",
-      "Give me 3 viral reel concepts with camera movement & voiceover lines",
-    ],
-  },
-  {
     id: "campaign_strategist",
-    name: "Creative Director",
+    name: "Campaign Strategist",
     shortName: "Strategist",
     roleTitle: "Master Themes & Narrative Pacing",
     icon: Cpu,
     color: "indigo",
     badgeBg: "bg-indigo-500/15",
-    badgeText: "text-indigo-600 dark:text-indigo-400",
+    badgeText: "text-indigo-400",
     borderColor: "border-indigo-500/30",
-    avatarBg: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
+    avatarBg: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30",
     description: "Architects multi-week narrative arcs, master campaign themes, and cross-platform conversion funnels.",
     starters: [
       "Structure a 3-phase narrative arc (Problem -> Solution -> Launch)",
@@ -224,25 +206,49 @@ export const SPECIALIST_AGENTS: SpecialistAgent[] = [
     ],
   },
   {
+    id: "content_architect",
+    name: "Content Architect",
+    shortName: "Content Arch.",
+    roleTitle: "Scene-by-Scene Concepts & Shoot Storyboards",
+    icon: Layers2,
+    color: "purple",
+    badgeBg: "bg-purple-500/15",
+    badgeText: "text-purple-400",
+    borderColor: "border-purple-500/30",
+    avatarBg: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    description: "Drafts timestamped Reel scripts (0:00-0:03 hook, beats, B-roll cues) and slide-by-slide Carousel decks.",
+    starters: [
+      "Write a 15-second Reel script with timestamped beats & B-roll directions",
+      "Give me 3 scene-by-scene video shoot concepts for our product",
+      "Draft a 7-slide educational carousel with high-retention slides",
+      "Give me 3 viral reel concepts with camera movement & voiceover lines",
+    ],
+  },
+  {
     id: "quality_evaluator",
-    name: "Quality & Compliance Critic",
-    shortName: "Quality Critic",
+    name: "Quality Evaluator & Gate",
+    shortName: "Quality Gate",
     roleTitle: "Pre-Flight Audit & Hook Critique",
     icon: FileCheck,
     color: "rose",
     badgeBg: "bg-rose-500/15",
-    badgeText: "text-rose-600 dark:text-rose-400",
+    badgeText: "text-rose-400",
     borderColor: "border-rose-500/30",
-    avatarBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
+    avatarBg: "bg-rose-500/10 text-rose-400 border-rose-500/30",
     description: "Audits hooks for retention strength, eliminates clichés, and checks claims against compliance guidelines.",
     starters: [
       "Audit our campaign concepts for weak hooks, clichés, or fluff",
       "Check our copy against prohibited or risky marketing claims",
-      "Score our 3-second hook strength and suggest punchier openings",
-      "How can we tighten our call-to-actions to maximize conversion?",
+      "Rate the retention strength of our opening 3-second hook",
+      "Provide constructive critique to elevate these deliverable concepts",
     ],
   },
 ];
+
+export const getAgentInfo = (agentId?: string): SpecialistAgent => {
+  if (!agentId || agentId === "director") return CAMPAIGN_DIRECTOR;
+  return SPECIALIST_AGENTS.find((a) => a.id === agentId) || CAMPAIGN_DIRECTOR;
+};
 
 interface ChatMsg {
   id: string;
@@ -305,6 +311,7 @@ function CampaignStudioContent() {
   // Collaborative Studio & Active Canvas State
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(searchParams.get("campaignId") || null);
   const [activeArtifact, setActiveArtifact] = useState<ActiveArtifactData | null>(null);
+  const [activeArtifactVersions, setActiveArtifactVersions] = useState<any[]>([]);
   const [mobileTab, setMobileTab] = useState<"nav" | "canvas" | "intel">("canvas");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; email: string; role?: string }>>([]);
@@ -377,6 +384,25 @@ function CampaignStudioContent() {
       chatInputRef.current?.focus();
     }
   }, [isChatLoading, isPipelineRunning, selectedClientId, studioMode, activeSpecialistId]);
+
+  // Guarded Keyboard Shortcuts (Ctrl+J / Cmd+J to toggle mode, ESC to dismiss modals)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput =
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        if (!isInput && !isExportModalOpen) {
+          e.preventDefault();
+          setStudioMode((prev) => (prev === "workflow" ? "specialists" : "workflow"));
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isExportModalOpen]);
 
   // Load clients
   useEffect(() => {
@@ -534,7 +560,7 @@ function CampaignStudioContent() {
 
   // Current active agent specification
   const currentAgentId = studioMode === "workflow" ? "director" : activeSpecialistId;
-  const currentAgent = SPECIALIST_AGENTS.find((a) => a.id === currentAgentId) || SPECIALIST_AGENTS[0];
+  const currentAgent = getAgentInfo(currentAgentId);
 
   // Send message to Copilot Brief endpoint with universal shared context
   const handleSendMessage = async (textOverride?: string) => {
@@ -855,6 +881,7 @@ function CampaignStudioContent() {
         payload: summary.payload,
         supporting_evidence_refs: summary.supporting_evidence_refs || [],
       });
+      setActiveArtifactVersions([]);
       setMobileTab("canvas");
       return;
     }
@@ -895,6 +922,7 @@ function CampaignStudioContent() {
             payload: payload,
             supporting_evidence_refs: detail.supporting_evidence_refs || [],
           });
+          setActiveArtifactVersions(detail.versions || []);
           setMobileTab("canvas");
         }
       } catch (err) {
@@ -908,7 +936,7 @@ function CampaignStudioContent() {
     }
   };
 
-  // Launch Multi-Agent Pipeline Execution inline in chat
+  // Launch Multi-Agent Pipeline Execution inline in chat (Real LangGraph Workflow, Zero Fake Timers)
   const handleRunPipeline = async () => {
     if (!token || !effectiveAgencyId || !selectedClientId || isPipelineRunning) return;
 
@@ -918,7 +946,7 @@ function CampaignStudioContent() {
     const pipelineMsg: ChatMsg = {
       id: pipelineMsgId,
       role: "assistant",
-      content: "🚀 **Launching Autonomous Multi-Agent Campaign Intelligence Engine...**\nCoordinating 6 specialized agents to architect this campaign sprint:",
+      content: "🚀 **Launching Autonomous Multi-Agent Campaign Intelligence Engine...**\nCoordinating 6 specialized agents: parallel gathering (Brand Intel, Market Research, Performance) → Strategy synthesis → Content Architecture → Quality Gate audit.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       agent_id: "director",
       agent_name: "Multi-Agent Engine",
@@ -926,50 +954,12 @@ function CampaignStudioContent() {
         status: "in_progress",
         activeStep: 0,
         stepDetails: {
-          agent1: "Extracting brand guidelines, verified offers & quota limits...",
+          agent1: "Executing parallel intelligence gathering across brand rules, market trends, and performance data...",
         },
       },
     };
 
     setChatMessages((prev) => [...prev, pipelineMsg]);
-
-    const stepInterval = setInterval(() => {
-      setChatMessages((prev) =>
-        prev.map((m) => {
-          if (m.id === pipelineMsgId && m.agentPipeline && m.agentPipeline.status === "in_progress") {
-            const nextStep = m.agentPipeline.activeStep < 5 ? m.agentPipeline.activeStep + 1 : 5;
-            const updatedDetails = { ...m.agentPipeline.stepDetails };
-
-            if (nextStep === 1) {
-              updatedDetails.agent1 = "Verified brand voice, forbidden claims & quota constraints.";
-              updatedDetails.agent2 = "Searching live web & format benchmarks for viral trends...";
-            } else if (nextStep === 2) {
-              updatedDetails.agent2 = "Extracted competitor hooks & market evidence.";
-              updatedDetails.agent3 = "Auditing historical drop-off rates & retention signals...";
-            } else if (nextStep === 3) {
-              updatedDetails.agent3 = "Calculated format weights and fatigue mitigations.";
-              updatedDetails.agent4 = "Synthesizing master theme, narrative arc & content pillars...";
-            } else if (nextStep === 4) {
-              updatedDetails.agent4 = "Master strategy locked with balanced distribution.";
-              updatedDetails.agent5 = "Generating polymorphic deliverables, Reel scenes & Carousel slides...";
-            } else if (nextStep === 5) {
-              updatedDetails.agent5 = "Drafted high-fidelity polymorphic deliverables.";
-              updatedDetails.agent6 = "Running deterministic quality gate & compliance audit...";
-            }
-
-            return {
-              ...m,
-              agentPipeline: {
-                ...m.agentPipeline,
-                activeStep: nextStep,
-                stepDetails: updatedDetails,
-              },
-            };
-          }
-          return m;
-        })
-      );
-    }, 3800);
 
     try {
       const newCampaign: any = await campaignApi.generatePlan(
@@ -988,8 +978,6 @@ function CampaignStudioContent() {
         token
       );
 
-      clearInterval(stepInterval);
-
       const draft = newCampaign.ai_plan_draft || {};
       const deliverablesCount = (draft.deliverables || []).length;
       const rawScore = draft.quality_evaluation?.compliance_score;
@@ -1001,6 +989,8 @@ function CampaignStudioContent() {
           : 95;
       const theme = draft.strategy?.campaign_theme || draft.campaign_name;
 
+      setActiveCampaignId(newCampaign.id);
+
       setChatMessages((prev) =>
         prev.map((m) => {
           if (m.id === pipelineMsgId) {
@@ -1010,7 +1000,7 @@ function CampaignStudioContent() {
                 status: "completed",
                 activeStep: 6,
                 stepDetails: {
-                  agent1: "Brand rules, verified offers & forbidden claims validated.",
+                  agent1: "Brand guidelines, verified offers & forbidden claims validated.",
                   agent2: "Live web research completed with competitor angles.",
                   agent3: "Historical retention analysis & format weights applied.",
                   agent4: `Strategy finalized: ${theme || "Master Campaign Strategy"}.`,
@@ -1030,8 +1020,25 @@ function CampaignStudioContent() {
           return m;
         })
       );
+
+      // Check if studio artifacts exist for the generated campaign
+      try {
+        const arts = await studioApi.listArtifacts(effectiveAgencyId, newCampaign.id, token);
+        if (arts && arts.length > 0) {
+          const first = arts[0];
+          setActiveArtifact({
+            id: first.id,
+            type: first.artifact_type,
+            title: first.title,
+            version: first.current_version_number || 1,
+            status: first.status,
+            payload: first.latest_version?.payload || {},
+          });
+        }
+      } catch {
+        // Artifacts optional
+      }
     } catch (err: any) {
-      clearInterval(stepInterval);
       setChatMessages((prev) =>
         prev.map((m) => {
           if (m.id === pipelineMsgId) {
@@ -1062,33 +1069,37 @@ function CampaignStudioContent() {
     { id: "handoff", name: "Production Handoff", step: "06", icon: CheckCircle2, desc: "Task conversion & export" },
   ];
 
-  // Helper to compute real execution status for any of the 6 agents
+  // Helper to compute honest execution status for any of the 6 agents (Zero Fake Timers)
   const getAgentStatus = (agentId: string) => {
+    // If the full LangGraph pipeline is actively running via generate-plan
     if (isPipelineRunning) {
-      const activeMsg = chatMessages.find(
-        (m) => m.agentPipeline && m.agentPipeline.status === "in_progress"
-      );
-      if (activeMsg && activeMsg.agentPipeline) {
-        const stepIdx = activeMsg.agentPipeline.activeStep;
-        const stepOrder = [
-          "brand_intelligence",
-          "market_research",
-          "historical_performance",
-          "campaign_strategist",
-          "content_architect",
-          "quality_evaluator",
-        ];
-        const agentIdx = stepOrder.indexOf(agentId);
-        if (agentIdx !== -1) {
-          if (stepIdx === agentIdx) return { state: "running", label: "Running" };
-          if (stepIdx > agentIdx) return { state: "completed", label: "Done" };
-          return { state: "pending", label: "Queued" };
-        }
+      if (["brand_intelligence", "market_research", "historical_performance"].includes(agentId)) {
+        return { state: "running", label: "Gathering" };
+      }
+      if (agentId === "campaign_strategist") {
+        return { state: "pending", label: "Fan-In" };
+      }
+      if (agentId === "content_architect") {
+        return { state: "pending", label: "Arch." };
+      }
+      if (agentId === "quality_evaluator") {
+        return { state: "pending", label: "Gate" };
       }
     }
+
+    // If an individual specialist chat stream is currently executing
     if (isChatLoading && currentAgentId === agentId) {
-      return { state: "running", label: "Thinking" };
+      return { state: "running", label: "Active" };
     }
+
+    // Check if this specialist previously executed in the current session
+    const hasExecuted = chatMessages.some(
+      (m) => m.agent_id === agentId && m.role === "assistant" && !m.isStreaming
+    );
+    if (hasExecuted) {
+      return { state: "completed", label: "Ready" };
+    }
+
     return { state: "idle", label: "Idle" };
   };
 
@@ -1464,7 +1475,7 @@ function CampaignStudioContent() {
                 Specialist Roster
               </span>
               <div className="grid grid-cols-2 gap-1 text-[11px]">
-                {SPECIALIST_AGENTS.filter((a) => a.id !== "director").map((agent) => (
+                {SPECIALIST_AGENTS.map((agent) => (
                   <button
                     key={agent.id}
                     type="button"
@@ -1494,6 +1505,18 @@ function CampaignStudioContent() {
         >
           <ContextualCanvas
             artifact={activeArtifact}
+            versions={activeArtifactVersions}
+            onSelectVersion={(versionNumber) => {
+              const targetVer = activeArtifactVersions.find((v: any) => v.version_number === versionNumber);
+              if (targetVer && activeArtifact) {
+                setActiveArtifact({
+                  ...activeArtifact,
+                  version: targetVer.version_number,
+                  status: targetVer.is_approved ? "approved" : (activeArtifact.status || "draft"),
+                  payload: targetVer.payload || activeArtifact.payload,
+                });
+              }
+            }}
             onApproveVersion={handleApproveVersion}
             onExportClick={() => {
               setIsExportModalOpen(true);
@@ -1515,12 +1538,29 @@ function CampaignStudioContent() {
               mobileTab === "intel" ? "flex" : "hidden lg:flex"
             }`}
           >
-            {/* 6-Agent Execution Status Roster */}
-            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2">
-              <div className="flex items-center justify-between">
+            {/* Orchestration Supervisor & 6-Agent Execution Status Roster */}
+            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2.5">
+              {/* Campaign Director Copilot Banner */}
+              <div className="flex items-center justify-between p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center font-bold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-[#F2F0F7] text-[11px] font-heading">Campaign Director</div>
+                    <div className="text-[9.5px] font-mono text-[#A3A0B0]">Sprint Orchestrator &amp; Copilot</div>
+                  </div>
+                </div>
+                <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium">
+                  {studioMode === "workflow" ? "Active Copilot" : "Standby"}
+                </span>
+              </div>
+
+              {/* 6 Specialist Agents Matrix */}
+              <div className="flex items-center justify-between pt-0.5">
                 <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
                   <Bot className="w-3.5 h-3.5 text-[#A78BFA]" />
-                  <span>Agent Matrix (6 Synced)</span>
+                  <span>Specialist Matrix (6 Synced)</span>
                 </span>
                 <span className="text-[10px] font-mono text-[#A3A0B0]">
                   {isPipelineRunning ? (
@@ -1537,14 +1577,7 @@ function CampaignStudioContent() {
 
               {/* 6 Agents Micro Matrix with LED Diodes */}
               <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { id: "brand_intelligence", name: "Brand Intel", icon: ShieldCheck },
-                  { id: "market_research", name: "Market Trends", icon: Search },
-                  { id: "historical_performance", name: "Performance", icon: BarChart3 },
-                  { id: "campaign_strategist", name: "Strategist", icon: Cpu },
-                  { id: "content_architect", name: "Architect", icon: Layers2 },
-                  { id: "quality_evaluator", name: "Quality Gate", icon: FileCheck },
-                ].map((item) => {
+                {SPECIALIST_AGENTS.map((item) => {
                   const stat = getAgentStatus(item.id);
                   const Icon = item.icon;
                   return (
@@ -1567,7 +1600,7 @@ function CampaignStudioContent() {
                           <span className="w-1.5 h-1.5 rounded-full bg-[#6E6D7A] shrink-0" />
                         )}
                         <Icon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{item.name}</span>
+                        <span className="truncate">{item.shortName}</span>
                       </div>
                       <span className="text-[9px] font-mono uppercase shrink-0 font-medium">
                         {stat.label}
@@ -1583,7 +1616,7 @@ function CampaignStudioContent() {
               {displayedMessages.map((msg) => {
                 const isUser = msg.role === "user";
                 const msgAgentId = msg.agent_id || "director";
-                const agentInfo = SPECIALIST_AGENTS.find((a) => a.id === msgAgentId) || SPECIALIST_AGENTS[0];
+                const agentInfo = getAgentInfo(msgAgentId);
                 const AgentIcon = agentInfo.icon;
 
                 return (

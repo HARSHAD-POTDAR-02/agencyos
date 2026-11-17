@@ -64,10 +64,20 @@ export function ExportPreviewModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [exportResult, setExportResult] = useState<ExportPipelineResponse | null>(null);
 
-  // Track previous modal state to initialize defaults ONLY when modal first opens or target artifact changes,
-  // NEVER when activeArtifact.status transitions to "exported" while the modal is already showing results.
   const prevIsOpenRef = useRef(false);
   const prevArtifactKeyRef = useRef("");
+
+  // Keyboard shortcut: ESC to dismiss modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     const artifactKey = artifact ? `${artifact.id}-v${artifact.version}` : "";
@@ -124,9 +134,9 @@ export function ExportPreviewModal({
   // Task notes preview
   let taskNotesPreview = "Production asset ready for execution.";
   if (artifact.payload?.scenes && Array.isArray(artifact.payload.scenes)) {
-    taskNotesPreview = `Storyboard with ${artifact.payload.scenes.length} scenes ready for shoot.`;
+    taskNotesPreview = `Storyboard with ${artifact.payload.scenes.length} scenes ready for production.`;
   } else if (artifact.payload?.slides && Array.isArray(artifact.payload.slides)) {
-    taskNotesPreview = `Carousel deck with ${artifact.payload.slides.length} slides ready for design.`;
+    taskNotesPreview = `Carousel deck with ${artifact.payload.slides.length} slides ready for production.`;
   }
 
   const handleApproveInline = async () => {
@@ -187,42 +197,42 @@ export function ExportPreviewModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl rounded-2xl border border-[#30303D] bg-[#17171E] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl rounded-2xl border border-white/[0.1] bg-[#17171E] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[#30303D] bg-[#101014]/60">
+        <div className="flex items-center justify-between p-5 border-b border-white/[0.08] bg-[#101014]/60">
           <div className="flex items-center gap-3">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs transition-colors ${
                 exportResult
-                  ? "bg-[#45B88A]/10 border border-[#45B88A]/20 text-[#45B88A]"
-                  : "bg-[#A78BFA]/10 border border-[#A78BFA]/20 text-[#A78BFA]"
+                  ? "bg-[#45B88A]/10 border border-[#45B88A]/30 text-[#45B88A]"
+                  : "bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[#A78BFA]"
               }`}
             >
               {exportResult ? <CheckCircle2 className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
             </div>
             <div>
-              <h2 id="export-modal-title" className="font-bold text-base text-[#F2F0F7]">
+              <h2 id="export-modal-title" className="font-bold text-base text-[#F2F0F7] font-heading">
                 {exportResult ? "Production Export Complete" : "Export to Production Pipeline"}
               </h2>
-              <p className="text-xs text-[#A3A0B0]">
+              <p className="text-xs text-[#A3A0B0] font-sans">
                 {exportResult
-                  ? `Artifact v${artifact.version} was exported into deliverables & tasks.`
-                  : `Convert approved studio draft v${artifact.version} into production Deliverable & Tasks.`}
+                  ? `Artifact v${artifact.version} was exported into Deliverable & Task records.`
+                  : `Convert approved studio draft v${artifact.version} into a production Deliverable and Task.`}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-[#20202A] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -238,32 +248,32 @@ export function ExportPreviewModal({
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="font-bold text-lg text-[#F2F0F7]">
+                <h3 className="font-bold text-lg text-[#F2F0F7] font-heading">
                   {exportResult.is_replay ? "Export Recovered (Idempotent Replay)" : "Successfully Exported to Production!"}
                 </h3>
                 <p className="text-xs text-[#A3A0B0] max-w-md mx-auto">
                   {exportResult.is_replay
-                    ? "An identical export request was already processed. Existing production records were retrieved safely without creating duplicates."
-                    : "The creative draft was locked, the audit record was created, and production work items were spawned."}
+                    ? "An identical export request was already processed. Existing production records were retrieved safely via idempotency key."
+                    : "The creative draft was locked, audit record created, and production work items were spawned."}
                 </p>
               </div>
 
               {/* Records Mapping Card */}
-              <div className="p-4 rounded-xl border border-[#30303D] bg-[#20202A] text-left space-y-3 max-w-lg mx-auto">
-                <div className="flex items-center justify-between text-xs pb-2 border-b border-[#30303D]/60">
-                  <span className="text-[#A3A0B0] font-medium">Production Deliverable</span>
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#101014] text-left space-y-3 max-w-lg mx-auto">
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-white/[0.06]">
+                  <span className="text-[#A3A0B0] font-medium font-mono text-[11px]">Production Deliverable</span>
                   <span className="font-semibold text-[#F2F0F7] truncate max-w-[240px]">
                     {exportResult.deliverable_title}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs pb-2 border-b border-[#30303D]/60">
-                  <span className="text-[#A3A0B0] font-medium">Production Task</span>
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-white/[0.06]">
+                  <span className="text-[#A3A0B0] font-medium font-mono text-[11px]">Production Task</span>
                   <span className="font-semibold text-[#F2F0F7] truncate max-w-[240px]">
                     {exportResult.task_title}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#A3A0B0] font-medium">Audit Export ID</span>
+                  <span className="text-[#A3A0B0] font-medium font-mono text-[11px]">Audit Export ID</span>
                   <span className="font-mono text-[11px] text-[#A3A0B0]">
                     {String(exportResult.export_id || exportResult.deliverable_id || "").substring(0, 8)}...
                   </span>
@@ -275,15 +285,15 @@ export function ExportPreviewModal({
                 {exportResult.deliverable_id && (
                   <Link
                     href={`/deliverables/${exportResult.deliverable_id}`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-colors shadow-2xs"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-colors shadow-2xs font-sans"
                   >
-                    <span>View Deliverable & Script</span>
+                    <span>View Deliverable</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
                 )}
                 <Link
                   href="/tasks"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] font-semibold text-xs transition-colors shadow-2xs"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#20202A] hover:bg-white/[0.06] border border-white/[0.08] text-[#F2F0F7] font-semibold text-xs transition-colors shadow-2xs font-sans"
                 >
                   <span>Go to Production Tasks</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -291,35 +301,37 @@ export function ExportPreviewModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-xl border border-[#30303D] hover:bg-[#20202A] text-[#F2F0F7] font-medium text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-white/[0.08] hover:bg-[#20202A] text-[#F2F0F7] font-medium text-xs transition-colors cursor-pointer"
                 >
                   Return to Studio
                 </button>
               </div>
             </div>
           ) : (
-            /* Export Form */
+            /* Export Proposal Form */
             <form onSubmit={handleConfirmExport} className="space-y-5">
               {/* Approval status banner */}
               {isApproved ? (
                 <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/20 text-[#45B88A] text-xs font-medium">
                   <ShieldCheck className="w-4 h-4 text-[#45B88A] shrink-0" />
                   <span>
-                    Artifact v{artifact.version} is <strong>Approved</strong> and eligible for production export.
+                    Artifact v{artifact.version} is <strong>Approved</strong> and verified for production export.
                   </span>
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-[#E5AA58]/10 border border-[#E5AA58]/30 text-[#E5AA58] text-xs">
                   <div className="flex items-center gap-2.5">
                     <AlertTriangle className="w-4 h-4 text-[#E5AA58] shrink-0" />
-                    <span>This artifact version is currently in <strong>Draft</strong> status. Approval is mandatory prior to export.</span>
+                    <span>
+                      Artifact v{artifact.version} is in <strong>Draft</strong> status. Version approval is required before export.
+                    </span>
                   </div>
                   {onApproveVersion && (
                     <button
                       type="button"
                       onClick={handleApproveInline}
                       disabled={isApproving}
-                      className="px-3 py-1 rounded-lg bg-[#45B88A] hover:bg-[#45B88A]/90 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs"
+                      className="px-3 py-1.5 rounded-lg bg-[#45B88A] hover:bg-[#45B88A]/90 text-[#101014] font-semibold text-xs transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs"
                     >
                       {isApproving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                       <span>Approve v{artifact.version}</span>
@@ -329,7 +341,7 @@ export function ExportPreviewModal({
               )}
 
               {errorMessage && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>{errorMessage}</span>
                 </div>
@@ -339,14 +351,14 @@ export function ExportPreviewModal({
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-[#F2F0F7] mb-1.5">
-                    Deliverable Name <span className="text-[#E16F7B]">*</span>
+                    Deliverable Title <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     value={deliverableName}
                     onChange={(e) => setDeliverableName(e.target.value)}
                     required
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-white/[0.08] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all"
                     placeholder="e.g. Hero Pour ASMR Reel"
                   />
                 </div>
@@ -359,7 +371,7 @@ export function ExportPreviewModal({
                     <select
                       value={targetFormat}
                       onChange={(e) => setTargetFormat(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-white/[0.08] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     >
                       <option value="reel_storyboard">Reel Storyboard / Short-Form Video</option>
                       <option value="carousel">Carousel Slide Deck</option>
@@ -376,7 +388,7 @@ export function ExportPreviewModal({
                     <select
                       value={targetPlatform}
                       onChange={(e) => setTargetPlatform(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-white/[0.08] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     >
                       <option value="instagram">Instagram</option>
                       <option value="tiktok">TikTok</option>
@@ -397,7 +409,7 @@ export function ExportPreviewModal({
                       type="date"
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-white/[0.08] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     />
                   </div>
 
@@ -408,7 +420,7 @@ export function ExportPreviewModal({
                     <select
                       value={assigneeId}
                       onChange={(e) => setAssigneeId(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#30303D] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-white/[0.08] bg-[#101014] text-[#F2F0F7] focus:outline-hidden focus:border-[#A78BFA] transition-all cursor-pointer"
                     >
                       <option value="">(Unassigned - Team Pool)</option>
                       {teamMembers.map((member) => (
@@ -421,48 +433,47 @@ export function ExportPreviewModal({
                 </div>
               </div>
 
-              {/* Task Preview Card */}
-              <div className="p-3.5 rounded-xl border border-[#30303D] bg-[#20202A] space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#F2F0F7]">
+              {/* Proposal Preview Card */}
+              <div className="p-3.5 rounded-xl border border-white/[0.08] bg-[#101014] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#F2F0F7] font-mono">
                   <Film className="w-3.5 h-3.5 text-[#A78BFA]" />
-                  <span>Production Task Preview</span>
+                  <span>Production Pipeline Scope</span>
                 </div>
-                <div className="text-xs text-[#A3A0B0] space-y-1">
+                <div className="text-xs text-[#A3A0B0] space-y-1 font-mono text-[11px]">
                   <div>
-                    <span className="font-medium text-[#F2F0F7]">Title: </span>
-                    Produce: {deliverableName || "Untitled"}
+                    <span className="font-medium text-[#F2F0F7]">Deliverable: </span>
+                    {deliverableName || "Untitled"}
                   </div>
                   <div>
-                    <span className="font-medium text-[#F2F0F7]">Type: </span>
-                    creative_production &bull; <span className="font-medium text-[#F2F0F7]">Status: </span>
-                    To Do &bull; <span className="font-medium text-[#F2F0F7]">Priority: </span>
-                    Medium
+                    <span className="font-medium text-[#F2F0F7]">Initial Task: </span>
+                    Script &amp; Production Prep &bull; <span className="font-medium text-[#F2F0F7]">Status: </span>
+                    To Do
                   </div>
                   <div>
-                    <span className="font-medium text-[#F2F0F7]">Production Notes: </span>
+                    <span className="font-medium text-[#F2F0F7]">Scope: </span>
                     {taskNotesPreview}
                   </div>
                 </div>
               </div>
 
               {/* Footer controls */}
-              <div className="flex items-center justify-between pt-3 border-t border-[#30303D]">
-                <span className="text-[11px] text-[#A3A0B0] font-mono">
-                  Key: {idempotencyKey.substring(0, 16)}...
+              <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
+                <span className="text-[10px] text-[#A3A0B0] font-mono">
+                  Idempotency: {idempotencyKey.substring(0, 16)}...
                 </span>
 
                 <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2 rounded-xl border border-[#30303D] hover:bg-[#20202A] text-[#F2F0F7] font-medium text-xs transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-xl border border-white/[0.08] hover:bg-white/[0.04] text-[#F2F0F7] font-medium text-xs transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isExporting || !isApproved || !deliverableName.trim()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer font-sans"
                   >
                     {isExporting ? (
                       <>
@@ -472,7 +483,7 @@ export function ExportPreviewModal({
                     ) : (
                       <>
                         <Share2 className="w-3.5 h-3.5" />
-                        <span>Confirm & Export</span>
+                        <span>Confirm &amp; Export</span>
                       </>
                     )}
                   </button>
