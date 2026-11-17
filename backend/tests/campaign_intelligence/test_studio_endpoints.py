@@ -24,12 +24,14 @@ from app.schemas.campaign import (
     ChatBriefRequest,
     ChatMessage,
     StudioApproveVersionRequest,
+    StudioReviseArtifactRequest,
 )
 from app.routers.campaigns import (
     approve_studio_artifact_endpoint,
     chat_brief_endpoint,
     get_studio_artifact_detail,
     list_studio_artifacts,
+    revise_studio_artifact_endpoint,
 )
 
 
@@ -291,3 +293,58 @@ async def test_tenant_isolation_rejects_cross_agency_artifact_access(db_session:
             db_session,
         )
     assert exc_info.value.status_code in [403, 404]
+
+
+@pytest.mark.asyncio
+async def test_manual_user_revision_endpoint(db_session: AsyncSession):
+    agency, client, campaign, user, membership = await _seed_test_env(db_session)
+
+    # 1. Create v1 via specialist chat
+    req = ChatBriefRequest(
+        agent_id="content_architect",
+        campaign_id=campaign.id,
+        messages=[ChatMessage(role="user", content="Draft reel.")],
+    )
+    res = await chat_brief_endpoint(agency.id, client.id, req, membership, db_session)
+    artifact_id = res.artifact_id
+
+    # 2. Revise via manual user endpoint
+    rev_payload = {
+        "deliverable_title": "Day 1: Handcrafted Latte Reel (User Edit)",
+        "scenes": [
+            {"scene_number": 1, "action": "Macro shot of milk froth"},
+            {"scene_number": 2, "action": "Latte art pour with steam"},
+        ],
+    }
+    rev_req = StudioReviseArtifactRequest(
+        title="Day 1: Handcrafted Latte Reel (User Edit)",
+        payload=rev_payload,
+        change_summary="User added macro milk froth shot",
+    )
+    rev_res = await revise_studio_artifact_endpoint(
+        agency_id=agency.id,
+        campaign_id=campaign.id,
+        artifact_id=artifact_id,
+        payload=rev_req,
+        membership=membership,
+        db=db_session,
+    )
+
+    assert rev_res.id == artifact_id
+    assert rev_res.current_version_number == 2
+    assert rev_res.title == "Day 1: Handcrafted Latte Reel (User Edit)"
+    assert rev_res.status == "draft"
+    assert len(rev_res.versions) == 2
+
+    # Verify latest version metadata
+    latest = rev_res.latest_version
+    assert latest.version_number == 2
+    assert latest.actor_type == "user"
+    assert latest.actor_id == str(user.id)
+    assert latest.change_summary == "User added macro milk froth shot"
+    assert latest.payload["deliverable_title"] == "Day 1: Handcrafted Latte Reel (User Edit)"
+
+    # Verify deliverables table has remained 100% untouched
+    delivs = (await db_session.execute(select(Deliverable))).scalars().all()
+    assert len(delivs) == 0
+

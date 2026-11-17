@@ -315,6 +315,8 @@ function CampaignStudioContent() {
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(searchParams.get("campaignId") || null);
   const [activeArtifact, setActiveArtifact] = useState<ActiveArtifactData | null>(null);
   const [activeArtifactVersions, setActiveArtifactVersions] = useState<any[]>([]);
+  const [persistedArtifacts, setPersistedArtifacts] = useState<any[]>([]);
+  const [isLoadingArtifacts, setIsLoadingArtifacts] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<"nav" | "canvas" | "intel">("canvas");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; email: string; role?: string }>>([]);
@@ -481,6 +483,7 @@ function CampaignStudioContent() {
       setActiveCampaignId(null);
       setActiveArtifact(null);
       setActiveArtifactVersions([]);
+      setPersistedArtifacts([]);
       if (selectedClientId) {
         await loadClientCampaigns(selectedClientId);
       }
@@ -490,6 +493,60 @@ function CampaignStudioContent() {
       setDeletingCampaign(false);
     }
   };
+
+  // Load all persistent studio artifacts for a campaign from database
+  const loadCampaignArtifacts = useCallback(
+    async (targetCampaignId: string) => {
+      if (!effectiveAgencyId || !targetCampaignId || !token) return;
+      setIsLoadingArtifacts(true);
+      try {
+        const arts = await studioApi.listArtifacts(effectiveAgencyId, targetCampaignId, token);
+        setPersistedArtifacts(arts || []);
+
+        // If no active artifact is loaded or current active artifact is not from this campaign, auto-select first
+        if (arts && arts.length > 0) {
+          setActiveArtifact((current) => {
+            if (!current || !arts.some((a: any) => a.id === current.id)) {
+              const first = arts[0];
+              const targetVer = first.latest_version;
+              // Also load versions asynchronously
+              studioApi
+                .getArtifactDetail(effectiveAgencyId, targetCampaignId, first.id, token)
+                .then((detail) => {
+                  if (detail?.versions) setActiveArtifactVersions(detail.versions);
+                })
+                .catch((e) => console.error("Error loading initial artifact detail:", e));
+
+              return {
+                id: first.id,
+                type: first.artifact_type,
+                title: first.title,
+                version: first.current_version_number || targetVer?.version_number || 1,
+                status: targetVer?.is_approved ? "approved" : (first.status || "draft"),
+                payload: targetVer?.payload || {},
+                supporting_evidence_refs: targetVer?.supporting_evidence_refs || [],
+              };
+            }
+            return current;
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load campaign studio artifacts:", err);
+      } finally {
+        setIsLoadingArtifacts(false);
+      }
+    },
+    [effectiveAgencyId, token]
+  );
+
+  // Sync persistent artifacts whenever active campaign sprint changes
+  useEffect(() => {
+    if (activeCampaignId && effectiveAgencyId && token) {
+      loadCampaignArtifacts(activeCampaignId);
+    } else {
+      setPersistedArtifacts([]);
+    }
+  }, [activeCampaignId, effectiveAgencyId, token, loadCampaignArtifacts]);
 
   // Load agency team members for production assignment
   useEffect(() => {
@@ -932,9 +989,57 @@ function CampaignStudioContent() {
         setActiveArtifact((prev) =>
           prev && prev.id === artifactId ? { ...prev, status: "approved" } : prev
         );
+        setActiveArtifactVersions((prev) =>
+          prev.map((v) => (v.version_number === versionNumber ? { ...v, is_approved: true } : v))
+        );
+        if (activeCampaignId) {
+          await loadCampaignArtifacts(activeCampaignId);
+        }
       }
     } catch (err: any) {
       console.error("Failed to approve artifact version:", err);
+    }
+  };
+
+  // Revise an artifact to create an immutable new version
+  const handleReviseArtifact = async (
+    artifactId: string,
+    revisedPayload: Record<string, any>,
+    changeSummary?: string
+  ) => {
+    if (!effectiveAgencyId || !activeCampaignId || !token) return;
+    try {
+      const parentVer = activeArtifactVersions.find(
+        (v) => v.version_number === activeArtifact?.version
+      );
+      const res = await studioApi.reviseArtifact(
+        effectiveAgencyId,
+        activeCampaignId,
+        artifactId,
+        {
+          payload: revisedPayload,
+          change_summary: changeSummary || "Manual edit from artboard",
+          parent_version_id: parentVer?.id || null,
+        },
+        token
+      );
+      if (res) {
+        const latest = res.latest_version;
+        setActiveArtifact({
+          id: res.id,
+          type: res.artifact_type,
+          title: res.title,
+          version: res.current_version_number,
+          status: res.status,
+          payload: latest?.payload || revisedPayload,
+          supporting_evidence_refs: latest?.supporting_evidence_refs || [],
+        });
+        setActiveArtifactVersions(res.versions || []);
+        await loadCampaignArtifacts(activeCampaignId);
+      }
+    } catch (err: any) {
+      console.error("Failed to save artifact revision:", err);
+      alert(err?.message || "Failed to save artifact revision");
     }
   };
 
@@ -942,34 +1047,8 @@ function CampaignStudioContent() {
   const [isLoadingCanvasArtifact, setIsLoadingCanvasArtifact] = useState<string | null>(null);
 
   const handleViewOnCanvas = async (summary: NonNullable<ChatMsg["artifact_summary"]>) => {
-    // 1. If payload is directly embedded on the message, restore immediately
-    if (summary.payload && Object.keys(summary.payload).length > 0) {
-      setActiveArtifact({
-        id: summary.id,
-        type: summary.type,
-        title: summary.title,
-        version: summary.version,
-        status: summary.status,
-        payload: summary.payload,
-        supporting_evidence_refs: summary.supporting_evidence_refs || [],
-      });
-      setActiveArtifactVersions([]);
-      setMobileTab("canvas");
-      return;
-    }
-
-    // 2. If the canvas is already displaying this exact artifact and version, just switch view tab
-    if (
-      activeArtifact &&
-      activeArtifact.id === summary.id &&
-      activeArtifact.version === summary.version
-    ) {
-      setMobileTab("canvas");
-      return;
-    }
-
-    // 3. Otherwise, fetch detail from backend
     const targetCampaignId = summary.campaign_id || activeCampaignId;
+
     if (effectiveAgencyId && targetCampaignId && token) {
       setIsLoadingCanvasArtifact(summary.id);
       try {
@@ -983,7 +1062,7 @@ function CampaignStudioContent() {
           const targetVer =
             detail.versions?.find((v: any) => v.version_number === summary.version) ||
             detail.latest_version;
-          const payload = targetVer?.payload || detail.payload || {};
+          const payload = targetVer?.payload || detail.payload || summary.payload || {};
 
           setActiveArtifact({
             id: detail.id,
@@ -992,18 +1071,31 @@ function CampaignStudioContent() {
             version: targetVer?.version_number || summary.version,
             status: targetVer?.is_approved ? "approved" : (detail.status || summary.status),
             payload: payload,
-            supporting_evidence_refs: detail.supporting_evidence_refs || [],
+            supporting_evidence_refs: targetVer?.supporting_evidence_refs || detail.supporting_evidence_refs || [],
           });
           setActiveArtifactVersions(detail.versions || []);
           setMobileTab("canvas");
+          return;
         }
       } catch (err) {
         console.error("Failed to load artifact details for canvas:", err);
-        setMobileTab("canvas");
       } finally {
         setIsLoadingCanvasArtifact(null);
       }
-    } else {
+    }
+
+    // Fallback if detail fetch failed or no targetCampaignId
+    if (summary.payload && Object.keys(summary.payload).length > 0) {
+      setActiveArtifact({
+        id: summary.id,
+        type: summary.type,
+        title: summary.title,
+        version: summary.version,
+        status: summary.status,
+        payload: summary.payload,
+        supporting_evidence_refs: summary.supporting_evidence_refs || [],
+      });
+      setActiveArtifactVersions([]);
       setMobileTab("canvas");
     }
   };
@@ -1176,19 +1268,45 @@ function CampaignStudioContent() {
     return { state: "idle", label: "Idle" };
   };
 
-  // Collect all unique artifacts from chat stream and canvas
+  // Collect all unique artifacts from database, chat stream, and canvas
   const studioArtifacts = React.useMemo(() => {
-    const map = new Map<string, NonNullable<ChatMsg["artifact_summary"]>>();
+    const map = new Map<string, any>();
+
+    // 1. First add all persisted artifacts from SQLite / Postgres
+    persistedArtifacts.forEach((art) => {
+      const verNum = art.current_version_number || art.latest_version?.version_number || 1;
+      const key = `${art.id}-v${verNum}`;
+      map.set(key, {
+        id: art.id,
+        campaign_id: art.campaign_id,
+        type: art.artifact_type,
+        title: art.title,
+        version: verNum,
+        status: art.status,
+        payload: art.latest_version?.payload || {},
+        supporting_evidence_refs: art.latest_version?.supporting_evidence_refs || [],
+        created_at: art.created_at,
+        versions: art.versions || [],
+      });
+    });
+
+    // 2. Add any chat message artifacts from active streaming session
     chatMessages.forEach((m) => {
       if (m.artifact_summary) {
-        map.set(`${m.artifact_summary.id}-v${m.artifact_summary.version}`, m.artifact_summary);
+        const key = `${m.artifact_summary.id}-v${m.artifact_summary.version}`;
+        if (!map.has(key)) {
+          map.set(key, m.artifact_summary);
+        }
       }
     });
+
+    // 3. Ensure active artifact is present
     if (activeArtifact) {
       const key = `${activeArtifact.id}-v${activeArtifact.version}`;
       if (!map.has(key)) {
         map.set(key, {
           id: activeArtifact.id,
+          campaign_id: activeCampaignId,
           type: activeArtifact.type,
           title: activeArtifact.title,
           version: activeArtifact.version,
@@ -1198,8 +1316,9 @@ function CampaignStudioContent() {
         });
       }
     }
+
     return Array.from(map.values());
-  }, [chatMessages, activeArtifact]);
+  }, [persistedArtifacts, chatMessages, activeArtifact, activeCampaignId]);
 
   // Messages to display according to the selected view filter
   const displayedMessages = chatMessages.filter((msg) => {
@@ -1559,11 +1678,28 @@ function CampaignStudioContent() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
-                            v{art.version}
-                          </span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
+                              v{art.version}
+                            </span>
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white/[0.04] text-[#A3A0B0] border border-white/[0.06] truncate">
+                              {art.type === "storyboard"
+                                ? "🎬 Reel"
+                                : art.type === "carousel_deck"
+                                ? "📑 Deck"
+                                : art.type === "compliance_review"
+                                ? "🛡️ Audit"
+                                : art.type === "research_evidence"
+                                ? "🔍 Intel"
+                                : art.type === "campaign_blueprint"
+                                ? "🗺️ Blueprint"
+                                : art.type === "brand_positioning"
+                                ? "💎 Brand"
+                                : art.type}
+                            </span>
+                          </div>
                           <span
-                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${
+                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
                               art.status === "approved" || art.status === "exported"
                                 ? "bg-[#45B88A]/15 text-[#45B88A] border-[#45B88A]/30"
                                 : "bg-white/[0.04] text-[#A3A0B0] border-white/[0.08]"
@@ -1632,6 +1768,7 @@ function CampaignStudioContent() {
               }
             }}
             onApproveVersion={handleApproveVersion}
+            onReviseArtifact={handleReviseArtifact}
             onExportClick={() => {
               setIsExportModalOpen(true);
             }}

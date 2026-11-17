@@ -186,6 +186,14 @@ class StudioApproveVersionRequest(BaseModel):
     version_number: int
 
 
+class StudioReviseArtifactRequest(BaseModel):
+    title: str | None = None
+    payload: dict[str, Any]
+    change_summary: str | None = None
+    parent_version_id: uuid.UUID | None = None
+    supporting_evidence_refs: list[dict[str, Any]] | None = None
+
+
 class StudioExportPipelineRequest(BaseModel):
     artifact_id: uuid.UUID
     expected_version_number: int

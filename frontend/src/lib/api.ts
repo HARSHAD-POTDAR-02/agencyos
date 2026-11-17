@@ -418,6 +418,28 @@ export const studioApi = {
       }
     ),
 
+  reviseArtifact: (
+    agencyId: string,
+    campaignId: string,
+    artifactId: string,
+    payload: {
+      title?: string;
+      payload: Record<string, any>;
+      change_summary?: string;
+      parent_version_id?: string | null;
+      supporting_evidence_refs?: Array<Record<string, any>> | null;
+    },
+    token: string
+  ) =>
+    apiFetch<any>(
+      `/agencies/${agencyId}/campaigns/${campaignId}/studio/artifacts/${artifactId}/revise`,
+      {
+        method: "POST",
+        body: payload,
+        token,
+      }
+    ),
+
   exportToPipeline: (
     agencyId: string,
     campaignId: string,

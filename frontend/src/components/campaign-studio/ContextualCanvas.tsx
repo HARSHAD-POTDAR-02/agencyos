@@ -26,6 +26,8 @@ import {
   X,
   History,
   Check,
+  GitBranch,
+  Edit3,
 } from "lucide-react";
 
 interface ContextualCanvasProps {
@@ -33,6 +35,11 @@ interface ContextualCanvasProps {
   versions?: any[];
   onSelectVersion?: (versionNumber: number) => void;
   onApproveVersion?: (artifactId: string, versionNumber: number) => Promise<void>;
+  onReviseArtifact?: (
+    artifactId: string,
+    revisedPayload: Record<string, any>,
+    changeSummary?: string
+  ) => Promise<void>;
   onExportClick?: (artifact: ActiveArtifactData) => void;
   onSelectPrompt?: (agentId: string, promptText: string) => void;
   onCloseCanvas?: () => void;
@@ -43,12 +50,16 @@ export function ContextualCanvas({
   versions = [],
   onSelectVersion,
   onApproveVersion,
+  onReviseArtifact,
   onExportClick,
   onSelectPrompt,
   onCloseCanvas,
 }: ContextualCanvasProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false);
+  const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  const [revisionSummary, setRevisionSummary] = useState("");
+  const [isSavingRevision, setIsSavingRevision] = useState(false);
 
   const handleApprove = async () => {
     if (!artifact || !onApproveVersion) return;
@@ -59,6 +70,24 @@ export function ContextualCanvas({
       console.error("Failed to approve version", err);
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleSaveRevision = async () => {
+    if (!artifact || !onReviseArtifact) return;
+    setIsSavingRevision(true);
+    try {
+      await onReviseArtifact(
+        artifact.id,
+        artifact.payload,
+        revisionSummary || `Revision v${(artifact.version || 1) + 1}`
+      );
+      setIsRevisionModalOpen(false);
+      setRevisionSummary("");
+    } catch (err) {
+      console.error("Failed to save revision", err);
+    } finally {
+      setIsSavingRevision(false);
     }
   };
 
@@ -238,32 +267,54 @@ export function ContextualCanvas({
                 </button>
 
                 {isVersionDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-48 bg-[#17171E] border border-white/[0.1] rounded-xl shadow-xl z-50 p-1.5 space-y-1">
-                    <span className="text-[9.5px] font-mono text-[#A3A0B0] uppercase px-2 py-0.5 block">
-                      Version History
-                    </span>
-                    {versions.map((v) => (
-                      <button
-                        key={v.version_number}
-                        type="button"
-                        onClick={() => {
-                          onSelectVersion?.(v.version_number);
-                          setIsVersionDropdownOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs font-mono transition-colors text-left ${
-                          v.version_number === artifact.version
-                            ? "bg-[#A78BFA]/15 text-[#A78BFA] font-bold"
-                            : "hover:bg-white/[0.04] text-[#A3A0B0] hover:text-[#F2F0F7]"
-                        }`}
-                      >
-                        <span>Version {v.version_number}</span>
-                        {v.is_approved && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#45B88A]/20 text-[#45B88A]">
-                            Approved
-                          </span>
-                        )}
-                      </button>
-                    ))}
+                  <div className="absolute top-full left-0 mt-1.5 w-64 bg-[#17171E] border border-white/[0.1] rounded-xl shadow-2xl z-50 p-2 space-y-1.5 max-h-72 overflow-y-auto">
+                    <div className="flex items-center justify-between px-2 py-0.5 border-b border-white/[0.06] pb-1">
+                      <span className="text-[10px] font-mono font-bold text-[#A3A0B0] uppercase">
+                        Revision History
+                      </span>
+                      <span className="text-[10px] font-mono text-[#A78BFA]">
+                        {versions.length} {versions.length === 1 ? "Version" : "Versions"}
+                      </span>
+                    </div>
+                    {versions.map((v) => {
+                      const isCurrent = v.version_number === artifact.version;
+                      return (
+                        <button
+                          key={v.version_number}
+                          type="button"
+                          onClick={() => {
+                            onSelectVersion?.(v.version_number);
+                            setIsVersionDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-start justify-between p-2 rounded-lg text-xs font-mono transition-colors text-left gap-2 ${
+                            isCurrent
+                              ? "bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30"
+                              : "hover:bg-white/[0.04] text-[#A3A0B0] hover:text-[#F2F0F7] border border-transparent"
+                          }`}
+                        >
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold">v{v.version_number}</span>
+                              {v.actor_type && (
+                                <span className="text-[9px] px-1 py-0.2 rounded bg-white/[0.06] text-[#A3A0B0]">
+                                  {v.actor_type === "user" ? "User" : (v.actor_id || "Agent")}
+                                </span>
+                              )}
+                            </div>
+                            {v.change_summary && (
+                              <span className="text-[10px] text-[#A3A0B0]/80 truncate max-w-[150px] font-sans mt-0.5">
+                                {v.change_summary}
+                              </span>
+                            )}
+                          </div>
+                          {v.is_approved && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#45B88A]/20 text-[#45B88A] font-semibold shrink-0">
+                              Approved
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -294,6 +345,18 @@ export function ContextualCanvas({
 
         {/* Canvas Quick Actions */}
         <div className="flex items-center gap-2">
+          {onReviseArtifact && (
+            <button
+              type="button"
+              onClick={() => setIsRevisionModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-white/[0.08] text-[#F2F0F7] border border-white/[0.1] font-semibold text-xs transition-all shadow-xs cursor-pointer font-sans"
+              title="Save a new revision snapshot without affecting production deliverables"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>Revise (v{(artifact.version || 1) + 1})</span>
+            </button>
+          )}
+
           {!isApproved && onApproveVersion && (
             <button
               type="button"
@@ -394,6 +457,86 @@ export function ContextualCanvas({
           </div>
         )}
       </div>
+
+      {/* ── Save New Revision Modal ── */}
+      {isRevisionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="relative w-full max-w-md surface-card rounded-2xl border border-white/[0.12] p-5 shadow-2xl space-y-4 text-left">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#A78BFA]/15 text-[#A78BFA]">
+                  <GitBranch className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-[#F2F0F7] font-heading">
+                    Create Revision Snapshot
+                  </h3>
+                  <p className="text-[11px] text-[#A3A0B0]">
+                    Advances version from <span className="font-mono text-[#A78BFA]">v{artifact.version}</span> to{" "}
+                    <span className="font-mono text-[#45B88A]">v{(artifact.version || 1) + 1}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRevisionModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-[#F2F0F7] block mb-1">
+                  Change Summary / Changelog Note
+                </label>
+                <input
+                  type="text"
+                  value={revisionSummary}
+                  onChange={(e) => setRevisionSummary(e.target.value)}
+                  placeholder="e.g. Tightened 3-second hook, added voiceover beat"
+                  className="w-full px-3 py-2 rounded-xl bg-[#101014] border border-white/[0.1] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/50 focus:outline-none focus:border-[#A78BFA]"
+                  autoFocus
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#101014]/60 border border-white/[0.06] text-[11px] text-[#A3A0B0] space-y-1">
+                <p className="font-semibold text-[#F2F0F7] flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#45B88A]" />
+                  <span>Draft Immutability Guarantee</span>
+                </p>
+                <p>
+                  This stores an immutable snapshot in SQLite/Postgres. Previous versions (v1, v2) remain preserved and switchable. The production <code className="text-[#A78BFA]">deliverables</code> and <code className="text-[#A78BFA]">tasks</code> tables are not touched.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setIsRevisionModalOpen(false)}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.06] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveRevision}
+                disabled={isSavingRevision}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-xs shadow-md transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingRevision ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                <span>Save Revision v{(artifact.version || 1) + 1} ✨</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

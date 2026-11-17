@@ -75,6 +75,7 @@ from app.schemas.campaign import (
     DeliverableOut,
     GeneratePlanRequest,
     StudioApproveVersionRequest,
+    StudioReviseArtifactRequest,
     StudioArtifactOut,
     StudioArtifactVersionOut,
     StudioExportPipelineRequest,
@@ -1418,6 +1419,66 @@ async def approve_studio_artifact_endpoint(
         campaign_id=campaign_id,
         user_id=user_id,
         db=db,
+    )
+    await db.commit()
+    return await get_studio_artifact_detail(agency_id, campaign_id, artifact_id, membership, db)
+
+
+@router.post(
+    "/agencies/{agency_id}/campaigns/{campaign_id}/studio/artifacts/{artifact_id}/revise",
+    response_model=StudioArtifactOut,
+    status_code=status.HTTP_200_OK,
+)
+async def revise_studio_artifact_endpoint(
+    agency_id: uuid.UUID,
+    campaign_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    payload: StudioReviseArtifactRequest,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> StudioArtifactOut:
+    """Save an immutable new revision of an existing studio draft artifact."""
+    await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
+    user_id = getattr(membership, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User context missing for revision.")
+
+    stmt = (
+        select(StudioArtifact)
+        .where(
+            StudioArtifact.id == artifact_id,
+            StudioArtifact.agency_id == agency_id,
+            StudioArtifact.campaign_id == campaign_id,
+        )
+    )
+    result = await db.execute(stmt)
+    artifact = result.scalars().first()
+    if not artifact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Studio artifact not found.")
+
+    session = await get_or_create_studio_session(
+        campaign_id=campaign_id,
+        client_id=artifact.client_id,
+        agency_id=agency_id,
+        user_id=user_id,
+        db=db,
+    )
+
+    await save_or_revise_artifact(
+        session_id=session.id,
+        agency_id=agency_id,
+        client_id=artifact.client_id,
+        campaign_id=campaign_id,
+        artifact_type=artifact.artifact_type,
+        title=payload.title or artifact.title,
+        payload=payload.payload,
+        actor_type="user",
+        actor_id=str(user_id),
+        db=db,
+        artifact_id=artifact.id,
+        parent_version_id=payload.parent_version_id,
+        change_summary=payload.change_summary or "Manual user revision",
+        supporting_evidence_refs=payload.supporting_evidence_refs,
     )
     await db.commit()
     return await get_studio_artifact_detail(agency_id, campaign_id, artifact_id, membership, db)
