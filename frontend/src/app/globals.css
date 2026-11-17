@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
+  --font-mono: var(--font-mono);
 
   /* Centralized AgencyOS Dark Tokens */
   --color-app-background: var(--app-background);
@@ -144,6 +145,13 @@
   }
   html {
     @apply font-sans;
+  }
+  h1, h2, h3, h4, .font-heading {
+    font-family: var(--font-heading), sans-serif;
+  }
+  code, kbd, samp, pre, .font-mono {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-feature-settings: "tnum";
   }
 }
 
