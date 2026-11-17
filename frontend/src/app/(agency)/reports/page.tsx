@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -27,6 +27,11 @@ import {
   Layers,
   ArrowUpRight,
   Share2,
+  Filter,
+  ArrowUpDown,
+  Download,
+  Activity,
+  SlidersHorizontal,
 } from "lucide-react";
 
 interface ClientOption {
@@ -50,6 +55,13 @@ const MONTHS = [
   { value: 11, label: "November" },
   { value: 12, label: "December" },
 ];
+
+function getClientInitials(name: string): string {
+  if (!name) return "CL";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
 
 function ReportsContent() {
   const router = useRouter();
@@ -79,6 +91,9 @@ function ReportsContent() {
   const [selectedYear, setSelectedYear] = useState<number>(
     parseInt(searchParams.get("year") || "") || currentYear
   );
+
+  const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook">("all");
+  const [sortBy, setSortBy] = useState<"views" | "likes" | "comments" | "engagement">("views");
 
   // Sync when searchParams change or custom period event is fired
   useEffect(() => {
@@ -114,7 +129,6 @@ function ReportsContent() {
         const res = (await clientApi.list(effectiveAgencyId, token)) as ClientOption[];
         setClients(res || []);
         if (res && res.length > 0 && !selectedClientId) {
-          // Preselect first client or query param match
           const matched = searchParams.get("clientId");
           const defaultClient = matched && res.some((c) => c.id === matched) ? matched : res[0].id;
           setSelectedClientId(defaultClient);
@@ -158,6 +172,24 @@ function ReportsContent() {
     }
   }, [selectedClientId, selectedMonth, selectedYear, loadReport]);
 
+  // Keyboard Shortcuts: R to refresh, P to print
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+        return;
+      }
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        loadReport();
+      } else if ((e.key === "p" || e.key === "P") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        window.print();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loadReport]);
+
   const handleCopySummary = async () => {
     if (!report?.executive_summary) return;
     try {
@@ -177,23 +209,56 @@ function ReportsContent() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
   const monthName = MONTHS.find((m) => m.value === selectedMonth)?.label || "Month";
-
   const years = [currentYear, currentYear - 1, currentYear - 2];
+
+  // Filter and sort top deliverables
+  const filteredDeliverables = useMemo(() => {
+    if (!report?.top_deliverables) return [];
+    return report.top_deliverables
+      .filter((d) => {
+        if (platformFilter === "all") return true;
+        return (d.platform || "").toLowerCase().includes(platformFilter);
+      })
+      .sort((a, b) => {
+        if (sortBy === "likes") return b.likes_count - a.likes_count;
+        if (sortBy === "comments") return b.comments_count - a.comments_count;
+        if (sortBy === "engagement") {
+          const rateA = a.views_count > 0 ? ((a.likes_count + a.comments_count) / a.views_count) * 100 : 0;
+          const rateB = b.views_count > 0 ? ((b.likes_count + b.comments_count) / b.views_count) * 100 : 0;
+          return rateB - rateA;
+        }
+        return b.views_count - a.views_count;
+      });
+  }, [report?.top_deliverables, platformFilter, sortBy]);
+
+  const instagramCount = useMemo(() => {
+    if (!report?.top_deliverables) return 0;
+    return report.top_deliverables.filter((d) => (d.platform || "").toLowerCase().includes("instagram")).length;
+  }, [report?.top_deliverables]);
+
+  const facebookCount = useMemo(() => {
+    if (!report?.top_deliverables) return 0;
+    return report.top_deliverables.filter((d) => (d.platform || "").toLowerCase().includes("facebook")).length;
+  }, [report?.top_deliverables]);
 
   if (!isLoading && isSpecialist) {
     return null;
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none">
-      {/* Header section */}
+    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none text-[#F2F0F7]">
       {/* ── Editorial Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.06] print:border-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-white/[0.08] print:border-none">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
             <span>Operations</span>
             <span className="text-white/[0.2]">/</span>
             <span className="text-[#A78BFA] font-medium">Performance Reports</span>
+            <span className="text-white/[0.2]">/</span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30 text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] animate-pulse" />
+              Meta Live Telemetry
+            </span>
           </div>
           <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
             Performance & Delivery Reports
@@ -207,43 +272,45 @@ function ReportsContent() {
           <button
             onClick={() => loadReport()}
             disabled={loadingReport || !selectedClientId}
-            title="Refresh Report Data"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F2F0F7] surface-card border border-white/[0.08] hover:bg-[#20202A] rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+            title="Refresh Report Data (Shortcut: R)"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F2F0F7] surface-card border border-white/[0.08] hover:bg-[#20202A] rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-xs active:scale-[0.98]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-[#A78BFA]" : "text-[#A3A0B0]"}`} />
-            <span>Refresh</span>
+            <span>Sync</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.2 rounded bg-white/[0.06] border border-white/[0.08] text-[9px] font-mono text-[#A3A0B0]">R</kbd>
           </button>
 
           <button
             onClick={handlePrint}
             disabled={!report}
-            title="Print or Save as PDF"
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            title="Print or Save as PDF (Shortcut: ⌘P)"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 active:scale-[0.98]"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Export PDF</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.2 rounded bg-[#101014]/20 text-[9px] font-mono text-[#101014]">⌘P</kbd>
           </button>
         </div>
       </div>
 
       {/* ── Selector Filters Bar (Linear Toolstrip) ── */}
-      <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs print:border-white/[0.08]">
+      <div className="surface-card rounded-xl border border-white/[0.08] p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs print:hidden">
         <div className="flex flex-wrap items-center gap-3">
           {/* Client Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-[#A3A0B0] flex items-center gap-1">
+            <label className="text-xs font-semibold text-[#A3A0B0] flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>Client:</span>
             </label>
             {loadingClients ? (
-              <div className="h-9 w-44 bg-[#101014] animate-pulse rounded-lg border border-[#30303D]" />
+              <div className="h-8 w-44 bg-[#101014] animate-pulse rounded-lg border border-white/[0.08]" />
             ) : clients.length === 0 ? (
               <span className="text-xs text-[#71717A] italic">No clients registered</span>
             ) : (
               <select
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
-                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
+                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
               >
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -254,16 +321,18 @@ function ReportsContent() {
             )}
           </div>
 
+          <div className="h-4 w-[1px] bg-white/[0.08] hidden sm:block" />
+
           {/* Month Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-[#A3A0B0] flex items-center gap-1">
+            <label className="text-xs font-medium text-[#A3A0B0] flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>Period:</span>
             </label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
+              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
             >
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -276,7 +345,7 @@ function ReportsContent() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
+              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -287,16 +356,19 @@ function ReportsContent() {
           </div>
         </div>
 
-        {/* Client quick link */}
-        {selectedClientId && (
-          <div className="text-xs text-[#A3A0B0] flex items-center gap-2">
-            <span>Viewing:</span>
+        {/* Client quick link & Avatar Monogram */}
+        {selectedClientId && selectedClient && (
+          <div className="flex items-center gap-2.5 text-xs text-[#A3A0B0]">
+            <span className="hidden sm:inline">Viewing:</span>
             <Link
               href={`/clients/${selectedClientId}`}
-              className="font-medium text-[#A78BFA] hover:text-[#B69BFF] bg-[#20202A] px-2.5 py-1 rounded-lg border border-white/[0.08] inline-flex items-center gap-1 transition-colors"
+              className="font-medium text-[#F2F0F7] hover:text-[#A78BFA] bg-[#101014] hover:bg-[#20202A] px-2.5 py-1 rounded-lg border border-white/[0.08] inline-flex items-center gap-2 transition-colors group shadow-xs"
             >
-              <span>{selectedClient?.business_name || "Client Workspace"}</span>
-              <ExternalLink className="w-3 h-3" />
+              <div className="w-5 h-5 rounded-md bg-[#A78BFA]/20 border border-[#A78BFA]/40 flex items-center justify-center text-[10px] font-mono font-bold text-[#A78BFA]">
+                {getClientInitials(selectedClient.business_name)}
+              </div>
+              <span className="font-semibold text-xs">{selectedClient.business_name}</span>
+              <ExternalLink className="w-3 h-3 text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors" />
             </Link>
           </div>
         )}
@@ -304,48 +376,60 @@ function ReportsContent() {
 
       {/* Loading state */}
       {loadingReport && (
-        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-12 text-center space-y-3">
+        <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center space-y-3">
           <div className="w-8 h-8 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-[#F2F0F7]">Generating monthly delivery report...</p>
-          <p className="text-[11px] text-[#71717A]">Auditing active contracts and aggregating live Meta stats</p>
+          <p className="text-xs font-semibold text-[#F2F0F7]">Compiling monthly delivery report...</p>
+          <p className="text-[11px] text-[#A3A0B0]">Auditing active retainer scope and aggregating live Meta statistics</p>
         </div>
       )}
 
       {/* Error state */}
       {!loadingReport && reportError && (
-        <div className="p-5 rounded-2xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-[#E16F7B] shrink-0" />
-          <div>
-            <p className="font-bold text-[#F2F0F7]">Failed to load report</p>
-            <p className="text-[#E16F7B] mt-0.5">{reportError}</p>
+        <div className="p-5 rounded-2xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-[#E16F7B] shrink-0" />
+            <div>
+              <p className="font-bold text-[#F2F0F7]">Failed to load performance report</p>
+              <p className="text-[#E16F7B] mt-0.5">{reportError}</p>
+            </div>
           </div>
+          <button
+            onClick={() => loadReport()}
+            className="px-3 py-1.5 rounded-lg bg-[#E16F7B]/20 text-[#F2F0F7] hover:bg-[#E16F7B]/30 font-semibold transition-colors"
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {/* Report Data */}
       {!loadingReport && report && (
         <div className="space-y-6">
-          {/* Executive Summary Card */}
-          <div className="surface-card text-[#F2F0F7] rounded-2xl p-6 border border-white/[0.08] space-y-4 relative overflow-hidden shadow-xs print:bg-white print:text-slate-900 print:border-slate-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.06] print:border-slate-200">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#20202A] border border-white/[0.08] flex items-center justify-center text-[#A78BFA] print:bg-purple-100 print:text-purple-700">
-                  <Sparkles className="w-4 h-4" />
+          {/* Executive Summary Card (Framer / Raycast Surface) */}
+          <div className="surface-card rounded-2xl p-6 border border-white/[0.08] space-y-4 relative overflow-hidden shadow-xs print:bg-white print:text-slate-900 print:border-slate-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08] print:border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#20202A] border border-white/[0.08] flex items-center justify-center text-[#A78BFA] shadow-xs print:bg-purple-100 print:text-purple-700">
+                  <Sparkles className="w-4 h-4 text-[#A78BFA]" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-[#A78BFA] print:text-purple-700">
-                    Executive Summary &bull; {monthName} {report.year}
-                  </h2>
-                  <p className="text-xs text-[#A3A0B0] print:text-slate-500">{report.client_name}</p>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#A78BFA] print:text-purple-700">
+                      Executive Summary &bull; {monthName} {report.year}
+                    </h2>
+                  </div>
+                  <p className="text-sm font-heading font-bold text-[#F2F0F7] print:text-slate-900 mt-0.5">
+                    {report.client_name}
+                  </p>
                 </div>
               </div>
 
               <button
                 onClick={handleCopySummary}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] text-[#F2F0F7] text-xs font-medium rounded-xl transition-colors cursor-pointer self-start sm:self-auto print:hidden shadow-xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] text-[#F2F0F7] text-xs font-medium rounded-xl transition-all cursor-pointer self-start sm:self-auto print:hidden shadow-xs active:scale-[0.98]"
               >
                 {copiedSummary ? <Check className="w-3.5 h-3.5 text-[#45B88A]" /> : <Copy className="w-3.5 h-3.5 text-[#A3A0B0]" />}
-                <span>{copiedSummary ? "Copied" : "Copy Summary"}</span>
+                <span>{copiedSummary ? "Copied" : "Copy Brief"}</span>
               </button>
             </div>
 
@@ -353,14 +437,20 @@ function ReportsContent() {
               {report.executive_summary}
             </p>
 
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-              <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-white/[0.06] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
-                Scope Target: {report.total_scope_quota} items
+            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs">
+              <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-3 py-1 rounded-lg border border-white/[0.08] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
+                Scope Target: <strong className="text-[#F2F0F7] print:text-slate-900">{report.total_scope_quota} items</strong>
               </span>
-              <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-white/[0.06] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
-                Delivered: {report.deliverables_delivered} approved
+              <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-3 py-1 rounded-lg border border-white/[0.08] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
+                Delivered: <strong className="text-[#F2F0F7] print:text-slate-900">{report.deliverables_delivered} approved</strong>
               </span>
-              <span className="font-mono text-[11px] font-semibold bg-[#A78BFA]/10 text-[#A78BFA] px-2.5 py-1 rounded-lg border border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800 print:border-purple-200">
+              <span className={`font-mono text-[11px] font-bold px-3 py-1 rounded-lg border ${
+                report.quota_fulfillment_rate >= 100
+                  ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30 print:bg-emerald-50 print:text-emerald-800"
+                  : report.quota_fulfillment_rate >= 50
+                  ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800"
+                  : "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30 print:bg-amber-50 print:text-amber-800"
+              }`}>
                 Fulfillment: {report.quota_fulfillment_rate}%
               </span>
             </div>
@@ -369,18 +459,18 @@ function ReportsContent() {
           {/* 4 Key Metric KPI Cards (Linear Style) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* KPI 1: Contract Quota Fulfillment */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Retainer Quota
                 </span>
                 <span
-                  className={`p-2 rounded-xl border border-white/[0.08] ${
+                  className={`p-2 rounded-xl border ${
                     report.quota_fulfillment_rate >= 100
-                      ? "bg-[#45B88A]/10 text-[#45B88A]"
+                      ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30"
                       : report.quota_fulfillment_rate >= 50
-                      ? "bg-[#E5AA58]/10 text-[#E5AA58]"
-                      : "bg-[#A78BFA]/10 text-[#A78BFA]"
+                      ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30"
+                      : "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30"
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -400,7 +490,7 @@ function ReportsContent() {
               </div>
 
               {/* Progress bar */}
-              <div className="w-full h-1.5 rounded-full bg-[#101014] overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-[#101014] overflow-hidden border border-white/[0.04]">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     report.quota_fulfillment_rate >= 100
@@ -415,12 +505,12 @@ function ReportsContent() {
             </div>
 
             {/* KPI 2: Total Content Views / Impressions */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Total Impressions
                 </span>
-                <span className="p-2 rounded-xl bg-[#20202A] text-[#69A9D8] border border-white/[0.08]">
+                <span className="p-2 rounded-xl bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30">
                   <Eye className="w-4 h-4" />
                 </span>
               </div>
@@ -434,19 +524,19 @@ function ReportsContent() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono font-medium text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2 py-0.5 rounded-md w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <TrendingUp className="w-3 h-3" />
                 <span>Meta Live Reach</span>
               </div>
             </div>
 
             {/* KPI 3: Total Social Engagement */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Total Engagement
                 </span>
-                <span className="p-2 rounded-xl bg-[#20202A] text-[#E16F7B] border border-white/[0.08]">
+                <span className="p-2 rounded-xl bg-[#E16F7B]/10 text-[#E16F7B] border border-[#E16F7B]/30">
                   <Heart className="w-4 h-4" />
                 </span>
               </div>
@@ -456,11 +546,11 @@ function ReportsContent() {
                   {(report.total_likes + report.total_comments).toLocaleString()}
                 </span>
                 <div className="flex items-center gap-2 text-[11px] font-mono text-[#A3A0B0] mt-1">
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 text-[#F2F0F7]">
                     <Heart className="w-3 h-3 text-[#E16F7B]" /> {report.total_likes.toLocaleString()}
                   </span>
                   <span>&bull;</span>
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 text-[#F2F0F7]">
                     <MessageCircle className="w-3 h-3 text-[#69A9D8]" /> {report.total_comments.toLocaleString()}
                   </span>
                 </div>
@@ -468,17 +558,17 @@ function ReportsContent() {
 
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <Share2 className="w-3 h-3" />
-                <span>Interactions</span>
+                <span>Audience Interactions</span>
               </div>
             </div>
 
             {/* KPI 4: Average Engagement Rate */}
-            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Avg Engagement Rate
                 </span>
-                <span className="p-2 rounded-xl bg-[#20202A] text-[#A78BFA] border border-[#30303D]">
+                <span className="p-2 rounded-xl bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
                   <Sparkles className="w-4 h-4" />
                 </span>
               </div>
@@ -488,7 +578,7 @@ function ReportsContent() {
                   <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                     {report.avg_engagement_rate}%
                   </span>
-                  <span className="text-xs font-medium text-[#71717A]">rate</span>
+                  <span className="text-xs font-mono text-[#A3A0B0]">rate</span>
                 </div>
                 <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
                   (Likes + Comments) &divide; Total Views
@@ -503,68 +593,118 @@ function ReportsContent() {
           </div>
 
           {/* Delivery & Fulfillment Funnel Overview */}
-          <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-6 space-y-4">
+          <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
             <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#A78BFA]" />
               <span>Contract Scope & Delivery Breakdown</span>
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-[#101014] border border-[#30303D]">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#71717A]">Monthly Quota</span>
+              <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08]">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">Monthly Quota</span>
                 <p className="text-2xl font-bold font-mono text-[#F2F0F7] mt-1">{report.total_scope_quota}</p>
-                <p className="text-[11px] text-[#71717A] mt-0.5">Contract Retainer Target</p>
+                <p className="text-[11px] text-[#A3A0B0] mt-0.5 font-mono">Contract Retainer Target</p>
               </div>
               <div className="p-4 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/30">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#45B88A]">Approved Content</span>
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#45B88A]">Approved Content</span>
                 <p className="text-2xl font-bold font-mono text-[#45B88A] mt-1">{report.deliverables_delivered}</p>
-                <p className="text-[11px] text-[#45B88A]/80 mt-0.5">Ready or Published</p>
+                <p className="text-[11px] text-[#45B88A]/80 mt-0.5 font-mono">Ready or Published</p>
               </div>
               <div className="p-4 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#A78BFA]">Published Live</span>
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A78BFA]">Published Live</span>
                 <p className="text-2xl font-bold font-mono text-[#A78BFA] mt-1">{report.deliverables_published}</p>
-                <p className="text-[11px] text-[#A78BFA]/80 mt-0.5">Live on Social Media</p>
+                <p className="text-[11px] text-[#A78BFA]/80 mt-0.5 font-mono">Live on Social Media</p>
               </div>
               <div className="p-4 rounded-xl bg-[#E5AA58]/10 border border-[#E5AA58]/30">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#E5AA58]">Pending Quota</span>
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#E5AA58]">Pending Quota</span>
                 <p className="text-2xl font-bold font-mono text-[#E5AA58] mt-1">
                   {Math.max(0, report.total_scope_quota - report.deliverables_delivered)}
                 </p>
-                <p className="text-[11px] text-[#E5AA58]/80 mt-0.5">Remaining this month</p>
+                <p className="text-[11px] text-[#E5AA58]/80 mt-0.5 font-mono">Remaining this month</p>
               </div>
             </div>
           </div>
 
           {/* Top Performing Content Leaderboard */}
-          <div className="bg-[#17171E] rounded-xl border border-[#30303D] overflow-hidden">
-            <div className="p-5 border-b border-[#30303D] flex items-center justify-between">
+          <div className="surface-card rounded-2xl border border-white/[0.08] overflow-hidden shadow-xs">
+            <div className="p-5 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#A78BFA]" />
-                  <span>Top Performing Content</span>
+                  <span>Top Performing Content Leaderboard</span>
                 </h3>
                 <p className="text-xs text-[#A3A0B0] mt-0.5">
                   Ranked by live impressions, audience likes, and comments on Meta
                 </p>
               </div>
-              <span className="text-xs font-mono text-[#71717A]">
-                Top {report.top_deliverables.length} posts
-              </span>
+
+              {/* Platform filter pills & Sort dropdown */}
+              <div className="flex flex-wrap items-center gap-2.5 print:hidden">
+                <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs">
+                  <button
+                    onClick={() => setPlatformFilter("all")}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                      platformFilter === "all"
+                        ? "bg-white/[0.08] text-[#F2F0F7] font-bold shadow-xs"
+                        : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                    }`}
+                  >
+                    All ({report.top_deliverables.length})
+                  </button>
+                  <button
+                    onClick={() => setPlatformFilter("instagram")}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                      platformFilter === "instagram"
+                        ? "bg-[#E16F7B]/20 text-[#E16F7B] font-bold border border-[#E16F7B]/30 shadow-xs"
+                        : "text-[#A3A0B0] hover:text-[#E16F7B]"
+                    }`}
+                  >
+                    Instagram ({instagramCount})
+                  </button>
+                  <button
+                    onClick={() => setPlatformFilter("facebook")}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                      platformFilter === "facebook"
+                        ? "bg-[#69A9D8]/20 text-[#69A9D8] font-bold border border-[#69A9D8]/30 shadow-xs"
+                        : "text-[#A3A0B0] hover:text-[#69A9D8]"
+                    }`}
+                  >
+                    Facebook ({facebookCount})
+                  </button>
+                </div>
+
+                {/* Sort selector */}
+                <div className="flex items-center gap-1.5 bg-[#101014] px-2.5 py-1 rounded-lg border border-white/[0.08] text-xs">
+                  <ArrowUpDown className="w-3 h-3 text-[#A3A0B0]" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="bg-transparent text-xs text-[#F2F0F7] font-mono focus:outline-none cursor-pointer"
+                  >
+                    <option value="views" className="bg-[#17171E]">By Views</option>
+                    <option value="likes" className="bg-[#17171E]">By Likes</option>
+                    <option value="comments" className="bg-[#17171E]">By Comments</option>
+                    <option value="engagement" className="bg-[#17171E]">By Engagement Rate</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            {report.top_deliverables.length === 0 ? (
+            {filteredDeliverables.length === 0 ? (
               <div className="p-12 text-center space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-[#20202A] border border-[#30303D] text-[#71717A] flex items-center justify-center mx-auto">
-                  <Film className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-[#20202A] border border-white/[0.08] text-[#A3A0B0] flex items-center justify-center mx-auto">
+                  <Film className="w-5 h-5 text-[#A3A0B0]" />
                 </div>
-                <p className="text-xs font-semibold text-[#F2F0F7]">No content published yet for this period</p>
-                <p className="text-[11px] text-[#71717A]">
-                  Publish posts to Instagram and Facebook to automatically track real-time impressions and engagement.
+                <p className="text-xs font-semibold text-[#F2F0F7]">No content matching this filter</p>
+                <p className="text-[11px] text-[#A3A0B0]">
+                  {report.top_deliverables.length === 0
+                    ? "Publish posts to Instagram and Facebook to automatically track real-time impressions and engagement."
+                    : "No published deliverables found for the selected platform filter."}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#30303D]/60">
-                {report.top_deliverables.map((item, idx) => {
+              <div className="divide-y divide-white/[0.06]">
+                {filteredDeliverables.map((item, idx) => {
                   const isVideo = item.deliverable_type?.toLowerCase().includes("video") || item.deliverable_type?.toLowerCase().includes("reel");
                   const platformStr = (item.platform || "").trim().toLowerCase();
                   const isInstagram = platformStr === "instagram";
@@ -577,6 +717,10 @@ function ReportsContent() {
                       : `https://www.instagram.com${item.live_post_url.startsWith("/") ? "" : "/"}${item.live_post_url}`
                     : null;
 
+                  const postEngagementRate = item.views_count > 0
+                    ? (((item.likes_count + item.comments_count) / item.views_count) * 100).toFixed(2)
+                    : "0.00";
+
                   return (
                     <div
                       key={item.id}
@@ -587,27 +731,27 @@ function ReportsContent() {
                         <div
                           className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
                             idx === 0
-                              ? "bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/40"
+                              ? "bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/40 shadow-xs"
                               : idx === 1
-                              ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]"
+                              ? "bg-white/[0.1] text-[#F2F0F7] border border-white/[0.15]"
                               : idx === 2
-                              ? "bg-[#20202A] text-[#A3A0B0] border border-[#30303D]"
-                              : "bg-[#101014] text-[#71717A]"
+                              ? "bg-[#20202A] text-[#A3A0B0] border border-white/[0.08]"
+                              : "bg-[#101014] text-[#A3A0B0]/70 border border-white/[0.04]"
                           }`}
                         >
                           #{idx + 1}
                         </div>
 
                         {/* Format icon */}
-                        <div className="w-9 h-9 rounded-xl bg-[#20202A] border border-[#30303D] text-[#A78BFA] flex items-center justify-center shrink-0">
-                          {isVideo ? <Film className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+                        <div className="w-9 h-9 rounded-xl bg-[#20202A] border border-white/[0.08] text-[#A78BFA] flex items-center justify-center shrink-0">
+                          {isVideo ? <Film className="w-4 h-4 text-[#A78BFA]" /> : <ImageIcon className="w-4 h-4 text-[#A78BFA]" />}
                         </div>
 
                         {/* Title and tags */}
                         <div className="min-w-0">
                           <Link
                             href={`/deliverables/${item.id}`}
-                            className="text-sm font-semibold text-[#F2F0F7] hover:text-[#A78BFA] truncate block max-w-md group"
+                            className="text-sm font-semibold text-[#F2F0F7] hover:text-[#A78BFA] truncate block max-w-md group transition-colors"
                           >
                             <span className="group-hover:underline">{item.title}</span>
                           </Link>
@@ -618,13 +762,16 @@ function ReportsContent() {
                                   ? "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
                                   : isFacebook
                                   ? "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30"
-                                  : "bg-[#20202A] text-[#A3A0B0] border-[#30303D]"
+                                  : "bg-[#20202A] text-[#A3A0B0] border-white/[0.08]"
                               }`}
                             >
                               {item.platform}
                             </span>
-                            <span className="capitalize text-[#A3A0B0] font-medium bg-[#101014] border border-[#30303D] px-2 py-0.5 rounded-md font-mono text-[10px]">
+                            <span className="capitalize text-[#A3A0B0] font-medium bg-[#101014] border border-white/[0.08] px-2 py-0.5 rounded-md font-mono text-[10px]">
                               {item.deliverable_type}
+                            </span>
+                            <span className="text-[#A3A0B0] font-mono text-[10px]">
+                              Engagement: <strong className="text-[#A78BFA]">{postEngagementRate}%</strong>
                             </span>
                           </div>
                         </div>
@@ -633,27 +780,27 @@ function ReportsContent() {
                       {/* Performance stats row */}
                       <div className="flex items-center gap-4 sm:gap-6 self-end sm:self-auto font-mono">
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-[#F2F0F7] text-xs font-bold justify-end">
+                          <div className="flex items-center gap-1.5 text-[#F2F0F7] text-xs font-bold justify-end">
                             <Eye className="w-3.5 h-3.5 text-[#69A9D8]" />
                             <span>{item.views_count.toLocaleString()}</span>
                           </div>
-                          <span className="text-[10px] text-[#71717A] font-medium">Views</span>
+                          <span className="text-[10px] text-[#A3A0B0] font-medium">Views</span>
                         </div>
 
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-[#F2F0F7] text-xs font-bold justify-end">
+                          <div className="flex items-center gap-1.5 text-[#F2F0F7] text-xs font-bold justify-end">
                             <Heart className="w-3.5 h-3.5 text-[#E16F7B]" />
                             <span>{item.likes_count.toLocaleString()}</span>
                           </div>
-                          <span className="text-[10px] text-[#71717A] font-medium">Likes</span>
+                          <span className="text-[10px] text-[#A3A0B0] font-medium">Likes</span>
                         </div>
 
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-[#F2F0F7] text-xs font-bold justify-end">
+                          <div className="flex items-center gap-1.5 text-[#F2F0F7] text-xs font-bold justify-end">
                             <MessageCircle className="w-3.5 h-3.5 text-[#69A9D8]" />
                             <span>{item.comments_count.toLocaleString()}</span>
                           </div>
-                          <span className="text-[10px] text-[#71717A] font-medium">Comments</span>
+                          <span className="text-[10px] text-[#A3A0B0] font-medium">Comments</span>
                         </div>
 
                         {/* Action buttons */}
@@ -663,7 +810,7 @@ function ReportsContent() {
                               href={liveUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-colors"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all active:scale-[0.98]"
                             >
                               <span>Live</span>
                               <ExternalLink className="w-3 h-3" />
@@ -671,9 +818,9 @@ function ReportsContent() {
                           ) : (
                             <Link
                               href={`/deliverables/${item.id}`}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#A78BFA] bg-[#20202A] hover:bg-[#262630] border border-[#30303D] rounded-xl transition-colors"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#A78BFA] bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] rounded-xl transition-all active:scale-[0.98]"
                             >
-                              <span>View</span>
+                              <span>Inspect</span>
                               <ChevronRight className="w-3 h-3" />
                             </Link>
                           )}
@@ -690,8 +837,8 @@ function ReportsContent() {
 
       {/* Empty State: No clients in Agency */}
       {!loadingClients && clients.length === 0 && (
-        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-[#20202A] border border-[#30303D] text-[#71717A] flex items-center justify-center mx-auto">
+        <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-[#20202A] border border-white/[0.08] text-[#A3A0B0] flex items-center justify-center mx-auto">
             <Building2 className="w-6 h-6" />
           </div>
           <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">No Clients Found</h3>
@@ -700,7 +847,7 @@ function ReportsContent() {
           </p>
           <Link
             href="/clients"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] text-[#101014] text-xs font-bold rounded-xl shadow-xs hover:bg-[#B69BFF] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] text-[#101014] text-xs font-bold rounded-xl shadow-xs hover:bg-[#B69BFF] transition-all"
           >
             Go to Clients Workspace
           </Link>
@@ -714,7 +861,7 @@ export default function ReportsPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-xs text-[#71717A]">Loading performance reports...</div>
+        <div className="p-8 text-center text-xs text-[#A3A0B0]">Loading performance reports...</div>
       }
     >
       <ReportsContent />
