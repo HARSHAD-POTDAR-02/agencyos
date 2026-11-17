@@ -21,21 +21,6 @@ MONTH_NAMES = [
 ]
 
 
-def _detect_industry_category(industry_str: str | None, voice_str: str | None) -> str:
-    combined = f"{industry_str or ''} {voice_str or ''}".lower()
-    if any(k in combined for k in ["tech", "software", "saas", "digital", "app", "cloud", "ai", "platform"]):
-        return "technology_saas"
-    if any(k in combined for k in ["fashion", "apparel", "clothing", "beauty", "cosmetics", "jewel"]):
-        return "fashion_lifestyle"
-    if any(k in combined for k in ["fitness", "gym", "health", "wellness", "yoga", "medical", "clinic"]):
-        return "fitness_wellness"
-    if any(k in combined for k in ["real estate", "property", "interior", "architecture", "construction"]):
-        return "real_estate_home"
-    if any(k in combined for k in ["finance", "legal", "consulting", "marketing", "agency", "corporate"]):
-        return "professional_services"
-    return "general_business"
-
-
 def _generate_generic_sprint(
     brand_name: str,
     industry: str,
@@ -96,30 +81,6 @@ def _generate_generic_sprint(
             "cta": tmpl["cta"],
             "audio_vibe": tmpl["audio"],
             "hashtags": tmpl["tags"],
-        })
-    return items
-    industry: str,
-    pillars: list[str],
-    voice: str,
-    total_days: int,
-) -> list[dict[str, Any]]:
-    """Synthesizes industry-aware reels for general businesses."""
-    items = []
-    for i in range(1, total_days + 1):
-        pillar = pillars[(i - 1) % len(pillars)] if pillars else "Brand Story"
-        clean_pillar = pillar.split("–")[0].split("-")[0].strip()
-        items.append({
-            "day_number": i,
-            "title": f"Day {i}: {clean_pillar} Spotlight",
-            "deliverable_type": "reel",
-            "platform": "instagram",
-            "pillar": clean_pillar,
-            "hook": f"3 things you never knew about {clean_pillar.lower()} at {brand_name} ⚡",
-            "visual_concept": f"Dynamic jump cuts highlighting {clean_pillar.lower()}, high contrast lighting with crisp bold typography overlay.",
-            "caption": f"At {brand_name}, we believe in transparency and excellence. Today we are diving deep into {clean_pillar.lower()}.\n\nSave this reel for your reference!",
-            "cta": "Drop your thoughts in comments or DM us for details.",
-            "audio_vibe": "Trending upbeat electronic lo-fi rhythm",
-            "hashtags": [f"#{brand_name.replace(' ', '').lower()}", f"#{clean_pillar.replace(' ', '').lower()}", "#viralgrowth", "#indiancreators"]
         })
     return items
 

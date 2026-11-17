@@ -135,9 +135,9 @@ async def web_search_handler(args: WebSearchInput, ctx: ToolExecutionContext) ->
 # =====================================================================
 
 PRICE_METRIC_PATTERN = re.compile(
-    r'(?:(?:₹|rs\.?|inr|\$)\s*\d+(?:[.,]\d+)?(?:\s*(?:per|/)\s*(?:100g|250g|500g|kg|month|meal|box|order|pack|year|day|session|serving))?)'
+    r'(?:(?:₹|rs\.?|inr|\$)\s*\d+(?:[.,]\d+)?(?:\s*(?:per|/)\s*(?:unit|month|user|item|order|pack|year|day|session|tier|kg|g|\d+g|\d+kg|\d+ml|\d+l|hr|hour))?)'
     r'|(?:\b\d+(?:[.,]\d+)?\s*%\s*(?:off|discount|growth|engagement|margin)?\b)'
-    r'|(?:\b\d+\+?\s*(?:cafes?|cafés?|stores?|subscribers?|followers?|reviews?|outlets?|branches?|cities|locations?)\b)',
+    r'|(?:\b\d+\+?\s*(?:offices?|stores?|clients?|subscribers?|followers?|reviews?|outlets?|branches?|cities|locations?)\b)',
     re.IGNORECASE
 )
 

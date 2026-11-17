@@ -61,7 +61,7 @@ class CampaignStrategy(BaseModel):
     messaging_pillars: list[MessagingPillar] = Field(default_factory=list)
     platform_distribution_strategy: dict[str, str] = Field(
         default_factory=dict,
-        description="Platform to strategic role mapping (e.g. {'instagram': 'Top-of-funnel reach', 'linkedin': 'B2B authority'})"
+        description="Platform to strategic role mapping (e.g. {'instagram': 'Top-of-funnel reach', 'linkedin': 'Professional authority'})"
     )
     pacing_and_cadence: str = Field(
         default="2-3 posts per week across 4 weeks",

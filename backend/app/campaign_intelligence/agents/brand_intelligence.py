@@ -278,7 +278,7 @@ Analyze the confirmed client brand data and historical feedback to extract actio
 4. Knowledge Gaps:
    - List any critical missing brand assets or guidelines needed for production.
 
-IMPORTANT: Do NOT invent positioning statements, fake client awards, or irrelevant consumer tropes for B2B/industrial clients. Ground your analysis strictly in the provided data.
+IMPORTANT: Do NOT invent positioning statements, fake client awards, or ungrounded claims. Ground your analysis strictly in the provided brand data.
 """
 
 

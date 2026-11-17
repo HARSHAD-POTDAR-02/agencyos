@@ -280,6 +280,29 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
                 if d.hero_entity and d.hero_entity.lower() not in d.title.lower():
                     d.title = f"{d.hero_entity}: {d.title}"
 
+                # Quality guarantee: Ensure reels have at least 3 director scenes and carousels have at least 4 slides
+                if d.deliverable_type.lower() == "reel" and (not d.reel_scenes or len(d.reel_scenes) < 3):
+                    assigned_h = d.hero_entity or (pinned[idx % len(pinned)] if pinned else None)
+                    msg = d.primary_hook or f"Experience {assigned_h or strategy.campaign_theme}"
+                    cta_txt = d.call_to_action or "Link in bio to get started"
+                    d.reel_scenes = [
+                        ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action=f"High-impact hook shot showcasing {assigned_h or 'core offering'}", on_screen_text=d.primary_hook or "Discover the Difference", spoken_audio_or_voiceover=msg, b_roll_notes="Dynamic professional lighting", hero_focus=[assigned_h] if assigned_h else []),
+                        ReelScene(scene_number=2, timestamp_range="0:03 - 0:15", visual_action=f"Behind-the-scenes showcase and feature breakdown for {assigned_h or strategy.campaign_theme}", on_screen_text=d.strategic_angle or "Core Value", spoken_audio_or_voiceover=f"Here is how {assigned_h or strategy.campaign_theme} delivers unmatched results.", b_roll_notes="Action feature highlights", hero_focus=[assigned_h] if assigned_h else []),
+                        ReelScene(scene_number=3, timestamp_range="0:15 - 0:30", visual_action=f"Product / service demonstration of signature {assigned_h or 'solution'}", on_screen_text="Signature Quality & Standards", spoken_audio_or_voiceover="Engineered with precision for an unparalleled customer experience.", b_roll_notes="Smooth cinematic tracking", hero_focus=[assigned_h] if assigned_h else []),
+                        ReelScene(scene_number=4, timestamp_range="0:30 - 0:45", visual_action="Final brand hero card, key takeaway, and call to action", on_screen_text=cta_txt, spoken_audio_or_voiceover=cta_txt, b_roll_notes="Outro CTA screen with handle", hero_focus=[assigned_h] if assigned_h else []),
+                    ]
+
+                if d.deliverable_type.lower() == "carousel" and (not d.carousel_slides or len(d.carousel_slides) < 4):
+                    assigned_h = d.hero_entity or (pinned[idx % len(pinned)] if pinned else None)
+                    msg = d.primary_hook or f"Key Insights: {assigned_h or strategy.campaign_theme}"
+                    cta_txt = d.call_to_action or "Save & Share this post"
+                    d.carousel_slides = [
+                        CarouselSlide(slide_number=1, headline=f"{assigned_h or 'Core Feature'}", body_copy=msg, visual_layout="High-impact hero cover slide", slide_type="cover"),
+                        CarouselSlide(slide_number=2, headline="The Strategic Problem", body_copy=f"Common roadblocks and why traditional methods fall short in delivering {assigned_h or 'results'}.", visual_layout="Split comparison layout", slide_type="content"),
+                        CarouselSlide(slide_number=3, headline="The Proven Solution", body_copy=f"Uncompromising quality and proven value delivered by {assigned_h or 'our core offering'}.", visual_layout="Step-by-step breakdown diagram", slide_type="content"),
+                        CarouselSlide(slide_number=4, headline="Take Action Today", body_copy=cta_txt, visual_layout="Bold closing CTA card with branding", slide_type="cta"),
+                    ]
+
                 # Propagate hero_focus to reel scenes if scenes exist and lack hero_focus
                 if d.reel_scenes and d.hero_entity:
                     for s in d.reel_scenes:
@@ -376,8 +399,9 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
                         call_to_action=cta,
                         carousel_slides=[
                             CarouselSlide(slide_number=1, headline=f"{assigned_hero or angle_name}", body_copy=core_msg, visual_layout="High-impact hero visual", slide_type="cover"),
-                            CarouselSlide(slide_number=2, headline="The Value Proposition", body_copy=f"Uncompromising quality and proven value delivered by {assigned_hero or 'our core offering'}.", visual_layout="Split highlight diagram", slide_type="content"),
-                            CarouselSlide(slide_number=3, headline="Get Started", body_copy=cta, visual_layout="Bold CTA banner", slide_type="cta"),
+                            CarouselSlide(slide_number=2, headline="The Problem & Opportunity", body_copy=f"Why conventional approaches fail and where {assigned_hero or 'real innovation'} makes the difference.", visual_layout="Comparison layout", slide_type="content"),
+                            CarouselSlide(slide_number=3, headline="The Value Proposition", body_copy=f"Uncompromising quality and proven value delivered by {assigned_hero or 'our core offering'}.", visual_layout="Split highlight diagram", slide_type="content"),
+                            CarouselSlide(slide_number=4, headline="Get Started", body_copy=cta, visual_layout="Bold CTA banner", slide_type="cta"),
                         ] if d_type == "carousel" else [],
                         reel_scenes=(
                             [

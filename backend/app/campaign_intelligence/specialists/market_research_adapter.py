@@ -84,7 +84,7 @@ class CompetitorFindingItem(BaseModel):
     )
     platform: str = Field(default="instagram", description="Platform observed on")
     observed_creative_angle: str = Field(description="Specific observed hook, positioning, or creative pattern")
-    observed_format: str = Field(default="Social Post", description="e.g. 'Short-form Video', 'Carousel Deck', 'Menu Offering', 'Storefront'")
+    observed_format: str = Field(default="Social Post", description="e.g. 'Short-form Video', 'Carousel Deck', 'Feature Showcase', 'Product Demo'")
     supporting_source_url: str | None = Field(
         default=None,
         description="Exact URL from retrieved evidence that establishes this observation",
@@ -265,12 +265,12 @@ CALL BUDGET ALLOCATION & ORCHESTRATION (6 CALLS MAXIMUM TOTAL SHARED BUDGET):
 - DYNAMIC ENTITY & FACET COVERAGE:
   * When multiple competitors or comparison entities are named (e.g. Entity A, B, and C):
     DO NOT spend multiple searches on Entity A! Dynamically distribute research attention:
-    - Phase 1 (Coverage Guarantee): Search 1 should cover Entities A & B; Search 2 should cover Entity C and specific requested dimensions (e.g. pricing, bundles, subscriptions, or reviews).
-    - Phase 2 (Targeted Page Extraction): Immediately call `extract_webpages` on 1 to 2 URLs containing menus, pricing, or product specs for the competitors.
+    - Phase 1 (Coverage Guarantee): Search 1 should cover Entities A & B; Search 2 should cover Entity C and specific requested dimensions (e.g. pricing, tiers, subscriptions, or reviews).
+    - Phase 2 (Targeted Page Extraction): Immediately call `extract_webpages` on 1 to 2 URLs containing catalogs, pricing, service plans, or product specs for the competitors.
     - Phase 3 (Gap Closure): If any named competitor or requested dimension is still missing, dedicate the remaining search or extraction specifically to that missing dimension.
   * Prioritize page extraction over redundant searches: verified primary page data is required for pricing and promotional claims.
-  * If the user specifically asks for customer complaints, negative reviews, or delivery issues: brand homepages NEVER list their own complaints! You MUST dedicate at least one search specifically to user reviews/complaints (e.g. "{{brand}} reviews complaints issues", "site:reddit.com/r/india {{brand}} review", "{{city}} meal prep delivery delay complaints").
-- DEEP PAGE INSPECTION (1 to 3 calls): Use `extract_webpages` on the most promising discovered URLs to inspect full menus, actual pricing tiers, subscription details, or review threads — not just snippets!
+  * If the user specifically asks for customer complaints, negative reviews, or delivery issues: brand homepages NEVER list their own complaints! You MUST dedicate at least one search specifically to user reviews/complaints (e.g. "{{brand}} reviews complaints issues", "site:reddit.com {{brand}} review", "{{domain}} service delay complaints").
+- DEEP PAGE INSPECTION (1 to 3 calls): Use `extract_webpages` on the most promising discovered URLs to inspect full product catalogs, actual pricing tiers, subscription details, or review threads — not just snippets!
 - COMPLETION: When evidence has been gathered, write your plain-text summary covering competitors, key facts, and whitespace gaps.
 
 RESEARCH PROTOCOL:
@@ -541,7 +541,7 @@ STRICT RULES:
 4. EVIDENCE GROUNDING FOR SENSITIVE CLAIMS: Pricing tiers, subscription fees, promotional discounts, customer review complaints, and quantitative performance numbers require an inspected webpage to be treated as verified evidence. If only found in a snippet, disclose as preliminary / unverified page content.
 5. STRATEGIC WHITESPACE CONSISTENCY: Every inferred opportunity (inferred_opportunities) must identify a genuine whitespace or differentiation gap that is internally consistent with your findings. Do NOT claim an angle is missing or unserved if your own findings state competitors are actively using it. Every opportunity must cite supporting_source_urls that appear in the evidence above.
 6. For key_findings, include the source_url when supported; set source_url to null if general or uncited.
-7. RESEARCH DIMENSIONS TRACKING: Decompose the original user query into 3 to 6 explicit requested dimensions (e.g., 'Blue Tokai Pricing & Subscriptions', 'Third Wave Coffee Offerings', 'Customer Review Complaints', 'Delivery Coverage in Specified Micro-Markets').
+7. RESEARCH DIMENSIONS TRACKING: Decompose the original user query into 3 to 6 explicit requested dimensions (e.g., 'Competitor Pricing & Subscriptions', 'Core Offering Tiers', 'Customer Review Complaints', 'Coverage in Target Geographic Markets').
    For each dimension, output a `ResearchDimensionItem`:
    - `dimension`: The specific entity, data point, or question requested.
    - `status`: 'answered' (if verified by primary inspected pages or clear evidence), 'partial' (if only preliminary snippets or unverified), or 'missing' (if unsearched, unverified, or omitted).
@@ -988,8 +988,8 @@ STRICT RULES:
             r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
             r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
             r"\bcompeting with\b",
-            r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|store|brand)\b",
-            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|service|brand)\b",
+            r"\b(?:for|on)\s+(?!(?:my|our|the)\s+(?:client|brand|company|business)|us\b)(?:an?\s+)?[a-z0-9\s,&-]+\s+(?:in|across|at|near)\s+[a-z0-9\s,&-]+\b",
+            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:company|companies|business|businesses|brand|brands|enterprise|enterprises|market|markets|sector|sectors|industry|industries|organization|organizations|service|services|product|products|vertical|verticals|niche|category|categories|segment|segments|domain|space|field)\b",
         ]
         if any(re.search(pat, q) for pat in named_patterns):
             return "INDEPENDENT_RESEARCH"

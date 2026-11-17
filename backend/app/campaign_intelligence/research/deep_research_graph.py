@@ -185,8 +185,8 @@ def _resolve_research_mode(
         r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
         r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
         r"\bcompeting with\b",
-        r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|store|brand)\b",
-        r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|service|brand)\b",
+        r"\b(?:for|on)\s+(?!(?:my|our|the)\s+(?:client|brand|company|business)|us\b)(?:an?\s+)?[a-z0-9\s,&-]+\s+(?:in|across|at|near)\s+[a-z0-9\s,&-]+\b",
+        r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:company|companies|business|businesses|brand|brands|enterprise|enterprises|market|markets|sector|sectors|industry|industries|organization|organizations|service|services|product|products|vertical|verticals|niche|category|categories|segment|segments|domain|space|field)\b",
     ]
     if any(re.search(pat, q) for pat in named_external_cues):
         return ResearchScopeMode.INDEPENDENT_RESEARCH, False
@@ -311,7 +311,7 @@ def _format_brand_context_block(context: CampaignStudioContext | None, query: st
         f"1. When the user asks about 'our brand', 'our business', 'our company', 'our competitors', 'we', 'us', "
         f"or asks open-ended questions like 'what are our direct and indirect competitors?' or 'who are our rivals?', "
         f"'our' refers EXCLUSIVELY to the active client brand: {client_name} ({industry}{f' in {location}' if location else ''}).\n"
-        f"2. Never confuse 'our brand' with AgencyOS, software, or tech SaaS. AgencyOS is the agency execution workspace; "
+        f"2. Never confuse 'our brand' with AgencyOS (the agency software application itself). AgencyOS is the agency execution workspace; "
         f"the market research is conducted for {client_name}.\n"
         f"3. Decompose and investigate actual competitors operating within {client_name}'s specific industry category "
         f"({industry}) and geographic market ({location or 'regional market'})."
@@ -401,15 +401,15 @@ USER QUERY: "{query}"
 
 MANDATORY PLANNING RULES:
 1. CLIENT BRAND ANCHORING: If research scope is CLIENT_SCOPED, anchor the entire investigation specifically to the ACTIVE CLIENT BRAND.
-2. ENTITY ISOLATION: If specific competitor companies, brands, or products are named in the query (e.g. 'Blue Tokai', 'Subko', 'Third Wave Coffee'), allocate at least one dedicated sub-topic to EACH named competitor entity. Do NOT bundle all competitors into a single generic search.
+2. ENTITY ISOLATION: If specific competitor companies, brands, or products are named in the query (e.g. 'Acme Corp', 'Rival Dynamics', 'Apex Inc'), allocate at least one dedicated sub-topic to EACH named competitor entity. Do NOT bundle all competitors into a single generic search.
 3. PRE-FLIGHT EVIDENCE PLANNING (MANDATORY): Map each sub-topic to the correct evidence_type:
-   - 'official_menu_or_store': For product pricing, menus, retail packs, subscription plans.
-   - 'independent_reviews': For customer complaints, negative feedback, delivery delays, freshness issues. (Must target review platforms/forums, NOT brand homepages).
-   - 'directory_or_outlets': For retail footprint, branch count, store locations.
+   - 'official_menu_or_store': For product pricing, services, catalog, subscription plans.
+   - 'independent_reviews': For customer feedback, satisfaction signals, recurring complaints. (Must target review platforms/forums, NOT brand homepages).
+   - 'directory_or_outlets': For operational footprint, branch count, store or office locations.
    - 'press_and_positioning': For social content, marketing angles, brand positioning, press coverage.
-4. DIMENSION ACCOUNTING: Ensure specific requested dimensions (pricing tiers, subscription models, seasonal gift bundles, customer review complaints) are explicitly captured in research_questions.
+4. DIMENSION ACCOUNTING: Ensure specific requested dimensions (pricing tiers, subscription models, packaging, customer review complaints) are explicitly captured in research_questions.
 5. BUDGET ALLOCATION: Allocate 1 or 2 tool calls per sub-topic. Total tool calls across all sub-topics must not exceed {state.get('max_global_budget', 6)}.
-6. SEARCH QUERY PRECISION: Provide specific, keyword-rich search queries. For 'independent_reviews', queries MUST target reviews, complaints, or forums (e.g. 'brand reviews complaints delay'). For 'official_menu_or_store', queries MUST target official store or menu pages."""
+6. SEARCH QUERY PRECISION: Provide specific, keyword-rich search queries. For 'independent_reviews', queries MUST target reviews, complaints, or forums (e.g. 'brand reviews complaints delay'). For 'official_menu_or_store', queries MUST target official store, catalog, or pricing pages."""
 
     try:
         plan = await invoke_structured_llm(
@@ -488,7 +488,7 @@ def _select_best_url_for_topic(
         "linkedin.com", "twitter.com", "x.com", "tiktok.com", "pinterest.com",
     )
     LOW_QUALITY_HOST_SUBSTRINGS = (
-        "aggregator-hub", "menuprices-scam", "foodindexing-auto",
+        "aggregator-hub", "contentfarm-auto", "scraper-hub",
     )
 
     STOPWORDS = {"the", "and", "for", "with", "from", "near", "best", "top", "online", "services", "pricing", "delivery", "plan", "plans"}
@@ -545,7 +545,7 @@ def _select_best_url_for_topic(
             if any(w in u_lower or w in path for w in ("menu", "shop", "store", "product", "pricing", "subscription", "order", "collections")):
                 score += 8.0
         elif evidence_type == "directory_or_outlets":
-            if any(w in u_lower or w in path for w in ("location", "locations", "outlets", "cafes", "stores", "branches", "find-us")):
+            if any(w in u_lower or w in path for w in ("location", "locations", "outlets", "offices", "sites", "stores", "branches", "find-us")):
                 score += 8.0
             if is_official_entity_domain:
                 score += 6.0
@@ -757,7 +757,7 @@ async def compile_report_node(state: DeepResearchState) -> dict[str, Any]:
     Applies strict post-validation:
     1. Ambiguity handling: Returns prompt clarification if business category was missing.
     2. Honest failure fallback: Explicitly reports zero sources if search returned empty.
-    3. Channel vs Direct Competitor: Classifies delivery aggregators (Zomato/Swiggy) as CHANNEL.
+    3. Channel vs Direct Competitor: Classifies third-party aggregators, marketplaces, or directories as CHANNEL.
     4. Review Integrity: Distinguishes 1 review (anecdote) from 2-4 (repeated) and 5+ (recurring).
     5. Numerical Claim Verification: Numbers not grounded in inspected evidence labeled unverified.
     6. Recommendation Discipline: Opportunities default to HYPOTHESIS with low-risk test methods.
@@ -771,8 +771,7 @@ async def compile_report_node(state: DeepResearchState) -> dict[str, Any]:
     if plan and plan.is_ambiguous_clarification:
         client_name = (context.client_name if context else None) or "the client brand"
         clarification_msg = (
-            f"To identify direct and indirect competitors for **{client_name}**, please clarify the primary business category "
-            f"(e.g., software SaaS, direct-to-consumer retail, professional services, or local clinic). "
+            f"To identify direct and indirect competitors for **{client_name}**, please clarify the primary business category or industry. "
             f"Once the category is confirmed, competitive analysis can be precisely targeted."
         )
         synthesis = MarketResearchSynthesisOutput(
@@ -879,7 +878,7 @@ STRICT ISOLATION CONTRACT:
         scope_directive = f"""--- RESEARCH SCOPE: CLIENT-INFORMED EXTERNAL OPPORTUNITY ANALYSIS ---
 {brand_section}
 STRICT SCOPE CONTRACT:
-1. Synthesize the external market research (e.g. specialty coffee trends, retail models, subscription practices).
+1. Synthesize the external market research (e.g. market trends, operational models, acquisition practices).
 2. Directly evaluate how the active client brand ({client_name}) can realistically explore, adapt, or adopt these external findings.
 3. Inferred opportunities should explicitly identify concrete, low-risk opportunities for {client_name} based on the external research."""
         rule_5 = f"5. Inferred opportunities must be categorized as 'hypothesis' by default, evaluating actionable ways {client_name} could realistically adopt or test these external practices, with concrete 'missing_evidence', a practical low-risk 'test_method', and measurable 'validation_criteria'."
@@ -1055,7 +1054,7 @@ STRICT EDITORIAL RULES:
 
     # Pass 3: Numerical Metric Verification
     for kf in synthesis.key_findings:
-        has_num_metric = bool(re.search(r"(?:₹|\$|rs\.?|inr)\s*\d+|\b\d+(?:,\d+)?\s*(?:daily|lakh|crore|outlets|cafes|branches|stores|raans|orders)\b", kf.finding, re.IGNORECASE))
+        has_num_metric = bool(re.search(r"(?:₹|\$|rs\.?|inr)\s*\d+|\b\d+(?:,\d+)?\s*(?:daily|monthly|annual|lakh|crore|outlets|branches|stores|units|users|clients|orders)\b", kf.finding, re.IGNORECASE))
         if has_num_metric:
             numbers_in_finding = re.findall(r"\b\d+(?:[.,]\d+)?\b", kf.finding)
             matched_in_inspected = any(num in all_inspected_text or any(num in m for m in all_inspected_metrics) for num in numbers_in_finding)

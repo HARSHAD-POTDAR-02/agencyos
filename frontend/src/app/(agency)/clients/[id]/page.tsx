@@ -898,7 +898,7 @@ function ClientWorkspaceContent() {
                 rows={3}
                 value={toneExamplesText}
                 onChange={(e) => setToneExamplesText(e.target.value)}
-                placeholder={"\"Chai isn't just tea, it's our 4 PM therapy session.\"\n\"No fake promises, only pure organic brew.\""}
+                placeholder={"\"Excellence isn't a goal, it's our standard operating procedure.\"\n\"No superficial shortcuts, only verified tangible impact.\""}
                 className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors font-mono"
               />
             </div>
@@ -934,7 +934,7 @@ function ClientWorkspaceContent() {
                   rows={4}
                   value={targetAudienceText}
                   onChange={(e) => setTargetAudienceText(e.target.value)}
-                  placeholder={"Urban Indian professionals aged 22-38 in tier 1 & 2 cities\nInterested in fitness, premium lifestyle, and productivity\nActive primarily on Instagram Reels & LinkedIn"}
+                  placeholder={"Core target demographic, geographic regions, and customer pain points\nKey interests, buying behavior, and motivations\nActive social platforms and preferred content formats"}
                   className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors"
                 />
               </div>
@@ -954,7 +954,7 @@ function ClientWorkspaceContent() {
                   rows={3}
                   value={prohibitedClaimsText}
                   onChange={(e) => setProhibitedClaimsText(e.target.value)}
-                  placeholder={"100% guaranteed results\nCheapest in India\nInstant cure\nUnverified clinical claims"}
+                  placeholder={"100% guaranteed results\nCheapest in market\nInstant guaranteed outcome\nUnverified performance claims"}
                   className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3 rounded-xl border border-[#E16F7B]/30 focus:outline-none focus:border-[#E16F7B] transition-colors"
                 />
               </div>
@@ -971,7 +971,7 @@ function ClientWorkspaceContent() {
                   rows={3}
                   value={approvedPhrasesText}
                   onChange={(e) => setApprovedPhrasesText(e.target.value)}
-                  placeholder={"Brewed with Real Passion\nAvailable exclusively at artisanstores.in\nT&C Apply"}
+                  placeholder={"Engineered for Excellence\nAvailable exclusively at official channels\nT&C Apply"}
                   className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3 rounded-xl border border-[#45B88A]/30 focus:outline-none focus:border-[#45B88A] transition-colors"
                 />
               </div>

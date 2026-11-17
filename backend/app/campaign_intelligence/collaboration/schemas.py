@@ -87,10 +87,10 @@ class CompetitorType(str, Enum):
 class CompetitorRelevance(BaseModel):
     """Structured overlap analysis without manufactured numerical scores."""
     geographic_overlap: str = Field(description="Local, regional, national, or delivery radius overlap")
-    product_or_service_overlap: str = Field(description="Degree of menu/product offering substitution")
+    product_or_service_overlap: str = Field(description="Degree of product or service offering substitution")
     price_overlap: str = Field(description="Relative price tier comparison (budget, parity, premium)")
     audience_overlap: str = Field(description="Target customer segment alignment")
-    occasion_overlap: str = Field(description="Dining or purchase occasion alignment (daily, weekend, celebration, quick bite)")
+    occasion_overlap: str = Field(description="Purchase, usage, or engagement occasion alignment (routine, milestone, seasonal, urgent)")
 
 
 class OpportunityStatus(str, Enum):

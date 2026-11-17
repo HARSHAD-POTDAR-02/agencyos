@@ -84,7 +84,7 @@ class MarketResearchAgent:
         # 1. Determine scope parameters
         industry = (
             (brand_context.industry if brand_context and brand_context.industry else None)
-            or "B2B Technology & Professional Services"
+            or "Commercial Enterprise"
         )
         audience = brief.target_audience or (brand_context.target_audience if brand_context else [])
         platforms = brief.platforms or ["linkedin", "instagram"]
