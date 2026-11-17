@@ -358,32 +358,40 @@ export default function EmployeeWorkspacePage() {
         {/* Metric 1: To Execute */}
         <div 
           onClick={() => setActiveTab("action_required")}
-          className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 first:px-0 cursor-pointer transition-all ${
-            activeTab === "action_required"
-              ? "opacity-100"
-              : activeTab === "all"
-              ? "opacity-75 hover:opacity-100"
-              : "opacity-40 hover:opacity-80"
-          }`}
+          className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 first:px-0 cursor-pointer transition-all group"
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
-            activeTab === "action_required" ? "text-[#C4B5FD] font-bold" : "text-[#71717A] font-medium"
+            activeTab === "action_required"
+              ? "text-[#C4B5FD] font-bold"
+              : activeTab === "all"
+              ? "text-[#A78BFA]/60 group-hover:text-[#A78BFA] font-medium"
+              : "text-[#A78BFA]/20 group-hover:text-[#A78BFA]/60 font-medium"
           }`}>
             <span>To Execute</span>
             <CheckSquare className={`w-3.5 h-3.5 transition-colors ${
-              activeTab === "action_required" ? "text-[#A78BFA]" : "text-[#71717A]"
+              activeTab === "action_required"
+                ? "text-[#A78BFA]"
+                : activeTab === "all"
+                ? "text-[#A78BFA]/60 group-hover:text-[#A78BFA]"
+                : "text-[#A78BFA]/20 group-hover:text-[#A78BFA]/60"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "action_required"
-                ? "text-3xl font-extrabold text-white drop-shadow-[0_0_12px_rgba(167,139,250,0.35)]"
-                : "text-2xl font-bold text-[#A3A0B0]"
+                ? "text-3xl font-extrabold text-white drop-shadow-[0_0_12px_rgba(167,139,250,0.4)]"
+                : activeTab === "all"
+                ? "text-2xl font-bold text-[#A78BFA]/75 group-hover:text-[#A78BFA]"
+                : "text-2xl font-bold text-[#A78BFA]/25 group-hover:text-[#A78BFA]/60"
             }`}>
               {activeTasks.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
-              activeTab === "action_required" ? "text-[#C4B5FD] font-semibold" : "text-[#71717A]"
+              activeTab === "action_required"
+                ? "text-[#C4B5FD] font-semibold"
+                : activeTab === "all"
+                ? "text-[#A78BFA]/50 group-hover:text-[#A78BFA]/80"
+                : "text-[#A78BFA]/20 group-hover:text-[#A78BFA]/50"
             }`}>
               ready to work
             </span>
@@ -393,32 +401,40 @@ export default function EmployeeWorkspacePage() {
         {/* Metric 2: Needs Update / Revisions */}
         <div 
           onClick={() => setActiveTab("revisions")}
-          className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all ${
-            activeTab === "revisions"
-              ? "opacity-100"
-              : activeTab === "all"
-              ? "opacity-75 hover:opacity-100"
-              : "opacity-40 hover:opacity-80"
-          }`}
+          className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all group"
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
-            activeTab === "revisions" ? "text-[#FBBF24] font-bold" : "text-[#71717A] font-medium"
+            activeTab === "revisions"
+              ? "text-[#FBBF24] font-bold"
+              : activeTab === "all"
+              ? "text-[#E5AA58]/60 group-hover:text-[#E5AA58] font-medium"
+              : "text-[#E5AA58]/20 group-hover:text-[#E5AA58]/60 font-medium"
           }`}>
             <span>Needs Update</span>
             <AlertTriangle className={`w-3.5 h-3.5 transition-colors ${
-              activeTab === "revisions" ? "text-[#FBBF24]" : "text-[#71717A]"
+              activeTab === "revisions"
+                ? "text-[#FBBF24]"
+                : activeTab === "all"
+                ? "text-[#E5AA58]/60 group-hover:text-[#E5AA58]"
+                : "text-[#E5AA58]/20 group-hover:text-[#E5AA58]/60"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "revisions"
-                ? "text-3xl font-extrabold text-[#FDE68A] drop-shadow-[0_0_12px_rgba(245,158,11,0.35)]"
-                : "text-2xl font-bold text-[#A3A0B0]"
+                ? "text-3xl font-extrabold text-[#FDE68A] drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                : activeTab === "all"
+                ? "text-2xl font-bold text-[#E5AA58]/75 group-hover:text-[#E5AA58]"
+                : "text-2xl font-bold text-[#E5AA58]/25 group-hover:text-[#E5AA58]/60"
             }`}>
               {pendingRevisions.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
-              activeTab === "revisions" ? "text-[#FBBF24] font-semibold" : "text-[#71717A]"
+              activeTab === "revisions"
+                ? "text-[#FBBF24] font-semibold"
+                : activeTab === "all"
+                ? "text-[#E5AA58]/50 group-hover:text-[#E5AA58]/80"
+                : "text-[#E5AA58]/20 group-hover:text-[#E5AA58]/50"
             }`}>
               manager feedback
             </span>
@@ -428,32 +444,40 @@ export default function EmployeeWorkspacePage() {
         {/* Metric 3: Awaiting Review */}
         <div 
           onClick={() => setActiveTab("in_review")}
-          className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all ${
-            activeTab === "in_review"
-              ? "opacity-100"
-              : activeTab === "all"
-              ? "opacity-75 hover:opacity-100"
-              : "opacity-40 hover:opacity-80"
-          }`}
+          className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all group"
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
-            activeTab === "in_review" ? "text-[#93C5FD] font-bold" : "text-[#71717A] font-medium"
+            activeTab === "in_review"
+              ? "text-[#93C5FD] font-bold"
+              : activeTab === "all"
+              ? "text-[#69A9D8]/60 group-hover:text-[#69A9D8] font-medium"
+              : "text-[#69A9D8]/20 group-hover:text-[#69A9D8]/60 font-medium"
           }`}>
             <span>In Inspection</span>
             <Clock className={`w-3.5 h-3.5 transition-colors ${
-              activeTab === "in_review" ? "text-[#93C5FD]" : "text-[#71717A]"
+              activeTab === "in_review"
+                ? "text-[#93C5FD]"
+                : activeTab === "all"
+                ? "text-[#69A9D8]/60 group-hover:text-[#69A9D8]"
+                : "text-[#69A9D8]/20 group-hover:text-[#69A9D8]/60"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "in_review"
-                ? "text-3xl font-extrabold text-[#DBEAFE] drop-shadow-[0_0_12px_rgba(147,197,253,0.35)]"
-                : "text-2xl font-bold text-[#A3A0B0]"
+                ? "text-3xl font-extrabold text-[#DBEAFE] drop-shadow-[0_0_12px_rgba(147,197,253,0.4)]"
+                : activeTab === "all"
+                ? "text-2xl font-bold text-[#69A9D8]/75 group-hover:text-[#69A9D8]"
+                : "text-2xl font-bold text-[#69A9D8]/25 group-hover:text-[#69A9D8]/60"
             }`}>
               {awaitingReview.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
-              activeTab === "in_review" ? "text-[#93C5FD] font-semibold" : "text-[#71717A]"
+              activeTab === "in_review"
+                ? "text-[#93C5FD] font-semibold"
+                : activeTab === "all"
+                ? "text-[#69A9D8]/50 group-hover:text-[#69A9D8]/80"
+                : "text-[#69A9D8]/20 group-hover:text-[#69A9D8]/50"
             }`}>
               submitted
             </span>
@@ -461,18 +485,16 @@ export default function EmployeeWorkspacePage() {
         </div>
 
         {/* Metric 4: Deadlines */}
-        <div className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 transition-all ${
-          activeTab === "all" ? "opacity-75" : "opacity-50"
-        }`}>
-          <div className="flex items-center justify-between text-[#71717A] text-[11px] font-mono font-medium uppercase tracking-wider">
+        <div className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 transition-all group">
+          <div className="flex items-center justify-between text-[#E16F7B]/40 group-hover:text-[#E16F7B]/70 text-[11px] font-mono font-medium uppercase tracking-wider transition-colors">
             <span>Deadlines</span>
-            <Calendar className={`w-3.5 h-3.5 ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#71717A]"}`} />
+            <Calendar className={`w-3.5 h-3.5 transition-colors ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#E16F7B]/40"}`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className={`text-2xl font-bold font-mono ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#A3A0B0]"}`}>
+            <span className={`text-2xl font-bold font-mono transition-colors ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#E16F7B]/35 group-hover:text-[#E16F7B]/60"}`}>
               {dueToday.length + overdue.length}
             </span>
-            <span className="text-[10px] text-[#71717A] font-mono">
+            <span className="text-[10px] text-[#E16F7B]/30 group-hover:text-[#E16F7B]/60 font-mono transition-colors">
               {overdue.length > 0 ? `${overdue.length} overdue` : "on track"}
             </span>
           </div>
@@ -481,32 +503,40 @@ export default function EmployeeWorkspacePage() {
         {/* Metric 5: Passed QA */}
         <div 
           onClick={() => setActiveTab("completed")}
-          className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all ${
-            activeTab === "completed"
-              ? "opacity-100"
-              : activeTab === "all"
-              ? "opacity-75 hover:opacity-100"
-              : "opacity-40 hover:opacity-80"
-          }`}
+          className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all group"
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
-            activeTab === "completed" ? "text-[#6EE7B7] font-bold" : "text-[#71717A] font-medium"
+            activeTab === "completed"
+              ? "text-[#6EE7B7] font-bold"
+              : activeTab === "all"
+              ? "text-[#45B88A]/60 group-hover:text-[#45B88A] font-medium"
+              : "text-[#45B88A]/20 group-hover:text-[#45B88A]/60 font-medium"
           }`}>
             <span>Passed QA</span>
             <CheckCircle2 className={`w-3.5 h-3.5 transition-colors ${
-              activeTab === "completed" ? "text-[#6EE7B7]" : "text-[#71717A]"
+              activeTab === "completed"
+                ? "text-[#6EE7B7]"
+                : activeTab === "all"
+                ? "text-[#45B88A]/60 group-hover:text-[#45B88A]"
+                : "text-[#45B88A]/20 group-hover:text-[#45B88A]/60"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "completed"
-                ? "text-3xl font-extrabold text-[#D1FAE5] drop-shadow-[0_0_12px_rgba(110,231,183,0.35)]"
-                : "text-2xl font-bold text-[#A3A0B0]"
+                ? "text-3xl font-extrabold text-[#D1FAE5] drop-shadow-[0_0_12px_rgba(110,231,183,0.4)]"
+                : activeTab === "all"
+                ? "text-2xl font-bold text-[#45B88A]/75 group-hover:text-[#45B88A]"
+                : "text-2xl font-bold text-[#45B88A]/25 group-hover:text-[#45B88A]/60"
             }`}>
               {completed.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
-              activeTab === "completed" ? "text-[#6EE7B7] font-semibold" : "text-[#71717A]"
+              activeTab === "completed"
+                ? "text-[#6EE7B7] font-semibold"
+                : activeTab === "all"
+                ? "text-[#45B88A]/50 group-hover:text-[#45B88A]/80"
+                : "text-[#45B88A]/20 group-hover:text-[#45B88A]/50"
             }`}>
               ready to publish
             </span>
