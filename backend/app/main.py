@@ -4,9 +4,10 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import async_engine, Base, AsyncSessionLocal
@@ -32,7 +33,7 @@ async def lifespan(app: FastAPI):
     if settings.APP_ENV == "development":
         async with async_engine.begin() as conn:
             # Import all models to ensure they are registered on metadata
-            import app.models  # noqa: F401
+            from app import models as _models  # noqa: F401
             await conn.run_sync(Base.metadata.create_all)
     # Ensure upload directory exists
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
@@ -42,6 +43,8 @@ async def lifespan(app: FastAPI):
     scheduler_task = asyncio.create_task(
         run_scheduler_worker(AsyncSessionLocal, stop_event=scheduler_stop_event)
     )
+    app.state.scheduler_task = scheduler_task
+    app.state.scheduler_stop_event = scheduler_stop_event
 
     yield
 
@@ -98,9 +101,81 @@ app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
 
 
 # ---------------------------------------------------------------------------
-# Health check
+# Health checks
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["meta"])
 async def health_check() -> dict:
-    """Liveness probe."""
+    """Lightweight liveness probe."""
     return {"status": "ok", "env": settings.APP_ENV}
+
+
+@app.get("/healthz", tags=["meta"])
+async def readiness_health_check(request: Request, response: Response) -> dict:
+    """
+    Comprehensive readiness check verifying database connectivity,
+    object storage availability, and background scheduler worker status.
+    Returns HTTP 200 when ready, HTTP 503 if primary dependencies fail.
+    """
+    db_status = "healthy"
+    db_details = {}
+    try:
+        async with async_engine.connect() as conn:
+            res = await conn.execute(text("SELECT 1"))
+            val = res.scalar()
+            db_details["connected"] = (val == 1)
+            db_details["engine"] = "postgresql" if "postgresql" in str(async_engine.url) else "sqlite"
+    except Exception as e:
+        db_status = "unhealthy"
+        db_details["connected"] = False
+        db_details["error"] = str(e)
+
+    storage_status = "healthy"
+    storage_details = {}
+    try:
+        from app.services.storage_service import (
+            _get_boto3_client,
+            _get_bucket_name,
+            is_remote_storage_active,
+        )
+        if is_remote_storage_active():
+            storage_details["backend"] = settings.STORAGE_BACKEND
+            storage_details["bucket"] = _get_bucket_name()
+            s3 = _get_boto3_client()
+            if s3:
+                # Test connectivity to B2 / S3
+                await asyncio.to_thread(s3.head_bucket, Bucket=_get_bucket_name())
+                storage_details["remote_reachable"] = True
+            else:
+                storage_status = "degraded"
+                storage_details["remote_reachable"] = False
+        else:
+            storage_details["backend"] = "local"
+            storage_details["upload_dir_exists"] = Path(settings.UPLOAD_DIR).is_dir()
+    except Exception as e:
+        storage_status = "degraded"
+        storage_details["remote_reachable"] = False
+        storage_details["error"] = str(e)
+
+    scheduler_task = getattr(request.app.state, "scheduler_task", None)
+    scheduler_running = scheduler_task is not None and not scheduler_task.done()
+    scheduler_status = "running" if scheduler_running else "stopped"
+
+    overall_healthy = (db_status == "healthy")
+    if not overall_healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return {
+        "status": "healthy" if overall_healthy else "unhealthy",
+        "environment": settings.APP_ENV,
+        "database": {
+            "status": db_status,
+            **db_details,
+        },
+        "storage": {
+            "status": storage_status,
+            **storage_details,
+        },
+        "scheduler": {
+            "status": scheduler_status,
+        },
+    }

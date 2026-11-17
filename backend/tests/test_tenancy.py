@@ -127,13 +127,13 @@ async def test_agency_search_and_notifications(
     Agency A can search its resources and fetch notifications.
     """
     _, agency_a = agency_a_data
-    client = await _seed_client(agency_a.id, "Shaurya Spices")
+    client = await _seed_client(agency_a.id, "Nexus Dynamics")
 
     # Search with match
-    search_res = await agency_a_client.get(f"/agencies/{agency_a.id}/search?q=Shaurya")
+    search_res = await agency_a_client.get(f"/agencies/{agency_a.id}/search?q=Nexus")
     assert search_res.status_code == 200
     search_data = search_res.json()
-    assert any("Shaurya" in r["title"] for r in search_data["results"])
+    assert any("Nexus" in r["title"] for r in search_data["results"])
 
     # Notifications
     notif_res = await agency_a_client.get(f"/agencies/{agency_a.id}/notifications")

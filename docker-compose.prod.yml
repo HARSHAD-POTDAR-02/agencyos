@@ -1,0 +1,83 @@
+# ==============================================================================
+# AgencyOS - Production Docker Compose Orchestration
+# ==============================================================================
+# Seamlessly orchestrates Backend (FastAPI + Gunicorn) and Frontend (Next.js Standalone).
+# Connects directly to serverless PostgreSQL (Neon) and S3 object storage (Backblaze B2).
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up --build -d
+# ==============================================================================
+
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agencyos_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      # Neon Serverless PostgreSQL
+      - DATABASE_URL=${DATABASE_URL}
+      - SYNC_DATABASE_URL=${SYNC_DATABASE_URL}
+      # Security & JWT
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      # Object Storage: Backblaze B2 Private Bucket with Presigned URLs
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-b2}
+      - B2_ENDPOINT=${B2_ENDPOINT:-https://s3.us-east-005.backblazeb2.com}
+      - B2_KEY_ID=${B2_KEY_ID}
+      - B2_APPLICATION_KEY=${B2_APPLICATION_KEY}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME:-agencyos-bucket}
+      - B2_REGION=${B2_REGION:-us-east-005}
+      - B2_PRESIGNED_EXPIRATION_SECONDS=86400
+      # AI & Research API Keys
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      # Meta Graph API Integration
+      - META_APP_ID=${META_APP_ID:-}
+      - META_APP_SECRET=${META_APP_SECRET:-}
+      - META_REDIRECT_URI=${META_REDIRECT_URI:-}
+      # URLs
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    volumes:
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: agencyos_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - PORT=3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 25s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  backend_uploads:
