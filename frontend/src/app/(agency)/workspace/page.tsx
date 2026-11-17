@@ -359,16 +359,34 @@ export default function EmployeeWorkspacePage() {
         <div 
           onClick={() => setActiveTab("action_required")}
           className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 first:px-0 cursor-pointer transition-all ${
-            activeTab === "action_required" ? "opacity-100 ring-1 ring-[#A78BFA]/30 rounded-lg p-1 bg-white/[0.02]" : "opacity-80 hover:opacity-100"
+            activeTab === "action_required"
+              ? "opacity-100"
+              : activeTab === "all"
+              ? "opacity-75 hover:opacity-100"
+              : "opacity-40 hover:opacity-80"
           }`}
         >
-          <div className="flex items-center justify-between text-[#A78BFA] text-[11px] font-mono font-medium uppercase tracking-wider">
+          <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
+            activeTab === "action_required" ? "text-[#C4B5FD] font-bold" : "text-[#71717A] font-medium"
+          }`}>
             <span>To Execute</span>
-            <CheckSquare className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <CheckSquare className={`w-3.5 h-3.5 transition-colors ${
+              activeTab === "action_required" ? "text-[#A78BFA]" : "text-[#71717A]"
+            }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{activeTasks.length}</span>
-            <span className="text-[10px] text-[#A78BFA] font-mono font-medium">ready to work</span>
+            <span className={`font-mono transition-all ${
+              activeTab === "action_required"
+                ? "text-3xl font-extrabold text-white drop-shadow-[0_0_12px_rgba(167,139,250,0.35)]"
+                : "text-2xl font-bold text-[#A3A0B0]"
+            }`}>
+              {activeTasks.length}
+            </span>
+            <span className={`text-[10px] font-mono transition-colors ${
+              activeTab === "action_required" ? "text-[#C4B5FD] font-semibold" : "text-[#71717A]"
+            }`}>
+              ready to work
+            </span>
           </div>
         </div>
 
@@ -376,16 +394,34 @@ export default function EmployeeWorkspacePage() {
         <div 
           onClick={() => setActiveTab("revisions")}
           className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all ${
-            activeTab === "revisions" ? "opacity-100 ring-1 ring-[#E5AA58]/30 rounded-lg p-1 bg-white/[0.02]" : "opacity-80 hover:opacity-100"
+            activeTab === "revisions"
+              ? "opacity-100"
+              : activeTab === "all"
+              ? "opacity-75 hover:opacity-100"
+              : "opacity-40 hover:opacity-80"
           }`}
         >
-          <div className="flex items-center justify-between text-[#E5AA58] text-[11px] font-mono font-medium uppercase tracking-wider">
+          <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
+            activeTab === "revisions" ? "text-[#FBBF24] font-bold" : "text-[#71717A] font-medium"
+          }`}>
             <span>Needs Update</span>
-            <AlertTriangle className="w-3.5 h-3.5 text-[#E5AA58]" />
+            <AlertTriangle className={`w-3.5 h-3.5 transition-colors ${
+              activeTab === "revisions" ? "text-[#FBBF24]" : "text-[#71717A]"
+            }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#E5AA58]">{pendingRevisions.length}</span>
-            <span className="text-[10px] text-[#E5AA58] font-mono">manager feedback</span>
+            <span className={`font-mono transition-all ${
+              activeTab === "revisions"
+                ? "text-3xl font-extrabold text-[#FDE68A] drop-shadow-[0_0_12px_rgba(245,158,11,0.35)]"
+                : "text-2xl font-bold text-[#A3A0B0]"
+            }`}>
+              {pendingRevisions.length}
+            </span>
+            <span className={`text-[10px] font-mono transition-colors ${
+              activeTab === "revisions" ? "text-[#FBBF24] font-semibold" : "text-[#71717A]"
+            }`}>
+              manager feedback
+            </span>
           </div>
         </div>
 
@@ -393,30 +429,50 @@ export default function EmployeeWorkspacePage() {
         <div 
           onClick={() => setActiveTab("in_review")}
           className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all ${
-            activeTab === "in_review" ? "opacity-100 ring-1 ring-[#69A9D8]/30 rounded-lg p-1 bg-white/[0.02]" : "opacity-80 hover:opacity-100"
+            activeTab === "in_review"
+              ? "opacity-100"
+              : activeTab === "all"
+              ? "opacity-75 hover:opacity-100"
+              : "opacity-40 hover:opacity-80"
           }`}
         >
-          <div className="flex items-center justify-between text-[#69A9D8] text-[11px] font-mono font-medium uppercase tracking-wider">
+          <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
+            activeTab === "in_review" ? "text-[#93C5FD] font-bold" : "text-[#71717A] font-medium"
+          }`}>
             <span>In Inspection</span>
-            <Clock className="w-3.5 h-3.5 text-[#69A9D8]" />
+            <Clock className={`w-3.5 h-3.5 transition-colors ${
+              activeTab === "in_review" ? "text-[#93C5FD]" : "text-[#71717A]"
+            }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#69A9D8]">{awaitingReview.length}</span>
-            <span className="text-[10px] text-[#69A9D8] font-mono">submitted</span>
+            <span className={`font-mono transition-all ${
+              activeTab === "in_review"
+                ? "text-3xl font-extrabold text-[#DBEAFE] drop-shadow-[0_0_12px_rgba(147,197,253,0.35)]"
+                : "text-2xl font-bold text-[#A3A0B0]"
+            }`}>
+              {awaitingReview.length}
+            </span>
+            <span className={`text-[10px] font-mono transition-colors ${
+              activeTab === "in_review" ? "text-[#93C5FD] font-semibold" : "text-[#71717A]"
+            }`}>
+              submitted
+            </span>
           </div>
         </div>
 
         {/* Metric 4: Deadlines */}
-        <div className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3">
-          <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-mono font-medium uppercase tracking-wider">
+        <div className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 transition-all ${
+          activeTab === "all" ? "opacity-75" : "opacity-50"
+        }`}>
+          <div className="flex items-center justify-between text-[#71717A] text-[11px] font-mono font-medium uppercase tracking-wider">
             <span>Deadlines</span>
-            <Calendar className={`w-3.5 h-3.5 ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#A3A0B0]"}`} />
+            <Calendar className={`w-3.5 h-3.5 ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#71717A]"}`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className={`text-2xl font-bold font-mono ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#F2F0F7]"}`}>
+            <span className={`text-2xl font-bold font-mono ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#A3A0B0]"}`}>
               {dueToday.length + overdue.length}
             </span>
-            <span className="text-[10px] text-[#A3A0B0] font-mono">
+            <span className="text-[10px] text-[#71717A] font-mono">
               {overdue.length > 0 ? `${overdue.length} overdue` : "on track"}
             </span>
           </div>
@@ -426,16 +482,34 @@ export default function EmployeeWorkspacePage() {
         <div 
           onClick={() => setActiveTab("completed")}
           className={`flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 cursor-pointer transition-all ${
-            activeTab === "completed" ? "opacity-100 ring-1 ring-[#45B88A]/30 rounded-lg p-1 bg-white/[0.02]" : "opacity-80 hover:opacity-100"
+            activeTab === "completed"
+              ? "opacity-100"
+              : activeTab === "all"
+              ? "opacity-75 hover:opacity-100"
+              : "opacity-40 hover:opacity-80"
           }`}
         >
-          <div className="flex items-center justify-between text-[#45B88A] text-[11px] font-mono font-medium uppercase tracking-wider">
+          <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
+            activeTab === "completed" ? "text-[#6EE7B7] font-bold" : "text-[#71717A] font-medium"
+          }`}>
             <span>Passed QA</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
+            <CheckCircle2 className={`w-3.5 h-3.5 transition-colors ${
+              activeTab === "completed" ? "text-[#6EE7B7]" : "text-[#71717A]"
+            }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#45B88A]">{completed.length}</span>
-            <span className="text-[10px] text-[#45B88A] font-mono font-medium">ready to publish</span>
+            <span className={`font-mono transition-all ${
+              activeTab === "completed"
+                ? "text-3xl font-extrabold text-[#D1FAE5] drop-shadow-[0_0_12px_rgba(110,231,183,0.35)]"
+                : "text-2xl font-bold text-[#A3A0B0]"
+            }`}>
+              {completed.length}
+            </span>
+            <span className={`text-[10px] font-mono transition-colors ${
+              activeTab === "completed" ? "text-[#6EE7B7] font-semibold" : "text-[#71717A]"
+            }`}>
+              ready to publish
+            </span>
           </div>
         </div>
       </div>
