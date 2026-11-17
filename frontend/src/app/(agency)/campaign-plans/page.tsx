@@ -11,6 +11,7 @@ import {
   type ReelSceneItem, 
   type CarouselSlideItem 
 } from "@/components/campaign-studio/DeliverableEditorModal";
+import { StrategyPitchDeckModal } from "@/components/campaign-studio/StrategyPitchDeckModal";
 import {
   CalendarDays,
   Sparkles,
@@ -45,6 +46,7 @@ import {
   ArrowRight,
   Loader2,
   Copy,
+  Presentation,
 } from "lucide-react";
 
 interface Client {
@@ -181,6 +183,7 @@ function CampaignPlansContent() {
   const [converting, setConverting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPitchDeck, setShowPitchDeck] = useState(false);
   const [copiedHookDay, setCopiedHookDay] = useState<number | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -460,6 +463,17 @@ function CampaignPlansContent() {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
+                {/* Present Strategy Pitch Deck */}
+                <button
+                  type="button"
+                  onClick={() => setShowPitchDeck(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#20202A] hover:bg-[#282836] text-[#F2F0F7] border border-white/[0.08] text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                  title="Present Executive Strategy Pitch Deck (Fullscreen & Print PDF)"
+                >
+                  <Presentation className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <span>Pitch Deck 🎬</span>
+                </button>
+
                 {selectedCampaign.status !== "in_production" ? (
                   <button
                     onClick={handleConvertToTasks}
@@ -1048,6 +1062,14 @@ function CampaignPlansContent() {
         agencyId={effectiveAgencyId || ""}
         token={token || ""}
         onDeliverableUpdated={handleDeliverableUpdated}
+      />
+
+      {/* Client Pitch Deck & Executive Strategy Presentation Modal */}
+      <StrategyPitchDeckModal
+        isOpen={showPitchDeck}
+        onClose={() => setShowPitchDeck(false)}
+        campaign={selectedCampaign as any}
+        client={clients.find((c) => c.id === (selectedClientId || selectedCampaign?.client_id)) || null}
       />
     </div>
   );

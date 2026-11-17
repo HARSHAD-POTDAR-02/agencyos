@@ -28,6 +28,7 @@ import {
   Check,
   GitBranch,
   Edit3,
+  Presentation,
 } from "lucide-react";
 
 interface ContextualCanvasProps {
@@ -45,6 +46,7 @@ interface ContextualCanvasProps {
     changeSummary?: string
   ) => Promise<void>;
   onExportClick?: (artifact: ActiveArtifactData) => void;
+  onPitchDeckClick?: () => void;
   onSelectPrompt?: (agentId: string, promptText: string) => void;
   onCloseCanvas?: () => void;
 }
@@ -60,6 +62,7 @@ export function ContextualCanvas({
   onApproveVersion,
   onReviseArtifact,
   onExportClick,
+  onPitchDeckClick,
   onSelectPrompt,
   onCloseCanvas,
 }: ContextualCanvasProps) {
@@ -487,6 +490,18 @@ export function ContextualCanvas({
               <CheckCircle2 className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>In Production</span>
             </Link>
+          )}
+
+          {onPitchDeckClick && (
+            <button
+              type="button"
+              onClick={onPitchDeckClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#282836] text-[#F2F0F7] border border-white/[0.08] text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer font-sans"
+              title="Present Executive Strategy Pitch Deck (Fullscreen & Print PDF)"
+            >
+              <Presentation className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>Pitch Deck 🎬</span>
+            </button>
           )}
 
           {onExportClick && (

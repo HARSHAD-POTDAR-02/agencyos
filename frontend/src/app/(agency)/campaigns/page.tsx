@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { clientApi, campaignApi, studioApi, agencyApi } from "@/lib/api";
 import { ContextualCanvas } from "@/components/campaign-studio/ContextualCanvas";
 import { ExportPreviewModal } from "@/components/campaign-studio/ExportPreviewModal";
+import { StrategyPitchDeckModal } from "@/components/campaign-studio/StrategyPitchDeckModal";
 import { ActiveArtifactData } from "@/components/campaign-studio/types";
 import {
   Sparkles,
@@ -41,6 +42,7 @@ import {
   Trash2,
   X,
   Ban,
+  Presentation,
 } from "lucide-react";
 
 interface Client {
@@ -319,6 +321,7 @@ function CampaignStudioContent() {
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<"nav" | "canvas" | "intel">("canvas");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPitchDeckModalOpen, setIsPitchDeckModalOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; email: string; role?: string }>>([]);
   const [isLeftNavOpen, setIsLeftNavOpen] = useState(true);
   const [isRightIntelOpen, setIsRightIntelOpen] = useState(true);
@@ -1535,6 +1538,19 @@ function CampaignStudioContent() {
             <span className="hidden sm:inline text-[11px]">Reset</span>
           </button>
 
+          {/* Pitch Deck Button (Active when campaign exists) */}
+          {activeCampaignId && clientCampaigns.some((c) => c.id === activeCampaignId) && (
+            <button
+              type="button"
+              onClick={() => setIsPitchDeckModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#20202A] hover:bg-[#282836] text-[#F2F0F7] border border-white/[0.08] transition-all cursor-pointer shadow-xs"
+              title="Present Executive Strategy Pitch Deck (Fullscreen & Print PDF)"
+            >
+              <Presentation className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span className="hidden md:inline text-[11px]">Pitch Deck 🎬</span>
+            </button>
+          )}
+
           {/* Campaign Plans Link */}
           <Link
             href={selectedClientId ? `/campaign-plans?clientId=${selectedClientId}` : "/campaign-plans"}
@@ -1819,6 +1835,9 @@ function CampaignStudioContent() {
             onReviseArtifact={handleReviseArtifact}
             onExportClick={() => {
               setIsExportModalOpen(true);
+            }}
+            onPitchDeckClick={() => {
+              setIsPitchDeckModalOpen(true);
             }}
             onSelectPrompt={(agentId, promptText) => {
               setActiveSpecialistId(agentId);
@@ -2219,6 +2238,13 @@ function CampaignStudioContent() {
             prev ? { ...prev, status: "exported" } : prev
           );
         }}
+      />
+
+      <StrategyPitchDeckModal
+        isOpen={isPitchDeckModalOpen}
+        onClose={() => setIsPitchDeckModalOpen(false)}
+        campaign={clientCampaigns.find((c) => c.id === activeCampaignId) || null}
+        client={selectedClient}
       />
 
       {/* Pre-Creation Confirmation Modal: Prevent Accidental Campaign Creation */}
