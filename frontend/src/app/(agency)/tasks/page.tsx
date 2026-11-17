@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, Suspense } from "react";
+import React, { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { taskApi, clientApi, agencyApi } from "@/lib/api";
@@ -8,22 +8,24 @@ import {
   Kanban,
   List,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
-  AlertCircle,
+  AlertTriangle,
   Sparkles,
   Film,
   PenTool,
   Scissors,
   ShieldCheck,
-  ChevronDown,
-  Layers,
-  ArrowRight,
   RefreshCw,
   ExternalLink,
   Briefcase,
   User,
+  Calendar,
+  X,
+  Layers,
+  ChevronDown,
+  Building2,
+  Check,
 } from "lucide-react";
 
 interface AgencyMember {
@@ -39,6 +41,8 @@ interface Task {
   title: string;
   task_type: string | null;
   assignee_id: string | null;
+  assignee_name?: string | null;
+  assignee_role?: string | null;
   status:
     | "backlog"
     | "todo"
@@ -54,6 +58,13 @@ interface Task {
   blocked_reason: string | null;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
+  client_id?: string;
+  client_name?: string;
+  campaign_id?: string;
+  campaign_title?: string;
+  deliverable_title?: string;
+  deliverable_type?: string;
 }
 
 interface Client {
@@ -99,8 +110,65 @@ const KANBAN_COLUMNS = [
   },
 ];
 
+function getMonogram(name?: string | null, email?: string | null): string {
+  if (name && name.trim()) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.slice(0, 2).toUpperCase();
+  }
+  return "??";
+}
+
+function getSlaStatus(dueDate: string | null) {
+  if (!dueDate) return null;
+  const target = new Date(dueDate);
+  if (isNaN(target.getTime())) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      text: `${Math.abs(diffDays)}d overdue`,
+      tone: "critical" as const,
+      isOverdue: true,
+    };
+  } else if (diffDays === 0) {
+    return {
+      text: "Due today",
+      tone: "urgent" as const,
+      isOverdue: false,
+    };
+  } else if (diffDays === 1) {
+    return {
+      text: "Due tomorrow",
+      tone: "warning" as const,
+      isOverdue: false,
+    };
+  } else if (diffDays <= 3) {
+    return {
+      text: `Due in ${diffDays}d`,
+      tone: "warning" as const,
+      isOverdue: false,
+    };
+  } else {
+    return {
+      text: `Due in ${diffDays}d`,
+      tone: "neutral" as const,
+      isOverdue: false,
+    };
+  }
+}
+
 function TasksContent() {
-  const { user, token, activeAgencyId, agencies, currentRole, isSpecialist, isOwnerOrManager } = useAuth();
+  const { user, token, activeAgencyId, agencies, currentRole, isSpecialist } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -108,6 +176,7 @@ function TasksContent() {
   const [members, setMembers] = useState<AgencyMember[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<string>("all");
+  const [selectedPriority, setSelectedPriority] = useState<string>("all");
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -115,12 +184,42 @@ function TasksContent() {
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
   // Set default assignee filter to current user for specialists
   useEffect(() => {
     if (isSpecialist && user?.id && selectedAssigneeId === "all") {
       setSelectedAssigneeId(user.id);
     }
   }, [isSpecialist, user?.id, selectedAssigneeId]);
+
+  // Keyboard navigation: 'k' for kanban, 'l' for list, '/' for search, ESC to clear
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || "").toLowerCase();
+      const isInput = activeTag === "input" || activeTag === "textarea" || activeTag === "select";
+
+      if (e.key === "/" && !isInput) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+        return;
+      }
+
+      if (!isInput && (e.key === "k" || e.key === "K")) {
+        setViewMode("kanban");
+      } else if (!isInput && (e.key === "l" || e.key === "L")) {
+        setViewMode("list");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Load clients, members and tasks
   const loadData = useCallback(async () => {
@@ -176,6 +275,7 @@ function TasksContent() {
 
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
       window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+      setNotification({ type: "success", text: `Task status updated to ${newStatus.replace("_", " ")}.` });
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Failed to update task status." });
     } finally {
@@ -195,8 +295,19 @@ function TasksContent() {
         token
       );
 
+      const matchedMember = members.find((m) => m.user_id === newAssigneeId);
+
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, assignee_id: newAssigneeId } : t))
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                assignee_id: newAssigneeId,
+                assignee_name: matchedMember?.user_full_name || matchedMember?.user_email?.split("@")[0] || null,
+                assignee_role: matchedMember?.role || null,
+              }
+            : t
+        )
       );
       setNotification({
         type: "success",
@@ -218,6 +329,12 @@ function TasksContent() {
         return false;
       }
     }
+    // Priority filter
+    if (selectedPriority !== "all") {
+      if (t.priority !== selectedPriority) {
+        return false;
+      }
+    }
     // Assignee filter
     if (selectedAssigneeId !== "all") {
       if (selectedAssigneeId === "unassigned") {
@@ -231,45 +348,50 @@ function TasksContent() {
       const q = searchQuery.toLowerCase();
       const matchTitle = t.title.toLowerCase().includes(q);
       const matchType = (t.task_type || "").toLowerCase().includes(q);
-      if (!matchTitle && !matchType) return false;
+      const matchClient = (t.client_name || "").toLowerCase().includes(q);
+      const matchDeliverable = (t.deliverable_title || "").toLowerCase().includes(q);
+      if (!matchTitle && !matchType && !matchClient && !matchDeliverable) return false;
     }
     return true;
   });
 
   const getStageBadge = (type: string | null) => {
-    switch (type) {
+    switch ((type || "").toLowerCase()) {
       case "scripting":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
-            <PenTool className="w-3 h-3 text-[#A78BFA]" />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
+            <PenTool className="w-2.5 h-2.5 text-[#A78BFA]" />
             <span>Scripting</span>
           </span>
         );
       case "filming":
+      case "shooting":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/20">
-            <Film className="w-3 h-3 text-[#69A9D8]" />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/20">
+            <Film className="w-2.5 h-2.5 text-[#69A9D8]" />
             <span>Shooting</span>
           </span>
         );
       case "editing":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/20">
-            <Scissors className="w-3 h-3 text-[#E5AA58]" />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/20">
+            <Scissors className="w-2.5 h-2.5 text-[#E5AA58]" />
             <span>Editing</span>
           </span>
         );
       case "approval":
+      case "review":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/20">
-            <ShieldCheck className="w-3 h-3 text-[#45B88A]" />
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/20">
+            <ShieldCheck className="w-2.5 h-2.5 text-[#45B88A]" />
             <span>Review</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#20202A] text-[#A3A0B0] border border-[#30303D]">
-            {type || "General"}
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium uppercase bg-[#20202A] text-[#A3A0B0] border border-white/[0.08]">
+            <Layers className="w-2.5 h-2.5 text-[#71717A]" />
+            <span>{type || "General"}</span>
           </span>
         );
     }
@@ -278,13 +400,31 @@ function TasksContent() {
   const getPriorityBadge = (p: Task["priority"]) => {
     switch (p) {
       case "urgent":
-        return <span className="text-[10px] font-mono font-bold text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-1.5 py-0.5 rounded">URGENT</span>;
+        return (
+          <span className="text-[10px] font-mono font-bold text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-1.5 py-0.5 rounded flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#E16F7B] animate-pulse" />
+            <span>URGENT</span>
+          </span>
+        );
       case "high":
-        return <span className="text-[10px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-1.5 py-0.5 rounded">HIGH</span>;
+        return (
+          <span className="text-[10px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-1.5 py-0.5 rounded flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#E5AA58]" />
+            <span>HIGH</span>
+          </span>
+        );
       case "medium":
-        return <span className="text-[10px] font-mono font-medium text-[#A3A0B0] bg-[#20202A] border border-[#30303D] px-1.5 py-0.5 rounded">MED</span>;
+        return (
+          <span className="text-[10px] font-mono font-medium text-[#A3A0B0] bg-[#20202A] border border-white/[0.08] px-1.5 py-0.5 rounded">
+            MED
+          </span>
+        );
       default:
-        return <span className="text-[10px] font-mono font-medium text-[#71717A] bg-[#17171E] border border-[#30303D] px-1.5 py-0.5 rounded">LOW</span>;
+        return (
+          <span className="text-[10px] font-mono font-medium text-[#71717A] bg-[#17171E] border border-white/[0.06] px-1.5 py-0.5 rounded">
+            LOW
+          </span>
+        );
     }
   };
 
@@ -292,13 +432,13 @@ function TasksContent() {
   const totalCount = tasks.length;
   const todoCount = tasks.filter((t) => t.status === "todo").length;
   const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
-  const reviewCount = tasks.filter((t) => ["internal_review", "client_review"].includes(t.status)).length;
+  const reviewCount = tasks.filter((t) => ["internal_review", "client_review", "changes_requested"].includes(t.status)).length;
   const doneCount = tasks.filter((t) => ["approved", "done"].includes(t.status)).length;
   const remainingCount = tasks.filter((t) => !["approved", "done"].includes(t.status)).length;
 
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* ── Editorial Header ── */}
+      {/* ── Linear Editorial Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
@@ -317,7 +457,7 @@ function TasksContent() {
         <div className="flex items-center gap-2.5">
           <Link
             href="/workspace"
-            className="inline-flex items-center gap-1.5 bg-[#17171E] hover:bg-[#20202A] text-[#F2F0F7] text-xs font-medium px-3.5 py-2 rounded-xl border border-white/[0.08] transition-colors"
+            className="inline-flex items-center gap-1.5 bg-[#17171E] hover:bg-[#20202A] text-[#F2F0F7] text-xs font-medium px-3.5 py-2 rounded-xl border border-white/[0.08] transition-colors shadow-xs"
           >
             <Briefcase className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>My Workbench</span>
@@ -334,7 +474,7 @@ function TasksContent() {
         </div>
       </div>
 
-      {/* ── Specialist Focus Banner (Subtle & Contextual) ── */}
+      {/* ── Specialist Execution Mode Banner (Contextual) ── */}
       {isSpecialist && (
         <div className="surface-card border border-[#A78BFA]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
@@ -346,7 +486,7 @@ function TasksContent() {
                 <h2 className="text-sm font-heading font-semibold text-[#F2F0F7] tracking-tight">
                   Specialist Execution Mode
                 </h2>
-                <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.2 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
+                <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
                   {currentRole === "writer" ? "Scriptwriter" : currentRole === "editor" ? "Video Editor" : currentRole === "designer" ? "Designer" : currentRole}
                 </span>
               </div>
@@ -388,7 +528,7 @@ function TasksContent() {
         </div>
       )}
 
-      {/* ── 5-Segment Editorial Telemetry Strip (Linear Style) ── */}
+      {/* ── 5-Segment Linear Telemetry Strip ── */}
       <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-sm grid grid-cols-2 sm:grid-cols-5 gap-3 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06]">
         {/* Metric 1 */}
         <div className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 first:px-0">
@@ -446,27 +586,40 @@ function TasksContent() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-mono text-[#45B88A]">{doneCount}</span>
-            <span className="text-[10px] text-[#45B88A] font-mono font-medium">ready to publish</span>
+            <span className="text-[10px] text-[#45B88A] font-mono font-medium">ready to deliver</span>
           </div>
         </div>
       </div>
 
-      {/* ── Filter and View Toggles Bar (Linear Toolstrip) ── */}
+      {/* ── Linear Filter Toolstrip ── */}
       <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Search Input */}
+          {/* Search Input with Keyboard Shortcut Badge */}
           <div className="relative w-56 sm:w-64">
-            <Search className="w-3.5 h-3.5 text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Filter tasks by title or deliverable..."
+              placeholder="Filter tasks... (Press / to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-8.5 pr-3 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all"
+              className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-8.5 pr-8 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all font-sans"
             />
+            {searchQuery ? (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#F2F0F7] cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono px-1 py-0.5 rounded bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08] pointer-events-none">
+                /
+              </kbd>
+            )}
           </div>
 
-          {/* Stage Filter */}
+          {/* Stage Filter Pills */}
           <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs font-medium">
             {["all", "scripting", "filming", "editing", "approval"].map((st) => (
               <button
@@ -478,10 +631,23 @@ function TasksContent() {
                     : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                 }`}
               >
-                {st === "filming" ? "Shooting" : st}
+                {st === "filming" ? "Shooting" : st === "approval" ? "Review" : st}
               </button>
             ))}
           </div>
+
+          {/* Priority Filter */}
+          <select
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+            className="bg-[#101014] text-xs font-medium text-[#F2F0F7] px-2.5 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
+          >
+            <option value="all">All Priorities</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
 
           {/* Client Filter */}
           {clients.length > 0 && (
@@ -510,33 +676,48 @@ function TasksContent() {
               <option value="unassigned">Unassigned Only</option>
               {members.map((m) => (
                 <option key={m.user_id} value={m.user_id}>
-                  {m.user_id === user?.id ? `⚡ ${m.user_full_name || m.user_email?.split("@")[0]} (Me)` : `${m.user_full_name || m.user_email?.split("@")[0]} (${m.role})`}
+                  {m.user_id === user?.id
+                    ? `⚡ ${m.user_full_name || m.user_email?.split("@")[0]} (Me)`
+                    : `${m.user_full_name || m.user_email?.split("@")[0]} (${m.role})`}
                 </option>
               ))}
             </select>
           )}
         </div>
 
-        {/* View Switcher: Kanban vs List */}
-        <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] self-start md:self-auto">
-          <button
-            onClick={() => setViewMode("kanban")}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-              viewMode === "kanban" ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs font-semibold" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
-            }`}
-          >
-            <Kanban className="w-3.5 h-3.5" />
-            <span>Kanban</span>
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-              viewMode === "list" ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs font-semibold" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>List Table</span>
-          </button>
+        {/* View Switcher: Kanban (K) vs List (L) */}
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] font-mono text-[#71717A] mr-1 hidden sm:inline">
+            {filteredTasks.length} task{filteredTasks.length === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08]">
+            <button
+              onClick={() => setViewMode("kanban")}
+              title="Kanban view (Press K)"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs font-semibold"
+                  : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>Kanban</span>
+              <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">K</kbd>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              title="List table view (Press L)"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs font-semibold"
+                  : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>List Table</span>
+              <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">L</kbd>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -549,8 +730,18 @@ function TasksContent() {
               : "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
           }`}
         >
-          <span>{notification.text}</span>
-          <button onClick={() => setNotification(null)} className="text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer">
+          <div className="flex items-center gap-2">
+            {notification.type === "success" ? (
+              <Check className="w-3.5 h-3.5 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+            )}
+            <span>{notification.text}</span>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer"
+          >
             &times;
           </button>
         </div>
@@ -580,19 +771,22 @@ function TasksContent() {
           </Link>
         </div>
       ) : viewMode === "kanban" ? (
-        /* ── KANBAN BOARD VIEW (Linear / Raycast Style) ── */
+        /* ── KANBAN BOARD VIEW (Linear / Raycast Precision Standard) ── */
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5 items-start">
           {KANBAN_COLUMNS.map((col) => {
             const colTasks = filteredTasks.filter((t) => col.statuses.includes(t.status));
             return (
-              <div key={col.id} className="bg-[#121217] rounded-xl p-3 border border-white/[0.06] min-h-[500px] flex flex-col">
+              <div
+                key={col.id}
+                className="bg-[#121217] rounded-xl p-3 border border-white/[0.06] min-h-[520px] flex flex-col shadow-xs"
+              >
                 {/* Column Header */}
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.06]">
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${col.dot}`} />
-                    <h3 className="text-xs font-semibold text-[#F2F0F7]">{col.title}</h3>
+                    <div className={`w-2 h-2 rounded-full ${col.dot}`} />
+                    <h3 className="text-xs font-semibold text-[#F2F0F7] tracking-tight">{col.title}</h3>
                   </div>
-                  <span className="text-[10px] font-mono font-medium text-[#A3A0B0] bg-[#20202A] px-1.5 py-0.2 rounded border border-white/[0.06]">
+                  <span className="text-[10px] font-mono font-medium text-[#A3A0B0] bg-[#1a1a22] px-1.5 py-0.5 rounded border border-white/[0.06]">
                     {colTasks.length}
                   </span>
                 </div>
@@ -600,87 +794,141 @@ function TasksContent() {
                 {/* Column Tasks */}
                 <div className="space-y-2.5 flex-1 overflow-y-auto">
                   {colTasks.length === 0 ? (
-                    <div className="text-center py-10 text-[11px] text-[#A3A0B0]/60">
+                    <div className="text-center py-12 text-[11px] text-[#71717A] italic font-mono">
                       No tasks in this stage
                     </div>
                   ) : (
-                    colTasks.map((t) => (
-                      <div
-                        key={t.id}
-                        className="surface-card rounded-xl border border-white/[0.08] hover:border-white/[0.18] p-3 transition-all space-y-2 shadow-xs group"
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          {getStageBadge(t.task_type)}
-                          {getPriorityBadge(t.priority)}
-                        </div>
+                    colTasks.map((t) => {
+                      const sla = getSlaStatus(t.due_date);
+                      const isChangesReq = t.status === "changes_requested";
+                      const isReview = t.status === "internal_review";
 
-                        <Link
-                          href={`/tasks/${t.id}`}
-                          className="text-xs font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors leading-snug line-clamp-2 block"
+                      return (
+                        <div
+                          key={t.id}
+                          className="surface-card rounded-xl border border-white/[0.08] hover:border-white/[0.18] p-3 transition-all space-y-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] group relative"
                         >
-                          {t.title}
-                        </Link>
+                          {/* Top Badges Row */}
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {getStageBadge(t.task_type)}
+                              {isChangesReq && (
+                                <span className="text-[9px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-1.5 py-0.2 rounded uppercase">
+                                  Revision Needed
+                                </span>
+                              )}
+                              {isReview && (
+                                <span className="text-[9px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-1.5 py-0.2 rounded uppercase">
+                                  In Review
+                                </span>
+                              )}
+                            </div>
+                            {getPriorityBadge(t.priority)}
+                          </div>
 
-                        <div className="flex items-center justify-between pt-0.5 text-[10px] text-[#A3A0B0]">
+                          {/* Client Tag */}
+                          {t.client_name && (
+                            <div className="flex items-center gap-1 text-[10px] font-mono text-[#A3A0B0] truncate">
+                              <Building2 className="w-2.5 h-2.5 text-[#71717A] shrink-0" />
+                              <span className="truncate">{t.client_name}</span>
+                            </div>
+                          )}
+
+                          {/* Task Title */}
                           <Link
                             href={`/tasks/${t.id}`}
-                            className="inline-flex items-center gap-1 font-semibold text-[#A78BFA] hover:text-[#B69BFF]"
+                            className="text-xs font-heading font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors leading-snug line-clamp-2 block"
                           >
-                            <ExternalLink className="w-2.5 h-2.5" />
-                            <span>Workbench &rarr;</span>
+                            {t.title}
                           </Link>
-                          {t.deliverable_id && (
-                            <Link
-                              href={`/deliverables/${t.deliverable_id}?task_id=${t.id}&from=tasks`}
-                              className="text-[#A3A0B0] hover:text-[#F2F0F7] flex items-center gap-0.5"
-                            >
-                              <Film className="w-2.5 h-2.5" /> Media
-                            </Link>
-                          )}
-                        </div>
 
-                        {/* Assignee & Status Transition Selectors */}
-                        <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] text-[#A3A0B0] flex items-center gap-1">
-                              <User className="w-2.5 h-2.5 text-[#A3A0B0] shrink-0" />
-                              <span>Assign:</span>
-                            </span>
-                            <select
-                              value={t.assignee_id || ""}
-                              disabled={updatingTaskId === t.id}
-                              onChange={(e) => handleUpdateAssignee(t.id, e.target.value || null)}
-                              className="text-[10px] font-medium bg-[#101014] text-[#F2F0F7] px-1.5 py-0.5 rounded border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[125px] truncate cursor-pointer"
-                            >
-                              <option value="">Unassigned</option>
-                              {members.map((m) => (
-                                <option key={m.user_id} value={m.user_id}>
-                                  {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
-                                </option>
-                              ))}
-                            </select>
+                          {/* SLA / Due Date & Quick Links */}
+                          <div className="flex items-center justify-between text-[10px] text-[#A3A0B0] pt-0.5">
+                            {sla ? (
+                              <span
+                                className={`font-mono text-[10px] flex items-center gap-1 ${
+                                  sla.tone === "critical"
+                                    ? "text-[#E16F7B] font-bold"
+                                    : sla.tone === "urgent" || sla.tone === "warning"
+                                    ? "text-[#E5AA58] font-medium"
+                                    : "text-[#A3A0B0]"
+                                }`}
+                              >
+                                <Calendar className="w-2.5 h-2.5" />
+                                <span>{sla.text}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[#71717A] font-mono text-[9px]">No deadline</span>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                              {t.deliverable_id && (
+                                <Link
+                                  href={`/deliverables/${t.deliverable_id}?task_id=${t.id}&from=tasks`}
+                                  className="text-[#71717A] hover:text-[#F2F0F7] flex items-center gap-0.5 transition-colors"
+                                  title="View connected deliverable media"
+                                >
+                                  <Film className="w-2.5 h-2.5" />
+                                  <span>Media</span>
+                                </Link>
+                              )}
+                              <Link
+                                href={`/tasks/${t.id}`}
+                                className="inline-flex items-center gap-0.5 font-medium text-[#A78BFA] hover:text-[#B69BFF] transition-colors"
+                              >
+                                <span>Workbench</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </Link>
+                            </div>
                           </div>
 
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] text-[#A3A0B0]">Move stage:</span>
-                            <select
-                              value={t.status}
-                              disabled={updatingTaskId === t.id}
-                              onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
-                              className="text-[10px] font-medium bg-[#101014] text-[#F2F0F7] px-1.5 py-0.5 rounded border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[125px] cursor-pointer"
-                            >
-                              <option value="backlog">Backlog</option>
-                              <option value="todo">To Do</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="internal_review">Internal Review</option>
-                              <option value="client_review">Client Review</option>
-                              <option value="approved">Approved</option>
-                              <option value="done">Done</option>
-                            </select>
+                          {/* Assignee & Status Transition Selectors */}
+                          <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
+                            {/* Assignee Row */}
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[10px] text-[#A3A0B0] flex items-center gap-1 shrink-0">
+                                <span className="w-4 h-4 rounded-full bg-[#20202A] text-[#A78BFA] text-[8px] font-mono font-bold flex items-center justify-center border border-white/[0.08]">
+                                  {getMonogram(t.assignee_name, t.assignee_id)}
+                                </span>
+                                <span className="text-[#71717A]">Assign:</span>
+                              </span>
+                              <select
+                                value={t.assignee_id || ""}
+                                disabled={updatingTaskId === t.id}
+                                onChange={(e) => handleUpdateAssignee(t.id, e.target.value || null)}
+                                className="text-[10px] font-medium bg-[#101014] text-[#F2F0F7] px-1.5 py-0.5 rounded border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[125px] truncate cursor-pointer transition-colors"
+                              >
+                                <option value="">Unassigned</option>
+                                {members.map((m) => (
+                                  <option key={m.user_id} value={m.user_id}>
+                                    {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Move Stage Row */}
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[10px] text-[#71717A]">Move:</span>
+                              <select
+                                value={t.status}
+                                disabled={updatingTaskId === t.id}
+                                onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
+                                className="text-[10px] font-medium bg-[#101014] text-[#F2F0F7] px-1.5 py-0.5 rounded border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[125px] cursor-pointer transition-colors"
+                              >
+                                <option value="backlog">Backlog</option>
+                                <option value="todo">To Do</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="internal_review">Internal Review</option>
+                                <option value="client_review">Client Review</option>
+                                <option value="approved">Approved</option>
+                                <option value="done">Done</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -688,95 +936,135 @@ function TasksContent() {
           })}
         </div>
       ) : (
-        /* ── LIST TABLE VIEW (Linear Density 38px rows) ── */
+        /* ── LIST TABLE VIEW (Linear Density 38-40px rows) ── */
         <div className="surface-card rounded-2xl border border-white/[0.08] overflow-hidden shadow-xs">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#121217] text-[#A3A0B0] font-mono text-[10px] uppercase tracking-wider border-b border-white/[0.08]">
               <tr>
-                <th className="py-2.5 px-4 font-medium">Task Deliverable</th>
+                <th className="py-2.5 px-4 font-medium">Task & Deliverable</th>
                 <th className="py-2.5 px-4 font-medium">Stage</th>
                 <th className="py-2.5 px-4 font-medium">Priority</th>
                 <th className="py-2.5 px-4 font-medium">Assignee</th>
+                <th className="py-2.5 px-4 font-medium">SLA / Deadline</th>
                 <th className="py-2.5 px-4 font-medium">Status LED</th>
                 <th className="py-2.5 px-4 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04] text-[#F2F0F7]">
-              {filteredTasks.map((t) => (
-                <tr key={t.id} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="py-2.5 px-4">
-                    <Link
-                      href={`/tasks/${t.id}`}
-                      className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors block leading-snug"
-                    >
-                      {t.title}
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#A3A0B0]">
-                      <Link
-                        href={`/tasks/${t.id}`}
-                        className="text-[#A78BFA] hover:text-[#B69BFF] inline-flex items-center gap-0.5 font-medium"
-                      >
-                        Workbench &rarr;
-                      </Link>
-                      {t.deliverable_id && (
+              {filteredTasks.map((t) => {
+                const sla = getSlaStatus(t.due_date);
+                return (
+                  <tr key={t.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="py-2.5 px-4">
+                      <div className="flex items-center gap-2">
+                        {t.client_name && (
+                          <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#1a1a22] px-1.5 py-0.5 rounded border border-white/[0.06] shrink-0">
+                            {t.client_name}
+                          </span>
+                        )}
                         <Link
-                          href={`/deliverables/${t.deliverable_id}?task_id=${t.id}&from=tasks`}
-                          className="hover:text-[#F2F0F7] inline-flex items-center gap-1"
+                          href={`/tasks/${t.id}`}
+                          className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors leading-snug line-clamp-1"
                         >
-                          <Film className="w-2.5 h-2.5" /> Media
+                          {t.title}
                         </Link>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#71717A]">
+                        <Link
+                          href={`/tasks/${t.id}`}
+                          className="text-[#A78BFA] hover:text-[#B69BFF] inline-flex items-center gap-0.5 font-medium transition-colors"
+                        >
+                          Workbench &rarr;
+                        </Link>
+                        {t.deliverable_id && (
+                          <Link
+                            href={`/deliverables/${t.deliverable_id}?task_id=${t.id}&from=tasks`}
+                            className="hover:text-[#F2F0F7] inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Film className="w-2.5 h-2.5" /> Media
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-4">{getStageBadge(t.task_type)}</td>
+                    <td className="py-2.5 px-4">{getPriorityBadge(t.priority)}</td>
+                    <td className="py-2.5 px-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-[#20202A] text-[#A78BFA] text-[9px] font-mono font-bold flex items-center justify-center border border-white/[0.08] shrink-0">
+                          {getMonogram(t.assignee_name, t.assignee_id)}
+                        </span>
+                        <select
+                          value={t.assignee_id || ""}
+                          disabled={updatingTaskId === t.id}
+                          onChange={(e) => handleUpdateAssignee(t.id, e.target.value || null)}
+                          className="text-[11px] font-medium bg-[#101014] text-[#F2F0F7] px-2 py-1 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[140px] truncate cursor-pointer transition-colors"
+                        >
+                          <option value="">Unassigned</option>
+                          {members.map((m) => (
+                            <option key={m.user_id} value={m.user_id}>
+                              {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      {sla ? (
+                        <span
+                          className={`font-mono text-xs flex items-center gap-1 ${
+                            sla.tone === "critical"
+                              ? "text-[#E16F7B] font-bold"
+                              : sla.tone === "urgent" || sla.tone === "warning"
+                              ? "text-[#E5AA58] font-medium"
+                              : "text-[#A3A0B0]"
+                          }`}
+                        >
+                          <Calendar className="w-3 h-3" />
+                          <span>{sla.text}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[#71717A] font-mono text-[11px]">—</span>
                       )}
-                    </div>
-                  </td>
-                  <td className="py-2.5 px-4">{getStageBadge(t.task_type)}</td>
-                  <td className="py-2.5 px-4">{getPriorityBadge(t.priority)}</td>
-                  <td className="py-2.5 px-4">
-                    <select
-                      value={t.assignee_id || ""}
-                      disabled={updatingTaskId === t.id}
-                      onChange={(e) => handleUpdateAssignee(t.id, e.target.value || null)}
-                      className="text-[11px] font-medium bg-[#101014] text-[#F2F0F7] px-2 py-1 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[150px] truncate cursor-pointer"
-                    >
-                      <option value="">Unassigned</option>
-                      {members.map((m) => (
-                        <option key={m.user_id} value={m.user_id}>
-                          {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        ["approved", "done"].includes(t.status)
-                          ? "bg-[#45B88A]"
-                          : ["internal_review", "client_review"].includes(t.status)
-                          ? "bg-[#69A9D8]"
-                          : t.status === "in_progress"
-                          ? "bg-[#E5AA58]"
-                          : "bg-[#71717A]"
-                      }`} />
-                      <span className="capitalize text-xs font-medium text-[#F2F0F7]">{t.status.replace("_", " ")}</span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <select
-                      value={t.status}
-                      disabled={updatingTaskId === t.id}
-                      onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
-                      className="text-[11px] font-medium bg-[#101014] text-[#F2F0F7] px-2 py-1 rounded-lg border border-white/[0.08] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50"
-                    >
-                      <option value="backlog">Backlog</option>
-                      <option value="todo">To Do</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="internal_review">Internal Review</option>
-                      <option value="client_review">Client Review</option>
-                      <option value="approved">Approved</option>
-                      <option value="done">Done</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            ["approved", "done"].includes(t.status)
+                              ? "bg-[#45B88A]"
+                              : ["internal_review", "client_review"].includes(t.status)
+                              ? "bg-[#69A9D8]"
+                              : t.status === "changes_requested"
+                              ? "bg-[#E5AA58]"
+                              : t.status === "in_progress"
+                              ? "bg-[#E5AA58]"
+                              : "bg-[#71717A]"
+                          }`}
+                        />
+                        <span className="capitalize text-xs font-medium text-[#F2F0F7] whitespace-nowrap">
+                          {t.status.replace("_", " ")}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <select
+                        value={t.status}
+                        disabled={updatingTaskId === t.id}
+                        onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
+                        className="text-[11px] font-medium bg-[#101014] text-[#F2F0F7] px-2 py-1 rounded-lg border border-white/[0.08] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50 transition-colors"
+                      >
+                        <option value="backlog">Backlog</option>
+                        <option value="todo">To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="internal_review">Internal Review</option>
+                        <option value="client_review">Client Review</option>
+                        <option value="approved">Approved</option>
+                        <option value="done">Done</option>
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -787,7 +1075,13 @@ function TasksContent() {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-[#71717A]">Loading task pipeline...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-xs font-mono text-[#71717A]">
+          Loading task pipeline...
+        </div>
+      }
+    >
       <TasksContent />
     </Suspense>
   );

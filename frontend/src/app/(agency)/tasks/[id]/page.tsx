@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { taskApi, agencyApi, API_BASE } from "@/lib/api";
 import {
@@ -18,22 +18,19 @@ import {
   ShieldCheck,
   UploadCloud,
   FileText,
-  FileVideo,
   Download,
   Eye,
-  MessageSquare,
   Building2,
   User,
   Calendar,
   Layers,
-  ChevronDown,
-  ChevronUp,
   Check,
   X,
   RefreshCw,
   Send,
   ExternalLink,
-  Play
+  Copy,
+  ChevronRight,
 } from "lucide-react";
 
 interface SubmissionVersion {
@@ -113,10 +110,75 @@ interface TaskDetail {
   review_comments: ReviewComment[];
 }
 
+function getMonogram(name?: string | null, email?: string | null): string {
+  if (name && name.trim()) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) {
+    return email.slice(0, 2).toUpperCase();
+  }
+  return "??";
+}
+
+function getSlaStatus(dueDate: string | null) {
+  if (!dueDate) return null;
+  const target = new Date(dueDate);
+  if (isNaN(target.getTime())) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      text: `${Math.abs(diffDays)}d overdue`,
+      tone: "critical" as const,
+      isOverdue: true,
+    };
+  } else if (diffDays === 0) {
+    return {
+      text: "Due today",
+      tone: "urgent" as const,
+      isOverdue: false,
+    };
+  } else if (diffDays === 1) {
+    return {
+      text: "Due tomorrow",
+      tone: "warning" as const,
+      isOverdue: false,
+    };
+  } else if (diffDays <= 3) {
+    return {
+      text: `Due in ${diffDays}d`,
+      tone: "warning" as const,
+      isOverdue: false,
+    };
+  } else {
+    return {
+      text: `Due in ${diffDays}d`,
+      tone: "neutral" as const,
+      isOverdue: false,
+    };
+  }
+}
+
+// 5-Stage Linear Lifecycle Stepper
+const PRODUCTION_STAGES = [
+  { id: "backlog", label: "Backlog", statuses: ["backlog"] },
+  { id: "todo", label: "Scripting / Prep", statuses: ["todo"] },
+  { id: "in_progress", label: "In Production", statuses: ["in_progress"] },
+  { id: "review", label: "Review & Quality", statuses: ["internal_review", "client_review", "changes_requested"] },
+  { id: "done", label: "Approved / Done", statuses: ["approved", "done"] },
+];
+
 function TaskWorkspaceContent() {
   const params = useParams();
   const taskId = (params?.id as string) || "";
-  const router = useRouter();
 
   const { user, token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
@@ -125,6 +187,7 @@ function TaskWorkspaceContent() {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Submission Form State
   const [submissionMode, setSubmissionMode] = useState<"script" | "media">("script");
@@ -143,12 +206,14 @@ function TaskWorkspaceContent() {
   const [feedbackNotes, setFeedbackNotes] = useState("");
   const [reviewing, setReviewing] = useState(false);
   const [members, setMembers] = useState<AgencyMember[]>([]);
-  const [reassigning, setReassigning] = useState(false);
+  const [updatingMetadata, setUpdatingMetadata] = useState(false);
 
   // Preview State
   const [activePreviewVersion, setActivePreviewVersion] = useState<SubmissionVersion | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [copiedBrief, setCopiedBrief] = useState(false);
+  const [copiedStoryboard, setCopiedStoryboard] = useState(false);
 
   const loadTask = useCallback(async () => {
     if (!token || !effectiveAgencyId || !taskId) return;
@@ -164,9 +229,16 @@ function TaskWorkspaceContent() {
 
       const data = (await taskApi.get(effectiveAgencyId, taskId, token)) as TaskDetail;
       setTask(data);
+
       // Determine default submission mode based on task_type
       const ttype = (data.task_type || "").toLowerCase();
-      if (ttype.includes("edit") || ttype.includes("video") || ttype.includes("film") || ttype.includes("shoot") || ttype.includes("design")) {
+      if (
+        ttype.includes("edit") ||
+        ttype.includes("video") ||
+        ttype.includes("film") ||
+        ttype.includes("shoot") ||
+        ttype.includes("design")
+      ) {
         setSubmissionMode("media");
       } else {
         setSubmissionMode("script");
@@ -179,9 +251,29 @@ function TaskWorkspaceContent() {
     }
   }, [token, effectiveAgencyId, taskId]);
 
+  useEffect(() => {
+    loadTask();
+  }, [loadTask]);
+
+  // Keyboard shortcut listener: ESC closes modal, Cmd+Enter submits
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (reviewModalOpen) {
+          setReviewModalOpen(false);
+        } else if (activePreviewVersion) {
+          setActivePreviewVersion(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [reviewModalOpen, activePreviewVersion]);
+
+  // Handle reassigning task
   const handleReassign = async (newAssigneeId: string | null) => {
     if (!token || !effectiveAgencyId || !task) return;
-    setReassigning(true);
+    setUpdatingMetadata(true);
     try {
       await taskApi.update(
         effectiveAgencyId,
@@ -195,27 +287,68 @@ function TaskWorkspaceContent() {
           ? {
               ...prev,
               assignee_id: newAssigneeId,
-              assignee_name: selectedMember?.user_full_name || selectedMember?.user_email?.split("@")[0] || null,
+              assignee_name:
+                selectedMember?.user_full_name || selectedMember?.user_email?.split("@")[0] || null,
               assignee_role: selectedMember?.role || null,
             }
           : prev
       );
+      setNotification({
+        type: "success",
+        text: newAssigneeId ? "Task reassigned successfully." : "Task marked as unassigned.",
+      });
       window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
     } catch (err: any) {
-      setError(err?.message || "Failed to reassign task");
+      setNotification({ type: "error", text: err?.message || "Failed to reassign task" });
     } finally {
-      setReassigning(false);
+      setUpdatingMetadata(false);
     }
   };
 
-  useEffect(() => {
-    loadTask();
-  }, [loadTask]);
+  // Handle updating status
+  const handleUpdateStatus = async (newStatus: TaskDetail["status"]) => {
+    if (!token || !effectiveAgencyId || !task) return;
+    setUpdatingMetadata(true);
+    try {
+      await taskApi.update(effectiveAgencyId, task.id, { status: newStatus }, token);
+      setTask((prev) => (prev ? { ...prev, status: newStatus } : prev));
+      setNotification({
+        type: "success",
+        text: `Task status updated to ${newStatus.replace("_", " ")}.`,
+      });
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      setNotification({ type: "error", text: err?.message || "Failed to update status." });
+    } finally {
+      setUpdatingMetadata(false);
+    }
+  };
+
+  // Handle updating priority
+  const handleUpdatePriority = async (newPriority: TaskDetail["priority"]) => {
+    if (!token || !effectiveAgencyId || !task) return;
+    setUpdatingMetadata(true);
+    try {
+      await taskApi.update(effectiveAgencyId, task.id, { priority: newPriority }, token);
+      setTask((prev) => (prev ? { ...prev, priority: newPriority } : prev));
+      setNotification({
+        type: "success",
+        text: `Task priority set to ${newPriority.toUpperCase()}.`,
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err?.message || "Failed to update priority." });
+    } finally {
+      setUpdatingMetadata(false);
+    }
+  };
 
   // Load preview content if text
   const openPreview = async (sub: SubmissionVersion) => {
     setActivePreviewVersion(sub);
-    const isText = sub.file_type?.includes("text") || sub.file_name.endsWith(".txt") || sub.file_name.endsWith(".md");
+    const isText =
+      sub.file_type?.includes("text") ||
+      sub.file_name.endsWith(".txt") ||
+      sub.file_name.endsWith(".md");
     if (isText && sub.url) {
       setPreviewLoading(true);
       try {
@@ -230,6 +363,18 @@ function TaskWorkspaceContent() {
       }
     } else {
       setPreviewContent(null);
+    }
+  };
+
+  // Copy helper
+  const copyToClipboard = (text: string, type: "brief" | "storyboard") => {
+    navigator.clipboard.writeText(text);
+    if (type === "brief") {
+      setCopiedBrief(true);
+      setTimeout(() => setCopiedBrief(false), 2000);
+    } else {
+      setCopiedStoryboard(true);
+      setTimeout(() => setCopiedStoryboard(false), 2000);
     }
   };
 
@@ -282,13 +427,25 @@ function TaskWorkspaceContent() {
     setReviewing(true);
     setError(null);
     try {
-      await taskApi.review(effectiveAgencyId, taskId, {
-        decision: reviewDecision,
-        feedback_notes: feedbackNotes.trim() || undefined,
-      }, token);
+      await taskApi.review(
+        effectiveAgencyId,
+        taskId,
+        {
+          decision: reviewDecision,
+          feedback_notes: feedbackNotes.trim() || undefined,
+        },
+        token
+      );
 
       setReviewModalOpen(false);
       setFeedbackNotes("");
+      setNotification({
+        type: "success",
+        text:
+          reviewDecision === "approved"
+            ? "Submission approved! The deliverable has advanced."
+            : "Revision request dispatched to the assigned specialist.",
+      });
       await loadTask();
     } catch (err: any) {
       console.error("Review failed:", err);
@@ -302,8 +459,8 @@ function TaskWorkspaceContent() {
     return (
       <main className="flex-1 flex items-center justify-center p-12">
         <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-[#A78BFA] animate-spin mx-auto" />
-          <p className="text-sm font-medium text-[#71717A]">Loading task workspace...</p>
+          <RefreshCw className="w-7 h-7 text-[#A78BFA] animate-spin mx-auto" />
+          <p className="text-xs font-mono text-[#A3A0B0]">Loading task execution workspace...</p>
         </div>
       </main>
     );
@@ -312,8 +469,11 @@ function TaskWorkspaceContent() {
   if (error && !task) {
     return (
       <main className="flex-1 p-8 max-w-4xl mx-auto space-y-4">
-        <Link href="/workspace" className="inline-flex items-center gap-2 text-xs font-semibold text-[#A3A0B0] hover:text-[#A78BFA]">
-          <ArrowLeft className="w-4 h-4" /> Back to Workspace
+        <Link
+          href="/tasks"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#A3A0B0] hover:text-[#A78BFA] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Task Pipeline
         </Link>
         <div className="bg-[#E16F7B]/10 border border-[#E16F7B]/30 rounded-2xl p-6 text-[#E16F7B]">
           <h2 className="text-base font-heading font-bold text-[#F2F0F7]">Task Error</h2>
@@ -325,106 +485,185 @@ function TaskWorkspaceContent() {
 
   if (!task) return null;
 
-  const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(currentMembership?.role || "owner");
+  const isManagerOrOwner = ["owner", "manager", "account_manager"].includes(
+    currentMembership?.role || "owner"
+  );
   const isInternalReview = task.status === "internal_review";
   const isRevisionRequested = task.status === "changes_requested";
   const isApproved = ["approved", "done"].includes(task.status);
-  const latestSubmission = task.submissions.length > 0 ? task.submissions[task.submissions.length - 1] : null;
+  const sla = getSlaStatus(task.due_date);
+
+  // Stepper active index
+  const currentStageIndex = PRODUCTION_STAGES.findIndex((stage) =>
+    stage.statuses.includes(task.status)
+  );
 
   return (
     <div className="min-h-full w-full bg-[#101014] text-[#F2F0F7] pb-16">
       <main className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
-        {/* Breadcrumb Navigation & Top Action Bar */}
+        {/* ── Breadcrumb Navigation & Top Action Bar ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
-              <Link href="/workspace" className="hover:text-[#A78BFA] flex items-center gap-1 text-[#A78BFA] transition-colors">
-                <Briefcase className="w-3.5 h-3.5" /> Workbench
+            <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0] flex-wrap">
+              <Link
+                href="/tasks"
+                className="hover:text-[#A78BFA] flex items-center gap-1 text-[#A78BFA] transition-colors"
+              >
+                <Briefcase className="w-3.5 h-3.5" /> Tasks
               </Link>
               <span className="text-white/[0.2]">/</span>
-              <span className="text-[#A3A0B0]">{task.client_name}</span>
-              <span className="text-white/[0.2]">/</span>
-              <span className="truncate max-w-[200px] text-[#A3A0B0]">{task.campaign_title}</span>
+              {task.client_name && (
+                <>
+                  <Link
+                    href={task.client_id ? `/clients/${task.client_id}` : "/clients"}
+                    className="hover:text-[#F2F0F7] text-[#A3A0B0] transition-colors"
+                  >
+                    {task.client_name}
+                  </Link>
+                  <span className="text-white/[0.2]">/</span>
+                </>
+              )}
+              <span className="truncate max-w-[200px] text-[#A3A0B0]">{task.campaign_title || "Campaign"}</span>
             </div>
 
-            <div className="flex items-center gap-3 pt-1">
-              <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">{task.title}</h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                task.status === "changes_requested"
-                  ? "bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30"
-                  : task.status === "internal_review"
-                  ? "bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30"
-                  : task.status === "approved" || task.status === "done"
-                  ? "bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30"
-                  : "bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30"
-              }`}>
+            <div className="flex items-center gap-3 pt-1 flex-wrap">
+              <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
+                {task.title}
+              </h1>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                  task.status === "changes_requested"
+                    ? "bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30"
+                    : task.status === "internal_review"
+                    ? "bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30"
+                    : isApproved
+                    ? "bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30"
+                    : "bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30"
+                }`}
+              >
                 {task.status.replace("_", " ")}
               </span>
             </div>
           </div>
 
-          {/* Top Actions: Assignee, Due Date & Navigation */}
           <div className="flex items-center gap-2.5">
-            <div className="surface-card border border-white/[0.08] rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs shadow-xs">
-              <User className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
-              <span className="text-[#A3A0B0]">Assigned:</span>
-              {isManagerOrOwner ? (
-                <select
-                  value={task.assignee_id || ""}
-                  disabled={reassigning}
-                  onChange={(e) => handleReassign(e.target.value || null)}
-                  className="bg-[#101014] text-xs font-medium text-[#F2F0F7] px-2 py-0.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
-                >
-                  <option value="">Unassigned</option>
-                  {members.map((m) => (
-                    <option key={m.user_id} value={m.user_id}>
-                      {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-medium text-[#F2F0F7]">{task.assignee_name || "Unassigned"}</span>
-              )}
-            </div>
-
-            {task.due_date && (
-              <div className="surface-card border border-white/[0.08] rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs shadow-xs">
-                <Calendar className="w-3.5 h-3.5 text-[#A3A0B0]" />
-                <span className="text-[#A3A0B0]">Deadline:</span>
-                <span className="font-mono font-medium text-[#F2F0F7]">{task.due_date}</span>
+            {sla && (
+              <div
+                className={`surface-card border rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs shadow-xs font-mono ${
+                  sla.tone === "critical"
+                    ? "border-[#E16F7B]/40 text-[#E16F7B] bg-[#E16F7B]/10 font-bold"
+                    : sla.tone === "urgent" || sla.tone === "warning"
+                    ? "border-[#E5AA58]/40 text-[#E5AA58] bg-[#E5AA58]/10 font-medium"
+                    : "border-white/[0.08] text-[#A3A0B0]"
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{sla.text}</span>
               </div>
             )}
 
             <Link
-              href="/workspace"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] text-xs font-medium text-[#F2F0F7] transition-colors"
+              href="/tasks"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] text-xs font-medium text-[#F2F0F7] transition-colors shadow-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Workbench</span>
+              <span>All Tasks</span>
             </Link>
           </div>
         </div>
 
-        {/* Manager Review Action Banner (Active during internal_review) */}
+        {/* ── Notification Banner ── */}
+        {notification && (
+          <div
+            className={`p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all ${
+              notification.type === "success"
+                ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30"
+                : "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {notification.type === "success" ? (
+                <Check className="w-3.5 h-3.5 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span>{notification.text}</span>
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer"
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
+        {/* ── Linear Lifecycle Progress Stepper ── */}
+        <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+            {PRODUCTION_STAGES.map((st, idx) => {
+              const isPast = currentStageIndex > idx;
+              const isCurrent = currentStageIndex === idx;
+
+              return (
+                <div key={st.id} className="flex items-center gap-2 flex-1 min-w-[120px]">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold transition-all ${
+                        isPast
+                          ? "bg-[#45B88A] text-[#101014]"
+                          : isCurrent
+                          ? "bg-[#A78BFA] text-[#101014] ring-4 ring-[#A78BFA]/20"
+                          : "bg-[#20202A] text-[#71717A] border border-white/[0.08]"
+                      }`}
+                    >
+                      {isPast ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : idx + 1}
+                    </div>
+                    <span
+                      className={`text-xs whitespace-nowrap font-medium ${
+                        isCurrent
+                          ? "text-[#F2F0F7] font-semibold"
+                          : isPast
+                          ? "text-[#A3A0B0]"
+                          : "text-[#71717A]"
+                      }`}
+                    >
+                      {st.label}
+                    </span>
+                  </div>
+                  {idx < PRODUCTION_STAGES.length - 1 && (
+                    <div
+                      className={`flex-1 h-[2px] mx-2 rounded-full hidden sm:block ${
+                        isPast ? "bg-[#45B88A]/60" : "bg-white/[0.08]"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Manager Review Action Banner (Active during internal_review) ── */}
         {isInternalReview && isManagerOrOwner && (
           <div className="surface-card border border-[#A78BFA]/40 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-[#A78BFA] font-heading font-semibold text-sm">
                 <ShieldCheck className="w-4 h-4 text-[#A78BFA]" />
-                <span>Internal Review Required</span>
+                <span>Internal Review Gate Required</span>
               </div>
               <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
-                The assigned specialist has submitted work for this task. Review the version below and either approve to unlock the next production stage or request specific revisions.
+                The assigned specialist has submitted a version for this task. Review the deliverables below and either approve to unlock the next production stage or request specific revisions.
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 shrink-0">
               <button
                 onClick={() => {
                   setReviewDecision("changes_requested");
                   setReviewModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E5AA58]/10 hover:bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/30 text-xs font-medium transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#E5AA58]/10 hover:bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/30 text-xs font-semibold transition-all cursor-pointer shadow-xs"
               >
                 <AlertTriangle className="w-3.5 h-3.5 text-[#E5AA58]" />
                 <span>Request Revision</span>
@@ -435,59 +674,86 @@ function TaskWorkspaceContent() {
                   setReviewDecision("approved");
                   setReviewModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#45B88A] hover:bg-[#52c595] text-[#101014] text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#45B88A] hover:bg-[#52c595] text-[#101014] text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Approve Submission</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Revision Requested Notice (For specialist) */}
+        {/* ── Revision Requested Notice (For specialist) ── */}
         {isRevisionRequested && (
-          <div className="bg-[#17171E] border border-[#E5AA58]/40 rounded-2xl p-5 space-y-2 text-[#E5AA58]">
+          <div className="bg-[#17171E] border border-[#E5AA58]/40 rounded-2xl p-5 space-y-3 text-[#E5AA58] shadow-sm">
             <div className="flex items-center gap-2 text-[#E5AA58] font-heading font-bold text-sm">
               <AlertTriangle className="w-5 h-5 text-[#E5AA58]" />
               <span>Revisions Requested by Manager</span>
             </div>
             <p className="text-xs text-[#A3A0B0] leading-relaxed">
-              Please review the manager feedback below, update your script or render, and resubmit using the workspace form.
+              Please review the feedback below, make the necessary modifications to your script or media asset, and submit a new version.
             </p>
             {task.review_comments.length > 0 && (
-              <div className="bg-[#101014] p-3.5 rounded-xl border border-[#30303D] text-xs font-mono text-[#F2F0F7]">
+              <div className="bg-[#101014] p-3.5 rounded-xl border border-white/[0.08] text-xs font-mono text-[#F2F0F7] leading-relaxed">
+                <span className="text-[#A3A0B0] block text-[10px] uppercase font-semibold mb-1">
+                  Manager Feedback:
+                </span>
                 {task.review_comments[task.review_comments.length - 1].message}
               </div>
             )}
           </div>
         )}
 
-        {/* 2-Column Production Workspace Layout */}
+        {/* ── Linear 2-Column Execution Workspace ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (5 cols): Creative Context & Storyboard */}
-          <div className="lg:col-span-5 space-y-6">
+          {/* ── Left Column (Main Workspace, 8 cols) ── */}
+          <div className="lg:col-span-8 space-y-6">
             {/* Creative Brief Card */}
             <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" /> Creative Context
-                </span>
-                <span className="text-[10px] font-mono font-medium px-2 py-0.2 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 uppercase">
-                  {task.platform} • {task.deliverable_type}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider">
+                    Creative Brief & Context
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 uppercase">
+                    {task.platform} • {task.deliverable_type}
+                  </span>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(
+                        `Campaign: ${task.campaign_title}\nObjective: ${task.campaign_objective}\nBrand Voice: ${task.brand_voice}`,
+                        "brief"
+                      )
+                    }
+                    className="p-1 rounded-md text-[#71717A] hover:text-[#F2F0F7] transition-colors"
+                    title="Copy brief to clipboard"
+                  >
+                    {copiedBrief ? (
+                      <Check className="w-3.5 h-3.5 text-[#45B88A]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-3 text-xs">
+              <div className="space-y-3.5 text-xs">
                 <div>
                   <span className="text-[#A3A0B0] block font-medium mb-1">Campaign Objective</span>
                   <p className="text-[#F2F0F7] leading-relaxed bg-[#101014] p-3 rounded-xl border border-white/[0.06]">
-                    {task.campaign_objective || "Promote campaign deliverables and drive target audience engagement."}
+                    {task.campaign_objective ||
+                      "Promote campaign deliverables and drive target audience engagement."}
                   </p>
                 </div>
 
                 {task.brand_voice && (
                   <div>
-                    <span className="text-[#A3A0B0] block font-medium mb-1">Brand Voice & Guidelines</span>
+                    <span className="text-[#A3A0B0] block font-medium mb-1">
+                      Brand Voice & Guidelines
+                    </span>
                     <p className="text-[#F2F0F7] leading-relaxed bg-[#101014] p-3 rounded-xl border border-white/[0.06]">
                       {task.brand_voice}
                     </p>
@@ -499,7 +765,10 @@ function TaskWorkspaceContent() {
                     <span className="text-[#A3A0B0] block font-medium mb-1.5">Target Audience</span>
                     <div className="flex flex-wrap gap-1.5">
                       {task.target_audience.map((aud, idx) => (
-                        <span key={idx} className="px-2 py-0.5 rounded-md bg-[#20202A] border border-white/[0.06] text-[#A3A0B0] text-[11px]">
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-md bg-[#20202A] border border-white/[0.06] text-[#A3A0B0] text-[11px] font-mono"
+                        >
                           {aud}
                         </span>
                       ))}
@@ -512,26 +781,43 @@ function TaskWorkspaceContent() {
             {/* Storyboard & Work Instructions Card */}
             <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider flex items-center gap-2">
-                  <Film className="w-3.5 h-3.5 text-[#A78BFA]" /> Storyboard & Instructions
-                </span>
-                <span className="text-[10px] font-mono text-[#A3A0B0]">Architect Specs</span>
+                <div className="flex items-center gap-2">
+                  <Film className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider">
+                    Storyboard & Script Directions
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-[#A3A0B0]">Architect Specs</span>
+                  {task.storyboard_text && (
+                    <button
+                      onClick={() => copyToClipboard(task.storyboard_text || "", "storyboard")}
+                      className="p-1 rounded-md text-[#71717A] hover:text-[#F2F0F7] transition-colors"
+                      title="Copy storyboard"
+                    >
+                      {copiedStoryboard ? (
+                        <Check className="w-3.5 h-3.5 text-[#45B88A]" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {task.storyboard_text ? (
                 <div className="space-y-2">
-                  <div className="max-h-[380px] overflow-y-auto bg-[#101014] p-3 rounded-xl border border-white/[0.06] font-mono text-xs text-[#F2F0F7] leading-relaxed whitespace-pre-wrap select-text">
+                  <div className="max-h-[380px] overflow-y-auto bg-[#0D0D12] p-4 rounded-xl border border-white/[0.08] font-mono text-xs text-[#F2F0F7] leading-relaxed whitespace-pre-wrap select-text shadow-inner">
                     {task.storyboard_text}
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-[#A3A0B0]/60 italic">No formal storyboard attached to this deliverable.</p>
+                <p className="text-xs text-[#71717A] italic py-3 font-mono">
+                  No formal storyboard attached to this deliverable.
+                </p>
               )}
             </div>
-          </div>
 
-          {/* Right Column (7 cols): Submissions, Versions & Actions */}
-          <div className="lg:col-span-7 space-y-6">
             {/* Version History & Submissions Accordion */}
             <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
@@ -545,33 +831,38 @@ function TaskWorkspaceContent() {
               </div>
 
               {task.submissions.length === 0 ? (
-                <div className="p-8 text-center border border-dashed border-[#30303D] rounded-2xl space-y-2 bg-[#101014]/60">
+                <div className="p-8 text-center border border-dashed border-white/[0.08] rounded-2xl space-y-2 bg-[#101014]/60">
                   <FileText className="w-8 h-8 text-[#71717A] mx-auto" />
                   <p className="text-xs font-semibold text-[#F2F0F7]">No versions submitted yet.</p>
-                  <p className="text-[11px] text-[#A3A0B0]">Use the submission form below to deliver the first version.</p>
+                  <p className="text-[11px] text-[#A3A0B0]">
+                    Use the submission form below to deliver the first version.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {task.submissions.map((sub) => {
-                    const isText = sub.file_type?.includes("text") || sub.file_name.endsWith(".txt");
-                    const isVideo = sub.file_type?.includes("video") || sub.file_name.endsWith(".mp4") || sub.file_name.endsWith(".mov");
                     const isApprovedVer = sub.approval_status === "approved";
                     const isChangesReq = sub.approval_status === "changes_requested";
 
                     return (
                       <div
                         key={sub.id}
-                        className="bg-[#101014] border border-[#30303D] rounded-xl p-4 space-y-3 transition-colors hover:border-[#A78BFA]/40"
+                        className="bg-[#101014] border border-white/[0.08] rounded-xl p-4 space-y-3 transition-colors hover:border-[#A78BFA]/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-lg bg-[#20202A] text-[#A78BFA] border border-[#30303D] font-mono font-bold text-xs flex items-center justify-center">
+                            <span className="w-7 h-7 rounded-lg bg-[#20202A] text-[#A78BFA] border border-white/[0.08] font-mono font-bold text-xs flex items-center justify-center">
                               v{sub.version_number}
                             </span>
                             <div>
-                              <span className="text-xs font-semibold text-[#F2F0F7] block">{sub.file_name}</span>
+                              <span className="text-xs font-semibold text-[#F2F0F7] block">
+                                {sub.file_name}
+                              </span>
                               <span className="text-[10px] font-mono text-[#71717A]">
-                                {new Date(sub.created_at).toLocaleString()} • {sub.file_size_bytes ? `${Math.round(sub.file_size_bytes / 1024)} KB` : "Asset"}
+                                {new Date(sub.created_at).toLocaleString()} •{" "}
+                                {sub.file_size_bytes
+                                  ? `${Math.round(sub.file_size_bytes / 1024)} KB`
+                                  : "Asset"}
                               </span>
                             </div>
                           </div>
@@ -584,13 +875,13 @@ function TaskWorkspaceContent() {
                             )}
                             {isChangesReq && (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30 uppercase">
-                                <AlertTriangle className="w-3 h-3 text-[#E5AA58]" /> Revisions Needed
+                                <AlertTriangle className="w-3 h-3 text-[#E5AA58]" /> Revision Needed
                               </span>
                             )}
 
                             <button
                               onClick={() => openPreview(sub)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#20202A] hover:bg-[#262630] text-xs font-semibold text-[#F2F0F7] border border-[#30303D] transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#20202A] hover:bg-[#262630] text-xs font-semibold text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5 text-[#A78BFA]" />
                               <span>Preview</span>
@@ -600,7 +891,7 @@ function TaskWorkspaceContent() {
                               <a
                                 href={sub.url.startsWith("http") ? sub.url : `${API_BASE}${sub.url}`}
                                 download
-                                className="p-1 rounded-lg bg-[#20202A] hover:bg-[#262630] text-[#A3A0B0] hover:text-[#F2F0F7] border border-[#30303D] transition-colors"
+                                className="p-1 rounded-lg bg-[#20202A] hover:bg-[#262630] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors"
                                 title="Download Asset"
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -611,9 +902,13 @@ function TaskWorkspaceContent() {
 
                         {/* Approval / Feedback Note attached to version */}
                         {sub.approval_notes && (
-                          <div className="bg-[#17171E] p-3 rounded-lg border border-[#30303D] text-xs text-[#F2F0F7]">
-                            <span className="font-semibold text-[#71717A] block text-[10px] uppercase">Reviewer Feedback:</span>
-                            <p className="mt-0.5 font-medium text-[#A3A0B0]">{sub.approval_notes}</p>
+                          <div className="bg-[#17171E] p-3 rounded-lg border border-white/[0.08] text-xs text-[#F2F0F7]">
+                            <span className="font-semibold text-[#71717A] block text-[10px] uppercase font-mono">
+                              Reviewer Feedback:
+                            </span>
+                            <p className="mt-0.5 font-medium text-[#A3A0B0] leading-relaxed">
+                              {sub.approval_notes}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -625,17 +920,18 @@ function TaskWorkspaceContent() {
 
             {/* Interactive Preview Drawer */}
             {activePreviewVersion && (
-              <div className="surface-card border border-[#A78BFA]/50 rounded-2xl p-5 space-y-3 shadow-md">
+              <div className="surface-card border border-[#A78BFA]/50 rounded-2xl p-5 space-y-3 shadow-md animate-in fade-in duration-150">
                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                   <div className="flex items-center gap-2">
                     <Eye className="w-3.5 h-3.5 text-[#A78BFA]" />
                     <span className="text-xs font-semibold text-[#F2F0F7]">
-                      Preview: {activePreviewVersion.file_name} (Version {activePreviewVersion.version_number})
+                      Preview: {activePreviewVersion.file_name} (Version{" "}
+                      {activePreviewVersion.version_number})
                     </span>
                   </div>
                   <button
                     onClick={() => setActivePreviewVersion(null)}
-                    className="p-1 rounded-lg hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer"
+                    className="p-1 rounded-lg hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -643,22 +939,31 @@ function TaskWorkspaceContent() {
 
                 {previewLoading ? (
                   <div className="py-8 text-center text-xs text-[#A3A0B0] flex items-center justify-center gap-2 font-mono">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#A78BFA]" /> Loading asset preview...
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#A78BFA]" /> Loading asset
+                    preview...
                   </div>
-                ) : activePreviewVersion.file_type?.includes("video") || activePreviewVersion.file_name.endsWith(".mp4") ? (
+                ) : activePreviewVersion.file_type?.includes("video") ||
+                  activePreviewVersion.file_name.endsWith(".mp4") ||
+                  activePreviewVersion.file_name.endsWith(".mov") ? (
                   <div className="space-y-2">
                     <video
-                      src={activePreviewVersion.url?.startsWith("http") ? activePreviewVersion.url : `${API_BASE}${activePreviewVersion.url}`}
+                      src={
+                        activePreviewVersion.url?.startsWith("http")
+                          ? activePreviewVersion.url
+                          : `${API_BASE}${activePreviewVersion.url}`
+                      }
                       controls
-                      className="w-full max-h-[360px] rounded-xl bg-black border border-white/[0.08]"
+                      className="w-full max-h-[380px] rounded-xl bg-black border border-white/[0.08]"
                     />
                   </div>
                 ) : previewContent ? (
-                  <div className="max-h-[300px] overflow-y-auto bg-[#101014] p-3.5 rounded-xl border border-white/[0.08] font-mono text-xs text-[#F2F0F7] whitespace-pre-wrap leading-relaxed select-text">
+                  <div className="max-h-[320px] overflow-y-auto bg-[#0D0D12] p-4 rounded-xl border border-white/[0.08] font-mono text-xs text-[#F2F0F7] whitespace-pre-wrap leading-relaxed select-text shadow-inner">
                     {previewContent}
                   </div>
                 ) : (
-                  <p className="text-xs text-[#A3A0B0]/60 italic">Preview not available for this file type. Please download to inspect.</p>
+                  <p className="text-xs text-[#A3A0B0]/60 italic py-3">
+                    Preview not available for this file type. Please download to inspect.
+                  </p>
                 )}
               </div>
             )}
@@ -676,7 +981,9 @@ function TaskWorkspaceContent() {
                     type="button"
                     onClick={() => setSubmissionMode("script")}
                     className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                      submissionMode === "script" ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      submissionMode === "script"
+                        ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs"
+                        : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                     }`}
                   >
                     Text Script
@@ -685,7 +992,9 @@ function TaskWorkspaceContent() {
                     type="button"
                     onClick={() => setSubmissionMode("media")}
                     className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                      submissionMode === "media" ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      submissionMode === "media"
+                        ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs"
+                        : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                     }`}
                   >
                     Media File
@@ -712,7 +1021,9 @@ function TaskWorkspaceContent() {
                   /* Writer Script Submission Form */
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-[#A3A0B0] mb-1">Script Draft Title</label>
+                      <label className="block text-xs font-medium text-[#A3A0B0] mb-1">
+                        Script Draft Title
+                      </label>
                       <input
                         type="text"
                         placeholder="e.g. Hotel Shauryawada Diwali Hook & Scene Script"
@@ -724,7 +1035,7 @@ function TaskWorkspaceContent() {
 
                     <div>
                       <label className="block text-xs font-medium text-[#A3A0B0] mb-1">
-                        Hook / Opening Hook Line (First 3 Seconds)
+                        Hook / Opening Line (First 3 Seconds)
                       </label>
                       <input
                         type="text"
@@ -744,19 +1055,21 @@ function TaskWorkspaceContent() {
                         placeholder={`Scene 1 (0-3s): Close-up of boiling mutton rassa...\nScene 2 (3-8s): Family walking in...\nScene 3 (8-15s): Chef plating the thali...`}
                         value={scriptBody}
                         onChange={(e) => setScriptBody(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-mono transition-all"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-mono transition-all leading-relaxed"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">Suggested Caption & Hashtags</label>
+                      <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                        Suggested Caption & Hashtags
+                      </label>
                       <textarea
                         rows={2}
                         placeholder="Caption copy to accompany the post..."
                         value={caption}
                         onChange={(e) => setCaption(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#71717A] p-3 rounded-xl border border-[#30303D] focus:outline-none focus:border-[#A78BFA] font-medium transition-all"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
                       />
                     </div>
                   </div>
@@ -764,8 +1077,10 @@ function TaskWorkspaceContent() {
                   /* Video Editor / Designer File Upload Form */
                   <div className="space-y-3.5">
                     <div>
-                      <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">Upload Media Asset (.mp4, .mov, .png, .jpg)</label>
-                      <div className="border border-dashed border-[#30303D] hover:border-[#A78BFA] rounded-2xl p-6 text-center transition-colors bg-[#101014]">
+                      <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                        Upload Media Asset (.mp4, .mov, .png, .jpg)
+                      </label>
+                      <div className="border border-dashed border-white/[0.12] hover:border-[#A78BFA] rounded-2xl p-6 text-center transition-colors bg-[#101014] group cursor-pointer">
                         <input
                           type="file"
                           id="task-file-upload"
@@ -774,25 +1089,31 @@ function TaskWorkspaceContent() {
                           accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg"
                         />
                         <label htmlFor="task-file-upload" className="cursor-pointer space-y-2 block">
-                          <UploadCloud className="w-8 h-8 text-[#A78BFA] mx-auto" />
+                          <UploadCloud className="w-8 h-8 text-[#A78BFA] mx-auto group-hover:scale-105 transition-transform" />
                           <span className="text-xs font-semibold text-[#F2F0F7] block">
-                            {selectedFile ? selectedFile.name : "Click to select or drag and drop render file"}
+                            {selectedFile
+                              ? selectedFile.name
+                              : "Click to select or drag and drop render file"}
                           </span>
-                          <span className="text-[10px] text-[#71717A] block">
-                            {selectedFile ? `${Math.round(selectedFile.size / (1024 * 1024))} MB` : "Supports MP4, MOV, WebM, PNG up to 100MB"}
+                          <span className="text-[10px] text-[#71717A] block font-mono">
+                            {selectedFile
+                              ? `${Math.round(selectedFile.size / (1024 * 1024))} MB`
+                              : "Supports MP4, MOV, WebM, PNG up to 100MB"}
                           </span>
                         </label>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">Production Notes</label>
+                      <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                        Production Notes
+                      </label>
                       <input
                         type="text"
                         placeholder="e.g. Exported 1080x1920 60fps render with color-graded footage"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#71717A] px-3.5 py-2.5 rounded-xl border border-[#30303D] focus:outline-none focus:border-[#A78BFA] font-medium transition-all"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
                       />
                     </div>
                   </div>
@@ -801,7 +1122,7 @@ function TaskWorkspaceContent() {
                 <button
                   type="submit"
                   disabled={submitting || (submissionMode === "media" && !selectedFile)}
-                  className="w-full py-2.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] disabled:opacity-40 text-[#101014] text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all"
+                  className="w-full py-2.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] disabled:opacity-40 text-[#101014] text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
                 >
                   {submitting ? (
                     <>
@@ -818,12 +1139,196 @@ function TaskWorkspaceContent() {
               </form>
             </div>
           </div>
+
+          {/* ── Right Column (Sticky Contextual Inspector, 4 cols) ── */}
+          <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
+            {/* Task Controls & Metadata Inspector */}
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <span>Task Inspector</span>
+                </span>
+                {updatingMetadata && (
+                  <RefreshCw className="w-3.5 h-3.5 text-[#A78BFA] animate-spin" />
+                )}
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                {/* Status Switcher */}
+                <div>
+                  <label className="text-[11px] font-mono text-[#A3A0B0] uppercase block mb-1.5">
+                    Lifecycle Status
+                  </label>
+                  <select
+                    value={task.status}
+                    disabled={updatingMetadata}
+                    onChange={(e) => handleUpdateStatus(e.target.value as TaskDetail["status"])}
+                    className="w-full bg-[#101014] text-xs font-medium text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+                  >
+                    <option value="backlog">Backlog / Queued</option>
+                    <option value="todo">To Do / Scripting</option>
+                    <option value="in_progress">In Production / Editing</option>
+                    <option value="internal_review">Internal Review</option>
+                    <option value="client_review">Client Review</option>
+                    <option value="changes_requested">Changes Requested</option>
+                    <option value="approved">Approved</option>
+                    <option value="done">Done / Published</option>
+                  </select>
+                </div>
+
+                {/* Priority Switcher */}
+                <div>
+                  <label className="text-[11px] font-mono text-[#A3A0B0] uppercase block mb-1.5">
+                    Priority Tier
+                  </label>
+                  <select
+                    value={task.priority}
+                    disabled={updatingMetadata}
+                    onChange={(e) => handleUpdatePriority(e.target.value as TaskDetail["priority"])}
+                    className="w-full bg-[#101014] text-xs font-medium text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                    <option value="urgent">🚨 Urgent Priority</option>
+                  </select>
+                </div>
+
+                {/* Assignee Selector */}
+                <div>
+                  <label className="text-[11px] font-mono text-[#A3A0B0] uppercase block mb-1.5">
+                    Assigned Specialist
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-full bg-[#20202A] text-[#A78BFA] text-[10px] font-mono font-bold flex items-center justify-center border border-white/[0.08] shrink-0">
+                      {getMonogram(task.assignee_name, task.assignee_id)}
+                    </span>
+                    {isManagerOrOwner ? (
+                      <select
+                        value={task.assignee_id || ""}
+                        disabled={updatingMetadata}
+                        onChange={(e) => handleReassign(e.target.value || null)}
+                        className="w-full bg-[#101014] text-xs font-medium text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+                      >
+                        <option value="">Unassigned</option>
+                        {members.map((m) => (
+                          <option key={m.user_id} value={m.user_id}>
+                            {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="font-medium text-[#F2F0F7] bg-[#101014] px-3 py-2 rounded-xl border border-white/[0.08] flex-1 truncate">
+                        {task.assignee_name || "Unassigned"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deadline & SLA */}
+                <div>
+                  <label className="text-[11px] font-mono text-[#A3A0B0] uppercase block mb-1.5">
+                    Delivery Deadline
+                  </label>
+                  <div className="bg-[#101014] p-3 rounded-xl border border-white/[0.08] flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-[#A3A0B0]">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span className="font-mono text-[#F2F0F7]">
+                        {task.due_date || "No date set"}
+                      </span>
+                    </div>
+                    {sla && (
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                          sla.tone === "critical"
+                            ? "bg-[#E16F7B]/10 text-[#E16F7B] border border-[#E16F7B]/30"
+                            : "bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30"
+                        }`}
+                      >
+                        {sla.text}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Deliverable Association Card */}
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                <span className="text-[11px] font-mono uppercase text-[#A3A0B0] font-medium flex items-center gap-1.5">
+                  <Film className="w-3 h-3 text-[#A78BFA]" />
+                  <span>Deliverable Output</span>
+                </span>
+                <span className="text-[10px] font-mono text-[#71717A] uppercase">
+                  {task.platform}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-[#F2F0F7] leading-snug">
+                  {task.deliverable_title}
+                </h4>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#101014] px-2 py-0.5 rounded border border-white/[0.06]">
+                    {task.deliverable_type}
+                  </span>
+                  {task.deliverable_id && (
+                    <Link
+                      href={`/deliverables/${task.deliverable_id}?task_id=${task.id}&from=tasks`}
+                      className="text-xs font-semibold text-[#A78BFA] hover:text-[#B69BFF] inline-flex items-center gap-1 transition-colors"
+                    >
+                      <span>Media Details</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Client Account Card */}
+            {task.client_name && (
+              <div className="surface-card rounded-2xl border border-white/[0.08] p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                  <span className="text-[11px] font-mono uppercase text-[#A3A0B0] font-medium flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3 text-[#A78BFA]" />
+                    <span>Client Account</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#20202A] text-[#A78BFA] font-mono font-bold text-xs flex items-center justify-center border border-white/[0.08]">
+                      {getMonogram(task.client_name)}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-[#F2F0F7] leading-snug">
+                        {task.client_name}
+                      </h4>
+                      <span className="text-[10px] font-mono text-[#71717A]">Active Client</span>
+                    </div>
+                  </div>
+
+                  {task.client_id && (
+                    <Link
+                      href={`/clients/${task.client_id}`}
+                      className="text-xs font-semibold text-[#A78BFA] hover:text-[#B69BFF] inline-flex items-center gap-1 transition-colors"
+                    >
+                      <span>Workspace</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Raycast Manager Review Decision Modal ── */}
         {reviewModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="surface-card border border-white/[0.1] rounded-2xl p-5 max-w-lg w-full space-y-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="surface-card border border-white/[0.1] rounded-2xl p-5 max-w-lg w-full space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                 <h3 className="text-sm font-heading font-semibold text-[#F2F0F7] flex items-center gap-2">
                   {reviewDecision === "approved" ? (
@@ -840,7 +1345,7 @@ function TaskWorkspaceContent() {
                 </h3>
                 <button
                   onClick={() => setReviewModalOpen(false)}
-                  className="p-1 rounded-md text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer"
+                  className="p-1 rounded-md text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -854,7 +1359,9 @@ function TaskWorkspaceContent() {
 
               <div>
                 <label className="block text-xs font-medium text-[#A3A0B0] mb-1">
-                  {reviewDecision === "approved" ? "Approval Notes (Optional)" : "Detailed Revision Instructions (Required)"}
+                  {reviewDecision === "approved"
+                    ? "Approval Notes (Optional)"
+                    : "Detailed Revision Instructions (Required)"}
                 </label>
                 <textarea
                   rows={4}
@@ -865,7 +1372,7 @@ function TaskWorkspaceContent() {
                   }
                   value={feedbackNotes}
                   onChange={(e) => setFeedbackNotes(e.target.value)}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all leading-relaxed"
                   required={reviewDecision === "changes_requested"}
                 />
               </div>
@@ -882,14 +1389,20 @@ function TaskWorkspaceContent() {
                 <button
                   type="button"
                   onClick={handleReviewSubmit}
-                  disabled={reviewing || (reviewDecision === "changes_requested" && !feedbackNotes.trim())}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  disabled={
+                    reviewing || (reviewDecision === "changes_requested" && !feedbackNotes.trim())
+                  }
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs ${
                     reviewDecision === "approved"
                       ? "bg-[#45B88A] hover:bg-[#52c595] text-[#101014]"
                       : "bg-[#E5AA58] hover:bg-[#f0b560] text-[#101014]"
                   }`}
                 >
-                  {reviewing ? "Processing Decision..." : reviewDecision === "approved" ? "Confirm Approval" : "Send Revision Request"}
+                  {reviewing
+                    ? "Processing Decision..."
+                    : reviewDecision === "approved"
+                    ? "Confirm Approval"
+                    : "Send Revision Request"}
                 </button>
               </div>
             </div>
@@ -904,7 +1417,9 @@ export default function TaskWorkspacePage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-xs text-[#71717A]">Loading task workspace...</div>
+        <div className="p-8 text-center text-xs font-mono text-[#71717A]">
+          Loading task workspace...
+        </div>
       }
     >
       <TaskWorkspaceContent />
