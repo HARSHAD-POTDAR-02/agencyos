@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi, agencyApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { Sparkles, ArrowRight, Building2, User, Mail, Lock } from "lucide-react";
+import { Sparkles, ArrowRight, Building2, User, Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -41,100 +41,103 @@ export default function RegisterPage() {
       // 4. Update auth context and redirect
       await login(loginRes.access_token);
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to create agency. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create agency. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#090A0F] px-4 py-12 relative overflow-hidden select-none">
+    <div className="min-h-screen flex items-center justify-center bg-[#101014] px-4 py-12 relative overflow-hidden select-none">
       {/* Background radial gradient glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-purple-600/20 via-indigo-600/15 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#A78BFA]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-80 h-80 bg-[#69A9D8]/10 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="max-w-md w-full bg-[#11131C] rounded-3xl border border-white/10 p-8 shadow-2xl relative z-10">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-purple-600/30 mx-auto mb-4 ring-1 ring-white/20">
+      <div className="max-w-md w-full surface-card rounded-3xl border border-white/[0.08] p-8 shadow-2xl relative z-10 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 rounded-2xl bg-[#20202A] border border-white/[0.08] flex items-center justify-center text-[#A78BFA] font-heading font-extrabold text-xl shadow-xs mx-auto ring-1 ring-[#A78BFA]/20">
             A
           </div>
-          <h1 className="text-xl font-extrabold text-white tracking-tight">Create Agency Workspace</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Built specifically for India-first social media agencies
+          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">Create Agency Workspace</h1>
+          <p className="text-xs text-[#A3A0B0] max-w-xs mx-auto">
+            Operating system for creative social media agencies
           </p>
         </div>
 
         {error && (
-          <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs rounded-xl font-medium">
-            {error}
+          <div className="p-3.5 bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs rounded-xl font-medium flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-mono font-medium text-[#A3A0B0] uppercase tracking-wider mb-1.5">
               Your Full Name
             </label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-[#A3A0B0] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-white/[0.04] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl text-xs text-white placeholder:text-slate-500 pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all"
+                className="w-full bg-[#101014] hover:bg-[#13131A] focus:bg-[#17171E] border border-white/[0.08] rounded-xl text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#A78BFA]/50 transition-all font-mono"
                 placeholder="Aryan Mehta"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-mono font-medium text-[#A3A0B0] uppercase tracking-wider mb-1.5">
               Agency Name
             </label>
             <div className="relative">
-              <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Building2 className="w-4 h-4 text-[#A3A0B0] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={agencyName}
                 onChange={(e) => setAgencyName(e.target.value)}
-                className="w-full bg-white/[0.04] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl text-xs text-white placeholder:text-slate-500 pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all"
-                placeholder="e.g. Elevate Social Media"
+                className="w-full bg-[#101014] hover:bg-[#13131A] focus:bg-[#17171E] border border-white/[0.08] rounded-xl text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#A78BFA]/50 transition-all font-mono"
+                placeholder="Elevate Social"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-mono font-medium text-[#A3A0B0] uppercase tracking-wider mb-1.5">
               Work Email
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-[#A3A0B0] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/[0.04] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl text-xs text-white placeholder:text-slate-500 pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all"
+                className="w-full bg-[#101014] hover:bg-[#13131A] focus:bg-[#17171E] border border-white/[0.08] rounded-xl text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#A78BFA]/50 transition-all font-mono"
                 placeholder="aryan@elevatesocial.in"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-mono font-medium text-[#A3A0B0] uppercase tracking-wider mb-1.5">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-[#A3A0B0] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/[0.04] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl text-xs text-white placeholder:text-slate-500 pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all"
-                placeholder="••••••••••••"
+                className="w-full bg-[#101014] hover:bg-[#13131A] focus:bg-[#17171E] border border-white/[0.08] rounded-xl text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#A78BFA]/50 transition-all font-mono"
+                placeholder="Minimum 8 characters"
               />
             </div>
           </div>
@@ -142,24 +145,24 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full mt-2 py-2.5 px-4 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer active:scale-[0.98]"
           >
             {loading ? (
-              <span>Initializing Workspace...</span>
+              <span>Creating your agency...</span>
             ) : (
               <>
                 <span>Launch Agency Workspace</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#101014]" />
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-6 pt-5 border-t border-white/[0.08] text-center">
-          <p className="text-xs text-slate-400">
-            Already have an account?{" "}
-            <Link href="/login" className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
-              Sign in to workspace →
+        <div className="pt-4 border-t border-white/[0.08] text-center">
+          <p className="text-xs text-[#A3A0B0]">
+            Already have an agency account?{" "}
+            <Link href="/login" className="text-[#A78BFA] hover:text-[#B69BFF] font-semibold transition-colors">
+              Sign in &rarr;
             </Link>
           </p>
         </div>
