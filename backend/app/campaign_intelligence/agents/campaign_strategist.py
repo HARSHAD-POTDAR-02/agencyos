@@ -141,6 +141,10 @@ class CampaignStrategistAgent:
         if brief.start_date and brief.end_date:
             timeline_info = f"Specific Sprint: {brief.start_date.strftime('%B %d, %Y')} to {brief.end_date.strftime('%B %d, %Y')} ({brief.duration_days} days total)"
 
+        hero_guidance = ""
+        if brief.pinned_entities:
+            hero_guidance = f"- Pinned Hero Offerings / Key Assets: {', '.join(brief.pinned_entities)} (Build strategic angles, narrative phases, and conversion climaxes around these verified offerings!)"
+
         if brief.start_date and brief.end_date and brief.duration_days:
             pacing_instruction = f"Daily phasing across the {brief.duration_days}-day sprint ({brief.start_date} to {brief.end_date}) detailing sequential daily narrative progression from Day 1 to Day {brief.duration_days}."
         else:
@@ -165,6 +169,7 @@ Synthesize the internal brand reality, external market research, and historical 
 - Target Formats: {', '.join(brief.deliverable_preferences) if brief.deliverable_preferences else 'Any'}
 - Campaign Timeline: {timeline_info}
 - Budget: {f"${brief.budget:,.2f}" if brief.budget else "Unspecified / Retainer Scope"}
+{hero_guidance}
 
 ### YOUR TASK
 Formulate a master Campaign Strategy strictly conforming to the JSON schema:

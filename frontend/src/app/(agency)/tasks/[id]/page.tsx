@@ -1026,7 +1026,7 @@ function TaskWorkspaceContent() {
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Hotel Shauryawada Diwali Hook & Scene Script"
+                        placeholder="e.g. Q4 Growth Sprint Hook & Scene Script"
                         value={scriptTitle}
                         onChange={(e) => setScriptTitle(e.target.value)}
                         className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-medium"
@@ -1039,7 +1039,7 @@ function TaskWorkspaceContent() {
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Puneites, stop scrolling if you love authentic Kolhapuri mutton thali!"
+                        placeholder="e.g. Stop scrolling if you want to scale your results this month!"
                         value={hook}
                         onChange={(e) => setHook(e.target.value)}
                         className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-medium"
@@ -1052,7 +1052,7 @@ function TaskWorkspaceContent() {
                       </label>
                       <textarea
                         rows={6}
-                        placeholder={`Scene 1 (0-3s): Close-up of boiling mutton rassa...\nScene 2 (3-8s): Family walking in...\nScene 3 (8-15s): Chef plating the thali...`}
+                        placeholder={`Scene 1 (0-3s): Dynamic hook visual introducing core challenge...\nScene 2 (3-8s): Product / service feature demonstration...\nScene 3 (8-15s): Customer proof & key call to action...`}
                         value={scriptBody}
                         onChange={(e) => setScriptBody(e.target.value)}
                         className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-mono transition-all leading-relaxed"

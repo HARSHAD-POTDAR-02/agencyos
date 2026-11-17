@@ -87,7 +87,7 @@ export function ContextualCanvas({
               </span>
             </div>
             <p className="text-[11px] text-[#A3A0B0]">
-              Pinned hero items ground all agents, video scripts, and sprint tasks into verified dishes &amp; products.
+              Pinned hero items ground all agents, video scripts, and sprint tasks into verified products &amp; services.
             </p>
           </div>
         </div>
@@ -158,7 +158,7 @@ export function ContextualCanvas({
 
         {pinnedEntities.length === 0 && discoveredEntities.length === 0 && (
           <span className="text-[11px] text-[#A3A0B0] italic py-0.5">
-            No hero entities identified yet. Type a signature dish or offering above to pin.
+            No hero entities identified yet. Type a signature offering or product above to pin.
           </span>
         )}
       </div>

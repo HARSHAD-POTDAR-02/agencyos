@@ -683,7 +683,7 @@ export default function ClientsPage() {
                     type="text"
                     value={industry}
                     onChange={(e) => setIndustry(e.target.value)}
-                    placeholder="e.g. Food & Hospitality"
+                    placeholder="e.g. Technology, Retail, Healthcare"
                     className="w-full px-3 py-2 bg-[#101014] border border-white/[0.08] rounded-xl text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/50 focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors"
                   />
                 </div>

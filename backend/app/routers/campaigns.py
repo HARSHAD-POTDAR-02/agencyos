@@ -398,6 +398,8 @@ async def generate_plan_endpoint(
             "hashtags": dp.hashtags or [],
             "hook_options": dp.hook_options or [],
             "production_notes": dp.production_notes or "",
+            "hero_entity": dp.hero_entity,
+            "hero_focus": dp.hero_focus or ([] if not dp.hero_entity else [dp.hero_entity]),
             "reel_scenes": [s.model_dump() for s in dp.reel_scenes] if dp.reel_scenes else [],
             "carousel_slides": [s.model_dump() for s in dp.carousel_slides] if dp.carousel_slides else [],
         })
@@ -421,6 +423,7 @@ async def generate_plan_endpoint(
         "objective": strategy.primary_objective if strategy and strategy.primary_objective else payload.objective,
         "brand_voice": brand_voice_str,
         "content_pillars": [p.pillar_name for p in strategy.messaging_pillars] if strategy and strategy.messaging_pillars else [],
+        "pinned_entities": payload.pinned_entities or [],
         "total_deliverables_planned": len(deliverables_formatted),
         "generator": "AgencyOS Multi-Agent Campaign Intelligence Engine v3.0",
         "deliverables": deliverables_formatted,
@@ -651,12 +654,10 @@ def extract_candidate_entities(
                         len(match) > 5
                         and match.lower()
                         not in [
-                            "authentic maharashtrian",
-                            "maharashtrian culture",
                             "customer experiences",
-                            "food photography",
-                            "restaurant ambience",
                             "general business",
+                            "content pillar",
+                            "strategic angle",
                         ]
                     ):
                         entities.add(match)
@@ -670,31 +671,17 @@ def extract_candidate_entities(
         if "scenes" in artifact_payload and isinstance(artifact_payload["scenes"], list):
             for sc in artifact_payload["scenes"]:
                 if isinstance(sc, dict):
-                    act = sc.get("visual_action", "")
-                    vo = sc.get("voiceover_script", "")
-                    for term in [
-                        "Mutton Raan",
-                        "Chicken Raan",
-                        "Special Mutton Thali",
-                        "Solapuri Cuisine",
-                        "Solapuri Mutton",
-                        "Chicken Malwani",
-                        "Tambada Rassa",
-                        "Pandhra Rassa",
-                    ]:
-                        if term.lower() in act.lower() or term.lower() in vo.lower():
-                            entities.add(term)
-
-    # 3. Always include known client signature dishes if client is Hotel Shauryawada
-    if client and client.business_name and "shauryawada" in client.business_name.lower():
-        for dish in [
-            "Special Mutton Thali",
-            "Mutton Raan Masala",
-            "Chicken Malwani",
-            "Solapuri Mutton Handi",
-            "Tambada Pandhra Rassa",
-        ]:
-            entities.add(dish)
+                    hf = sc.get("hero_focus", [])
+                    if isinstance(hf, list):
+                        for item in hf:
+                            if isinstance(item, str) and item.strip():
+                                entities.add(item.strip())
+        if "slides" in artifact_payload and isinstance(artifact_payload["slides"], list):
+            for sl in artifact_payload["slides"]:
+                if isinstance(sl, dict):
+                    hl = sl.get("headline", "")
+                    if hl and len(hl) <= 40:
+                        entities.add(hl)
 
     cleaned: list[str] = []
     for e in sorted(entities):
@@ -1862,7 +1849,7 @@ USER'S REVISION INSTRUCTION:
 REQUIREMENTS:
 1. Apply the user's requested modifications with surgical precision. If they ask to modify a specific scene (e.g. scene 2 or 3), update that scene while keeping the rest cohesive.
 2. If the user asks for a specific total duration (e.g. 30 to 45s, 45 to 60s), adjust the scene count (4-7 scenes) and timestamps accordingly so the final scene ends at the target duration!
-3. If they ask for a new angle, dish, hook, or tone, rewrite the scenes, voiceovers, and visual actions to reflect that dish/concept accurately.
+3. If they ask for a new angle, feature, product, hook, or tone, rewrite the scenes, voiceovers, and visual actions to reflect that concept accurately.
 4. Keep all scenes written strictly in English.
 5. Provide a crisp 1-2 sentence explanation of your changes.
 """
@@ -2022,11 +2009,15 @@ async def convert_campaign_to_tasks(
             except Exception:
                 pass
 
-        # Create Deliverable with explicit planned_date
+        # Create Deliverable with explicit planned_date and hero entity prominence
+        hero_tag = item.get("hero_entity")
+        raw_title = item.get("title") or f"Day {item.get('day_number', 1)}: {item.get('hook', 'Deliverable')[:50]}"
+        final_title = f"{hero_tag}: {raw_title}" if (hero_tag and hero_tag.lower() not in raw_title.lower()) else raw_title
+
         deliv = Deliverable(
             id=uuid.uuid4(),
             campaign_id=campaign.id,
-            title=item.get("title") or f"Day {item.get('day_number', 1)}: {item.get('hook', 'Deliverable')[:50]}",
+            title=final_title,
             deliverable_type=dtype,
             platform=item.get("platform", "instagram"),
             planned_date=planned_dt,

@@ -160,13 +160,13 @@ def _resolve_research_mode(
         "our competitors", "who are our competitors", "what are our competitors",
         "what are our direct and indirect competitors", "our direct competitors",
         "who is our competition", "my client", "our client", "the client",
-        "our brand", "our restaurant", "our cafe", "our company", "our business",
+        "our brand", "our company", "our business", "our enterprise", "our agency",
         "our product", "our pricing", "our location", "around us", "for us",
         "we offer", "we are", "we're", "our service", "our shop", "our agency client",
     }
     has_client_cue = any(cue in q for cue in client_cues) or (len(cleaned_client) >= 4 and cleaned_client in q)
 
-    # Priority 1: Hybrid Client-Informed External (e.g. "Based on coffee research, what opportunities could Hotel Shauryawada explore?")
+    # Priority 1: Hybrid Client-Informed External
     hybrid_external_cues = [
         r"\bbased on\b",
         r"\bwhat opportunities could\b",
@@ -185,8 +185,8 @@ def _resolve_research_mode(
         r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
         r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
         r"\bcompeting with\b",
-        r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
-        r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand|roaster|roasters)\b",
+        r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|store|brand)\b",
+        r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|service|brand)\b",
     ]
     if any(re.search(pat, q) for pat in named_external_cues):
         return ResearchScopeMode.INDEPENDENT_RESEARCH, False
@@ -308,7 +308,7 @@ def _format_brand_context_block(context: CampaignStudioContext | None, query: st
         f"{pillars_line}"
         f"{facts_line}\n\n"
         f"CRITICAL BRAND GROUNDING RULES:\n"
-        f"1. When the user asks about 'our brand', 'our business', 'our restaurant', 'our competitors', 'we', 'us', "
+        f"1. When the user asks about 'our brand', 'our business', 'our company', 'our competitors', 'we', 'us', "
         f"or asks open-ended questions like 'what are our direct and indirect competitors?' or 'who are our rivals?', "
         f"'our' refers EXCLUSIVELY to the active client brand: {client_name} ({industry}{f' in {location}' if location else ''}).\n"
         f"2. Never confuse 'our brand' with AgencyOS, software, or tech SaaS. AgencyOS is the agency execution workspace; "
@@ -772,7 +772,7 @@ async def compile_report_node(state: DeepResearchState) -> dict[str, Any]:
         client_name = (context.client_name if context else None) or "the client brand"
         clarification_msg = (
             f"To identify direct and indirect competitors for **{client_name}**, please clarify the primary business category "
-            f"(e.g., dining restaurant, lodging hotel, cafe, or catering service). "
+            f"(e.g., software SaaS, direct-to-consumer retail, professional services, or local clinic). "
             f"Once the category is confirmed, competitive analysis can be precisely targeted."
         )
         synthesis = MarketResearchSynthesisOutput(
@@ -868,9 +868,9 @@ async def compile_report_node(state: DeepResearchState) -> dict[str, Any]:
         scope_directive = """--- RESEARCH SCOPE: STRICTLY INDEPENDENT MARKET RESEARCH ---
 STRICT ISOLATION CONTRACT:
 1. This is an INDEPENDENT market investigation into the requested external entities / brands.
-2. Do NOT mention, reference, or relate this research to any agency client (e.g. do NOT mention Hotel Shauryawada, Handewadi, restaurants, or dining).
-3. The entities being investigated (e.g. Blue Tokai, Subko, Third Wave Coffee) are competing directly against EACH OTHER in their market. Their competitor_type is 'direct'. They are NOT indirect competitors to a restaurant!
-4. Strategic whitespace opportunities must be opportunities within the investigated market itself (e.g. specialty coffee roasters), NOT recommendations for an external restaurant client!
+2. Do NOT mention, reference, or relate this research to any external agency client or unrequested client entity.
+3. The entities being investigated are competing directly against EACH OTHER in their market. Their competitor_type is 'direct'.
+4. Strategic whitespace opportunities must be opportunities within the investigated market itself, NOT recommendations for an external client!
 5. Never invent or force an external client relationship."""
         rule_5 = "5. Inferred opportunities must be categorized as 'hypothesis' by default, representing whitespace within the investigated market itself (do NOT relate to any agency client), with concrete 'missing_evidence', a practical low-risk 'test_method', and measurable 'validation_criteria'."
     elif mode_str == "client_informed_external":
@@ -906,7 +906,7 @@ USER QUERY: "{query}"
 {sources_text}
 
 STRICT EDITORIAL RULES:
-1. Every competitor (observed_competitors) MUST be an actual business, brand, company, or product. Output exact entity name (e.g. 'Blue Tokai', 'Subko', 'Third Wave Coffee', 'Garden Gate', 'Surve\\'s'). Never output SEO aggregate titles or listicle names (e.g. never 'Restaurants listed on Zomato', 'Top 10 Cafes', 'Casual Dining in Pune').
+1. Every competitor (observed_competitors) MUST be an actual business, brand, company, or product. Output exact entity name. Never output SEO aggregate titles or listicle names (e.g. never 'Top 10 Providers', 'Best Solutions in Market').
 2. Every competitor MUST cite a supporting_source_url that appears verbatim in the bibliography above.
 3. Quantifiable claims (pricing tiers, subscription fees, promotional discounts) must be grounded in the verified metrics and excerpts.
 4. For research_dimensions, explicitly account for each requested query dimension:
@@ -984,7 +984,7 @@ STRICT EDITORIAL RULES:
         # Filter out generic listicle article titles
         if re.search(r"^\d+\s+(?:gorgeous|best|top|popular|great)\b", c_name_lower):
             continue
-        if re.search(r"\b(?:list of|top \d+|best restaurants|casual dining in)\b", c_name_lower):
+        if re.search(r"\b(?:list of|top \d+|best companies|top providers in)\b", c_name_lower):
             continue
 
         if any(agg in c_name_lower for agg in AGGREGATOR_PLATFORMS):
@@ -997,14 +997,14 @@ STRICT EDITORIAL RULES:
                 comp.competitor_name = "Magicpin"
             if not comp.relevance:
                 comp.relevance = CompetitorRelevance(
-                    geographic_overlap="National / Regional delivery coverage",
-                    product_or_service_overlap="Food delivery aggregator & restaurant discovery channel platform, not a direct culinary competitor",
-                    price_overlap="Platform commission & delivery fees",
-                    audience_overlap="Online ordering diners",
-                    occasion_overlap="Home delivery & table reservations",
+                    geographic_overlap="National / Regional market coverage",
+                    product_or_service_overlap="Aggregator & marketplace discovery channel platform, not a direct category competitor",
+                    price_overlap="Platform commission & marketplace fees",
+                    audience_overlap="Online marketplace users",
+                    occasion_overlap="Digital search & marketplace transactions",
                 )
             else:
-                comp.relevance.product_or_service_overlap = "Delivery & discovery channel platform, not a direct culinary producer"
+                comp.relevance.product_or_service_overlap = "Discovery & distribution channel platform, not a direct producer"
         else:
             if mode_str == "independent_research":
                 comp.competitor_type = CompetitorType.DIRECT
@@ -1025,17 +1025,17 @@ STRICT EDITORIAL RULES:
     # Mode-specific scrubbing for INDEPENDENT_RESEARCH
     if mode_str == "independent_research" and context and context.client_name:
         cname = context.client_name.strip()
-        cname_pat = rf"\b(?:Hotel\s+)?{re.escape(cname)}(?:'s)?\b"
+        cname_pat = rf"\b{re.escape(cname)}(?:'s)?\b"
         synthesis.executive_summary = re.sub(
-            rf"\s*While these entities operate in [^.]+? rather than direct restaurant competition with [^.]+?\.\s*",
+            rf"\s*While these entities operate in [^.]+? rather than direct competition with [^.]+?\.\s*",
             " ",
             synthesis.executive_summary,
             flags=re.IGNORECASE,
         )
-        synthesis.executive_summary = re.sub(cname_pat, "specialty operators", synthesis.executive_summary, flags=re.IGNORECASE)
+        synthesis.executive_summary = re.sub(cname_pat, "industry operators", synthesis.executive_summary, flags=re.IGNORECASE)
         for opp in synthesis.inferred_opportunities:
-            opp.opportunity_description = re.sub(cname_pat, "Specialty operators", opp.opportunity_description, flags=re.IGNORECASE)
-            opp.target_whitespace = re.sub(cname_pat, "specialty market", opp.target_whitespace, flags=re.IGNORECASE)
+            opp.opportunity_description = re.sub(cname_pat, "Industry operators", opp.opportunity_description, flags=re.IGNORECASE)
+            opp.target_whitespace = re.sub(cname_pat, "target market", opp.target_whitespace, flags=re.IGNORECASE)
 
     # Pass 2: Review Integrity Check (Complaints Scope: 1 anecdote vs 2-4 signal vs 5+ recurring)
     for kf in synthesis.key_findings:
@@ -1079,11 +1079,11 @@ STRICT EDITORIAL RULES:
             if not has_inspected_support:
                 opp.status = OpportunityStatus.HYPOTHESIS
         if not opp.missing_evidence:
-            opp.missing_evidence = ["Unit economics & food cost margins", "Customer willingness-to-pay threshold", "Kitchen prep and dispatch capacity"]
+            opp.missing_evidence = ["Unit economics & operating margins", "Customer willingness-to-pay threshold", "Fulfillment and delivery capacity"]
         if not opp.test_method:
-            opp.test_method = "Run a 7-day social story poll or limited 20-order weekend pre-order test"
+            opp.test_method = "Run a 7-day social story poll or limited customer pilot test"
         if not opp.validation_criteria:
-            opp.validation_criteria = "Achieve >= 15 pre-orders or >= 65% positive response rate before rollout"
+            opp.validation_criteria = "Achieve >= 15 qualified conversions or >= 65% positive response rate before rollout"
 
     # Pass 5: Dimension Statuses Accounting & Honest Demotion
     for dim in synthesis.research_dimensions:

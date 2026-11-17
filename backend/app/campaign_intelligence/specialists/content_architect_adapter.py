@@ -165,20 +165,20 @@ def normalize_storyboard_scenes_timing(
             en_sec = en_ms // 1000
             ts_str = f"{st_sec // 60}:{st_sec % 60:02d} - {en_sec // 60}:{en_sec % 60:02d}"
             if i == 0:
-                vo = s0.voiceover_script or "Stop scrolling and feast your eyes on this!"
+                vo = s0.voiceover_script or "Stop scrolling and take a look at this!"
                 act = s0.visual_action
-                ost = s0.on_screen_text or "Signature Feast"
-                sfx = s0.audio_sfx_cue or "Whoosh hit + sizzling audio"
+                ost = s0.on_screen_text or "Signature Highlight"
+                sfx = s0.audio_sfx_cue or "Whoosh hit + modern rhythm"
             elif i == beat_count - 1:
-                vo = "Experience the authentic taste today – book your table or order via link in bio!"
-                act = "Hero closing reveal of the steaming presentation with brand social off-ramp."
-                ost = "Book Now • Link in Bio"
-                sfx = "Rich musical swell + chime"
+                vo = "Experience the difference today – visit our link in bio to get started!"
+                act = "Hero closing reveal of the brand solution with prominent call-to-action."
+                ost = "Get Started • Link in Bio"
+                sfx = "Clear musical swell + branded chime"
             else:
-                vo = "Slow-cooked with pure desi ghee and artisanal spices, crafted for unmatched tenderness."
-                act = "Dynamic multi-angle camera tracks the cooking and plating with rich sensory details."
-                ost = "Fresh & Authentic"
-                sfx = "Crackle of ghee + ambient kitchen beat"
+                vo = "Engineered with precision and crafted to deliver measurable impact for our clients."
+                act = "Dynamic multi-angle camera captures the core features with rich visual details."
+                ost = "Premium Quality & Performance"
+                sfx = "Ambient soundscape + steady tempo beat"
             subdivided.append(SceneCard(
                 scene_number=i + 1,
                 start_ms=st_ms,
@@ -920,11 +920,11 @@ CRITICAL REQUIREMENTS:
 
             final_caption = (sb_res.caption or "").strip()
             if not final_caption:
-                final_caption = f"🍲✨ Experience authentic craftsmanship at {client_name}! Slow-cooked to perfection with traditional spices and rich aroma. Visit us today or order now! 🚀"
-            final_hashtags = sb_res.hashtags if sb_res.hashtags else [f"#{client_name.lower().replace(' ', '')}", f"#{industry.lower().replace(' ', '')}", "#foodies", "#authentic"]
+                final_caption = f"✨ Discover how {client_name} delivers unmatched value and excellence! Built to exceed expectations every single day. Explore more via link in bio! 🚀"
+            final_hashtags = sb_res.hashtags if sb_res.hashtags else [f"#{client_name.lower().replace(' ', '')}", f"#{industry.lower().replace(' ', '')}", "#innovation", "#growth"]
             final_cta = (sb_res.call_to_action or "").strip()
             if not final_cta:
-                final_cta = "Book your table via link in bio!"
+                final_cta = "Connect with us via link in bio!"
 
             payload = StoryboardArtifactPayload(
                 deliverable_title=sb_res.deliverable_title or f"{client_name}: Signature Showcase Reel",

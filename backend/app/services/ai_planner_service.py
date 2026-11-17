@@ -23,105 +23,70 @@ MONTH_NAMES = [
 
 def _detect_industry_category(industry_str: str | None, voice_str: str | None) -> str:
     combined = f"{industry_str or ''} {voice_str or ''}".lower()
-    if any(k in combined for k in ["restaurant", "food", "cafe", "hotel", "beverage", "dining", "cuisine", "thali", "raan", "kitchen", "bakery", "sweet"]):
-        return "food_hospitality"
+    if any(k in combined for k in ["tech", "software", "saas", "digital", "app", "cloud", "ai", "platform"]):
+        return "technology_saas"
     if any(k in combined for k in ["fashion", "apparel", "clothing", "beauty", "cosmetics", "jewel"]):
         return "fashion_lifestyle"
-    if any(k in combined for k in ["fitness", "gym", "health", "wellness", "yoga"]):
+    if any(k in combined for k in ["fitness", "gym", "health", "wellness", "yoga", "medical", "clinic"]):
         return "fitness_wellness"
-    if any(k in combined for k in ["real estate", "property", "interior", "architecture"]):
+    if any(k in combined for k in ["real estate", "property", "interior", "architecture", "construction"]):
         return "real_estate_home"
+    if any(k in combined for k in ["finance", "legal", "consulting", "marketing", "agency", "corporate"]):
+        return "professional_services"
     return "general_business"
 
 
-def _generate_food_hospitality_sprint(
+def _generate_generic_sprint(
     brand_name: str,
+    industry: str,
     pillars: list[str],
     voice: str,
     total_days: int,
 ) -> list[dict[str, Any]]:
-    """Synthesizes authentic restaurant and food reels tailored to the brand's cuisine,
-
-    pillars, and voice.
-    """
-    # Extract signature dishes from voice if present
-    signatures = []
-    if "raan" in voice.lower():
-        signatures.append("Signature Raan Special (Mutton & Chicken)")
-    if "thali" in voice.lower():
-        signatures.append("Grand Maharashtrian Thali")
-    if not signatures:
-        signatures = ["Chef's Special Thali", "Signature Sizzler", "Traditional House Special"]
-
-    is_marathi = any(k in voice.lower() for k in ["marathi", "maharashtrian", "kolhapur", "pune", "mumbai"])
-
-    food_templates = [
+    """Synthesizes industry-aware reels for general businesses."""
+    items = []
+    templates = [
         {
-            "pillar_idx": 0,
-            "hook": f"Ekda tari he try kelach pahije at {brand_name}! 🔥🤤" if is_marathi else f"Have you tried the legendary food at {brand_name}? 🤤🔥",
-            "visual": "Extreme close-up macro shot of sizzling hot food being plated, steam rising, rich aromatic gravy poured over fresh bread/bhakri.",
-            "caption": f"When authentic flavors meet traditional recipes, magic happens! Come hungry and experience our signature preparations crafted with age-old secret spices.\n\n📍 Visit us today at {brand_name}.",
-            "cta": "Tag your foodie partner who needs to take you here this week!",
-            "audio": "Trending rhythmic folk-fusion beat with upbeat food reel vibes",
-            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#foodreels", "#indiancuisine", "#foodiesofindia", "#maharashtrianfood"]
+            "hook": f"3 things you never knew about {brand_name} ⚡",
+            "visual": "Fast-paced cinematic montage highlighting core features and client benefits with bold typography.",
+            "caption": f"At {brand_name}, we believe in excellence and tangible results. Here is what sets us apart from the rest.\n\nSave this reel for your reference!",
+            "cta": "Drop your thoughts in comments or DM us for details.",
+            "audio": "Trending upbeat electronic rhythm",
+            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#innovation", "#growth", "#industryleader"]
         },
         {
-            "pillar_idx": 1,
-            "hook": f"Pure meat lovers' paradise: Look at this massive feast! 🍗🍖",
-            "visual": "Table-filling spread shot from overhead 4K angle, showcasing overflowing thalis, smoking tandoori starters, and authentic accompaniments.",
-            "caption": f"Generous portions, tender slow-cooked meats, and unmatched authentic taste. At {brand_name}, we don't hold back on flavors.\n\nWhich one are you attacking first? 👇",
-            "cta": "Save this reel for your next weekend family feast!",
-            "audio": "Trending dramatic bass-drop foodie transition audio",
-            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#muttonlovers", "#chickenthali", "#nonvegfeast", "#carnivore"]
+            "hook": f"The biggest mistake people make in {industry or 'our industry'} (and how we solve it) 💡",
+            "visual": "Founder / team member breaking down key solution steps with engaging visual overlays.",
+            "caption": f"Avoid common pitfalls with proven strategies. Here is how we ensure seamless execution at {brand_name}.\n\nFollow for more expert breakdowns!",
+            "cta": "Save this reel and share with someone who needs this!",
+            "audio": "Thought-provoking modern ambient track",
+            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#businesstips", "#problemsolved", "#strategy"]
         },
         {
-            "pillar_idx": 2,
-            "hook": f"Behind The Kitchen: The secret spice blend that makes {brand_name} unique 🌶️✨",
-            "visual": "Fast-paced cinematic montage: Chef hand-crushing whole spices on a stone mortar, tossing aromatic masala in a giant flaming wok.",
-            "caption": f"No shortcuts, no ready-made pastes. Every morning our kitchen starts with fresh regional spices roasted to perfection.\n\nTaste the real tradition at {brand_name}.",
-            "cta": "Drop a ❤️ if you appreciate authentic, slow-cooked food!",
-            "audio": "Acoustic traditional percussion mixed with contemporary rhythm",
-            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#secretrecipe", "#chefskills", "#authenticcooking", "#spicejourney"]
+            "hook": f"Behind The Scenes: How we deliver excellence at {brand_name} ✨",
+            "visual": "Cinematic behind-the-scenes footage tracking the team craft, process precision, and final delivery.",
+            "caption": f"Every single day our team focuses on quality craftsmanship and precision. Real work, real standards.\n\nLearn more via link in bio.",
+            "cta": "Visit our website to discover our full range of solutions!",
+            "audio": "Inspiring build-up melodic soundtrack",
+            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#behindthescenes", "#craftsmanship", "#teamwork"]
         },
         {
-            "pillar_idx": 3,
-            "hook": f"POV: You finally brought your family to {brand_name} on a Sunday afternoon 🏡❤️",
-            "visual": "Warm candid shots of multi-generational family smiling, sharing plates, clinking glasses, children enjoying food in traditional village-style seating.",
-            "caption": f"Good food tastes 10x better when shared with family. Experience the warmth of village-inspired hospitality right in the heart of town.\n\nBook your family table today!",
-            "cta": "Share this with your family WhatsApp group for Sunday lunch!",
-            "audio": "Soulful, heartwarming acoustic melody with flute/sitar highlights",
-            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#familydining", "#villageambience", "#weekendlunch", "#sundayfeast"]
-        },
-        {
-            "pillar_idx": 4,
-            "hook": f"Wait till the end to see the full plate reveal! 🤯✨",
-            "visual": "Tantalizing reveal shot: Waiter carrying massive smoking platter through the rustic dining area, unveiling the signature feast to a stunned customer.",
-            "caption": f"Warning: Do not watch this reel on an empty stomach! 🤤 Here is our most popular special served fresh and sizzling.\n\nTag that one friend who is always hungry!",
-            "cta": "Comment 'HUNGRY' and we will DM you our full menu & location!",
-            "audio": "Viral high-tempo Marathi/Bollywood trending reel audio",
-            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#foodporn", "#platereveal", "#viralreels", "#cravingssatisfied"]
-        },
-        {
-            "pillar_idx": 5,
-            "hook": f"What 100+ happy customers say about our signature feast ⭐⭐⭐⭐⭐",
-            "visual": "Rapid cuts of genuine diners smiling, giving a thumbs up, dipping bhakri into rassa with authentic 'waah' expressions.",
-            "caption": f"Nothing beats genuine customer love! Thank you for making {brand_name} your favorite dining destination week after week.\n\nHave you tried our signature dishes yet?",
-            "cta": "Tell us your favorite dish in the comments below!",
-            "audio": "Upbeat cheerful review audio trend",
-            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#customerlove", "#foodreview", "#5starfood", "#happycustomers"]
+            "hook": f"Real feedback from clients who trusted {brand_name} ⭐⭐⭐⭐⭐",
+            "visual": "Dynamic testimonial transitions pairing client quotes with real-world results and proof metrics.",
+            "caption": f"Nothing matters more than client satisfaction and proven outcomes. Thank you for your continued trust!\n\nReady to get started? We are here to help.",
+            "cta": "Link in bio to schedule your consultation or explore services!",
+            "audio": "Upbeat cheerful review trend audio",
+            "tags": [f"#{brand_name.replace(' ', '').lower()}", "#clientlove", "#socialproof", "#results"]
         }
     ]
 
-    items = []
     for i in range(1, total_days + 1):
-        tmpl = food_templates[(i - 1) % len(food_templates)]
-        pillar_name = pillars[tmpl["pillar_idx"] % len(pillars)] if pillars else "Authentic Dining"
-        # If pillar has description after hyphen/dash, clean it up for title
-        clean_pillar = pillar_name.split("–")[0].split("-")[0].strip()
-
+        tmpl = templates[(i - 1) % len(templates)]
+        pillar = pillars[(i - 1) % len(pillars)] if pillars else "Brand Story"
+        clean_pillar = pillar.split("–")[0].split("-")[0].strip()
         items.append({
             "day_number": i,
-            "title": f"Day {i}: {tmpl['hook'][:42]}...",
+            "title": f"Day {i}: {clean_pillar} Spotlight",
             "deliverable_type": "reel",
             "platform": "instagram",
             "pillar": clean_pillar,
@@ -132,12 +97,7 @@ def _generate_food_hospitality_sprint(
             "audio_vibe": tmpl["audio"],
             "hashtags": tmpl["tags"],
         })
-
     return items
-
-
-def _generate_generic_sprint(
-    brand_name: str,
     industry: str,
     pillars: list[str],
     voice: str,
@@ -178,7 +138,7 @@ def _build_procedural_fallback_plan(
     """
     month_name = MONTH_NAMES[period_month] if 1 <= period_month <= 12 else f"Month {period_month}"
     brand_name = client.business_name
-    industry = client.industry or "Food & Hospitality"
+    industry = client.industry or "General Business"
     voice = (brand_profile.brand_voice if brand_profile and brand_profile.brand_voice else "")
     
     pillars: list[str] = []
@@ -190,30 +150,25 @@ def _build_procedural_fallback_plan(
 
     if not pillars:
         pillars = [
-            "Authentic Signature Specialties",
+            "Core Product & Service Excellence",
             "Behind The Scenes Craftsmanship",
-            "Customer Moments & Social Proof",
-            "Ambience & Culture Experience",
-            "Special Combos & Weekend Highlights"
+            "Customer Stories & Social Proof",
+            "Industry Leadership & Insights",
+            "Community & Client Spotlights"
         ]
 
     total_reels = sum(s.monthly_quantity for s in scopes if "reel" in s.deliverable_type.lower())
     if total_reels == 0:
         total_reels = 30
 
-    category = _detect_industry_category(industry, voice)
-
-    if category == "food_hospitality":
-        calendar_items = _generate_food_hospitality_sprint(brand_name, pillars, voice, total_reels)
-    else:
-        calendar_items = _generate_generic_sprint(brand_name, industry, pillars, voice, total_reels)
+    calendar_items = _generate_generic_sprint(brand_name, industry, pillars, voice, total_reels)
 
     clean_pillars_list = [p.split("–")[0].split("-")[0].strip() for p in pillars]
 
     return {
         "campaign_name": f"{brand_name} - {month_name} {period_year} Content Sprint",
-        "objective": objective or f"Maximize footfall, viral reel reach, and loyal customer engagement for {month_name} {period_year}.",
-        "brand_voice": voice or "Authentic, inviting and customer-centric",
+        "objective": objective or f"Maximize brand awareness, organic engagement, and conversions for {month_name} {period_year}.",
+        "brand_voice": voice or "Authentic, professional and customer-centric",
         "content_pillars": clean_pillars_list,
         "total_deliverables_planned": len(calendar_items),
         "generator": "agencyos-intelligent-sprint-engine",
@@ -261,7 +216,7 @@ async def generate_campaign_plan(
         brand_context += f"""
         Brand Voice & Personality: {brand_profile.brand_voice or 'Authentic, inviting and engaging'}
         Tone & Copy Examples: {brand_profile.tone_examples or 'N/A'}
-        Target Audience: {brand_profile.target_audience or 'Local food lovers and families'}
+        Target Audience: {brand_profile.target_audience or 'Target audience and clients'}
         Content Pillars: {brand_profile.content_pillars or []}
         Approved Phrases: {brand_profile.approved_phrases or []}
         PROHIBITED CLAIMS & FORBIDDEN WORDS: {brand_profile.prohibited_claims or []}
@@ -274,11 +229,11 @@ async def generate_campaign_plan(
     ] or ["30x Reels on Instagram"]
 
     system_prompt = (
-        "You are the Head of Social Media Strategy at a premier Indian creative agency. "
+        "You are the Head of Social Media Strategy at a premier creative agency. "
         "Your task is to create a hyper-specific, high-converting 30-day Instagram Reel content calendar for this specific client. "
         "CRITICAL INSTRUCTIONS: "
         "1. Strictly align every single reel hook, shot list, and caption with the client's actual industry, brand voice, and content pillars. "
-        "2. If the client is a restaurant/hotel, every reel MUST feature their actual food (e.g. signature dishes, thalis, raan, sizzling kitchen preparations, family dining ambiance). DO NOT write generic agency advice. "
+        "2. Ground every deliverable in the client's actual offerings, value propositions, and real-world brand context. DO NOT write vague advice. "
         "3. Strictly avoid all prohibited claims and forbidden words. "
         "4. Output MUST be valid JSON only with NO markdown backticks or extra text outside JSON."
     )
@@ -294,10 +249,10 @@ async def generate_campaign_plan(
     Total deliverables to generate: {total_quantity}
     
     CAMPAIGN OBJECTIVE:
-    {objective or 'Maximize local footfall, viral organic reel reach, and mouth-watering food engagement'}
+    {objective or 'Maximize brand awareness, organic audience engagement, and qualified conversions'}
     
     ADDITIONAL BRIEF:
-    {custom_brief or 'Focus on irresistible 3-second visual hooks, sizzling food transitions, and strong local community CTAs.'}
+    {custom_brief or 'Focus on irresistible 3-second hooks, dynamic visual transitions, and strong community CTAs.'}
     
     Return a JSON object with this exact structure:
     {{
@@ -314,7 +269,7 @@ async def generate_campaign_plan(
           "platform": "instagram",
           "pillar": "Pillar name from brand profile",
           "hook": "The first 3 seconds hook to stop the scroll",
-          "visual_concept": "Visual description, camera movements, food action shots",
+          "visual_concept": "Visual description, camera movements, and key action shots",
           "caption": "Full Instagram caption text in brand voice",
           "cta": "Call to action",
           "audio_vibe": "Music style or viral audio suggestion",

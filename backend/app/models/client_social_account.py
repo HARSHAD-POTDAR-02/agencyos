@@ -23,8 +23,8 @@ class ClientSocialAccount(Base):
         index=True,
     )
     platform: Mapped[str] = mapped_column(String(50), nullable=False)  # "instagram", "facebook"
-    account_name: Mapped[str | None] = mapped_column(String(255), nullable=True)  # e.g. "Hotel Shauryawada Official"
-    account_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g. "@hotelshauryawada"
+    account_name: Mapped[str | None] = mapped_column(String(255), nullable=True)  # e.g. "Acme Corp Official"
+    account_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g. "@acmecorp"
     instagram_business_id: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g. "178414000..."
     facebook_page_id: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g. "10523000..."
     access_token: Mapped[str] = mapped_column(Text, nullable=False)

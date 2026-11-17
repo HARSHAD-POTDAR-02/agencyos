@@ -14,6 +14,7 @@ class ReelScene(BaseModel):
     on_screen_text: str = Field(default="", description="Text overlay on frame")
     spoken_audio_or_voiceover: str = Field(default="", description="Spoken dialogue or voiceover script")
     b_roll_notes: str | None = Field(default=None, description="Supporting footage notes")
+    hero_focus: list[str] = Field(default_factory=list, description="Hero entities featured in this scene")
 
     @model_validator(mode="before")
     @classmethod
@@ -91,6 +92,8 @@ class DeliverablePlan(BaseModel):
     caption: str = Field(default="", description="Complete, copywritten social caption")
     hashtags: list[str] = Field(default_factory=list)
     call_to_action: str = Field(default="Follow for more")
+    hero_entity: str | None = Field(default=None, description="Featured hero offering, product, or core brand entity")
+    hero_focus: list[str] = Field(default_factory=list, description="All matching hero entities for this deliverable")
     scope_item_id: uuid.UUID | None = None
 
     # Format-specific polymorphic fields

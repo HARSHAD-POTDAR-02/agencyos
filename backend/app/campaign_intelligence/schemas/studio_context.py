@@ -39,7 +39,7 @@ class CampaignStudioContext(BaseModel):
     active_artifact_version: int | None = None
     active_artifact_payload: dict[str, Any] | None = None
 
-    # Discovered & Pinned Brand Entities (Dishes, Products, USPs)
+    # Discovered & Pinned Brand Entities (Offerings, Products, USPs)
     discovered_entities: list[str] = Field(default_factory=list)
     pinned_entities: list[str] = Field(default_factory=list)
 

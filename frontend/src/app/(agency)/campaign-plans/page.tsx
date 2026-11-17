@@ -708,8 +708,23 @@ function CampaignPlansContent() {
                         </div>
                       </div>
 
-                      {/* Hook & Pillar */}
-                      <div className="mt-2.5 space-y-1.5">
+                      {/* Hero Entity Badge */}
+                      {item.hero_entity && (
+                        <div className="mt-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 truncate max-w-full">
+                            <span>⭐</span>
+                            <span className="truncate">{item.hero_entity}</span>
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Title, Hook & Pillar */}
+                      <div className="mt-2 space-y-1">
+                        {item.title && (
+                          <p className="font-bold text-[#F2F0F7] text-xs leading-snug line-clamp-1">
+                            {item.title}
+                          </p>
+                        )}
                         <span className="text-[10px] font-mono font-medium text-[#A3A0B0] block truncate">
                           🎯 {item.pillar}
                         </span>
@@ -749,32 +764,67 @@ function CampaignPlansContent() {
 
                           {/* Reel Beats Director Button */}
                           {isReel && item.reel_scenes && item.reel_scenes.length > 0 && (
-                            <button
-                              onClick={() =>
-                                setExpandedReelDay(
-                                  expandedReelDay === item.day_number ? null : item.day_number
-                                )
-                              }
-                              className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded-lg bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] text-[10px] font-semibold cursor-pointer border border-[#A78BFA]/20"
-                            >
-                              <Video className="w-3 h-3" />
-                              <span>{expandedReelDay === item.day_number ? "Hide Scene Script" : `View ${item.reel_scenes.length} Scene Beats`}</span>
-                            </button>
+                            <>
+                              <button
+                                onClick={() =>
+                                  setExpandedReelDay(
+                                    expandedReelDay === item.day_number ? null : item.day_number
+                                  )
+                                }
+                                className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded-lg bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] text-[10px] font-semibold cursor-pointer border border-[#A78BFA]/20"
+                              >
+                                <Video className="w-3 h-3" />
+                                <span>{expandedReelDay === item.day_number ? "Hide Scene Script" : `View ${item.reel_scenes.length} Scene Beats`}</span>
+                              </button>
+                              {expandedReelDay === item.day_number && (
+                                <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                  {item.reel_scenes.map((s) => (
+                                    <div key={s.scene_number} className="p-2 rounded-lg bg-[#101014] border border-white/[0.06] text-[10px]">
+                                      <div className="flex items-center justify-between font-mono text-[#A78BFA] font-bold">
+                                        <span>S{s.scene_number}</span>
+                                        <span className="text-[#A3A0B0]">{s.timestamp_range}</span>
+                                      </div>
+                                      <p className="text-[#F2F0F7] line-clamp-2 mt-0.5">{s.visual_action}</p>
+                                      {s.hero_focus && s.hero_focus.length > 0 && (
+                                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                          ⭐ {s.hero_focus.join(", ")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )}
 
                           {/* Carousel Slides Button */}
                           {isCarousel && item.carousel_slides && item.carousel_slides.length > 0 && (
-                            <button
-                              onClick={() =>
-                                setExpandedCarouselDay(
-                                  expandedCarouselDay === item.day_number ? null : item.day_number
-                                )
-                              }
-                              className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded-lg bg-[#69A9D8]/10 hover:bg-[#69A9D8]/20 text-[#69A9D8] text-[10px] font-semibold cursor-pointer border border-[#69A9D8]/20"
-                            >
-                              <Layers2 className="w-3 h-3" />
-                              <span>{expandedCarouselDay === item.day_number ? "Hide Slides" : `View ${item.carousel_slides.length} Slide Deck`}</span>
-                            </button>
+                            <>
+                              <button
+                                onClick={() =>
+                                  setExpandedCarouselDay(
+                                    expandedCarouselDay === item.day_number ? null : item.day_number
+                                  )
+                                }
+                                className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded-lg bg-[#69A9D8]/10 hover:bg-[#69A9D8]/20 text-[#69A9D8] text-[10px] font-semibold cursor-pointer border border-[#69A9D8]/20"
+                              >
+                                <Layers2 className="w-3 h-3" />
+                                <span>{expandedCarouselDay === item.day_number ? "Hide Slides" : `View ${item.carousel_slides.length} Slide Deck`}</span>
+                              </button>
+                              {expandedCarouselDay === item.day_number && (
+                                <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                  {item.carousel_slides.map((cs) => (
+                                    <div key={cs.slide_number} className="p-2 rounded-lg bg-[#101014] border border-white/[0.06] text-[10px]">
+                                      <div className="flex items-center justify-between font-mono text-[#69A9D8] font-bold">
+                                        <span>Slide {cs.slide_number} ({cs.slide_type})</span>
+                                      </div>
+                                      <p className="text-[#F2F0F7] font-semibold mt-0.5">{cs.headline}</p>
+                                      <p className="text-[#A3A0B0] line-clamp-2 mt-0.5">{cs.body_copy}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
@@ -824,13 +874,19 @@ function CampaignPlansContent() {
                           D{item.day_number}
                         </span>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-heading font-bold text-sm text-[#F2F0F7]">
                               {item.title || (item.hook ? `Day ${item.day_number}: ${item.hook.slice(0, 45)}...` : `Day ${item.day_number}`)}
                             </span>
                             <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-[#101014] text-[#A3A0B0] border border-white/[0.08]">
                               {item.platform} • {item.deliverable_type}
                             </span>
+                            {item.hero_entity && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                                <span>⭐ Hero:</span>
+                                <span>{item.hero_entity}</span>
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-[#A3A0B0] mt-0.5 font-mono">
                             {item.date_label && (
@@ -930,6 +986,15 @@ function CampaignPlansContent() {
                               <p className="text-[#A3A0B0] italic">
                                 <strong>Voiceover:</strong> &ldquo;{scene.spoken_audio_or_voiceover}&rdquo;
                               </p>
+                              {scene.hero_focus && scene.hero_focus.length > 0 && (
+                                <div className="flex flex-wrap gap-1 pt-1 border-t border-white/[0.04]">
+                                  {scene.hero_focus.map((hf, hfIdx) => (
+                                    <span key={hfIdx} className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                      ⭐ {hf}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

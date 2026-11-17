@@ -92,7 +92,7 @@ class CompetitorFindingItem(BaseModel):
     citation_quote: str = Field(default="", description="Verbatim excerpt from source")
     competitor_type: CompetitorType = Field(
         default=CompetitorType.DIRECT,
-        description="Classification: 'direct' (same food/product & area), 'indirect' (substitute dining/needs), 'product_level' (specific dish/item), or 'channel' (aggregators like Zomato/Swiggy)."
+        description="Classification: 'direct' (same core product/service & market), 'indirect' (substitute solutions/needs), 'product_level' (specific feature/offering), or 'channel' (aggregators and distribution platforms)."
     )
     relevance: CompetitorRelevance | None = Field(
         default=None,
@@ -963,7 +963,7 @@ STRICT RULES:
             "our competitors", "who are our competitors", "what are our competitors",
             "what are our direct and indirect competitors", "our direct competitors",
             "who is our competition", "my client", "our client", "the client",
-            "our brand", "our restaurant", "our cafe", "our company", "our business",
+            "our brand", "our company", "our business", "our enterprise", "our agency",
             "our product", "our pricing", "our location", "around us", "for us",
             "we offer", "we are", "we're", "our service", "our shop", "our agency client",
         }
@@ -988,8 +988,8 @@ STRICT RULES:
             r"\bcompare\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
             r"\b(?:between|across)\s+[a-z0-9\s,&-]+(?:\sand\s|\svs\s)",
             r"\bcompeting with\b",
-            r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym)\b",
-            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:dining|restaurant|coffee|cafe|bakery|clinic|salon|fitness|meal-prep|gym|service|brand|roaster|roasters)\b",
+            r"\bfor\s+(?:an?\s+)?[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|store|brand)\b",
+            r"\b(?:analysis|research)\s+on\s+[a-z0-9\s,&-]+(?:platform|saas|agency|retail|healthcare|clinic|salon|fitness|firm|service|brand)\b",
         ]
         if any(re.search(pat, q) for pat in named_patterns):
             return "INDEPENDENT_RESEARCH"

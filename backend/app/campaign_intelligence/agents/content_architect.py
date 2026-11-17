@@ -148,6 +148,18 @@ class ContentArchitectAgent:
         prohibited = ", ".join([pt.term for pt in brand_context.prohibited_terms]) if brand_context and brand_context.prohibited_terms else "None"
         offers_text = ", ".join([o.name for o in brand_context.verified_offers]) if brand_context and brand_context.verified_offers else "Standard Services"
 
+        pinned_text = ", ".join(brief.pinned_entities) if brief.pinned_entities else ""
+        hero_entities_section = ""
+        if pinned_text:
+            hero_entities_section = (
+                f"\n### MANDATORY HERO OFFERINGS / PINNED CORE ENTITIES:\n"
+                f"The client has pinned the following signature offerings: {pinned_text}.\n"
+                f"You MUST explicitly feature these hero offerings across the deliverables.\n"
+                f"For each deliverable, designate which hero offering is featured in `hero_entity` (e.g. '{brief.pinned_entities[0]}'), "
+                f"and include specific hero items in `hero_focus` on scenes/slides where they appear. "
+                f"Incorporate the signature item name directly into the deliverable title, primary hook, and script details!\n"
+            )
+
         revision_section = ""
         if revision_instructions:
             rev_items = "\n".join([f"  ! {item}" for item in revision_instructions])
@@ -191,7 +203,7 @@ Messaging Pillars:
 - Prescribed Tone (DO): {tone_do}
 - Proscribed Tone (DONT): {tone_dont}
 - FORBIDDEN TERMS (NEVER USE): {prohibited}
-
+{hero_entities_section}
 ### REQUIRED DELIVERABLE TARGETS (Strict Quotas)
 {chr(10).join(target_specs)}
 Total Deliverables to generate: EXACTLY {total_quota_count}
@@ -223,6 +235,7 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
 
         # 6. Assign stable UUIDs, day distribution, scheduled dates, and link scope_item_ids
         deliverables = list(output.deliverables)
+        pinned = brief.pinned_entities or []
         for idx, d in enumerate(deliverables):
             if not d.deliverable_id:
                 d.deliverable_id = uuid.uuid4()
@@ -246,80 +259,151 @@ Total Deliverables to generate: EXACTLY {total_quota_count}
                         d.scope_item_id = q.scope_item_id
                         break
 
-        # 7. Deterministic Sprint Completeness Guarantee:
-        # If the LLM returned fewer deliverables than sprint_days (e.g. LLM generated 1 item for a 3-day sprint),
-        # automatically synthesize high-fidelity deliverable plans for all missing days so every day has its own card!
-        if (is_date_bounded or sprint_days > 1 or active_formats) and len(deliverables) < sprint_days:
+            # Hero entity assignment if pinned_entities exist
+            if pinned:
+                # If LLM didn't set hero_entity or it's not in pinned, map round-robin or detect in text
+                if not d.hero_entity:
+                    combined_text = f"{d.title} {d.caption} {d.primary_hook}".lower()
+                    matched = [p for p in pinned if p.lower() in combined_text]
+                    if matched:
+                        d.hero_entity = matched[0]
+                        d.hero_focus = matched
+                    else:
+                        assigned_hero = pinned[idx % len(pinned)]
+                        d.hero_entity = assigned_hero
+                        d.hero_focus = [assigned_hero]
+                else:
+                    if not d.hero_focus:
+                        d.hero_focus = [d.hero_entity]
+
+                # Ensure deliverable title prominently displays the hero entity if not already present
+                if d.hero_entity and d.hero_entity.lower() not in d.title.lower():
+                    d.title = f"{d.hero_entity}: {d.title}"
+
+                # Propagate hero_focus to reel scenes if scenes exist and lack hero_focus
+                if d.reel_scenes and d.hero_entity:
+                    for s in d.reel_scenes:
+                        scene_txt = f"{s.visual_action} {s.on_screen_text} {s.spoken_audio_or_voiceover}".lower()
+                        s_matched = [p for p in pinned if p.lower() in scene_txt]
+                        if s_matched:
+                            s.hero_focus = s_matched
+                        elif not s.hero_focus:
+                            s.hero_focus = [d.hero_entity]
+
+        # 7. Deterministic Sprint & Quota Completeness Guarantee:
+        # If the LLM returned fewer deliverables than required by contract quota or sprint length,
+        # automatically synthesize high-fidelity deliverable plans for all missing items so targets are met!
+        target_count = sprint_days if (is_date_bounded or explicit_count_requested) else total_quota_count
+        if target_count > 1 and len(deliverables) < target_count:
+            missing_count = target_count - len(deliverables)
             covered_days = {d.planned_day for d in deliverables if d.planned_day}
             curr_date = datetime.now(timezone.utc).date()
             start_base = brief.start_date or curr_date
-            for day_idx in range(1, sprint_days + 1):
-                if day_idx not in covered_days:
-                    calc_dt = start_base + timedelta(days=day_idx - 1)
-                    angle_idx = (day_idx - 1) % len(strategy.strategic_angles) if strategy.strategic_angles else 0
-                    pillar_idx = (day_idx - 1) % len(strategy.messaging_pillars) if strategy.messaging_pillars else 0
-                    angle = strategy.strategic_angles[angle_idx] if strategy.strategic_angles else None
-                    pillar = strategy.messaging_pillars[pillar_idx] if strategy.messaging_pillars else None
 
-                    d_type = formats_cycle[(day_idx - 1) % len(formats_cycle)]
-                    p_name = platforms_cycle[(day_idx - 1) % len(platforms_cycle)]
-                    angle_name = angle.angle_name if angle else f"Day {day_idx} Showcase"
-                    pillar_name = pillar.pillar_name if pillar else (angle.aligned_content_pillar if angle else "Brand Experience")
-                    core_msg = pillar.core_message if pillar else strategy.campaign_theme
-                    cta = pillar.primary_call_to_action if pillar else "Visit us today to experience the difference!"
+            if is_date_bounded:
+                needed_days = [d for d in range(1, target_count + 1) if d not in covered_days]
+            else:
+                needed_days = []
+                next_day = 1
+                while len(needed_days) < missing_count:
+                    if next_day not in covered_days:
+                        needed_days.append(next_day)
+                        covered_days.add(next_day)
+                    next_day += 1
 
-                    synth_deliv = DeliverablePlan(
-                        deliverable_id=uuid.uuid4(),
-                        title=f"Day {day_idx}: {angle_name}",
-                        deliverable_type=d_type,
-                        platform=p_name,
-                        planned_day=day_idx,
-                        scheduled_date=calc_dt.isoformat(),
-                        date_label=calc_dt.strftime("%a, %b %d, %Y"),
-                        strategic_angle=angle_name,
-                        hook_options=[
-                            f"Day {day_idx}: Experience {strategy.campaign_theme}",
-                            f"Why our {angle_name} is turning heads this week",
-                        ],
-                        primary_hook=f"Day {day_idx}: {core_msg}",
+            for day_num in needed_days:
+                calc_dt = start_base + timedelta(days=day_num - 1)
+                angle_idx = (day_num - 1) % len(strategy.strategic_angles) if strategy.strategic_angles else 0
+                pillar_idx = (day_num - 1) % len(strategy.messaging_pillars) if strategy.messaging_pillars else 0
+                angle = strategy.strategic_angles[angle_idx] if strategy.strategic_angles else None
+                pillar = strategy.messaging_pillars[pillar_idx] if strategy.messaging_pillars else None
+
+                # If quotas are defined, find missing quota formats first
+                d_type = None
+                p_name = None
+                matched_scope_id = None
+                if quotas:
+                    existing_counts: dict[tuple[str, str], int] = {}
+                    for ed in deliverables:
+                        k = (ed.deliverable_type.lower(), ed.platform.lower())
+                        existing_counts[k] = existing_counts.get(k, 0) + 1
+                    for q in quotas:
+                        k = (q.deliverable_type.lower(), q.platform.lower())
+                        if existing_counts.get(k, 0) < q.monthly_quantity:
+                            d_type = q.deliverable_type.lower()
+                            p_name = q.platform.lower()
+                            matched_scope_id = q.scope_item_id
+                            existing_counts[k] = existing_counts.get(k, 0) + 1
+                            break
+
+                if not d_type:
+                    d_type = formats_cycle[(day_num - 1) % len(formats_cycle)]
+                if not p_name:
+                    p_name = platforms_cycle[(day_num - 1) % len(platforms_cycle)]
+
+                angle_name = angle.angle_name if angle else f"Day {day_num} Showcase"
+                pillar_name = pillar.pillar_name if pillar else (angle.aligned_content_pillar if angle else "Brand Experience")
+                core_msg = pillar.core_message if pillar else strategy.campaign_theme
+                cta = pillar.primary_call_to_action if pillar else "Visit us today to experience the difference!"
+
+                assigned_hero = pinned[(day_num - 1) % len(pinned)] if pinned else None
+                hero_prefix = f"{assigned_hero}: " if assigned_hero else ""
+
+                synth_deliv = DeliverablePlan(
+                    deliverable_id=uuid.uuid4(),
+                    title=f"{hero_prefix}Day {day_num}: {angle_name}",
+                    deliverable_type=d_type,
+                    platform=p_name,
+                    planned_day=day_num,
+                    scheduled_date=calc_dt.isoformat() if is_date_bounded else None,
+                    date_label=calc_dt.strftime("%a, %b %d, %Y") if is_date_bounded else None,
+                    strategic_angle=angle_name,
+                    hero_entity=assigned_hero,
+                    hero_focus=[assigned_hero] if assigned_hero else [],
+                    scope_item_id=matched_scope_id,
+                    hook_options=[
+                        f"Day {day_num}: Experience {assigned_hero or strategy.campaign_theme}",
+                        f"Why our {assigned_hero or angle_name} is turning heads this week",
+                    ],
+                    primary_hook=f"Day {day_num}: {core_msg}",
                         caption=(
-                            f"Day {day_idx} of our {strategy.campaign_theme}! ✨\n\n"
+                            f"Day {day_num} of our {strategy.campaign_theme}! ✨\n\n"
                             f"{core_msg}\n\n"
-                            f"Authentic flavours and memorable moments with zero hassle.\n\n"
+                            f"{('Featuring our signature ' + assigned_hero + '. ') if assigned_hero else ''}Premium quality and measurable results designed for our clients.\n\n"
                             f"👉 {cta}"
                         ),
                         hashtags=["#campaign", "#trending", "#viral", "#growth"],
                         call_to_action=cta,
                         carousel_slides=[
-                            CarouselSlide(slide_number=1, headline=f"Day {day_idx}: {angle_name}", body_copy=core_msg, visual_layout="High-impact hero visual", slide_type="cover"),
-                            CarouselSlide(slide_number=2, headline="The Experience", body_copy="Authentic preparation and unforgettable taste.", visual_layout="Split highlight diagram", slide_type="content"),
-                            CarouselSlide(slide_number=3, headline="Join Us Today", body_copy=cta, visual_layout="Bold CTA banner", slide_type="cta"),
+                            CarouselSlide(slide_number=1, headline=f"{assigned_hero or angle_name}", body_copy=core_msg, visual_layout="High-impact hero visual", slide_type="cover"),
+                            CarouselSlide(slide_number=2, headline="The Value Proposition", body_copy=f"Uncompromising quality and proven value delivered by {assigned_hero or 'our core offering'}.", visual_layout="Split highlight diagram", slide_type="content"),
+                            CarouselSlide(slide_number=3, headline="Get Started", body_copy=cta, visual_layout="Bold CTA banner", slide_type="cta"),
                         ] if d_type == "carousel" else [],
                         reel_scenes=(
                             [
-                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm dramatic lighting"),
-                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:12", visual_action="Behind-the-scenes authentic cooking and clay oven craft", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how our master chefs prepare {strategy.campaign_theme}.", b_roll_notes="Macro sizzle shots"),
-                                ReelScene(scene_number=3, timestamp_range="0:12 - 0:25", visual_action="Plating signature family feast and aromatic garnishing", on_screen_text="Signature Heritage Recipe", spoken_audio_or_voiceover="Fresh local spices ground daily for an unmatched flavour profile.", b_roll_notes="Slow motion steam rise"),
-                                ReelScene(scene_number=4, timestamp_range="0:25 - 0:38", visual_action="Dining experience and genuine reaction shot", on_screen_text="Unforgettable Dining Experience", spoken_audio_or_voiceover="Hearty portions designed to bring people together.", b_roll_notes="Warm ambient lighting"),
-                                ReelScene(scene_number=5, timestamp_range=f"0:38 - 0:{reel_dur[1]:02d}" if reel_dur[1] < 60 else "0:38 - 1:00", visual_action="Final table spread, location card, and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen with reservation handle"),
+                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action=f"High-impact hook shot showcasing {assigned_hero or 'core offering'}", on_screen_text=f"Day {day_num}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Dynamic professional lighting", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:12", visual_action=f"Behind-the-scenes showcase and feature breakdown for {assigned_hero or strategy.campaign_theme}", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how {assigned_hero or strategy.campaign_theme} delivers unmatched results.", b_roll_notes="Macro feature highlights", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=3, timestamp_range="0:12 - 0:25", visual_action=f"Product / service demonstration of signature {assigned_hero or 'solution'}", on_screen_text="Signature Quality & Standards", spoken_audio_or_voiceover="Engineered with precision for an unparalleled customer experience.", b_roll_notes="Smooth cinematic tracking", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=4, timestamp_range="0:25 - 0:38", visual_action="Customer outcome and authentic success story", on_screen_text="Proven Results & Impact", spoken_audio_or_voiceover="Reliable quality designed to exceed expectations every single time.", b_roll_notes="Engaging contextual setting", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=5, timestamp_range=f"0:38 - 0:{reel_dur[1]:02d}" if reel_dur[1] < 60 else "0:38 - 1:00", visual_action="Final brand hero card, key takeaway, and call to action", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen with contact handle", hero_focus=[assigned_hero] if assigned_hero else []),
                             ] if (reel_dur and reel_dur[1] >= 40) else
                             [
-                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm lighting"),
-                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:14", visual_action="Dynamic kitchen action montage and sizzling dish reveal", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how we bring {strategy.campaign_theme} to life with authentic spices.", b_roll_notes="Action montage"),
-                                ReelScene(scene_number=3, timestamp_range="0:14 - 0:26", visual_action="Tasting shot with steam rising and table spread details", on_screen_text="Authentic Taste & Heritage", spoken_audio_or_voiceover="Slow-cooked perfection that turns every meal into a celebration.", b_roll_notes="Close-up bite"),
-                                ReelScene(scene_number=4, timestamp_range=f"0:26 - 0:{reel_dur[1]:02d}" if reel_dur else "0:26 - 0:30", visual_action="Final table spread and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen"),
+                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action=f"High-impact hook shot showcasing {assigned_hero or 'core offering'}", on_screen_text=f"Day {day_num}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Dynamic lighting", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:14", visual_action=f"Dynamic demonstration montage and {assigned_hero or 'offering'} reveal", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how {assigned_hero or strategy.campaign_theme} solves the core challenge.", b_roll_notes="Action montage", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=3, timestamp_range="0:14 - 0:26", visual_action=f"Customer spotlight on {assigned_hero or 'solution'} and key benefits", on_screen_text="Industry-Leading Standards", spoken_audio_or_voiceover="Tested performance that elevates your brand and sets the benchmark.", b_roll_notes="Close-up focus", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=4, timestamp_range=f"0:26 - 0:{reel_dur[1]:02d}" if reel_dur else "0:26 - 0:30", visual_action="Final brand hero card and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen", hero_focus=[assigned_hero] if assigned_hero else []),
                             ] if (reel_dur and reel_dur[1] >= 25) else
                             [
-                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action="Quick cut hero hook shot", on_screen_text=f"Day {day_idx}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Warm lighting"),
-                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:10", visual_action="Fast-paced kitchen / product showcase", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how we bring {strategy.campaign_theme} to life.", b_roll_notes="Action montage"),
-                                ReelScene(scene_number=3, timestamp_range=f"0:10 - 0:{reel_dur[1]:02d}" if reel_dur else "0:10 - 0:20", visual_action="Final table spread and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen"),
+                                ReelScene(scene_number=1, timestamp_range="0:00 - 0:03", visual_action=f"High-impact hook shot showcasing {assigned_hero or 'core offering'}", on_screen_text=f"Day {day_num}: {core_msg}", spoken_audio_or_voiceover=core_msg, b_roll_notes="Dynamic lighting", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=2, timestamp_range="0:03 - 0:10", visual_action=f"Fast-paced feature and product showcase for {assigned_hero or strategy.campaign_theme}", on_screen_text=angle_name, spoken_audio_or_voiceover=f"Here is how {assigned_hero or strategy.campaign_theme} delivers value.", b_roll_notes="Action montage", hero_focus=[assigned_hero] if assigned_hero else []),
+                                ReelScene(scene_number=3, timestamp_range=f"0:10 - 0:{reel_dur[1]:02d}" if reel_dur else "0:10 - 0:20", visual_action="Final brand hero card and logo outro", on_screen_text=cta, spoken_audio_or_voiceover=cta, b_roll_notes="Outro CTA screen", hero_focus=[assigned_hero] if assigned_hero else []),
                             ]
                         ) if d_type == "reel" else [],
-                    )
-                    deliverables.append(synth_deliv)
+                )
+                deliverables.append(synth_deliv)
 
-            # Sort deliverables sequentially by planned_day
-            deliverables.sort(key=lambda d: d.planned_day or 0)
+        # Sort deliverables sequentially by planned_day
+        deliverables.sort(key=lambda d: d.planned_day or 0)
 
         return deliverables
 

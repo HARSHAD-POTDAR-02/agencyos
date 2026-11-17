@@ -30,6 +30,7 @@ export interface ReelSceneItem {
   b_roll_notes?: string;
   shot_type?: string;
   audio_sfx_cue?: string;
+  hero_focus?: string[];
 }
 
 export interface CarouselSlideItem {
@@ -58,6 +59,8 @@ export interface DeliverableItem {
   hashtags?: string[];
   hook_options?: string[];
   production_notes?: string;
+  hero_entity?: string;
+  hero_focus?: string[];
   reel_scenes?: ReelSceneItem[];
   carousel_slides?: CarouselSlideItem[];
 }
@@ -291,10 +294,10 @@ export function DeliverableEditorModal({
 
   const samplePrompts = isReel
     ? [
-        "Rewrite scene 2 to focus on traditional clay oven craft",
-        "Make the hook more aggressive and punchy for local foodies",
+        "Rewrite scene 2 to focus on core product demonstration",
+        "Make the opening hook bolder and more engaging",
         "Adjust timing so the total reel is 30 to 45 seconds",
-        "Add a behind-the-scenes chef prep scene before the reveal",
+        "Add a behind-the-scenes feature prep scene before the reveal",
       ]
     : [
         "Make slide 2 focus on customer testimonials",
@@ -322,6 +325,11 @@ export function DeliverableEditorModal({
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#20202A] text-[#A3A0B0] uppercase border border-[#30303D]">
                   {current.deliverable_type}
                 </span>
+                {current.hero_entity && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    ⭐ {current.hero_entity}
+                  </span>
+                )}
               </div>
               <input
                 type="text"
@@ -665,7 +673,7 @@ export function DeliverableEditorModal({
                 rows={3}
                 disabled={isRevisingAI}
                 className="w-full text-xs p-3 rounded-xl bg-[#17171E] border border-[#30303D] text-[#F2F0F7] placeholder:text-[#A3A0B0]/60 focus:outline-hidden focus:ring-1 focus:ring-[#A78BFA] leading-relaxed resize-none disabled:opacity-50"
-                placeholder='e.g., "I don&apos;t like scene 2. Make it focus on slow cooking in the clay oven, extend scene 3 to 15 seconds, and make the hook bolder."'
+                placeholder='e.g., "Make scene 2 focus on core product features, extend scene 3 to 15 seconds, and make the hook bolder."'
               />
 
               <button
