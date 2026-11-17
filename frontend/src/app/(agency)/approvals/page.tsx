@@ -245,7 +245,7 @@ function ApprovalsContent() {
     load();
   }, [load]);
 
-  // Keyboard navigation: 'R' to refresh, numbers '1'..'6' for tabs
+  // Keyboard navigation: 'R' to refresh
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || "").toLowerCase();
@@ -254,18 +254,6 @@ function ApprovalsContent() {
       if (e.key === "r" || e.key === "R") {
         e.preventDefault();
         load(true);
-      } else if (e.key === "1") {
-        handleTabChange("all");
-      } else if (e.key === "2") {
-        handleTabChange("client_review");
-      } else if (e.key === "3") {
-        handleTabChange("changes_requested");
-      } else if (e.key === "4") {
-        handleTabChange("approved");
-      } else if (e.key === "5") {
-        handleTabChange("scheduled");
-      } else if (e.key === "6") {
-        handleTabChange("published");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -418,7 +406,6 @@ function ApprovalsContent() {
           }`}
         >
           <span>All ({counts.all})</span>
-          <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">1</kbd>
         </button>
         <button
           onClick={() => handleTabChange("client_review")}
@@ -430,7 +417,6 @@ function ApprovalsContent() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#E5AA58]" />
           <span>In Review ({counts.client_review})</span>
-          <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">2</kbd>
         </button>
         <button
           onClick={() => handleTabChange("changes_requested")}
@@ -442,7 +428,6 @@ function ApprovalsContent() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#E16F7B]" />
           <span>Changes ({counts.changes_requested})</span>
-          <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">3</kbd>
         </button>
         <button
           onClick={() => handleTabChange("approved")}
@@ -454,7 +439,6 @@ function ApprovalsContent() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A]" />
           <span>Ready to Publish ({counts.approved})</span>
-          <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">4</kbd>
         </button>
         <button
           onClick={() => handleTabChange("scheduled")}
@@ -466,7 +450,6 @@ function ApprovalsContent() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA]" />
           <span>Scheduled ({counts.scheduled})</span>
-          <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">5</kbd>
         </button>
         <button
           onClick={() => handleTabChange("published")}
@@ -478,7 +461,6 @@ function ApprovalsContent() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A]" />
           <span>Published Live ({counts.published})</span>
-          <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">6</kbd>
         </button>
       </div>
 

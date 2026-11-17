@@ -210,13 +210,7 @@ export default function TeamManagementPage() {
       }
 
       if (!isInput) {
-        if (e.key === "1") setRoleFilter("all");
-        else if (e.key === "2") setRoleFilter("specialists");
-        else if (e.key === "3") setRoleFilter("management");
-        else if (e.key === "4") setRoleFilter("writer");
-        else if (e.key === "5") setRoleFilter("editor");
-        else if (e.key === "6") setRoleFilter("designer");
-        else if ((e.key === "c" || e.key === "C" || e.key === "a" || e.key === "A") && isManagerOrOwner) {
+        if ((e.key === "c" || e.key === "C" || e.key === "a" || e.key === "A") && isManagerOrOwner) {
           setModalError(null);
           setCreatedCredentials(null);
           setShowAddModal(true);

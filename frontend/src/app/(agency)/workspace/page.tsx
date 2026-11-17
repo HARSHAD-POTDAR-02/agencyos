@@ -137,22 +137,7 @@ export default function EmployeeWorkspacePage() {
         return;
       }
 
-      if (e.key === "1") {
-        e.preventDefault();
-        setActiveTab("action_required");
-      } else if (e.key === "2") {
-        e.preventDefault();
-        setActiveTab("revisions");
-      } else if (e.key === "3") {
-        e.preventDefault();
-        setActiveTab("in_review");
-      } else if (e.key === "4") {
-        e.preventDefault();
-        setActiveTab("completed");
-      } else if (e.key === "5") {
-        e.preventDefault();
-        setActiveTab("all");
-      } else if (e.key === "l" || e.key === "L") {
+      if (e.key === "l" || e.key === "L") {
         e.preventDefault();
         setViewMode("list");
       } else if (e.key === "c" || e.key === "C" || e.key === "v" || e.key === "V") {
@@ -546,7 +531,7 @@ export default function EmployeeWorkspacePage() {
 
       {/* ── Filter and Tab Navigation Bar (Linear Toolstrip) ── */}
       <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
-        {/* Tab Controls with 1..5 numbers */}
+        {/* Tab Controls */}
         <div className="flex items-center gap-1 p-0.5 bg-[#101014] rounded-lg border border-white/[0.08] text-xs font-medium overflow-x-auto">
           <button
             onClick={() => setActiveTab("action_required")}
@@ -560,7 +545,6 @@ export default function EmployeeWorkspacePage() {
             <span className="px-1.5 py-0.2 rounded bg-white/[0.06] text-[10px] font-mono font-bold text-[#A78BFA]">
               {activeTasks.length + pendingRevisions.length}
             </span>
-            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-white/[0.04] text-[9px] text-[#A3A0B0]">1</kbd>
           </button>
 
           <button
@@ -575,7 +559,6 @@ export default function EmployeeWorkspacePage() {
             <span className="px-1.5 py-0.2 rounded bg-[#E5AA58]/10 text-[10px] font-mono font-bold text-[#E5AA58]">
               {pendingRevisions.length}
             </span>
-            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-white/[0.04] text-[9px] text-[#A3A0B0]">2</kbd>
           </button>
 
           <button
@@ -590,7 +573,6 @@ export default function EmployeeWorkspacePage() {
             <span className="px-1.5 py-0.2 rounded bg-[#69A9D8]/10 text-[10px] font-mono font-bold text-[#69A9D8]">
               {awaitingReview.length}
             </span>
-            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-white/[0.04] text-[9px] text-[#A3A0B0]">3</kbd>
           </button>
 
           <button
@@ -605,7 +587,6 @@ export default function EmployeeWorkspacePage() {
             <span className="px-1.5 py-0.2 rounded bg-[#45B88A]/10 text-[10px] font-mono font-bold text-[#45B88A]">
               {completed.length}
             </span>
-            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-white/[0.04] text-[9px] text-[#A3A0B0]">4</kbd>
           </button>
 
           <button
@@ -620,7 +601,6 @@ export default function EmployeeWorkspacePage() {
             <span className="px-1.5 py-0.2 rounded bg-white/[0.06] text-[10px] font-mono font-bold text-[#F2F0F7]">
               {tasks.length}
             </span>
-            <kbd className="hidden sm:inline-block px-1 py-0.2 rounded bg-white/[0.04] text-[9px] text-[#A3A0B0]">5</kbd>
           </button>
         </div>
 
