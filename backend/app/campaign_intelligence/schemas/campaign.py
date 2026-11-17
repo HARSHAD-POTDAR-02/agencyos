@@ -23,6 +23,7 @@ class CampaignBrief(BaseModel):
     target_audience: list[str] = Field(default_factory=list, description="Target demographics/personas")
     platforms: list[str] = Field(default_factory=list, description="Target social platforms (e.g. instagram, linkedin)")
     deliverable_preferences: list[str] = Field(default_factory=list, description="Format preferences (e.g. reel, carousel)")
+    pinned_entities: list[str] = Field(default_factory=list, description="Verified hero dishes, products, or core brand features to emphasize")
     budget: float | None = Field(default=None, ge=0.0, description="Campaign budget if applicable")
     additional_constraints: list[str] = Field(default_factory=list, description="Explicit restrictions or rules")
     success_criteria: list[str] = Field(default_factory=list, description="Metrics or goals defining campaign success")

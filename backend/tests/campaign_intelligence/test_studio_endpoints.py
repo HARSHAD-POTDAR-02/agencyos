@@ -1,5 +1,5 @@
 import uuid
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, patch
 import pytest
 import pytest_asyncio
@@ -347,4 +347,39 @@ async def test_manual_user_revision_endpoint(db_session: AsyncSession):
     # Verify deliverables table has remained 100% untouched
     delivs = (await db_session.execute(select(Deliverable))).scalars().all()
     assert len(delivs) == 0
+
+
+@pytest.mark.asyncio
+async def test_pinned_and_discovered_entities_in_chat_brief(
+    db_session: AsyncSession,
+):
+    """
+    Verify that passing pinned_entities and discovered_entities in chat_brief_endpoint
+    returns the grounded entities, discovers brand entities, and threads them through.
+    """
+    agency, client, campaign, user, membership = await _seed_test_env(db_session)
+
+    chat_req = ChatBriefRequest(
+        messages=[
+            ChatMessage(role="user", content="Draft a signature 20-second reel highlighting our Special Mutton Thali."),
+        ],
+        campaign_id=campaign.id,
+        agent_id="content_architect",
+        pinned_entities=["Special Mutton Thali"],
+        discovered_entities=["Solapuri Cuisine"],
+    )
+
+    res = await chat_brief_endpoint(
+        agency_id=agency.id,
+        client_id=client.id,
+        payload=chat_req,
+        membership=membership,
+        db=db_session,
+    )
+
+    assert "Special Mutton Thali" in res.pinned_entities
+    assert len(res.discovered_entities) > 0
+    assert res.artifact_id is not None
+    assert res.artifact_payload is not None
+
 

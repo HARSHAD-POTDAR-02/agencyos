@@ -865,12 +865,21 @@ Return strictly matching CarouselGenerationOutput schema.
         dur_secs = target_dur % 60
         end_ts = f"{dur_mins}:{dur_secs:02d}"
 
+        pinned_clause = ""
+        if context.pinned_entities:
+            pinned_clause = f"""
+CRITICAL HERO ENTITY GROUNDING:
+The client/user has PINNED the following hero entities/offerings:
+{', '.join(context.pinned_entities)}
+You MUST prominently feature these exact pinned hero entities in the scenes, visual action, voiceovers, and on-screen text! Do not replace them with generic or fabricated items.
+"""
+
         prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
 User Request: "{query}"
 
 Client: {client_name} ({industry}, Location: {context.client_location or 'General'})
 Brand Voice: {brand_voice}
-
+{pinned_clause}
 YOUR TASK:
 Generate a full production-ready video storyboard matching StoryboardGenerationOutput schema.
 CRITICAL REQUIREMENTS:
@@ -900,6 +909,15 @@ CRITICAL REQUIREMENTS:
             norm_scenes, total_dur = normalize_storyboard_scenes_timing(
                 sb_res.scenes, target_duration_seconds=target_dur
             )
+
+            # Ground scenes with hero focus entities
+            if context.pinned_entities:
+                for sc in norm_scenes:
+                    text_blob = f"{sc.visual_action} {sc.voiceover_script} {sc.on_screen_text} {sc.ai_visual_prompt or ''}".lower()
+                    matched = [e for e in context.pinned_entities if e.lower() in text_blob]
+                    if matched:
+                        sc.hero_focus = matched
+
             final_caption = (sb_res.caption or "").strip()
             if not final_caption:
                 final_caption = f"🍲✨ Experience authentic craftsmanship at {client_name}! Slow-cooked to perfection with traditional spices and rich aroma. Visit us today or order now! 🚀"
@@ -918,6 +936,7 @@ CRITICAL REQUIREMENTS:
                 full_caption=final_caption,
                 hashtags=final_hashtags,
                 call_to_action=final_cta,
+                hero_entities=context.pinned_entities or [],
             )
             activity_logs.append(f"Successfully generated {len(norm_scenes)}-scene storyboard: '{sb_res.deliverable_title}'.")
             return SpecialistResult(

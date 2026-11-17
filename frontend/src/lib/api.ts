@@ -241,6 +241,8 @@ export const campaignApi = {
       campaign_id?: string;
       active_artifact_id?: string;
       active_artifact_version?: number;
+      pinned_entities?: string[];
+      discovered_entities?: string[];
     },
     token: string
   ) =>
@@ -267,6 +269,8 @@ export const campaignApi = {
       artifact_status?: string;
       supporting_evidence_refs?: Array<Record<string, unknown>>;
       activity_logs?: Array<Record<string, unknown> | string>;
+      pinned_entities?: string[];
+      discovered_entities?: string[];
     }>(`/agencies/${agencyId}/clients/${clientId}/campaigns/chat-brief`, {
       method: "POST",
       body: data,
@@ -286,6 +290,8 @@ export const campaignApi = {
       campaign_id?: string;
       active_artifact_id?: string;
       active_artifact_version?: number;
+      pinned_entities?: string[];
+      discovered_entities?: string[];
     },
     token: string,
     onEvent: (event: {

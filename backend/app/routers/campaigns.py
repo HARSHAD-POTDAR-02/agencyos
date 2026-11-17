@@ -269,6 +269,13 @@ async def generate_plan_endpoint(
     if detected_count and not duration_days:
         duration_days = detected_count
 
+    custom_brief_text = payload.custom_brief
+    if payload.pinned_entities:
+        pinned_summary = ", ".join(payload.pinned_entities)
+        custom_brief_text = (
+            f"{custom_brief_text or ''}\n[HERO FOCUS]: Feature these verified hero entities: {pinned_summary}"
+        ).strip()
+
     brief = CampaignBrief(
         campaign_id=campaign_id,
         client_id=client_id,
@@ -280,8 +287,9 @@ async def generate_plan_endpoint(
         start_date=start_dt,
         end_date=end_dt,
         duration_days=duration_days,
-        custom_brief=payload.custom_brief,
+        custom_brief=custom_brief_text,
         deliverable_preferences=final_prefs or [],
+        pinned_entities=payload.pinned_entities,
     )
 
     # 2. Build initial StateGraph state
@@ -603,6 +611,99 @@ Your domain is rigorous pre-flight content auditing: spotting weak or cliché ho
 }
 
 
+def extract_candidate_entities(
+    brand_profile: BrandProfile | None,
+    client: Client | None,
+    existing_discovered: list[str] | None = None,
+    artifact_payload: dict[str, Any] | None = None,
+) -> list[str]:
+    entities: set[str] = set(existing_discovered or [])
+
+    # 1. Extract from Brand Profile pillars & approved phrases
+    if brand_profile:
+        if brand_profile.approved_phrases:
+            phrases = (
+                brand_profile.approved_phrases
+                if isinstance(brand_profile.approved_phrases, list)
+                else [str(brand_profile.approved_phrases)]
+            )
+            for p in phrases:
+                clean_p = p.strip().lstrip("-").strip()
+                if (
+                    clean_p
+                    and 3 <= len(clean_p) <= 40
+                    and not clean_p.lower().startswith("mention")
+                    and not clean_p.lower().startswith("approval")
+                    and not clean_p.lower().startswith("proposed")
+                    and not clean_p.lower().startswith("required")
+                    and not clean_p.lower().startswith("suggested")
+                ):
+                    entities.add(clean_p)
+        if brand_profile.content_pillars:
+            pillars = (
+                brand_profile.content_pillars
+                if isinstance(brand_profile.content_pillars, list)
+                else [str(brand_profile.content_pillars)]
+            )
+            for pil in pillars:
+                for match in re.findall(r"\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3}\b", pil):
+                    if (
+                        len(match) > 5
+                        and match.lower()
+                        not in [
+                            "authentic maharashtrian",
+                            "maharashtrian culture",
+                            "customer experiences",
+                            "food photography",
+                            "restaurant ambience",
+                            "general business",
+                        ]
+                    ):
+                        entities.add(match)
+
+    # 2. Extract from artifact payload
+    if artifact_payload and isinstance(artifact_payload, dict):
+        if "hero_entities" in artifact_payload and isinstance(artifact_payload["hero_entities"], list):
+            for e in artifact_payload["hero_entities"]:
+                if isinstance(e, str) and e.strip():
+                    entities.add(e.strip())
+        if "scenes" in artifact_payload and isinstance(artifact_payload["scenes"], list):
+            for sc in artifact_payload["scenes"]:
+                if isinstance(sc, dict):
+                    act = sc.get("visual_action", "")
+                    vo = sc.get("voiceover_script", "")
+                    for term in [
+                        "Mutton Raan",
+                        "Chicken Raan",
+                        "Special Mutton Thali",
+                        "Solapuri Cuisine",
+                        "Solapuri Mutton",
+                        "Chicken Malwani",
+                        "Tambada Rassa",
+                        "Pandhra Rassa",
+                    ]:
+                        if term.lower() in act.lower() or term.lower() in vo.lower():
+                            entities.add(term)
+
+    # 3. Always include known client signature dishes if client is Hotel Shauryawada
+    if client and client.business_name and "shauryawada" in client.business_name.lower():
+        for dish in [
+            "Special Mutton Thali",
+            "Mutton Raan Masala",
+            "Chicken Malwani",
+            "Solapuri Mutton Handi",
+            "Tambada Pandhra Rassa",
+        ]:
+            entities.add(dish)
+
+    cleaned: list[str] = []
+    for e in sorted(entities):
+        s = e.strip()
+        if 3 <= len(s) <= 40 and s not in cleaned and not s.startswith("http"):
+            cleaned.append(s)
+    return cleaned[:15]
+
+
 async def execute_chat_turn(
     agency_id: uuid.UUID,
     client_id: uuid.UUID,
@@ -818,6 +919,7 @@ async def execute_chat_turn(
             target_aud if isinstance(target_aud, list) else ([str(target_aud)] if target_aud else [])
         ),
         deliverable_preferences=["reel", "carousel"],
+        pinned_entities=payload.pinned_entities,
     )
 
     studio_context = CampaignStudioContext(
@@ -833,6 +935,8 @@ async def execute_chat_turn(
         active_artifact_type=active_artifact_type,
         active_artifact_version=active_artifact_version,
         active_artifact_payload=active_artifact_payload,
+        discovered_entities=payload.discovered_entities or [],
+        pinned_entities=payload.pinned_entities or [],
     )
 
     # 5. SPECIALIST DISPATCH: Route to dedicated specialist adapter when requested
@@ -887,6 +991,13 @@ async def execute_chat_turn(
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
         extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
 
+        candidate_entities = extract_candidate_entities(
+            brand_profile=brand_profile,
+            client=client,
+            existing_discovered=payload.discovered_entities,
+            artifact_payload=specialist_res.artifact_payload,
+        )
+
         return ChatBriefResponse(
             reply=specialist_res.reply,
             agent_id=target_agent_id,
@@ -909,6 +1020,8 @@ async def execute_chat_turn(
             suggested_end_date=extracted.end_date.isoformat() if extracted else payload.end_date,
             suggested_duration_days=extracted.duration_days if extracted else extracted_cnt,
             is_ready_to_generate=False,
+            pinned_entities=payload.pinned_entities,
+            discovered_entities=candidate_entities,
         )
 
     # 6. CAMPAIGN DIRECTOR FLOW: Intake copilot synthesizing overall brief
@@ -1097,6 +1210,13 @@ CRITICAL SYSTEM RULES:
         if not has_explicit_year and ref_year >= 2026:
             reply_text = re.sub(r"\b202[0-5]\b", str(ref_year), reply_text)
 
+        candidate_entities = extract_candidate_entities(
+            brand_profile=brand_profile,
+            client=client,
+            existing_discovered=payload.discovered_entities,
+            artifact_payload=active_artifact_payload,
+        )
+
         return ChatBriefResponse(
             reply=reply_text,
             agent_id=target_agent_id,
@@ -1116,6 +1236,8 @@ CRITICAL SYSTEM RULES:
             suggested_end_date=final_end_date,
             suggested_duration_days=final_duration_days,
             is_ready_to_generate=output.is_ready_to_generate,
+            pinned_entities=payload.pinned_entities,
+            discovered_entities=candidate_entities,
         )
     except Exception as ex:
         logger.error(f"Structured LLM failed in chat_brief_endpoint ({ex}). Initiating contextual recovery...")
@@ -1133,6 +1255,13 @@ CRITICAL SYSTEM RULES:
             dur_days = extracted_cnt
             p_month = payload.period_month or ref_month
             p_year = payload.period_year or ref_year
+
+        candidate_entities = extract_candidate_entities(
+            brand_profile=brand_profile,
+            client=client,
+            existing_discovered=payload.discovered_entities,
+            artifact_payload=active_artifact_payload,
+        )
 
         # Contextual LLM recovery fallback: Answer the user's specific request directly instead of a canned greeting
         fallback_reply = ""
@@ -1179,6 +1308,8 @@ CRITICAL SYSTEM RULES:
             suggested_duration_days=dur_days,
             suggested_deliverable_preferences=extracted_fmts,
             is_ready_to_generate=False,
+            pinned_entities=payload.pinned_entities,
+            discovered_entities=candidate_entities,
         )
 
 

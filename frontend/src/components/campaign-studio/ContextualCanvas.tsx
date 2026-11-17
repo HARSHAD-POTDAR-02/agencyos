@@ -33,6 +33,10 @@ import {
 interface ContextualCanvasProps {
   artifact: ActiveArtifactData | null;
   versions?: any[];
+  pinnedEntities?: string[];
+  discoveredEntities?: string[];
+  onTogglePinEntity?: (entity: string) => void;
+  onAddCustomEntity?: (entity: string) => void;
   onSelectVersion?: (versionNumber: number) => void;
   onApproveVersion?: (artifactId: string, versionNumber: number) => Promise<void>;
   onReviseArtifact?: (
@@ -48,6 +52,10 @@ interface ContextualCanvasProps {
 export function ContextualCanvas({
   artifact,
   versions = [],
+  pinnedEntities = [],
+  discoveredEntities = [],
+  onTogglePinEntity,
+  onAddCustomEntity,
   onSelectVersion,
   onApproveVersion,
   onReviseArtifact,
@@ -60,6 +68,102 @@ export function ContextualCanvas({
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [revisionSummary, setRevisionSummary] = useState("");
   const [isSavingRevision, setIsSavingRevision] = useState(false);
+  const [customEntityInput, setCustomEntityInput] = useState("");
+
+  const renderHeroEntityTray = () => (
+    <div className="surface-card p-4 rounded-2xl border border-white/[0.08] shadow-xs space-y-3 bg-[#13131A]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-[#E5AA58]/15 text-[#E5AA58] border border-[#E5AA58]/30 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-bold font-heading text-[#F2F0F7] tracking-tight">
+                Hero Entity Tray
+              </h4>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/30 font-semibold">
+                {pinnedEntities.length} Pinned Focus
+              </span>
+            </div>
+            <p className="text-[11px] text-[#A3A0B0]">
+              Pinned hero items ground all agents, video scripts, and sprint tasks into verified dishes &amp; products.
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Add Custom Entity */}
+        <div className="flex items-center gap-1.5">
+          <input
+            type="text"
+            value={customEntityInput}
+            onChange={(e) => setCustomEntityInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && customEntityInput.trim()) {
+                onAddCustomEntity?.(customEntityInput.trim());
+                setCustomEntityInput("");
+              }
+            }}
+            placeholder="+ Add custom hero item..."
+            className="px-2.5 py-1 rounded-lg bg-[#101014] border border-white/[0.1] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/50 focus:outline-none focus:border-[#E5AA58] w-40 sm:w-48"
+          />
+          <button
+            type="button"
+            disabled={!customEntityInput.trim()}
+            onClick={() => {
+              if (customEntityInput.trim()) {
+                onAddCustomEntity?.(customEntityInput.trim());
+                setCustomEntityInput("");
+              }
+            }}
+            className="px-2.5 py-1 rounded-lg bg-[#E5AA58] hover:bg-[#F0B865] text-[#101014] font-bold text-xs transition-colors disabled:opacity-40 cursor-pointer"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* Chips Area */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {/* Pinned Items */}
+        {pinnedEntities.map((entity) => (
+          <button
+            key={`pinned-${entity}`}
+            type="button"
+            onClick={() => onTogglePinEntity?.(entity)}
+            title="Click to unpin from hero focus"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/50 text-xs font-mono font-semibold hover:bg-[#E5AA58]/30 transition-all cursor-pointer shadow-xs group"
+          >
+            <Sparkles className="w-3 h-3 text-[#E5AA58]" />
+            <span>{entity}</span>
+            <X className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+          </button>
+        ))}
+
+        {/* Discovered / Unpinned Candidates */}
+        {discoveredEntities
+          .filter((e) => !pinnedEntities.includes(e))
+          .map((entity) => (
+            <button
+              key={`disc-${entity}`}
+              type="button"
+              onClick={() => onTogglePinEntity?.(entity)}
+              title="Click to pin as hero item"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#1C1C26] hover:bg-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] hover:border-white/[0.2] text-xs font-mono transition-all cursor-pointer group"
+            >
+              <span className="text-white/40 group-hover:text-[#E5AA58] font-bold">+</span>
+              <span>{entity}</span>
+            </button>
+          ))}
+
+        {pinnedEntities.length === 0 && discoveredEntities.length === 0 && (
+          <span className="text-[11px] text-[#A3A0B0] italic py-0.5">
+            No hero entities identified yet. Type a signature dish or offering above to pin.
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
   const handleApprove = async () => {
     if (!artifact || !onApproveVersion) return;
@@ -123,6 +227,8 @@ export function ContextualCanvas({
 
         {/* ── Interactive Artboard Viewport ── */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {renderHeroEntityTray()}
+
           {/* Studio Welcome & Sprint Launcher */}
           <div className="surface-card rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden shadow-xs">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(ellipse_at_top_right,rgba(167,139,250,0.12),transparent_70%)] pointer-events-none" />
@@ -409,8 +515,13 @@ export function ContextualCanvas({
 
       {/* ── Canvas Scrollable Body ── */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {renderHeroEntityTray()}
+
         {artifact.type === "storyboard" && (
-          <StoryboardPanel payload={artifact.payload as any} />
+          <StoryboardPanel
+            payload={artifact.payload as any}
+            pinnedEntities={pinnedEntities}
+          />
         )}
 
         {artifact.type === "hook_comparison" && (

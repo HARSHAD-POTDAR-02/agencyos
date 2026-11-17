@@ -217,6 +217,7 @@ class SceneCard(BaseModel):
         default=None,
         description="Ready-to-use Flux / Midjourney visual prompt for image/video generation"
     )
+    hero_focus: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_timing(self) -> SceneCard:
@@ -236,6 +237,7 @@ class StoryboardArtifactPayload(BaseModel):
     full_caption: str = ""
     hashtags: list[str] = Field(default_factory=list)
     call_to_action: str = ""
+    hero_entities: list[str] = Field(default_factory=list)
 
 
 class CarouselSlideCard(BaseModel):
@@ -256,6 +258,7 @@ class CarouselDeckArtifactPayload(BaseModel):
     full_caption: str = ""
     hashtags: list[str] = Field(default_factory=list)
     call_to_action: str = ""
+    hero_entities: list[str] = Field(default_factory=list)
 
 
 class StaticPostArtifactPayload(BaseModel):

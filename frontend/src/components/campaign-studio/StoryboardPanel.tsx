@@ -23,9 +23,10 @@ import {
 
 interface StoryboardPanelProps {
   payload: StoryboardPayload;
+  pinnedEntities?: string[];
 }
 
-export function StoryboardPanel({ payload }: StoryboardPanelProps) {
+export function StoryboardPanel({ payload, pinnedEntities = [] }: StoryboardPanelProps) {
   const [copiedPromptIdx, setCopiedPromptIdx] = useState<number | null>(null);
   const [selectedSceneIdx, setSelectedSceneIdx] = useState<number>(0);
 
@@ -123,6 +124,22 @@ export function StoryboardPanel({ payload }: StoryboardPanelProps) {
         <div className="overflow-x-auto flex gap-4 pb-4 pt-1 px-1 scrollbar-thin">
           {scenes.map((scene, idx) => {
             const isSelected = selectedSceneIdx === idx;
+            const sceneEntities = Array.from(
+              new Set([
+                ...(scene.hero_focus || []),
+                ...pinnedEntities.filter((e) => {
+                  const q = e.toLowerCase();
+                  return (
+                    scene.visual_action?.toLowerCase().includes(q) ||
+                    scene.voiceover_script?.toLowerCase().includes(q) ||
+                    scene.on_screen_text?.toLowerCase().includes(q) ||
+                    scene.ai_visual_prompt?.toLowerCase().includes(q)
+                  );
+                }),
+              ])
+            );
+            const isHeroScene = sceneEntities.length > 0;
+
             return (
               <div
                 key={scene.scene_number || idx}
@@ -130,6 +147,8 @@ export function StoryboardPanel({ payload }: StoryboardPanelProps) {
                 className={`w-72 sm:w-80 shrink-0 surface-card rounded-2xl border transition-all cursor-pointer flex flex-col justify-between p-4 space-y-3.5 relative overflow-hidden ${
                   isSelected
                     ? "border-[#A78BFA] shadow-[0_0_16px_rgba(167,139,250,0.15)] ring-1 ring-[#A78BFA]/50"
+                    : isHeroScene
+                    ? "border-[#E5AA58]/60 shadow-[0_0_14px_rgba(229,170,88,0.12)] hover:border-[#E5AA58]"
                     : "border-white/[0.08] hover:border-white/[0.18]"
                 }`}
               >
@@ -147,6 +166,21 @@ export function StoryboardPanel({ payload }: StoryboardPanelProps) {
                     {scene.shot_type || "Talking Head"}
                   </span>
                 </div>
+
+                {/* Hero Focus Badge Banner */}
+                {isHeroScene && (
+                  <div className="flex items-center gap-1.5 flex-wrap -mt-1">
+                    {sceneEntities.map((ent) => (
+                      <span
+                        key={ent}
+                        className="flex items-center gap-1 text-[9.5px] font-mono px-2 py-0.5 rounded-md bg-[#E5AA58]/15 text-[#E5AA58] border border-[#E5AA58]/30 font-semibold"
+                      >
+                        <Sparkles className="w-2.5 h-2.5 text-[#E5AA58]" />
+                        <span>Hero: {ent}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* 9:16 Viewfinder Visual Mockup Frame */}
                 <div className="relative aspect-[9/16] w-full max-h-56 rounded-xl bg-[#101014] border border-white/[0.08] flex flex-col justify-between p-3 overflow-hidden group">

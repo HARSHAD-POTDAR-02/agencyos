@@ -324,6 +324,23 @@ function CampaignStudioContent() {
   const [isRightIntelOpen, setIsRightIntelOpen] = useState(true);
   const [rightPanelTab, setRightPanelTab] = useState<"chat" | "evidence">("chat");
 
+  // Hero Entity Tray State (Cross-Agent Context & Grounding)
+  const [pinnedEntities, setPinnedEntities] = useState<string[]>([]);
+  const [discoveredEntities, setDiscoveredEntities] = useState<string[]>([]);
+
+  const handleTogglePinEntity = (entity: string) => {
+    setPinnedEntities((prev) =>
+      prev.includes(entity) ? prev.filter((e) => e !== entity) : [...prev, entity]
+    );
+  };
+
+  const handleAddCustomEntity = (entity: string) => {
+    const clean = entity.trim();
+    if (!clean) return;
+    setPinnedEntities((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
+    setDiscoveredEntities((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
+  };
+
   // Date range and timeline state
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -600,6 +617,8 @@ function CampaignStudioContent() {
             if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
             if (parsed.activeArtifact) setActiveArtifact(parsed.activeArtifact);
             if (parsed.activeCampaignId) setActiveCampaignId(parsed.activeCampaignId);
+            if (Array.isArray(parsed.pinnedEntities)) setPinnedEntities(parsed.pinnedEntities);
+            if (Array.isArray(parsed.discoveredEntities)) setDiscoveredEntities(parsed.discoveredEntities);
             return;
           }
         } catch (e) {
@@ -649,12 +668,14 @@ function CampaignStudioContent() {
           activeSpecialistId,
           activeArtifact,
           activeCampaignId,
+          pinnedEntities,
+          discoveredEntities,
         })
       );
     } catch (e) {
       console.error("Failed to save chat to storage", e);
     }
-  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, activeArtifact, activeCampaignId, selectedClientId, getStorageKey]);
+  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, activeArtifact, activeCampaignId, pinnedEntities, discoveredEntities, selectedClientId, getStorageKey]);
 
   // Reset conversation handler
   const handleResetChat = () => {
@@ -685,6 +706,8 @@ function CampaignStudioContent() {
     setDurationDays(null);
     setActiveCampaignId(null);
     setActiveArtifact(null);
+    setPinnedEntities([]);
+    setDiscoveredEntities([]);
   };
 
   // Current active agent specification
@@ -752,6 +775,8 @@ function CampaignStudioContent() {
           campaign_id: activeCampaignId || undefined,
           active_artifact_id: activeArtifact?.id || undefined,
           active_artifact_version: activeArtifact?.version || undefined,
+          pinned_entities: pinnedEntities,
+          discovered_entities: discoveredEntities,
         },
         token,
         (evt) => {
@@ -823,6 +848,14 @@ function CampaignStudioContent() {
             if (response.suggested_period_month) setPeriodMonth(response.suggested_period_month);
             if (response.suggested_period_year) setPeriodYear(response.suggested_period_year);
             if (response.is_ready_to_generate) setIsReadyToGenerate(true);
+            if (response.discovered_entities && Array.isArray(response.discovered_entities)) {
+              setDiscoveredEntities((prev) =>
+                Array.from(new Set([...prev, ...(response.discovered_entities || [])]))
+              );
+            }
+            if (response.pinned_entities && Array.isArray(response.pinned_entities) && pinnedEntities.length === 0) {
+              setPinnedEntities(response.pinned_entities);
+            }
 
             setChatMessages((prev) =>
               prev.map((m) =>
@@ -890,11 +923,21 @@ function CampaignStudioContent() {
             campaign_id: activeCampaignId || undefined,
             active_artifact_id: activeArtifact?.id || undefined,
             active_artifact_version: activeArtifact?.version || undefined,
+            pinned_entities: pinnedEntities,
+            discovered_entities: discoveredEntities,
           },
           token
         );
 
         if (response.campaign_id) setActiveCampaignId(response.campaign_id);
+        if (response.discovered_entities && Array.isArray(response.discovered_entities)) {
+          setDiscoveredEntities((prev) =>
+            Array.from(new Set([...prev, ...(response.discovered_entities || [])]))
+          );
+        }
+        if (response.pinned_entities && Array.isArray(response.pinned_entities) && pinnedEntities.length === 0) {
+          setPinnedEntities(response.pinned_entities);
+        }
         if (response.artifact_id && response.artifact_payload) {
           setActiveArtifact({
             id: response.artifact_id,
@@ -1138,6 +1181,7 @@ function CampaignStudioContent() {
           objective: suggestedObjective || undefined,
           custom_brief: suggestedCustomBrief || undefined,
           deliverable_preferences: deliverablePreferences.length > 0 ? deliverablePreferences : undefined,
+          pinned_entities: pinnedEntities,
         },
         token
       );
@@ -1756,6 +1800,10 @@ function CampaignStudioContent() {
           <ContextualCanvas
             artifact={activeArtifact}
             versions={activeArtifactVersions}
+            pinnedEntities={pinnedEntities}
+            discoveredEntities={discoveredEntities}
+            onTogglePinEntity={handleTogglePinEntity}
+            onAddCustomEntity={handleAddCustomEntity}
             onSelectVersion={(versionNumber) => {
               const targetVer = activeArtifactVersions.find((v: any) => v.version_number === versionNumber);
               if (targetVer && activeArtifact) {

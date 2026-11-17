@@ -91,6 +91,7 @@ class GeneratePlanRequest(BaseModel):
     objective: str | None = None
     custom_brief: str | None = None
     deliverable_preferences: list[str] | None = None
+    pinned_entities: list[str] = Field(default_factory=list)
 
 
 class ConvertToTasksResponse(BaseModel):
@@ -117,6 +118,8 @@ class ChatBriefRequest(BaseModel):
     campaign_id: uuid.UUID | None = None
     active_artifact_id: uuid.UUID | None = None
     active_artifact_version: int | None = None
+    pinned_entities: list[str] = Field(default_factory=list)
+    discovered_entities: list[str] = Field(default_factory=list)
 
 
 class ChatBriefResponse(BaseModel):
@@ -144,6 +147,8 @@ class ChatBriefResponse(BaseModel):
     artifact_status: str | None = None
     supporting_evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
     activity_logs: list[dict[str, Any]] = Field(default_factory=list)
+    pinned_entities: list[str] = Field(default_factory=list)
+    discovered_entities: list[str] = Field(default_factory=list)
 
 
 class StudioArtifactVersionOut(BaseModel):

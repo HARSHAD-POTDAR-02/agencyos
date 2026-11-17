@@ -10,6 +10,7 @@ export interface SceneCardData {
   audio_sfx_cue?: string;
   b_roll_notes?: string;
   ai_visual_prompt?: string;
+  hero_focus?: string[];
 }
 
 export interface StoryboardPayload {
@@ -22,6 +23,7 @@ export interface StoryboardPayload {
   full_caption?: string;
   hashtags?: string[];
   call_to_action?: string;
+  hero_entities?: string[];
 }
 
 export interface HookCardData {
