@@ -187,18 +187,19 @@ function ReportsContent() {
   return (
     <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none">
       {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#30303D] print:border-none">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-[#20202A] text-[#A78BFA] border border-[#30303D] print:hidden">
-              <BarChart3 className="w-5 h-5" />
-            </span>
-            <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
-              Performance & Delivery Reports
-            </h1>
+      {/* ── Editorial Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.06] print:border-none">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
+            <span>Operations</span>
+            <span className="text-white/[0.2]">/</span>
+            <span className="text-[#A78BFA] font-medium">Performance Reports</span>
           </div>
-          <p className="text-xs text-[#A3A0B0] mt-1">
-            Audit monthly retainer scope fulfillment, delivery status, and Meta social engagement.
+          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
+            Performance & Delivery Reports
+          </h1>
+          <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
+            Audit monthly retainer scope fulfillment, delivery status, and Meta social reach across client workspaces.
           </p>
         </div>
 
@@ -207,9 +208,9 @@ function ReportsContent() {
             onClick={() => loadReport()}
             disabled={loadingReport || !selectedClientId}
             title="Refresh Report Data"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#F2F0F7] bg-[#17171E] border border-[#30303D] hover:bg-[#20202A] rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F2F0F7] surface-card border border-white/[0.08] hover:bg-[#20202A] rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-[#A78BFA]" : "text-[#71717A]"}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingReport ? "animate-spin text-[#A78BFA]" : "text-[#A3A0B0]"}`} />
             <span>Refresh</span>
           </button>
 
@@ -217,16 +218,16 @@ function ReportsContent() {
             onClick={handlePrint}
             disabled={!report}
             title="Print or Save as PDF"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Export PDF / Print</span>
+            <span>Export PDF</span>
           </button>
         </div>
       </div>
 
-      {/* Selector Filters Bar */}
-      <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-3 flex flex-wrap items-center justify-between gap-4 print:border-[#30303D]">
+      {/* ── Selector Filters Bar (Linear Toolstrip) ── */}
+      <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs print:border-white/[0.08]">
         <div className="flex flex-wrap items-center gap-3">
           {/* Client Selector */}
           <div className="flex items-center gap-2">
@@ -242,7 +243,7 @@ function ReportsContent() {
               <select
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
-                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
+                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
               >
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -255,14 +256,14 @@ function ReportsContent() {
 
           {/* Month Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-[#A3A0B0] flex items-center gap-1">
+            <label className="text-xs font-medium text-[#A3A0B0] flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>Period:</span>
             </label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
+              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
             >
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -275,7 +276,7 @@ function ReportsContent() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-[#30303D] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
+              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -292,9 +293,9 @@ function ReportsContent() {
             <span>Viewing:</span>
             <Link
               href={`/clients/${selectedClientId}`}
-              className="font-semibold text-[#A78BFA] hover:text-[#B69BFF] bg-[#20202A] px-2.5 py-1 rounded-lg border border-[#30303D] inline-flex items-center gap-1 transition-colors"
+              className="font-medium text-[#A78BFA] hover:text-[#B69BFF] bg-[#20202A] px-2.5 py-1 rounded-lg border border-white/[0.08] inline-flex items-center gap-1 transition-colors"
             >
-              <span>{selectedClient?.business_name || "Client Details"}</span>
+              <span>{selectedClient?.business_name || "Client Workspace"}</span>
               <ExternalLink className="w-3 h-3" />
             </Link>
           </div>
@@ -325,14 +326,14 @@ function ReportsContent() {
       {!loadingReport && report && (
         <div className="space-y-6">
           {/* Executive Summary Card */}
-          <div className="bg-[#17171E] text-[#F2F0F7] rounded-2xl p-6 border border-[#30303D] space-y-4 relative overflow-hidden print:bg-white print:text-slate-900 print:border-slate-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#30303D] print:border-slate-200">
+          <div className="surface-card text-[#F2F0F7] rounded-2xl p-6 border border-white/[0.08] space-y-4 relative overflow-hidden shadow-xs print:bg-white print:text-slate-900 print:border-slate-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.06] print:border-slate-200">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#20202A] border border-[#30303D] flex items-center justify-center text-[#A78BFA] print:bg-purple-100 print:text-purple-700">
+                <div className="w-8 h-8 rounded-xl bg-[#20202A] border border-white/[0.08] flex items-center justify-center text-[#A78BFA] print:bg-purple-100 print:text-purple-700">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-heading font-bold uppercase tracking-wider text-[#A78BFA] print:text-purple-700">
+                  <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-[#A78BFA] print:text-purple-700">
                     Executive Summary &bull; {monthName} {report.year}
                   </h2>
                   <p className="text-xs text-[#A3A0B0] print:text-slate-500">{report.client_name}</p>
@@ -341,40 +342,40 @@ function ReportsContent() {
 
               <button
                 onClick={handleCopySummary}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#20202A] hover:bg-[#262630] border border-[#30303D] text-[#F2F0F7] text-xs font-semibold rounded-xl transition-colors cursor-pointer self-start sm:self-auto print:hidden"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] text-[#F2F0F7] text-xs font-medium rounded-xl transition-colors cursor-pointer self-start sm:self-auto print:hidden shadow-xs"
               >
                 {copiedSummary ? <Check className="w-3.5 h-3.5 text-[#45B88A]" /> : <Copy className="w-3.5 h-3.5 text-[#A3A0B0]" />}
-                <span>{copiedSummary ? "Copied to Clipboard" : "Copy Summary"}</span>
+                <span>{copiedSummary ? "Copied" : "Copy Summary"}</span>
               </button>
             </div>
 
-            <p className="text-sm text-[#F2F0F7] leading-relaxed font-normal print:text-slate-800">
+            <p className="text-xs text-[#F2F0F7] leading-relaxed font-normal print:text-slate-800">
               {report.executive_summary}
             </p>
 
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-              <span className="font-mono font-medium bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-[#30303D] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+              <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-white/[0.06] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
                 Scope Target: {report.total_scope_quota} items
               </span>
-              <span className="font-mono font-medium bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-[#30303D] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
+              <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-2.5 py-1 rounded-lg border border-white/[0.06] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
                 Delivered: {report.deliverables_delivered} approved
               </span>
-              <span className="font-mono font-semibold bg-[#A78BFA]/10 text-[#A78BFA] px-2.5 py-1 rounded-lg border border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800 print:border-purple-200">
+              <span className="font-mono text-[11px] font-semibold bg-[#A78BFA]/10 text-[#A78BFA] px-2.5 py-1 rounded-lg border border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800 print:border-purple-200">
                 Fulfillment: {report.quota_fulfillment_rate}%
               </span>
             </div>
           </div>
 
-          {/* 4 Key Metric KPI Cards */}
+          {/* 4 Key Metric KPI Cards (Linear Style) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* KPI 1: Contract Quota Fulfillment */}
-            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Retainer Quota
                 </span>
                 <span
-                  className={`p-2 rounded-xl border border-[#30303D] ${
+                  className={`p-2 rounded-xl border border-white/[0.08] ${
                     report.quota_fulfillment_rate >= 100
                       ? "bg-[#45B88A]/10 text-[#45B88A]"
                       : report.quota_fulfillment_rate >= 50
@@ -391,10 +392,10 @@ function ReportsContent() {
                   <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                     {report.quota_fulfillment_rate}%
                   </span>
-                  <span className="text-xs font-medium text-[#71717A]">fulfilled</span>
+                  <span className="text-xs font-mono text-[#A3A0B0]">fulfilled</span>
                 </div>
                 <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
-                  {report.deliverables_delivered} of {report.total_scope_quota} monthly deliverables delivered
+                  {report.deliverables_delivered} of {report.total_scope_quota} items delivered
                 </p>
               </div>
 
@@ -414,12 +415,12 @@ function ReportsContent() {
             </div>
 
             {/* KPI 2: Total Content Views / Impressions */}
-            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Total Impressions
                 </span>
-                <span className="p-2 rounded-xl bg-[#20202A] text-[#69A9D8] border border-[#30303D]">
+                <span className="p-2 rounded-xl bg-[#20202A] text-[#69A9D8] border border-white/[0.08]">
                   <Eye className="w-4 h-4" />
                 </span>
               </div>
@@ -433,19 +434,19 @@ function ReportsContent() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-medium text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2 py-0.5 rounded-md w-fit">
                 <TrendingUp className="w-3 h-3" />
                 <span>Meta Live Reach</span>
               </div>
             </div>
 
             {/* KPI 3: Total Social Engagement */}
-            <div className="bg-[#17171E] rounded-xl border border-[#30303D] p-5 space-y-3">
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[#A3A0B0]">
                   Total Engagement
                 </span>
-                <span className="p-2 rounded-xl bg-[#20202A] text-[#E16F7B] border border-[#30303D]">
+                <span className="p-2 rounded-xl bg-[#20202A] text-[#E16F7B] border border-white/[0.08]">
                   <Heart className="w-4 h-4" />
                 </span>
               </div>

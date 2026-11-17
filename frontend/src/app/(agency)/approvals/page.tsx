@@ -229,32 +229,34 @@ function ApprovalsContent() {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
-            <span className="p-2 bg-[#20202A] text-[#A78BFA] border border-[#30303D] rounded-xl">
-              <FileCheck2 className="w-5 h-5" />
-            </span>
-            Approvals Queue
+    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* ── Editorial Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
+            <span>Operations</span>
+            <span className="text-white/[0.2]">/</span>
+            <span className="text-[#A78BFA] font-medium">Approvals Queue</span>
+          </div>
+          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
+            Approvals & Publishing Queue
           </h1>
-          <p className="text-sm text-[#A3A0B0] mt-1">
-            Review client feedback, approved deliverables, and live published posts across your agency.
+          <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
+            Review client feedback, internal inspection queues, and verified live social releases across all agency workspaces.
           </p>
         </div>
         <button
           onClick={() => load(true)}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#F2F0F7] bg-[#17171E] border border-[#30303D] hover:bg-[#20202A] rounded-xl transition-colors self-start sm:self-auto disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F2F0F7] surface-card border border-white/[0.08] hover:bg-[#20202A] rounded-xl transition-colors self-start sm:self-auto disabled:opacity-50 cursor-pointer shadow-xs"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-[#A78BFA]" : "text-[#71717A]"}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-[#A78BFA]" : "text-[#A3A0B0]"}`} />
           <span>Refresh</span>
         </button>
       </div>
 
       {statusNotification && (
-        <div className="mb-6 p-4 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[#A78BFA] text-xs font-medium flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[#A78BFA] text-xs font-medium flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#A78BFA] shrink-0" />
             <span>{statusNotification}</span>
@@ -269,83 +271,83 @@ function ApprovalsContent() {
       )}
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 text-[#E16F7B] text-xs font-medium flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-[#E16F7B] shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 mb-6 p-1 bg-[#17171E] border border-[#30303D] rounded-xl w-fit">
+      {/* ── Filter Tabs (Linear Style) ── */}
+      <div className="flex flex-wrap items-center gap-1 p-0.5 surface-card border border-white/[0.08] rounded-xl w-fit shadow-xs">
         <button
           onClick={() => handleTabChange("all")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            filter === "all" ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D] font-bold" : "text-[#71717A] hover:text-[#F2F0F7]"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            filter === "all" ? "bg-white/[0.08] text-[#F2F0F7] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
           }`}
         >
           All ({counts.all})
         </button>
         <button
           onClick={() => handleTabChange("client_review")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-            filter === "client_review" ? "bg-[#20202A] text-[#E5AA58] border border-[#30303D] font-bold" : "text-[#71717A] hover:text-[#F2F0F7]"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+            filter === "client_review" ? "bg-white/[0.08] text-[#E5AA58] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-[#E5AA58]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E5AA58]" />
           In Review ({counts.client_review})
         </button>
         <button
           onClick={() => handleTabChange("changes_requested")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-            filter === "changes_requested" ? "bg-[#20202A] text-[#E16F7B] border border-[#30303D] font-bold" : "text-[#71717A] hover:text-[#F2F0F7]"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+            filter === "changes_requested" ? "bg-white/[0.08] text-[#E16F7B] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-[#E16F7B]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E16F7B]" />
           Changes ({counts.changes_requested})
         </button>
         <button
           onClick={() => handleTabChange("approved")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-            filter === "approved" ? "bg-[#20202A] text-[#45B88A] border border-[#30303D] font-bold" : "text-[#71717A] hover:text-[#F2F0F7]"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+            filter === "approved" ? "bg-white/[0.08] text-[#45B88A] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-[#45B88A]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A]" />
           Ready to Publish ({counts.approved})
         </button>
         <button
           onClick={() => handleTabChange("scheduled")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-            filter === "scheduled" ? "bg-[#20202A] text-[#A78BFA] border border-[#30303D] font-bold" : "text-[#71717A] hover:text-[#F2F0F7]"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+            filter === "scheduled" ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-[#A78BFA]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA]" />
           Scheduled ({counts.scheduled})
         </button>
         <button
           onClick={() => handleTabChange("published")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-            filter === "published" ? "bg-[#20202A] text-[#45B88A] border border-[#30303D] font-bold" : "text-[#71717A] hover:text-[#F2F0F7]"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+            filter === "published" ? "bg-white/[0.08] text-[#45B88A] font-semibold shadow-xs" : "text-[#A3A0B0] hover:text-[#F2F0F7]"
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-[#45B88A]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A]" />
           Published Live ({counts.published})
         </button>
       </div>
 
-      {/* List */}
+      {/* ── List Surface ── */}
       {filtered.length === 0 ? (
-        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] p-12 text-center">
-          <div className="w-12 h-12 rounded-xl bg-[#20202A] border border-[#30303D] text-[#45B88A] flex items-center justify-center mx-auto mb-3">
-            <CheckCircle2 className="w-6 h-6 text-[#45B88A]" />
+        <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center">
+          <div className="w-10 h-10 rounded-xl bg-[#20202A] border border-white/[0.08] text-[#45B88A] flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 className="w-5 h-5 text-[#45B88A]" />
           </div>
-          <h3 className="text-sm font-heading font-bold text-[#F2F0F7] mb-1">Queue is clear</h3>
+          <h3 className="text-sm font-heading font-semibold text-[#F2F0F7] mb-1">Queue is clear</h3>
           <p className="text-xs text-[#A3A0B0]">
             {filter === "all" ? "No deliverables currently in the approvals queue." : `No items with status "${filter}".`}
           </p>
         </div>
       ) : (
-        <div className="bg-[#17171E] rounded-2xl border border-[#30303D] overflow-hidden">
-          <div className="divide-y divide-[#30303D]/60">
+        <div className="surface-card rounded-2xl border border-white/[0.08] overflow-hidden shadow-xs">
+          <div className="divide-y divide-white/[0.04]">
             {filtered.map((item) => {
               const st = STATUS_CONFIG[item.status] || STATUS_CONFIG["client_review"];
               const StatusIcon = st.icon;
