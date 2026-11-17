@@ -34,8 +34,20 @@ def get_effective_public_base_url() -> str:
 def get_effective_media_url(storage_key: str, override_url: str | None = None) -> str:
     """
     Constructs a fully qualified public URL for a media asset.
+    If Backblaze B2/S3 is configured, generates an authenticated pre-signed URL.
+    Otherwise falls back to the public tunnel/server uploads route.
     """
     if override_url:
         return override_url.strip()
+
+    try:
+        from app.services.storage_service import generate_presigned_url, is_remote_storage_active
+        if is_remote_storage_active():
+            presigned = generate_presigned_url(storage_key)
+            if presigned:
+                return presigned
+    except Exception as e:
+        logger.debug(f"Could not generate presigned URL, falling back: {e}")
+
     base = get_effective_public_base_url()
     return f"{base.rstrip('/')}/uploads/{storage_key.lstrip('/')}"

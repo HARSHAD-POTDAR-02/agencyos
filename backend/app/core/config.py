@@ -61,13 +61,23 @@ class Settings(BaseSettings):
             keys.append(self.TAVILY_API_KEY_2.strip())
         return keys or [""]
 
-    # File storage
+    # File storage (Backblaze B2 / S3 / Local)
+    STORAGE_BACKEND: str = "b2"  # "b2", "s3", or "local"
+    B2_ENDPOINT: str = "https://s3.us-east-005.backblazeb2.com"
+    B2_KEY_ID: str = ""
+    B2_APPLICATION_KEY: str = ""
+    B2_BUCKET_NAME: str = "agencyos-bucket"
+    B2_REGION: str = "us-east-005"
+    B2_PRESIGNED_EXPIRATION_SECONDS: int = 86400  # 24 hours
+
+    # S3 Fallback Compatibility
     S3_ENDPOINT: str = "http://localhost:9000"
     S3_ACCESS_KEY: str = "minioadmin"
     S3_SECRET_KEY: str = "minioadmin"
     S3_BUCKET: str = "agencyos-assets"
+    S3_REGION: str = "us-east-005"
 
-    # File storage (local filesystem for MVP)
+    # File storage (local filesystem fallback/cache)
     UPLOAD_DIR: str = "uploads"
 
     # App
