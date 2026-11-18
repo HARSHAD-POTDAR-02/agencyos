@@ -28,11 +28,10 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Dev-only: create all tables on startup if they don't exist.
-    # Production should use Alembic migrations instead.
-    if settings.APP_ENV == "development":
+    # Auto-create tables on startup only for local SQLite databases.
+    # Remote PostgreSQL (Neon) uses pre-provisioned schemas / migrations.
+    if "sqlite" in str(async_engine.url):
         async with async_engine.begin() as conn:
-            # Import all models to ensure they are registered on metadata
             from app import models as _models  # noqa: F401
             await conn.run_sync(Base.metadata.create_all)
     # Ensure upload directory exists
