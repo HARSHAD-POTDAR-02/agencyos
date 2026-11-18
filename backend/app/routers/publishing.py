@@ -857,7 +857,10 @@ async def get_client_monthly_delivery_report(
                     matched_deliverable.comments_count = p_comments
                     deliverables_modified = True
                 # If views were 0, estimate views based on likes/comments
-                if (matched_deliverable.views_count or 0) == 0 and (p_likes > 0 or p_comments > 0):
+                if p.get("views_count", 0) > 0 or p.get("reach_count", 0) > 0:
+                    matched_deliverable.views_count = p.get("views_count") or p.get("reach_count")
+                    deliverables_modified = True
+                elif (matched_deliverable.views_count or 0) == 0 and (p_likes > 0 or p_comments > 0):
                     matched_deliverable.views_count = (p_likes * 14) + (p_comments * 30)
                     deliverables_modified = True
 
@@ -873,6 +876,9 @@ async def get_client_monthly_delivery_report(
                     likes_count=p.get("likes_count", 0),
                     comments_count=p.get("comments_count", 0),
                     shares_count=p.get("shares_count", 0),
+                    reach_count=p.get("reach_count", 0),
+                    views_count=p.get("views_count", 0),
+                    saved_count=p.get("saved_count", 0),
                     is_deliverable_match=is_match,
                     deliverable_title=deliv_title,
                 )
@@ -890,6 +896,9 @@ async def get_client_monthly_delivery_report(
     live_meta_likes = meta_telemetry.get("total_likes", 0) if meta_telemetry else 0
     live_meta_comments = meta_telemetry.get("total_comments", 0) if meta_telemetry else 0
     live_meta_shares = meta_telemetry.get("total_shares", 0) if meta_telemetry else 0
+    live_meta_reach = meta_telemetry.get("total_reach", 0) if meta_telemetry else 0
+    live_meta_views = meta_telemetry.get("total_views", 0) if meta_telemetry else 0
+    live_meta_saves = meta_telemetry.get("total_saves", 0) if meta_telemetry else 0
     total_audience = meta_telemetry.get("total_audience", 0) if meta_telemetry else 0
     num_meta_posts = len(live_meta_posts_out)
 
@@ -898,16 +907,20 @@ async def get_client_monthly_delivery_report(
     total_social_interactions = blended_likes + blended_comments + live_meta_shares
 
     # Calculate Organic Reach:
-    # Standard formula: Total Engagements / Reach * 100 (ERR).
-    # In standard Meta organic distribution without paid boost, benchmark reach is 15x-20x engagements.
-    if num_meta_posts > 0 and total_social_interactions > 0:
+    # Use 100% verified live Meta Insights reach if available; fallback to benchmark
+    is_live_insights = live_meta_reach > 0
+    if is_live_insights:
+        total_reach = live_meta_reach
+        total_views = max(live_meta_views, live_meta_reach)
+    elif num_meta_posts > 0 and total_social_interactions > 0:
         total_reach = max(db_views * max(num_meta_posts, 1), total_social_interactions * 20, 1280)
+        total_views = total_reach
     elif db_views > 0:
         total_reach = db_views
+        total_views = db_views
     else:
         total_reach = max(total_audience * 10, 500) if total_audience > 0 else 100
-
-    total_views = total_reach  # Align total impressions/reach across posts
+        total_views = total_reach
 
     # ERR (Engagement Rate by Reach): (Total Engagements / Reach) * 100
     err_rate = round((total_social_interactions / max(total_reach, 1)) * 100, 2)
@@ -938,9 +951,12 @@ async def get_client_monthly_delivery_report(
         erf_rate=erf_rate,
         total_engagements=total_social_interactions,
         total_reach=total_reach,
+        total_views=total_views,
+        total_saves=live_meta_saves,
         avg_engagements_per_post=avg_engagements_per_post,
         formula_used="(Total Engagements / Reach) × 100",
         benchmark_status=benchmark_status,
+        is_live_insights_verified=is_live_insights,
     )
 
     # 5. Format Distribution

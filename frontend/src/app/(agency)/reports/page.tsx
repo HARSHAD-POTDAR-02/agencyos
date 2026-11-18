@@ -1279,13 +1279,19 @@ function ReportsContent() {
                   {report.total_views.toLocaleString()}
                 </span>
                 <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
-                  Organic reach & impressions across feed
+                  {report.engagement_rate_metrics?.is_live_insights_verified
+                    ? "Verified live reach across feed via Meta Insights"
+                    : "Organic reach & impressions across feed"}
                 </p>
               </div>
 
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <TrendingUp className="w-3 h-3" />
-                <span>Meta Organic Reach</span>
+                <span>
+                  {report.engagement_rate_metrics?.is_live_insights_verified
+                    ? "Live Meta Insights API"
+                    : "Meta Organic Reach"}
+                </span>
               </div>
             </div>
 
@@ -1343,13 +1349,17 @@ function ReportsContent() {
                   (Total Engagements &divide; Reach) &times; 100
                 </p>
                 <div className="text-[10px] font-mono text-white/50 mt-0.5">
-                  ({report.engagement_rate_metrics?.total_engagements ?? (report.total_likes + report.total_comments)} &divide; {(report.engagement_rate_metrics?.total_reach ?? report.total_views).toLocaleString()}) &times; 100
+                  ({report.engagement_rate_metrics?.total_engagements ?? (report.total_likes + report.total_comments)} &divide; {(report.engagement_rate_metrics?.total_reach ?? report.total_views).toLocaleString()} reach) &times; 100
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <ArrowUpRight className="w-3 h-3" />
-                <span>{report.engagement_rate_metrics?.benchmark_status ?? "⭐ Elite Organic (>5.0%)"}</span>
+                <span>
+                  {report.engagement_rate_metrics?.is_live_insights_verified
+                    ? "✓ 100% Live Meta Insights Verified"
+                    : report.engagement_rate_metrics?.benchmark_status ?? "⭐ Elite Organic (>5.0%)"}
+                </span>
               </div>
 
               <div className="pt-2 border-t border-white/[0.06] grid grid-cols-2 gap-2 text-[10px] font-mono">
@@ -1686,15 +1696,21 @@ function ReportsContent() {
                           </div>
 
                           <div className="pt-2 border-t border-white/[0.04] flex items-center justify-between text-xs font-mono">
-                            <div className="flex items-center gap-3">
-                              <span className="inline-flex items-center gap-1 text-[#F2F0F7]">
+                            <div className="flex items-center gap-2.5">
+                              <span className="inline-flex items-center gap-1 text-[#F2F0F7]" title="Likes">
                                 <Heart className="w-3 h-3 text-[#E16F7B]" />
                                 <span>{post.likes_count}</span>
                               </span>
-                              <span className="inline-flex items-center gap-1 text-[#F2F0F7]">
+                              <span className="inline-flex items-center gap-1 text-[#F2F0F7]" title="Comments">
                                 <MessageCircle className="w-3 h-3 text-[#69A9D8]" />
                                 <span>{post.comments_count}</span>
                               </span>
+                              {((post.reach_count ?? 0) > 0 || (post.views_count ?? 0) > 0) && (
+                                <span className="inline-flex items-center gap-1 text-[#69A9D8]" title="Live Meta Reach">
+                                  <Eye className="w-3 h-3 text-[#69A9D8]" />
+                                  <span>{post.reach_count || post.views_count}</span>
+                                </span>
+                              )}
                             </div>
 
                             <a

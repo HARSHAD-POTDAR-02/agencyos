@@ -804,6 +804,9 @@ export interface LiveMetaPostItem {
   likes_count: number;
   comments_count: number;
   shares_count: number;
+  reach_count?: number;
+  views_count?: number;
+  saved_count?: number;
   is_deliverable_match: boolean;
   deliverable_title?: string | null;
 }
@@ -833,9 +836,12 @@ export interface EngagementRateMetrics {
   erf_rate: number;
   total_engagements: number;
   total_reach: number;
+  total_views?: number;
+  total_saves?: number;
   avg_engagements_per_post: number;
   formula_used: string;
   benchmark_status: string;
+  is_live_insights_verified?: boolean;
 }
 
 export interface MonthlyReport {

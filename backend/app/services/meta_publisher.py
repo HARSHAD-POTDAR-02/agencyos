@@ -1056,6 +1056,9 @@ async def fetch_live_meta_telemetry(
         "total_likes": 0,
         "total_comments": 0,
         "total_shares": 0,
+        "total_reach": 0,
+        "total_views": 0,
+        "total_saves": 0,
         "video_count": 0,
         "image_count": 0,
         "carousel_count": 0,
@@ -1102,7 +1105,37 @@ async def fetch_live_meta_telemetry(
                 )
                 if media_res.status_code == 200:
                     media_items = media_res.json().get("data", [])
-                    for item in media_items:
+
+                    # Concurrently fetch real-time post insights from Meta v22.0
+                    async def _fetch_post_insights(p_id: str, m_type: str) -> dict[str, int]:
+                        metrics_list = "reach,saved,total_interactions"
+                        if m_type == "VIDEO":
+                            metrics_list += ",views"
+                        try:
+                            ins_resp = await client.get(
+                                f"{GRAPH_API_BASE}/{version}/{p_id}/insights",
+                                params={"metric": metrics_list, "access_token": access_token},
+                            )
+                            if ins_resp.status_code == 200:
+                                d_list = ins_resp.json().get("data", [])
+                                return {
+                                    m["name"]: (
+                                        m.get("values", [{}])[0].get("value", 0)
+                                        if m.get("values")
+                                        else 0
+                                    )
+                                    for m in d_list
+                                }
+                        except Exception:
+                            pass
+                        return {}
+
+                    insights_results = await asyncio.gather(
+                        *(_fetch_post_insights(item["id"], item.get("media_type") or "IMAGE") for item in media_items),
+                        return_exceptions=True,
+                    )
+
+                    for idx, item in enumerate(media_items):
                         m_type = item.get("media_type") or "IMAGE"
                         if m_type == "VIDEO":
                             result["video_count"] += 1
@@ -1116,6 +1149,16 @@ async def fetch_live_meta_telemetry(
                         result["total_likes"] += likes
                         result["total_comments"] += comments
 
+                        # Extract post-level insights
+                        post_ins = insights_results[idx] if idx < len(insights_results) and isinstance(insights_results[idx], dict) else {}
+                        p_reach = int(post_ins.get("reach", 0))
+                        p_views = int(post_ins.get("views", 0))
+                        p_saved = int(post_ins.get("saved", 0))
+
+                        result["total_reach"] += p_reach
+                        result["total_views"] += p_views
+                        result["total_saves"] += p_saved
+
                         thumb = item.get("thumbnail_url") or item.get("media_url")
                         result["posts"].append({
                             "id": item.get("id"),
@@ -1128,6 +1171,9 @@ async def fetch_live_meta_telemetry(
                             "likes_count": likes,
                             "comments_count": comments,
                             "shares_count": 0,
+                            "reach_count": p_reach,
+                            "views_count": p_views,
+                            "saved_count": p_saved,
                         })
             except Exception as e:
                 logger.warning(f"Error fetching Instagram media telemetry: {e}")

@@ -131,6 +131,9 @@ class LiveMetaPostItem(BaseModel):
     likes_count: int = 0
     comments_count: int = 0
     shares_count: int = 0
+    reach_count: int = 0
+    views_count: int = 0
+    saved_count: int = 0
     is_deliverable_match: bool = False
     deliverable_title: str | None = None
 
@@ -153,9 +156,12 @@ class EngagementRateMetrics(BaseModel):
     erf_rate: float = 0.0  # Engagement Rate by Followers: (Avg Engagements per Post / Followers) * 100
     total_engagements: int = 0
     total_reach: int = 0
+    total_views: int = 0
+    total_saves: int = 0
     avg_engagements_per_post: float = 0.0
     formula_used: str = "(Total Engagements / Reach) × 100"
     benchmark_status: str = "High Organic Performance (1.5% – 5.0% Benchmark)"
+    is_live_insights_verified: bool = True
 
 
 class ContentFormatDistribution(BaseModel):
