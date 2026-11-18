@@ -171,6 +171,22 @@ function ClientWorkspaceContent() {
   const [verifyingToken, setVerifyingToken] = useState(false);
   const [verifyResult, setVerifyResult] = useState<{ username?: string; name?: string } | null>(null);
   const [connectingSocial, setConnectingSocial] = useState(false);
+  const [connectingViaMeta, setConnectingViaMeta] = useState(false);
+
+  const handleMetaOAuthRedirect = async () => {
+    if (!token || !effectiveAgencyId || !clientId) return;
+    setConnectingViaMeta(true);
+    try {
+      const redirectUri = window.location.origin + "/social/callback";
+      const res = await socialApi.getOAuthUrl(effectiveAgencyId, clientId, redirectUri, token);
+      if (res.oauth_url) {
+        window.location.href = res.oauth_url;
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to initialize Meta OAuth login." });
+      setConnectingViaMeta(false);
+    }
+  };
 
   // Token exchange helper state
   const [showTokenHelper, setShowTokenHelper] = useState(false);
@@ -1278,37 +1294,62 @@ function ClientWorkspaceContent() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setSocialAccountName(client?.business_name || "");
-                setVerifyResult(null);
-                setShowConnectModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] shrink-0 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 text-[#101014]" />
-              <span>Connect Account</span>
-            </button>
-          </div>
-
-          {socialAccounts.length === 0 ? (
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <InstagramIcon className="w-8 h-8 text-[#A3A0B0]/50 mx-auto mb-3" />
-              <h4 className="font-heading text-sm font-semibold text-[#F2F0F7]">No Social Accounts Connected</h4>
-              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
-                Connect {client?.business_name}&apos;s Instagram Business Account or Facebook Page to enable automated 1-click publishing.
-              </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={connectingViaMeta}
+                onClick={handleMetaOAuthRedirect}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 hover:from-blue-500 hover:via-indigo-500 hover:to-pink-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_12px_rgba(99,102,241,0.4)] cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{connectingViaMeta ? "Opening Meta..." : "Connect with Meta"}</span>
+              </button>
               <button
                 onClick={() => {
                   setSocialAccountName(client?.business_name || "");
                   setVerifyResult(null);
                   setShowConnectModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-4 py-2 rounded-xl transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                title="Manual token configuration"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Connect Social Account</span>
+                <span>Manual Token</span>
               </button>
+            </div>
+          </div>
+
+          {socialAccounts.length === 0 ? (
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+              <div className="flex items-center justify-center gap-2 mb-3 text-[#A3A0B0]/60">
+                <FacebookIcon className="w-7 h-7 text-blue-500" />
+                <span className="text-xl font-light text-slate-600">+</span>
+                <InstagramIcon className="w-7 h-7 text-pink-500" />
+              </div>
+              <h4 className="font-heading text-sm font-semibold text-[#F2F0F7]">No Social Accounts Connected</h4>
+              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-6">
+                Connect {client?.business_name}&apos;s Instagram Business Account or Facebook Page for automated 1-click publishing.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  disabled={connectingViaMeta}
+                  onClick={handleMetaOAuthRedirect}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 hover:from-blue-500 hover:via-indigo-500 hover:to-pink-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-[0_2px_16px_rgba(99,102,241,0.4)] cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{connectingViaMeta ? "Redirecting to Meta..." : "1-Click Connect with Meta"}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSocialAccountName(client?.business_name || "");
+                    setVerifyResult(null);
+                    setShowConnectModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 border border-white/[0.08] text-xs font-medium px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+                >
+                  <span>Manual Setup</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

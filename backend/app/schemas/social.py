@@ -54,3 +54,43 @@ class ExchangeTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int | None = None
+
+
+class MetaOAuthUrlResponse(BaseModel):
+    oauth_url: str
+    client_id: str
+    redirect_uri: str
+
+
+class MetaResolveCodeRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+
+class MetaInstagramAccount(BaseModel):
+    id: str
+    username: str | None = None
+    name: str | None = None
+    profile_picture_url: str | None = None
+
+
+class MetaPageOption(BaseModel):
+    page_id: str
+    page_name: str
+    page_access_token: str
+    instagram_business_account: MetaInstagramAccount | None = None
+
+
+class MetaResolveCodeResponse(BaseModel):
+    pages: list[MetaPageOption]
+
+
+class MetaConnectSelectedRequest(BaseModel):
+    page_id: str
+    page_name: str
+    page_access_token: str
+    connect_facebook: bool = True
+    connect_instagram: bool = True
+    instagram_business_id: str | None = None
+    instagram_username: str | None = None
+

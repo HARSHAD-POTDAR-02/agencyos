@@ -15,14 +15,23 @@ from app.schemas.social import (
     ClientSocialAccountOut,
     ExchangeTokenRequest,
     ExchangeTokenResponse,
+    MetaConnectSelectedRequest,
+    MetaInstagramAccount,
+    MetaOAuthUrlResponse,
+    MetaPageOption,
+    MetaResolveCodeRequest,
+    MetaResolveCodeResponse,
     VerifyAccountRequest,
     VerifyAccountResponse,
 )
 from app.services.meta_publisher import (
     MetaPublishingError,
+    exchange_code_for_user_token,
     exchange_long_lived_token,
+    get_user_pages_and_instagram,
     verify_instagram_account,
 )
+from app.core.config import settings
 from app.services.tenant_service import get_client_for_agency
 
 router = APIRouter(
@@ -181,3 +190,181 @@ async def exchange_token_for_long_lived(
         )
     except MetaPublishingError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/meta/oauth-url", response_model=MetaOAuthUrlResponse)
+async def get_meta_oauth_url(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    redirect_uri: str,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> MetaOAuthUrlResponse:
+    """Construct and return the Meta OAuth 2.0 authorization dialog URL."""
+    await get_client_for_agency(client_id, agency_id, db)
+    app_id = settings.META_APP_ID
+    if not app_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="META_APP_ID is not configured in backend.",
+        )
+    
+    version = getattr(settings, "META_GRAPH_API_VERSION", "v22.0")
+    scopes = [
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_posts",
+        "instagram_basic",
+        "instagram_content_publish",
+    ]
+    scope_str = ",".join(scopes)
+    import urllib.parse
+    state_payload = urllib.parse.quote(f"{agency_id}:{client_id}")
+    encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
+    
+    oauth_url = (
+        f"https://www.facebook.com/{version}/dialog/oauth"
+        f"?client_id={app_id}"
+        f"&redirect_uri={encoded_redirect}"
+        f"&scope={scope_str}"
+        f"&state={state_payload}"
+        f"&response_type=code"
+    )
+    return MetaOAuthUrlResponse(oauth_url=oauth_url, client_id=app_id, redirect_uri=redirect_uri)
+
+
+@router.post("/meta/resolve-code", response_model=MetaResolveCodeResponse)
+async def resolve_meta_oauth_code(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: MetaResolveCodeRequest,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> MetaResolveCodeResponse:
+    """Exchange Meta OAuth code for accounts (Facebook Pages + linked Instagram Business profiles)."""
+    await get_client_for_agency(client_id, agency_id, db)
+    try:
+        # 1. Exchange code for user token
+        token_data = await exchange_code_for_user_token(
+            code=payload.code,
+            redirect_uri=payload.redirect_uri,
+        )
+        user_access_token = token_data["access_token"]
+        
+        # 2. Upgrade to 60-day Long-Lived User Token
+        try:
+            long_lived = await exchange_long_lived_token(
+                settings.META_APP_ID,
+                settings.META_APP_SECRET,
+                user_access_token,
+            )
+            user_access_token = long_lived.get("access_token", user_access_token)
+        except Exception:
+            pass  # Fall back to token if exchange fails
+            
+        # 3. Fetch managed Facebook Pages and linked Instagram accounts
+        accounts_data = await get_user_pages_and_instagram(user_access_token)
+        
+        pages_out: list[MetaPageOption] = []
+        for p in accounts_data:
+            page_id = str(p.get("id"))
+            page_name = p.get("name", "Facebook Page")
+            page_token = p.get("access_token", user_access_token)
+            ig_raw = p.get("instagram_business_account")
+            ig_acc: MetaInstagramAccount | None = None
+            if ig_raw and isinstance(ig_raw, dict):
+                ig_acc = MetaInstagramAccount(
+                    id=str(ig_raw.get("id")),
+                    username=ig_raw.get("username"),
+                    name=ig_raw.get("name"),
+                    profile_picture_url=ig_raw.get("profile_picture_url"),
+                )
+            pages_out.append(
+                MetaPageOption(
+                    page_id=page_id,
+                    page_name=page_name,
+                    page_access_token=page_token,
+                    instagram_business_account=ig_acc,
+                )
+            )
+        return MetaResolveCodeResponse(pages=pages_out)
+    except MetaPublishingError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/meta/connect-selected", response_model=list[ClientSocialAccountOut])
+async def connect_selected_meta_accounts(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: MetaConnectSelectedRequest,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[ClientSocialAccountOut]:
+    """Save selected Facebook Page and/or Instagram account to client."""
+    client = await get_client_for_agency(client_id, agency_id, db)
+    saved_accounts: list[ClientSocialAccount] = []
+    
+    # 1. Connect Facebook Page if requested
+    if payload.connect_facebook and payload.page_id:
+        fb_existing = await db.execute(
+            select(ClientSocialAccount).where(
+                ClientSocialAccount.client_id == client_id,
+                ClientSocialAccount.platform == "facebook",
+            )
+        )
+        fb_acc = fb_existing.scalar_one_or_none()
+        if fb_acc:
+            fb_acc.account_name = payload.page_name
+            fb_acc.facebook_page_id = payload.page_id
+            fb_acc.access_token = payload.page_access_token
+            fb_acc.is_active = True
+        else:
+            fb_acc = ClientSocialAccount(
+                id=uuid.uuid4(),
+                client_id=client_id,
+                platform="facebook",
+                account_name=payload.page_name,
+                facebook_page_id=payload.page_id,
+                access_token=payload.page_access_token,
+                is_active=True,
+            )
+            db.add(fb_acc)
+        saved_accounts.append(fb_acc)
+        
+    # 2. Connect Instagram Account if requested
+    if payload.connect_instagram and payload.instagram_business_id:
+        ig_existing = await db.execute(
+            select(ClientSocialAccount).where(
+                ClientSocialAccount.client_id == client_id,
+                ClientSocialAccount.platform == "instagram",
+            )
+        )
+        ig_acc = ig_existing.scalar_one_or_none()
+        handle = f"@{payload.instagram_username}" if payload.instagram_username else None
+        if ig_acc:
+            ig_acc.account_name = payload.instagram_username or payload.page_name
+            ig_acc.account_handle = handle
+            ig_acc.instagram_business_id = payload.instagram_business_id
+            ig_acc.facebook_page_id = payload.page_id
+            ig_acc.access_token = payload.page_access_token
+            ig_acc.is_active = True
+        else:
+            ig_acc = ClientSocialAccount(
+                id=uuid.uuid4(),
+                client_id=client_id,
+                platform="instagram",
+                account_name=payload.instagram_username or payload.page_name,
+                account_handle=handle,
+                instagram_business_id=payload.instagram_business_id,
+                facebook_page_id=payload.page_id,
+                access_token=payload.page_access_token,
+                is_active=True,
+            )
+            db.add(ig_acc)
+        saved_accounts.append(ig_acc)
+        
+    await db.commit()
+    for acc in saved_accounts:
+        await db.refresh(acc)
+    return [ClientSocialAccountOut.model_validate(a) for a in saved_accounts]
+

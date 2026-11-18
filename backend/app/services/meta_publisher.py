@@ -127,6 +127,58 @@ async def verify_instagram_account(access_token: str, instagram_business_id: str
         return data
 
 
+async def exchange_code_for_user_token(
+    code: str,
+    redirect_uri: str,
+    app_id: str | None = None,
+    app_secret: str | None = None,
+) -> dict[str, Any]:
+    """
+    Exchange a Meta OAuth authorization code for an initial user access token.
+    """
+    version = _get_api_version()
+    effective_app_id = app_id or settings.META_APP_ID
+    effective_app_secret = app_secret or settings.META_APP_SECRET
+    if not effective_app_id or not effective_app_secret:
+        raise MetaPublishingError("Meta App ID or App Secret is not configured.")
+
+    url = f"{GRAPH_API_BASE}/{version}/oauth/access_token"
+    params = {
+        "client_id": effective_app_id,
+        "redirect_uri": redirect_uri,
+        "client_secret": effective_app_secret,
+        "code": code,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        res = await client.get(url, params=params)
+        data = res.json()
+        if res.status_code != 200 or "error" in data:
+            err_msg = data.get("error", {}).get("message", "OAuth code exchange failed.")
+            raise MetaPublishingError(f"OAuth code exchange error: {err_msg}", data.get("error"))
+        return data
+
+
+async def get_user_pages_and_instagram(user_access_token: str) -> list[dict[str, Any]]:
+    """
+    Fetch all Facebook Pages and connected Instagram Business accounts for an authenticated user.
+    Uses the user's access token to call /me/accounts.
+    """
+    version = _get_api_version()
+    url = f"{GRAPH_API_BASE}/{version}/me/accounts"
+    params = {
+        "fields": "id,name,category,access_token,instagram_business_account{id,username,name,profile_picture_url}",
+        "access_token": user_access_token,
+        "limit": 100,
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        res = await client.get(url, params=params)
+        data = res.json()
+        if res.status_code != 200 or "error" in data:
+            err_msg = data.get("error", {}).get("message", "Failed to fetch accounts from Meta.")
+            raise MetaPublishingError(f"Meta accounts fetch error: {err_msg}", data.get("error"))
+        return data.get("data", [])
+
+
 async def exchange_long_lived_token(
     app_id: str,
     app_secret: str,

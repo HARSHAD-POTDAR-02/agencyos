@@ -664,6 +664,59 @@ export const socialApi = {
       `/agencies/${agencyId}/clients/${clientId}/social-accounts/exchange-token`,
       { method: "POST", body: data, token }
     ),
+
+  getOAuthUrl: (agencyId: string, clientId: string, redirectUri: string, token: string) =>
+    apiFetch<{ oauth_url: string; client_id: string; redirect_uri: string }>(
+      `/agencies/${agencyId}/clients/${clientId}/social-accounts/meta/oauth-url?redirect_uri=${encodeURIComponent(redirectUri)}`,
+      { token }
+    ),
+
+  resolveCode: (
+    agencyId: string,
+    clientId: string,
+    data: { code: string; redirect_uri: string },
+    token: string
+  ) =>
+    apiFetch<{
+      pages: Array<{
+        page_id: string;
+        page_name: string;
+        page_access_token: string;
+        instagram_business_account?: {
+          id: string;
+          username?: string;
+          name?: string;
+          profile_picture_url?: string;
+        };
+      }>;
+    }>(`/agencies/${agencyId}/clients/${clientId}/social-accounts/meta/resolve-code`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  connectSelected: (
+    agencyId: string,
+    clientId: string,
+    data: {
+      page_id: string;
+      page_name: string;
+      page_access_token: string;
+      connect_facebook?: boolean;
+      connect_instagram?: boolean;
+      instagram_business_id?: string;
+      instagram_username?: string;
+    },
+    token: string
+  ) =>
+    apiFetch<SocialAccount[]>(
+      `/agencies/${agencyId}/clients/${clientId}/social-accounts/meta/connect-selected`,
+      {
+        method: "POST",
+        body: data,
+        token,
+      }
+    ),
 };
 
 /* ── Publishing & Delivery endpoints (Phase 5) ── */

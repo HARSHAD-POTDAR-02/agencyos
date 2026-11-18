@@ -74,10 +74,11 @@ def _normalize_database_urls(
         async_connect_args["statement_cache_size"] = 0
 
     async_kwargs = {
-        "echo": settings.APP_ENV == "development",
+        "echo": False,
         "pool_pre_ping": True,
         "pool_size": 10,
         "max_overflow": 20,
+        "pool_recycle": 300,
     }
     if async_connect_args:
         async_kwargs["connect_args"] = async_connect_args

@@ -85,6 +85,8 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     PUBLIC_BASE_URL: str = "http://localhost:8000"
     META_GRAPH_API_VERSION: str = "v22.0"
+    META_APP_ID: str = "573556449081156"
+    META_APP_SECRET: str = ""
 
 
 settings = Settings()
