@@ -161,22 +161,152 @@ async def exchange_code_for_user_token(
 async def get_user_pages_and_instagram(user_access_token: str) -> list[dict[str, Any]]:
     """
     Fetch all Facebook Pages and connected Instagram Business accounts for an authenticated user.
-    Uses the user's access token to call /me/accounts.
+    Uses resilient multi-tiered discovery:
+    1. /me/accounts (classic & standard pages)
+    2. /me/assigned_pages (New Pages Experience task assignments)
+    3. /debug_token -> granular_scopes -> target_ids (explicit pages selected by user in OAuth popup)
+    4. /me/businesses -> /{biz_id}/owned_pages, client_pages, pages, assigned_pages
+    5. Direct node inspection for each discovered page (resolving Instagram Business / Connected IG)
     """
     version = _get_api_version()
-    url = f"{GRAPH_API_BASE}/{version}/me/accounts"
-    params = {
-        "fields": "id,name,category,access_token,instagram_business_account{id,username,name,profile_picture_url}",
-        "access_token": user_access_token,
-        "limit": 100,
-    }
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        res = await client.get(url, params=params)
-        data = res.json()
-        if res.status_code != 200 or "error" in data:
-            err_msg = data.get("error", {}).get("message", "Failed to fetch accounts from Meta.")
-            raise MetaPublishingError(f"Meta accounts fetch error: {err_msg}", data.get("error"))
-        return data.get("data", [])
+    pages: list[dict[str, Any]] = []
+    seen_page_ids: set[str] = set()
+
+    def _add_page(page_dict: dict[str, Any]):
+        pid = str(page_dict.get("id"))
+        if pid and pid not in seen_page_ids:
+            seen_page_ids.add(pid)
+            if not page_dict.get("access_token"):
+                page_dict["access_token"] = user_access_token
+            pages.append(page_dict)
+
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        # Tier 1: Query /me/accounts with full fields
+        try:
+            acc_res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/me/accounts",
+                params={
+                    "fields": "id,name,category,access_token,tasks,instagram_business_account{id,username,name,profile_picture_url},connected_instagram_account{id,username,name,profile_picture_url}",
+                    "access_token": user_access_token,
+                    "limit": 100,
+                },
+            )
+            print(f"DEBUG: /me/accounts HTTP {acc_res.status_code}: {acc_res.json()}")
+            if acc_res.status_code == 200:
+                for p in acc_res.json().get("data", []):
+                    _add_page(p)
+        except Exception as e:
+            print(f"DEBUG: Error fetching /me/accounts: {e}")
+
+        # Tier 2: Query /me/assigned_pages (New Pages Experience)
+        try:
+            assign_res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/me/assigned_pages",
+                params={
+                    "fields": "id,name,category,access_token,tasks,instagram_business_account{id,username,name,profile_picture_url},connected_instagram_account{id,username,name,profile_picture_url}",
+                    "access_token": user_access_token,
+                    "limit": 100,
+                },
+            )
+            print(f"DEBUG: /me/assigned_pages HTTP {assign_res.status_code}: {assign_res.json()}")
+            if assign_res.status_code == 200:
+                for p in assign_res.json().get("data", []):
+                    _add_page(p)
+        except Exception as e:
+            print(f"DEBUG: Error fetching /me/assigned_pages: {e}")
+
+        # Tier 3: Inspect Token via /debug_token for Granular Scopes & target_ids
+        # When user checks specific pages in the OAuth popup, Meta embeds their IDs in granular_scopes.target_ids!
+        app_id = settings.META_APP_ID
+        app_secret = settings.META_APP_SECRET
+        if app_id and app_secret:
+            try:
+                app_token = f"{app_id}|{app_secret}"
+                debug_res = await client.get(
+                    f"{GRAPH_API_BASE}/debug_token",
+                    params={"input_token": user_access_token, "access_token": app_token},
+                )
+                print(f"DEBUG: /debug_token HTTP {debug_res.status_code}: {debug_res.json()}")
+                if debug_res.status_code == 200:
+                    token_data = debug_res.json().get("data", {})
+                    granular_scopes = token_data.get("granular_scopes", [])
+                    target_ids: set[str] = set()
+                    for gs in granular_scopes:
+                        for tid in gs.get("target_ids", []):
+                            target_ids.add(str(tid))
+                    print(f"DEBUG: Discovered target_ids from OAuth token: {target_ids}")
+                    for tid in target_ids:
+                        if tid not in seen_page_ids:
+                            try:
+                                page_res = await client.get(
+                                    f"{GRAPH_API_BASE}/{version}/{tid}",
+                                    params={
+                                        "fields": "id,name,category,access_token,tasks,instagram_business_account{id,username,name,profile_picture_url},connected_instagram_account{id,username,name,profile_picture_url}",
+                                        "access_token": user_access_token,
+                                    },
+                                )
+                                print(f"DEBUG: Target page {tid} query HTTP {page_res.status_code}: {page_res.json()}")
+                                if page_res.status_code == 200:
+                                    _add_page(page_res.json())
+                            except Exception as pe:
+                                print(f"DEBUG: Error querying target page {tid}: {pe}")
+            except Exception as e:
+                print(f"DEBUG: Error calling /debug_token: {e}")
+
+        # Tier 4: Query Business Portfolios (/me/businesses)
+        try:
+            biz_res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/me/businesses",
+                params={"fields": "id,name", "access_token": user_access_token},
+            )
+            print(f"DEBUG: /me/businesses HTTP {biz_res.status_code}: {biz_res.json()}")
+            if biz_res.status_code == 200:
+                biz_list = biz_res.json().get("data", [])
+                for b in biz_list:
+                    biz_id = b.get("id")
+                    if not biz_id:
+                        continue
+                    for edge in ("owned_pages", "client_pages", "pages", "assigned_pages"):
+                        try:
+                            edge_res = await client.get(
+                                f"{GRAPH_API_BASE}/{version}/{biz_id}/{edge}",
+                                params={
+                                    "fields": "id,name,access_token,instagram_business_account{id,username,name,profile_picture_url},connected_instagram_account{id,username,name,profile_picture_url}",
+                                    "access_token": user_access_token,
+                                },
+                            )
+                            print(f"DEBUG: Business {biz_id}/{edge} HTTP {edge_res.status_code}: {edge_res.json()}")
+                            if edge_res.status_code == 200:
+                                for p in edge_res.json().get("data", []):
+                                    _add_page(p)
+                        except Exception as ee:
+                            print(f"DEBUG: Error fetching {biz_id}/{edge}: {ee}")
+        except Exception as e:
+            print(f"DEBUG: Error querying businesses: {e}")
+
+        # Tier 5: For any discovered page that doesn't have an instagram_business_account,
+        # inspect connected_instagram_account or query Instagram endpoints
+        for p in pages:
+            if not p.get("instagram_business_account"):
+                conn_ig = p.get("connected_instagram_account")
+                if conn_ig and isinstance(conn_ig, dict) and conn_ig.get("id"):
+                    ig_id = str(conn_ig["id"])
+                    try:
+                        ig_res = await client.get(
+                            f"{GRAPH_API_BASE}/{version}/{ig_id}",
+                            params={
+                                "fields": "id,username,name,profile_picture_url",
+                                "access_token": user_access_token,
+                            },
+                        )
+                        if ig_res.status_code == 200:
+                            p["instagram_business_account"] = ig_res.json()
+                            print(f"DEBUG: Resolved linked IG from connected_instagram_account: {p['instagram_business_account']}")
+                    except Exception as ige:
+                        print(f"DEBUG: Error fetching connected IG {ig_id}: {ige}")
+
+    print(f"DEBUG: Total resolved pages count: {len(pages)}")
+    return pages
 
 
 async def exchange_long_lived_token(
@@ -234,6 +364,12 @@ def ensure_instagram_compatible_image(
             needs_ratio_adjust = ratio < 0.79 or ratio > 1.92
 
             if not needs_format_conversion and not needs_ratio_adjust:
+                if storage_key and local_file_path and Path(local_file_path).is_file():
+                    try:
+                        from app.services.storage_service import upload_local_file
+                        upload_local_file(local_file_path, storage_key, content_type="image/jpeg")
+                    except Exception:
+                        pass
                 return local_file_path, storage_key
 
             jpeg_name = f"{file_path.stem}_ig.jpg"
@@ -271,7 +407,16 @@ def ensure_instagram_compatible_image(
 
             rgb_img.save(jpeg_path, "JPEG", quality=95, optimize=True)
             logger.info(f"Converted/adjusted asset '{file_path.name}' to Instagram-compliant JPEG: '{jpeg_name}'")
-            return str(jpeg_path), (jpeg_storage_key or storage_key)
+
+            target_storage_key = jpeg_storage_key or storage_key
+            if target_storage_key:
+                try:
+                    from app.services.storage_service import upload_local_file
+                    upload_local_file(str(jpeg_path), target_storage_key, content_type="image/jpeg")
+                except Exception as ue:
+                    logger.warning(f"Failed to upload converted Instagram JPEG to B2: {ue}")
+
+            return str(jpeg_path), target_storage_key
     except Exception as e:
         logger.warning(f"Error checking/converting image for Instagram: {e}")
         return local_file_path, storage_key
@@ -889,3 +1034,170 @@ async def sync_instagram_metrics(
             logger.info(f"Insights not available yet for {media_id}: {e}")
 
     return metrics
+
+
+async def fetch_live_meta_telemetry(
+    access_token: str,
+    instagram_business_id: str | None = None,
+    facebook_page_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Fetch comprehensive live social telemetry across connected Instagram Business Profile
+    and Facebook Page using Meta Graph API v22.0 Standard Access endpoints.
+    Collects real profiles, follower counts, media counts, and recent published posts
+    with verified like counts, comments, reactions, and media thumbnails.
+    """
+    version = _get_api_version()
+    result: dict[str, Any] = {
+        "instagram": None,
+        "facebook": None,
+        "posts": [],
+        "total_audience": 0,
+        "total_likes": 0,
+        "total_comments": 0,
+        "total_shares": 0,
+        "video_count": 0,
+        "image_count": 0,
+        "carousel_count": 0,
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        # 1. Instagram Profile & Posts
+        if instagram_business_id:
+            try:
+                prof_res = await client.get(
+                    f"{GRAPH_API_BASE}/{version}/{instagram_business_id}",
+                    params={
+                        "fields": "id,username,name,profile_picture_url,followers_count,follows_count,media_count,biography,website",
+                        "access_token": access_token,
+                    },
+                )
+                if prof_res.status_code == 200:
+                    ig_data = prof_res.json()
+                    followers = int(ig_data.get("followers_count") or 0)
+                    result["instagram"] = {
+                        "connected": True,
+                        "id": ig_data.get("id"),
+                        "username": ig_data.get("username"),
+                        "name": ig_data.get("name"),
+                        "profile_picture_url": ig_data.get("profile_picture_url"),
+                        "followers_count": followers,
+                        "follows_count": int(ig_data.get("follows_count") or 0),
+                        "media_count": int(ig_data.get("media_count") or 0),
+                        "biography": ig_data.get("biography"),
+                        "website": ig_data.get("website"),
+                    }
+                    result["total_audience"] += followers
+            except Exception as e:
+                logger.warning(f"Error fetching Instagram profile telemetry: {e}")
+
+            try:
+                media_res = await client.get(
+                    f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/media",
+                    params={
+                        "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+                        "access_token": access_token,
+                        "limit": 20,
+                    },
+                )
+                if media_res.status_code == 200:
+                    media_items = media_res.json().get("data", [])
+                    for item in media_items:
+                        m_type = item.get("media_type") or "IMAGE"
+                        if m_type == "VIDEO":
+                            result["video_count"] += 1
+                        elif m_type == "CAROUSEL_ALBUM":
+                            result["carousel_count"] += 1
+                        else:
+                            result["image_count"] += 1
+
+                        likes = int(item.get("like_count") or 0)
+                        comments = int(item.get("comments_count") or 0)
+                        result["total_likes"] += likes
+                        result["total_comments"] += comments
+
+                        thumb = item.get("thumbnail_url") or item.get("media_url")
+                        result["posts"].append({
+                            "id": item.get("id"),
+                            "platform": "instagram",
+                            "caption": item.get("caption"),
+                            "media_type": m_type,
+                            "media_url": thumb,
+                            "permalink": item.get("permalink") or f"https://www.instagram.com/p/{item.get('id')}",
+                            "timestamp": item.get("timestamp"),
+                            "likes_count": likes,
+                            "comments_count": comments,
+                            "shares_count": 0,
+                        })
+            except Exception as e:
+                logger.warning(f"Error fetching Instagram media telemetry: {e}")
+
+        # 2. Facebook Page & Posts
+        if facebook_page_id:
+            try:
+                fb_res = await client.get(
+                    f"{GRAPH_API_BASE}/{version}/{facebook_page_id}",
+                    params={
+                        "fields": "id,name,fan_count,followers_count,talking_about_count,link,picture{url}",
+                        "access_token": access_token,
+                    },
+                )
+                if fb_res.status_code == 200:
+                    fb_data = fb_res.json()
+                    fb_followers = int(fb_data.get("followers_count") or fb_data.get("fan_count") or 0)
+                    avatar = fb_data.get("picture", {}).get("data", {}).get("url") if isinstance(fb_data.get("picture"), dict) else None
+                    result["facebook"] = {
+                        "connected": True,
+                        "id": fb_data.get("id"),
+                        "page_name": fb_data.get("name"),
+                        "fan_count": int(fb_data.get("fan_count") or 0),
+                        "followers_count": fb_followers,
+                        "talking_about_count": int(fb_data.get("talking_about_count") or 0),
+                        "link": fb_data.get("link") or f"https://www.facebook.com/{facebook_page_id}",
+                        "avatar_url": avatar,
+                    }
+                    result["total_audience"] += fb_followers
+            except Exception as e:
+                logger.warning(f"Error fetching Facebook page telemetry: {e}")
+
+            try:
+                feed_res = await client.get(
+                    f"{GRAPH_API_BASE}/{version}/{facebook_page_id}/feed",
+                    params={
+                        "fields": "id,message,created_time,permalink_url,shares,reactions.summary(true),comments.summary(true)",
+                        "access_token": access_token,
+                        "limit": 20,
+                    },
+                )
+                if feed_res.status_code == 200:
+                    feed_items = feed_res.json().get("data", [])
+                    for post in feed_items:
+                        reactions = int(post.get("reactions", {}).get("summary", {}).get("total_count", 0))
+                        comments = int(post.get("comments", {}).get("summary", {}).get("total_count", 0))
+                        shares = int(post.get("shares", {}).get("count", 0))
+
+                        result["total_likes"] += reactions
+                        result["total_comments"] += comments
+                        result["total_shares"] += shares
+
+                        result["posts"].append({
+                            "id": post.get("id"),
+                            "platform": "facebook",
+                            "caption": post.get("message"),
+                            "media_type": "STATUS",
+                            "media_url": None,
+                            "permalink": post.get("permalink_url") or f"https://www.facebook.com/{post.get('id')}",
+                            "timestamp": post.get("created_time"),
+                            "likes_count": reactions,
+                            "comments_count": comments,
+                            "shares_count": shares,
+                        })
+            except Exception as e:
+                logger.warning(f"Error fetching Facebook feed telemetry: {e}")
+
+    def _parse_time(p: dict[str, Any]) -> str:
+        return str(p.get("timestamp") or "")
+
+    result["posts"].sort(key=_parse_time, reverse=True)
+    return result
+

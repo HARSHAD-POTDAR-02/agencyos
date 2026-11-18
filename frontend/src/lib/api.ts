@@ -769,6 +769,65 @@ export interface ScheduledDeliverableItem {
   thumbnail_url?: string | null;
 }
 
+export interface InstagramProfileTelemetry {
+  connected: boolean;
+  id?: string | null;
+  username?: string | null;
+  name?: string | null;
+  profile_picture_url?: string | null;
+  followers_count: number;
+  follows_count: number;
+  media_count: number;
+  biography?: string | null;
+  website?: string | null;
+}
+
+export interface FacebookProfileTelemetry {
+  connected: boolean;
+  id?: string | null;
+  page_name?: string | null;
+  fan_count: number;
+  followers_count: number;
+  talking_about_count: number;
+  link?: string | null;
+  avatar_url?: string | null;
+}
+
+export interface LiveMetaPostItem {
+  id: string;
+  platform: "instagram" | "facebook" | string;
+  caption?: string | null;
+  media_type?: string | null;
+  media_url?: string | null;
+  permalink: string;
+  timestamp?: string | null;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  is_deliverable_match: boolean;
+  deliverable_title?: string | null;
+}
+
+export interface AgencyRoiMetrics {
+  monthly_retainer_fee: number;
+  currency: string;
+  total_audience: number;
+  total_social_interactions: number;
+  live_engagement_rate: number;
+  cost_per_approved_asset: number;
+  estimated_production_value: number;
+  estimated_earned_media_value: number;
+  roi_multiplier: number;
+  breakdown_text: string;
+}
+
+export interface ContentFormatDistribution {
+  videos_count: number;
+  images_count: number;
+  carousels_count: number;
+  other_count: number;
+}
+
 export interface MonthlyReport {
   client_id: string;
   client_name: string;
@@ -793,6 +852,11 @@ export interface MonthlyReport {
     comments_count: number;
   }>;
   executive_summary: string;
+  instagram_profile?: InstagramProfileTelemetry | null;
+  facebook_profile?: FacebookProfileTelemetry | null;
+  live_meta_posts?: LiveMetaPostItem[];
+  roi_metrics?: AgencyRoiMetrics | null;
+  format_distribution?: ContentFormatDistribution | null;
 }
 
 export const publishingApi = {

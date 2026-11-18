@@ -164,6 +164,30 @@ def save_text_content(deliverable_id: uuid.UUID, file_name: str, text: str) -> t
     return storage_key, checksum, file_size
 
 
+def upload_local_file(local_file_path: str, storage_key: str, content_type: str = "image/jpeg") -> bool:
+    """
+    Upload an existing file from the local filesystem to Backblaze B2 / S3.
+    """
+    s3 = _get_boto3_client()
+    if not s3 or not Path(local_file_path).is_file():
+        return False
+    bucket = _get_bucket_name()
+    try:
+        with open(local_file_path, "rb") as f:
+            data = f.read()
+        s3.put_object(
+            Bucket=bucket,
+            Key=storage_key,
+            Body=data,
+            ContentType=content_type,
+        )
+        logger.info(f"Successfully uploaded local file '{local_file_path}' ({len(data)} bytes) to B2 '{storage_key}'.")
+        return True
+    except Exception as e:
+        logger.error(f"Error uploading local file {local_file_path} to Backblaze B2: {e}")
+        return False
+
+
 def delete_file(storage_key: str) -> None:
     """Remove a stored file from both remote B2 and local cache."""
     # 1. Local

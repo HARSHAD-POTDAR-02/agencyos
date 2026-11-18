@@ -71,6 +71,7 @@ async def seed_production_demo() -> None:
             ("admin@agencyos.io", "Admin1234!", RoleEnum.owner),
             ("director@agencyos.io", "Director1234!", RoleEnum.strategist),
             ("manager@agencyos.io", "Manager1234!", RoleEnum.account_manager),
+            ("harshadpotdar02@gmail.com", "Admin1234!", RoleEnum.owner),
         ]
 
         admin_user = None

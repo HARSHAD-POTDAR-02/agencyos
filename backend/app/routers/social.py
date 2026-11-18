@@ -216,6 +216,7 @@ async def get_meta_oauth_url(
         "pages_manage_posts",
         "instagram_basic",
         "instagram_content_publish",
+        "business_management",
     ]
     scope_str = ",".join(scopes)
     import urllib.parse
@@ -229,6 +230,7 @@ async def get_meta_oauth_url(
         f"&scope={scope_str}"
         f"&state={state_payload}"
         f"&response_type=code"
+        f"&auth_type=rerequest"
     )
     return MetaOAuthUrlResponse(oauth_url=oauth_url, client_id=app_id, redirect_uri=redirect_uri)
 

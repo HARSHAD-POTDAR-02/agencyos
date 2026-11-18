@@ -47,7 +47,8 @@ def _normalize_database_urls(
     parsed_async = urllib.parse.urlparse(async_url_raw)
     async_qs = urllib.parse.parse_qs(parsed_async.query)
     is_neon = "neon.tech" in (parsed_async.netloc or "").lower()
-    needs_ssl = is_neon or "sslmode" in async_qs or "ssl" in async_qs
+    is_supabase = "supabase" in (parsed_async.netloc or "").lower()
+    needs_ssl = is_neon or is_supabase or "sslmode" in async_qs or "ssl" in async_qs
 
     # Clean query string for asyncpg (asyncpg expects ssl via connect_args or ssl=require, rejects sslmode/channel_binding)
     async_qs.pop("sslmode", None)
