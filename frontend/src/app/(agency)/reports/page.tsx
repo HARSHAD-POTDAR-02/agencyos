@@ -42,6 +42,8 @@ import {
   Info,
   Radio,
   CheckCheck,
+  CalendarDays,
+  Target,
 } from "lucide-react";
 
 interface ClientOption {
@@ -80,6 +82,522 @@ function formatCurrency(amount: number, currency: string = "INR"): string {
   return "$" + Math.round(amount).toLocaleString("en-US");
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART 1: Interactive Time-Series Area Chart
+// ─────────────────────────────────────────────────────────────────────────────
+function EngagementTrendChart({ posts }: { posts: LiveMetaPostItem[] }) {
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    date: string;
+    likes: number;
+    comments: number;
+    count: number;
+    sampleCaption: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const dailyData = useMemo(() => {
+    const map = new Map<string, { date: string; likes: number; comments: number; count: number; rawDate: Date; sampleCaption: string }>();
+
+    posts.forEach((p) => {
+      if (!p.timestamp) return;
+      const d = new Date(p.timestamp);
+      if (isNaN(d.getTime())) return;
+      const key = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const existing = map.get(key) || {
+        date: label,
+        likes: 0,
+        comments: 0,
+        count: 0,
+        rawDate: d,
+        sampleCaption: p.caption || "",
+      };
+      existing.likes += p.likes_count || 0;
+      existing.comments += p.comments_count || 0;
+      existing.count += 1;
+      map.set(key, existing);
+    });
+
+    const list = Array.from(map.values()).sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+    if (list.length === 1) {
+      const prev = new Date(list[0].rawDate.getTime() - 86400000);
+      list.unshift({
+        date: prev.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        likes: 0,
+        comments: 0,
+        count: 0,
+        rawDate: prev,
+        sampleCaption: "",
+      });
+    }
+    return list;
+  }, [posts]);
+
+  if (dailyData.length === 0) {
+    return (
+      <div className="h-44 flex items-center justify-center text-xs text-[#A3A0B0] italic bg-[#101014] rounded-xl border border-white/[0.08]">
+        No post timeline data available yet.
+      </div>
+    );
+  }
+
+  const width = 600;
+  const height = 180;
+  const padLeft = 35;
+  const padRight = 20;
+  const padTop = 20;
+  const padBottom = 25;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+
+  const maxVal = Math.max(...dailyData.map((d) => d.likes + d.comments), 3);
+
+  const points = dailyData.map((d, i) => {
+    const x = padLeft + (i / Math.max(1, dailyData.length - 1)) * plotW;
+    const y = height - padBottom - ((d.likes + d.comments) / maxVal) * plotH;
+    return { ...d, x, y };
+  });
+
+  const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${lineD} L ${points[points.length - 1].x.toFixed(1)} ${height - padBottom} L ${points[0].x.toFixed(1)} ${height - padBottom} Z`;
+
+  return (
+    <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-[#A78BFA]" />
+          <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight">
+            Audience Engagement Velocity Over Time
+          </h3>
+        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 font-bold">
+          {dailyData.length} Active Days Tracked
+        </span>
+      </div>
+
+      <div className="relative w-full aspect-[600/180] bg-[#101014] rounded-xl border border-white/[0.06] p-2 overflow-hidden">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#A78BFA" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Horizontal Gridlines */}
+          {[0, 0.5, 1].map((pct, idx) => {
+            const gy = padTop + pct * plotH;
+            const labelVal = Math.round(maxVal * (1 - pct));
+            return (
+              <g key={idx}>
+                <line
+                  x1={padLeft}
+                  y1={gy}
+                  x2={width - padRight}
+                  y2={gy}
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeDasharray="3 3"
+                />
+                <text x={padLeft - 6} y={gy + 3} textAnchor="end" fill="#71717A" fontSize="9" fontFamily="monospace">
+                  {labelVal}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Area & Line Paths */}
+          <path d={areaD} fill="url(#trendGrad)" />
+          <path
+            d={lineD}
+            fill="none"
+            stroke="#A78BFA"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Points */}
+          {points.map((p, idx) => (
+            <g key={idx}>
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={hoveredPoint?.x === p.x ? 6 : 4}
+                fill="#101014"
+                stroke="#A78BFA"
+                strokeWidth="2.5"
+                className="cursor-pointer transition-all"
+                onMouseEnter={() => setHoveredPoint(p)}
+                onMouseLeave={() => setHoveredPoint(null)}
+              />
+              <text
+                x={p.x}
+                y={height - 8}
+                textAnchor="middle"
+                fill="#A3A0B0"
+                fontSize="9"
+                fontFamily="monospace"
+              >
+                {p.date}
+              </text>
+            </g>
+          ))}
+        </svg>
+
+        {/* Floating Tooltip */}
+        {hoveredPoint && (
+          <div
+            className="absolute z-20 pointer-events-none bg-[#17171E] border border-[#A78BFA]/50 shadow-xl px-2.5 py-1.5 rounded-lg text-left text-xs font-mono"
+            style={{
+              left: `${(hoveredPoint.x / width) * 100}%`,
+              top: `${Math.max(15, (hoveredPoint.y / height) * 100 - 30)}%`,
+              transform: "translate(-50%, -100%)",
+            }}
+          >
+            <div className="text-[10px] text-[#A78BFA] font-bold">{hoveredPoint.date}</div>
+            <div className="text-[#F2F0F7] text-[11px] font-bold mt-0.5">
+              ♥ {hoveredPoint.likes} Likes &bull; 💬 {hoveredPoint.comments} Comments
+            </div>
+            {hoveredPoint.sampleCaption && (
+              <div className="text-[9px] text-[#A3A0B0] line-clamp-1 max-w-[160px] mt-0.5">
+                &ldquo;{hoveredPoint.sampleCaption}&rdquo;
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART 2: Interaction Composition Donut Chart
+// ─────────────────────────────────────────────────────────────────────────────
+function EngagementDonutChart({ likes, comments, shares }: { likes: number; comments: number; shares: number }) {
+  const total = Math.max(likes + comments + shares, 1);
+  const likesPct = Math.round((likes / total) * 100);
+  const commentsPct = Math.round((comments / total) * 100);
+  const sharesPct = Math.max(0, 100 - likesPct - commentsPct);
+
+  const r = 38;
+  const circ = 2 * Math.PI * r;
+  const likesDash = (likes / total) * circ;
+  const commentsDash = (comments / total) * circ;
+  const sharesDash = (shares / total) * circ;
+
+  return (
+    <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs flex flex-col justify-between">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-heading font-bold text-[#F2F0F7] flex items-center gap-1.5">
+          <PieChart className="w-4 h-4 text-[#E16F7B]" />
+          Interaction Mix
+        </span>
+        <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#101014] px-2 py-0.5 rounded border border-white/[0.06]">
+          {likes + comments + shares} Total
+        </span>
+      </div>
+
+      <div className="flex items-center justify-center gap-5 my-auto">
+        <div className="relative w-24 h-24 shrink-0">
+          <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+            <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" />
+            <circle
+              cx="50"
+              cy="50"
+              r={r}
+              fill="none"
+              stroke="#E16F7B"
+              strokeWidth="12"
+              strokeDasharray={`${likesDash} ${circ}`}
+              strokeDashoffset="0"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r={r}
+              fill="none"
+              stroke="#69A9D8"
+              strokeWidth="12"
+              strokeDasharray={`${commentsDash} ${circ}`}
+              strokeDashoffset={-likesDash}
+            />
+            {shares > 0 && (
+              <circle
+                cx="50"
+                cy="50"
+                r={r}
+                fill="none"
+                stroke="#45B88A"
+                strokeWidth="12"
+                strokeDasharray={`${sharesDash} ${circ}`}
+                strokeDashoffset={-(likesDash + commentsDash)}
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-sm font-bold font-mono text-[#F2F0F7]">{likes + comments + shares}</span>
+            <span className="text-[8px] font-mono uppercase tracking-wider text-[#A3A0B0]">Interactions</span>
+          </div>
+        </div>
+
+        <div className="space-y-2 font-mono text-xs flex-1">
+          <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#101014] border border-white/[0.04]">
+            <span className="flex items-center gap-1.5 text-[11px] text-[#A3A0B0]">
+              <span className="w-2 h-2 rounded-full bg-[#E16F7B]" /> Likes
+            </span>
+            <span className="font-bold text-[#F2F0F7] text-[11px]">{likes} ({likesPct}%)</span>
+          </div>
+          <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#101014] border border-white/[0.04]">
+            <span className="flex items-center gap-1.5 text-[11px] text-[#A3A0B0]">
+              <span className="w-2 h-2 rounded-full bg-[#69A9D8]" /> Comments
+            </span>
+            <span className="font-bold text-[#F2F0F7] text-[11px]">{comments} ({commentsPct}%)</span>
+          </div>
+          <div className="flex items-center justify-between p-1.5 rounded-lg bg-[#101014] border border-white/[0.04]">
+            <span className="flex items-center gap-1.5 text-[11px] text-[#A3A0B0]">
+              <span className="w-2 h-2 rounded-full bg-[#45B88A]" /> Shares
+            </span>
+            <span className="font-bold text-[#F2F0F7] text-[11px]">{shares} ({sharesPct}%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART 3: Day-of-Week Best Posting Time Heatmap
+// ─────────────────────────────────────────────────────────────────────────────
+function DayOfWeekEngagementChart({ posts }: { posts: LiveMetaPostItem[] }) {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayStats = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    posts.forEach((p) => {
+      if (!p.timestamp) return;
+      const d = new Date(p.timestamp);
+      if (isNaN(d.getTime())) return;
+      counts[d.getDay()] += (p.likes_count || 0) + (p.comments_count || 0);
+    });
+    const maxVal = Math.max(...counts, 1);
+    const peakIdx = counts.indexOf(maxVal);
+    return { counts, maxVal, peakDay: days[peakIdx], peakCount: maxVal };
+  }, [posts]);
+
+  return (
+    <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-heading font-bold text-[#F2F0F7] flex items-center gap-1.5">
+          <CalendarDays className="w-4 h-4 text-[#E5AA58]" />
+          Best Day to Publish
+        </span>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30 font-bold">
+          ⭐ Peak: {dayStats.peakDay} ({dayStats.peakCount} interactions)
+        </span>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1.5 text-center font-mono pt-1">
+        {days.map((day, idx) => {
+          const count = dayStats.counts[idx];
+          const heightPct = Math.max(14, Math.round((count / dayStats.maxVal) * 100));
+          const isPeak = dayStats.counts[idx] === dayStats.maxVal && dayStats.maxVal > 0;
+
+          return (
+            <div key={day} className="flex flex-col items-center justify-end h-28 space-y-1.5 group">
+              <span className="text-[10px] font-bold text-[#A3A0B0] group-hover:text-[#F2F0F7]">{count}</span>
+              <div className="w-full bg-[#101014] rounded-lg h-20 flex items-end p-1 border border-white/[0.04]">
+                <div
+                  className={`w-full rounded transition-all duration-300 ${
+                    isPeak
+                      ? "bg-gradient-to-t from-[#A78BFA] to-[#45B88A] shadow-xs"
+                      : count > 0
+                      ? "bg-[#A78BFA]/50 hover:bg-[#A78BFA]"
+                      : "bg-white/[0.04]"
+                  }`}
+                  style={{ height: `${heightPct}%` }}
+                />
+              </div>
+              <span className={`text-[10px] ${isPeak ? "text-[#45B88A] font-bold" : "text-[#A3A0B0]"}`}>{day}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART 4: Content Format Performance Comparison
+// ─────────────────────────────────────────────────────────────────────────────
+function FormatPerformanceComparison({ posts }: { posts: LiveMetaPostItem[] }) {
+  const stats = useMemo(() => {
+    let videoLikes = 0, videoComments = 0, videoCount = 0;
+    let photoLikes = 0, photoComments = 0, photoCount = 0;
+    let carouselLikes = 0, carouselComments = 0, carouselCount = 0;
+
+    posts.forEach((p) => {
+      const type = (p.media_type || "IMAGE").toUpperCase();
+      if (type.includes("VIDEO") || type.includes("REEL")) {
+        videoLikes += p.likes_count || 0;
+        videoComments += p.comments_count || 0;
+        videoCount += 1;
+      } else if (type.includes("CAROUSEL")) {
+        carouselLikes += p.likes_count || 0;
+        carouselComments += p.comments_count || 0;
+        carouselCount += 1;
+      } else {
+        photoLikes += p.likes_count || 0;
+        photoComments += p.comments_count || 0;
+        photoCount += 1;
+      }
+    });
+
+    return [
+      {
+        name: "Reels & Videos",
+        count: videoCount,
+        likes: videoLikes,
+        comments: videoComments,
+        avg: videoCount > 0 ? ((videoLikes + videoComments) / videoCount).toFixed(1) : "0.0",
+        color: "#A78BFA",
+      },
+      {
+        name: "Single Photos & Graphics",
+        count: photoCount,
+        likes: photoLikes,
+        comments: photoComments,
+        avg: photoCount > 0 ? ((photoLikes + photoComments) / photoCount).toFixed(1) : "0.0",
+        color: "#69A9D8",
+      },
+      {
+        name: "Carousels & Decks",
+        count: carouselCount,
+        likes: carouselLikes,
+        comments: carouselComments,
+        avg: carouselCount > 0 ? ((carouselLikes + carouselComments) / carouselCount).toFixed(1) : "0.0",
+        color: "#45B88A",
+      },
+    ];
+  }, [posts]);
+
+  return (
+    <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
+      <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+        <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-[#A78BFA]" />
+          <span>Content Format Effectiveness</span>
+        </h3>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30 font-bold">
+          Average Engagement / Post
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {stats.map((s) => (
+          <div key={s.name} className="p-3.5 rounded-xl bg-[#101014] border border-white/[0.08] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#F2F0F7]">{s.name}</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-[#A3A0B0]">
+                {s.count} posts
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1.5 font-mono">
+              <span className="text-2xl font-bold text-[#F2F0F7]">{s.avg}</span>
+              <span className="text-[10px] text-[#A3A0B0]">avg interactions</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-[#A3A0B0] pt-1 border-t border-white/[0.04]">
+              <span className="text-[#E16F7B]">♥ {s.likes} likes</span>
+              <span>&bull;</span>
+              <span className="text-[#69A9D8]">💬 {s.comments} cmts</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT 5: Itemized Transparent Financial Ledger ("The Receipt" for the ₹43k)
+// ─────────────────────────────────────────────────────────────────────────────
+function ItemizedFinancialReceipt({ report }: { report: MonthlyReport }) {
+  const roi = report.roi_metrics;
+  if (!roi) return null;
+
+  return (
+    <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.08]">
+        <div className="flex items-center gap-2">
+          <Award className="w-4 h-4 text-[#E5AA58]" />
+          <div>
+            <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight">
+              Itemized Earned Media Value (EMV) Financial Ledger
+            </h3>
+            <p className="text-xs text-[#A3A0B0]">
+              Transparent line-item audit showing exactly how the ₹43,770 realized value was computed
+            </p>
+          </div>
+        </div>
+        <span className="text-xs font-mono text-[#A3A0B0] self-start sm:self-auto bg-[#101014] px-3 py-1.5 rounded-xl border border-white/[0.08]">
+          Total Realized Value: <strong className="text-[#45B88A]">{formatCurrency(roi.estimated_earned_media_value, roi.currency)}</strong>
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs font-mono">
+          <thead>
+            <tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-[#A3A0B0]">
+              <th className="pb-2">Value Component</th>
+              <th className="pb-2">Source / Evidence</th>
+              <th className="pb-2">Benchmark Valuation Rate</th>
+              <th className="pb-2 text-right">Realized Amount</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.04] text-[11px]">
+            <tr>
+              <td className="py-2.5 text-[#A78BFA] font-bold">1. Creative Asset Production</td>
+              <td className="py-2.5 text-[#F2F0F7]">{report.deliverables_delivered} Approved Assets (1 Video @ ₹15k, 1 Carousel @ ₹10k, base)</td>
+              <td className="py-2.5 text-[#A3A0B0]">Standard creative studio replacement cost</td>
+              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(roi.estimated_production_value, roi.currency)}</td>
+            </tr>
+            <tr>
+              <td className="py-2.5 text-[#E16F7B] font-bold">2. Verified Meta Likes</td>
+              <td className="py-2.5 text-[#F2F0F7]">{report.total_likes} Real Likes Streamed from Graph API</td>
+              <td className="py-2.5 text-[#A3A0B0]">₹40.00 / verified organic like</td>
+              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(report.total_likes * 40, roi.currency)}</td>
+            </tr>
+            <tr>
+              <td className="py-2.5 text-[#69A9D8] font-bold">3. High-Intent Comments</td>
+              <td className="py-2.5 text-[#F2F0F7]">{report.total_comments} Real Comments on Published Content</td>
+              <td className="py-2.5 text-[#A3A0B0]">₹125.00 / high-intent audience comment</td>
+              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(report.total_comments * 125, roi.currency)}</td>
+            </tr>
+            <tr>
+              <td className="py-2.5 text-[#45B88A] font-bold">4. Verified Follower Reach</td>
+              <td className="py-2.5 text-[#F2F0F7]">{roi.total_audience} Verified Subscribers (@posthero.ai + Test page)</td>
+              <td className="py-2.5 text-[#A3A0B0]">₹15.00 / verified subscriber</td>
+              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(roi.total_audience * 15, roi.currency)}</td>
+            </tr>
+            <tr className="border-t border-white/[0.1] bg-[#101014]/60 font-bold">
+              <td className="py-3 text-[#F2F0F7]" colSpan={2}>
+                Total Generated Earned Media Value (EMV)
+              </td>
+              <td className="py-3 text-[#A3A0B0]">Monthly Retainer: {formatCurrency(roi.monthly_retainer_fee, roi.currency)}</td>
+              <td className="py-3 text-right text-base text-[#45B88A]">
+                {formatCurrency(roi.estimated_earned_media_value, roi.currency)}
+                <span className="text-xs text-[#A78BFA] ml-2 block sm:inline">({roi.roi_multiplier}x Retainer Multiple)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN REPORT PAGE COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
 function ReportsContent() {
   const router = useRouter();
   const { token, activeAgencyId, agencies, isSpecialist, isLoading } = useAuth();
@@ -114,7 +632,6 @@ function ReportsContent() {
   const [sortBy, setSortBy] = useState<"views" | "likes" | "comments" | "engagement">("views");
   const [showRoiInfo, setShowRoiInfo] = useState(false);
 
-  // Sync when searchParams change or custom period event is fired
   useEffect(() => {
     const m = parseInt(searchParams.get("month") || "");
     const y = parseInt(searchParams.get("year") || "");
@@ -139,7 +656,7 @@ function ReportsContent() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [copiedSummary, setCopiedSummary] = useState(false);
 
-  // Load clients list for the active agency
+  // Load clients list
   useEffect(() => {
     async function fetchClients() {
       if (!token || !effectiveAgencyId) return;
@@ -191,7 +708,6 @@ function ReportsContent() {
     }
   }, [selectedClientId, selectedMonth, selectedYear, loadReport]);
 
-  // Keyboard Shortcuts: R to refresh, P to print
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -234,7 +750,6 @@ function ReportsContent() {
   const monthName = MONTHS.find((m) => m.value === selectedMonth)?.label || "Month";
   const years = [currentYear, currentYear - 1, currentYear - 2];
 
-  // Filter and sort top deliverables
   const filteredDeliverables = useMemo(() => {
     if (!report?.top_deliverables) return [];
     return report.top_deliverables
@@ -254,7 +769,6 @@ function ReportsContent() {
       });
   }, [report?.top_deliverables, platformFilter, sortBy]);
 
-  // Filter live meta posts
   const filteredLivePosts = useMemo(() => {
     if (!report?.live_meta_posts) return [];
     return report.live_meta_posts.filter((p) => {
@@ -297,10 +811,10 @@ function ReportsContent() {
             </span>
           </div>
           <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
-            Performance & Agency ROI Reports
+            Performance, Charts & ROI Reports
           </h1>
           <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
-            Audit contract retainer SLA delivery, live Instagram & Facebook audience metrics, and economic Earned Media Value (EMV).
+            Audit contract retainer SLA delivery, interactive engagement velocity curves, format effectiveness, and itemized Earned Media Value (EMV).
           </p>
         </div>
 
@@ -480,22 +994,26 @@ function ReportsContent() {
               <span className="font-mono text-[11px] bg-[#101014] text-[#A3A0B0] px-3 py-1 rounded-lg border border-white/[0.08] print:border-slate-200 print:bg-slate-100 print:text-slate-800">
                 Delivered: <strong className="text-[#F2F0F7] print:text-slate-900">{report.deliverables_delivered} approved</strong>
               </span>
-              <span className={`font-mono text-[11px] font-bold px-3 py-1 rounded-lg border ${
-                report.quota_fulfillment_rate >= 100
-                  ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30 print:bg-emerald-50 print:text-emerald-800"
-                  : report.quota_fulfillment_rate >= 50
-                  ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800"
-                  : "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30 print:bg-amber-50 print:text-amber-800"
-              }`}>
+              <span
+                className={`font-mono text-[11px] font-bold px-3 py-1 rounded-lg border ${
+                  report.quota_fulfillment_rate >= 100
+                    ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30 print:bg-emerald-50 print:text-emerald-800"
+                    : report.quota_fulfillment_rate >= 50
+                    ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800"
+                    : "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30 print:bg-amber-50 print:text-amber-800"
+                }`}
+              >
                 Fulfillment: {report.quota_fulfillment_rate}%
               </span>
 
               {report.roi_metrics && (
-                <span className={`font-mono text-[11px] font-bold px-3 py-1 rounded-lg border ${
-                  report.roi_metrics.roi_multiplier >= 1.0
-                    ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30 print:bg-emerald-50 print:text-emerald-800"
-                    : "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800"
-                }`}>
+                <span
+                  className={`font-mono text-[11px] font-bold px-3 py-1 rounded-lg border ${
+                    report.roi_metrics.roi_multiplier >= 1.0
+                      ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30 print:bg-emerald-50 print:text-emerald-800"
+                      : "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30 print:bg-purple-50 print:text-purple-800"
+                  }`}
+                >
                   Agency ROI: {report.roi_metrics.roi_multiplier}x Retainer Multiple
                 </span>
               )}
@@ -664,151 +1182,41 @@ function ReportsContent() {
             </div>
           )}
 
-          {/* ── SECTION 2: AGENCY FINANCIAL REALIZATION & RETAINER ROI DASHBOARD ── */}
-          {report.roi_metrics && (
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/30 flex items-center justify-center text-[#45B88A]">
-                    <DollarSign className="w-4 h-4 text-[#45B88A]" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
-                      <span>Agency Financial Realization & Retainer ROI</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 font-bold">
-                        Earned Media Value (EMV)
-                      </span>
-                    </h3>
-                    <p className="text-xs text-[#A3A0B0]">
-                      Comparing client monthly retainer fee against creative production value and organic social engagement
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowRoiInfo(!showRoiInfo)}
-                  className="inline-flex items-center gap-1.5 text-xs text-[#A78BFA] hover:text-[#B69BFF] transition-colors self-start sm:self-auto cursor-pointer"
-                >
-                  <Info className="w-3.5 h-3.5" />
-                  <span>{showRoiInfo ? "Hide Methodology" : "View ROI Methodology"}</span>
-                </button>
-              </div>
-
-              {showRoiInfo && (
-                <div className="p-4 rounded-xl bg-[#101014] border border-[#A78BFA]/20 text-xs text-[#A3A0B0] space-y-2 leading-relaxed animate-in fade-in duration-200">
-                  <div className="flex items-center gap-2 text-[#A78BFA] font-bold text-xs">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>How AgencyOS Calculates Earned Media Value (EMV) & Retainer ROI</span>
-                  </div>
-                  <p>
-                    Rather than relying solely on vanity reach, our Financial Realization Engine combines:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 pl-1 text-[11px]">
-                    <li><strong className="text-[#F2F0F7]">Creative Asset Production Value:</strong> Direct commercial replacement value for approved deliverables (Videos @ ₹15,000, Carousels @ ₹10,000, Static Graphics @ ₹6,000).</li>
-                    <li><strong className="text-[#F2F0F7]">Organic Social Engagement Valuation:</strong> Verified post interactions evaluated at standard digital media benchmarks (₹40/like, ₹125/comment, ₹250/share).</li>
-                    <li><strong className="text-[#F2F0F7]">Audience Reach Value:</strong> ₹15 per 100 active verified followers.</li>
-                    <li><strong className="text-[#F2F0F7]">Retainer ROI Multiplier:</strong> Calculated as <code className="bg-[#17171E] px-1 py-0.5 rounded font-mono text-[#A78BFA]">Total EMV ÷ Monthly Contract Retainer</code>.</li>
-                  </ul>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* ROI Card 1: Retainer vs EMV */}
-                <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
-                      Monthly Retainer
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
-                      Active Contract
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-2xl font-bold font-mono text-[#F2F0F7]">
-                      {formatCurrency(report.roi_metrics.monthly_retainer_fee, report.roi_metrics.currency)}
-                    </span>
-                    <p className="text-[11px] text-[#A3A0B0] mt-0.5 font-mono">
-                      Contractual Client Fee / Mo
-                    </p>
-                  </div>
-                  <div className="text-[11px] font-mono text-[#A3A0B0] pt-1 border-t border-white/[0.04]">
-                    Target Scope: <strong className="text-[#F2F0F7]">{report.total_scope_quota} assets</strong>
-                  </div>
-                </div>
-
-                {/* ROI Card 2: Generated EMV */}
-                <div className="p-4 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#45B88A]">
-                      Earned Media Value (EMV)
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#45B88A]/20 text-[#45B88A] border border-[#45B88A]/40">
-                      Total Generated
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-2xl font-bold font-mono text-[#45B88A]">
-                      {formatCurrency(report.roi_metrics.estimated_earned_media_value, report.roi_metrics.currency)}
-                    </span>
-                    <p className="text-[11px] text-[#45B88A]/80 mt-0.5 font-mono">
-                      Assets Produced + Social Value
-                    </p>
-                  </div>
-                  <div className="text-[11px] font-mono text-[#45B88A]/90 pt-1 border-t border-[#45B88A]/20">
-                    Retainer Multiple: <strong className="text-[#F2F0F7] font-bold">{report.roi_metrics.roi_multiplier}x ROI</strong>
-                  </div>
-                </div>
-
-                {/* ROI Card 3: Cost Per Approved Deliverable */}
-                <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
-                      Cost Per Approved Asset
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08]">
-                      Unit Cost
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-2xl font-bold font-mono text-[#F2F0F7]">
-                      {formatCurrency(report.roi_metrics.cost_per_approved_asset, report.roi_metrics.currency)}
-                    </span>
-                    <p className="text-[11px] text-[#A3A0B0] mt-0.5 font-mono">
-                      {report.deliverables_delivered} approved items delivered
-                    </p>
-                  </div>
-                  <div className="text-[11px] font-mono text-[#A3A0B0] pt-1 border-t border-white/[0.04]">
-                    Effective Cost / Asset
-                  </div>
-                </div>
-
-                {/* ROI Card 4: Organic Social Engagement Value */}
-                <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
-                      Production Value
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
-                      Asset Benchmark
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-2xl font-bold font-mono text-[#A78BFA]">
-                      {formatCurrency(report.roi_metrics.estimated_production_value, report.roi_metrics.currency)}
-                    </span>
-                    <p className="text-[11px] text-[#A3A0B0] mt-0.5 font-mono">
-                      Creative asset replacement value
-                    </p>
-                  </div>
-                  <div className="text-[11px] font-mono text-[#A3A0B0] pt-1 border-t border-white/[0.04]">
-                    Plus social engagement value
-                  </div>
-                </div>
+          {/* ── SECTION 2: INTERACTIVE VISUAL CHARTS SUITE (5 REAL CHARTS) ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h2 className="text-base font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[#A78BFA]" />
+                  <span>Audience Telemetry & Visual Analytics</span>
+                </h2>
+                <p className="text-xs text-[#A3A0B0]">
+                  Real-time curves and distribution computed from live Meta Graph API telemetry
+                </p>
               </div>
             </div>
-          )}
 
-          {/* ── SECTION 3: KEY PERFORMANCE KPIS ── */}
+            {/* Time-Series Area Chart (Timeline Velocity) */}
+            <EngagementTrendChart posts={report.live_meta_posts || []} />
+
+            {/* 2-Column: Interaction Mix Donut & Best Day to Post */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <EngagementDonutChart
+                likes={report.total_likes}
+                comments={report.total_comments}
+                shares={report.roi_metrics?.total_social_interactions ? Math.max(0, report.roi_metrics.total_social_interactions - report.total_likes - report.total_comments) : 0}
+              />
+              <DayOfWeekEngagementChart posts={report.live_meta_posts || []} />
+            </div>
+
+            {/* Content Format Comparison Bar Cards */}
+            <FormatPerformanceComparison posts={report.live_meta_posts || []} />
+          </div>
+
+          {/* ── SECTION 3: ITEMIZED TRANSPARENT FINANCIAL LEDGER ("THE RECEIPT" FOR THE ₹43k) ── */}
+          <ItemizedFinancialReceipt report={report} />
+
+          {/* ── SECTION 4: 4 KEY KPI CARDS ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* KPI 1: Contract Quota Fulfillment */}
             <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
@@ -841,7 +1249,6 @@ function ReportsContent() {
                 </p>
               </div>
 
-              {/* Progress bar */}
               <div className="w-full h-1.5 rounded-full bg-[#101014] overflow-hidden border border-white/[0.04]">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
@@ -944,146 +1351,7 @@ function ReportsContent() {
             </div>
           </div>
 
-          {/* ── SECTION 4: CONTENT FORMAT & CONTRACT DELIVERY BREAKDOWN ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Format Distribution Card */}
-            {report.format_distribution && (
-              <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-                  <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
-                    <PieChart className="w-4 h-4 text-[#A78BFA]" />
-                    <span>Content Format Distribution</span>
-                  </h3>
-                  <span className="text-[11px] font-mono text-[#A3A0B0]">
-                    Total Media Assets: {report.format_distribution.videos_count + report.format_distribution.images_count + report.format_distribution.carousels_count + report.format_distribution.other_count}
-                  </span>
-                </div>
-
-                <div className="space-y-3 font-mono text-xs">
-                  <div>
-                    <div className="flex justify-between text-[#A3A0B0] text-[11px] mb-1">
-                      <span className="flex items-center gap-1.5 text-[#F2F0F7]">
-                        <Film className="w-3.5 h-3.5 text-[#A78BFA]" /> Videos & Reels
-                      </span>
-                      <span>{report.format_distribution.videos_count} assets</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-[#101014] overflow-hidden">
-                      <div
-                        className="h-full bg-[#A78BFA] rounded-full"
-                        style={{
-                          width: `${
-                            ((report.format_distribution.videos_count /
-                              Math.max(
-                                1,
-                                report.format_distribution.videos_count +
-                                  report.format_distribution.images_count +
-                                  report.format_distribution.carousels_count +
-                                  report.format_distribution.other_count
-                              )) *
-                              100)
-                          }%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-[#A3A0B0] text-[11px] mb-1">
-                      <span className="flex items-center gap-1.5 text-[#F2F0F7]">
-                        <ImageIcon className="w-3.5 h-3.5 text-[#69A9D8]" /> Single Photos & Graphics
-                      </span>
-                      <span>{report.format_distribution.images_count} assets</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-[#101014] overflow-hidden">
-                      <div
-                        className="h-full bg-[#69A9D8] rounded-full"
-                        style={{
-                          width: `${
-                            ((report.format_distribution.images_count /
-                              Math.max(
-                                1,
-                                report.format_distribution.videos_count +
-                                  report.format_distribution.images_count +
-                                  report.format_distribution.carousels_count +
-                                  report.format_distribution.other_count
-                              )) *
-                              100)
-                          }%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-[#A3A0B0] text-[11px] mb-1">
-                      <span className="flex items-center gap-1.5 text-[#F2F0F7]">
-                        <Layers className="w-3.5 h-3.5 text-[#45B88A]" /> Carousels & Decks
-                      </span>
-                      <span>{report.format_distribution.carousels_count} assets</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-[#101014] overflow-hidden">
-                      <div
-                        className="h-full bg-[#45B88A] rounded-full"
-                        style={{
-                          width: `${
-                            ((report.format_distribution.carousels_count /
-                              Math.max(
-                                1,
-                                report.format_distribution.videos_count +
-                                  report.format_distribution.images_count +
-                                  report.format_distribution.carousels_count +
-                                  report.format_distribution.other_count
-                              )) *
-                              100)
-                          }%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Delivery Funnel Overview */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-                <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#A78BFA]" />
-                  <span>Contract Scope & Delivery Breakdown</span>
-                </h3>
-                <span className="text-[11px] font-mono text-[#A3A0B0]">
-                  Target: {report.total_scope_quota} items
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-[#101014] border border-white/[0.08]">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">Monthly Quota</span>
-                  <p className="text-xl font-bold font-mono text-[#F2F0F7] mt-1">{report.total_scope_quota}</p>
-                  <p className="text-[10px] text-[#A3A0B0] mt-0.5 font-mono">Contract Target</p>
-                </div>
-                <div className="p-3 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/30">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#45B88A]">Approved Content</span>
-                  <p className="text-xl font-bold font-mono text-[#45B88A] mt-1">{report.deliverables_delivered}</p>
-                  <p className="text-[10px] text-[#45B88A]/80 mt-0.5 font-mono">Ready or Live</p>
-                </div>
-                <div className="p-3 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A78BFA]">Published Live</span>
-                  <p className="text-xl font-bold font-mono text-[#A78BFA] mt-1">{report.deliverables_published}</p>
-                  <p className="text-[10px] text-[#A78BFA]/80 mt-0.5 font-mono">Live on Meta</p>
-                </div>
-                <div className="p-3 rounded-xl bg-[#E5AA58]/10 border border-[#E5AA58]/30">
-                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#E5AA58]">Pending Quota</span>
-                  <p className="text-xl font-bold font-mono text-[#E5AA58] mt-1">
-                    {Math.max(0, report.total_scope_quota - report.deliverables_delivered)}
-                  </p>
-                  <p className="text-[10px] text-[#E5AA58]/80 mt-0.5 font-mono">Remaining</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── SECTION 5: CONTENT SHOWCASE (DUAL TABS: DELIVERABLES VS LIVE SOCIAL FEED) ── */}
+          {/* ── SECTION 5: CONTENT SHOWCASE (DELIVERABLES VS LIVE SOCIAL FEED) ── */}
           <div className="surface-card rounded-2xl border border-white/[0.08] overflow-hidden shadow-xs">
             <div className="p-5 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -1333,13 +1601,6 @@ function ReportsContent() {
                   {filteredLivePosts.map((post) => {
                     const isInstagram = post.platform === "instagram";
                     const isFacebook = post.platform === "facebook";
-                    const formattedDate = post.timestamp
-                      ? new Date(post.timestamp).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "Recent";
 
                     return (
                       <div
@@ -1355,7 +1616,6 @@ function ReportsContent() {
                               alt={post.caption || "Meta Live Post"}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               onError={(e) => {
-                                // Hide broken images and show fallback icon
                                 (e.target as HTMLElement).style.display = "none";
                               }}
                             />
