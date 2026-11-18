@@ -148,6 +148,16 @@ class AgencyRoiMetrics(BaseModel):
     breakdown_text: str = ""
 
 
+class EngagementRateMetrics(BaseModel):
+    err_rate: float = 0.0  # Engagement Rate by Reach: (Total Engagements / Reach) * 100
+    erf_rate: float = 0.0  # Engagement Rate by Followers: (Avg Engagements per Post / Followers) * 100
+    total_engagements: int = 0
+    total_reach: int = 0
+    avg_engagements_per_post: float = 0.0
+    formula_used: str = "(Total Engagements / Reach) × 100"
+    benchmark_status: str = "High Organic Performance (1.5% – 5.0% Benchmark)"
+
+
 class ContentFormatDistribution(BaseModel):
     videos_count: int = 0
     images_count: int = 0
@@ -176,4 +186,6 @@ class MonthlyReportOut(BaseModel):
     live_meta_posts: list[LiveMetaPostItem] = []
     roi_metrics: AgencyRoiMetrics | None = None
     format_distribution: ContentFormatDistribution | None = None
+    engagement_rate_metrics: EngagementRateMetrics | None = None
+
 

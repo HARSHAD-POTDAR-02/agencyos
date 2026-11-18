@@ -828,6 +828,16 @@ export interface ContentFormatDistribution {
   other_count: number;
 }
 
+export interface EngagementRateMetrics {
+  err_rate: number;
+  erf_rate: number;
+  total_engagements: number;
+  total_reach: number;
+  avg_engagements_per_post: number;
+  formula_used: string;
+  benchmark_status: string;
+}
+
 export interface MonthlyReport {
   client_id: string;
   client_name: string;
@@ -857,6 +867,7 @@ export interface MonthlyReport {
   live_meta_posts?: LiveMetaPostItem[];
   roi_metrics?: AgencyRoiMetrics | null;
   format_distribution?: ContentFormatDistribution | null;
+  engagement_rate_metrics?: EngagementRateMetrics | null;
 }
 
 export const publishingApi = {

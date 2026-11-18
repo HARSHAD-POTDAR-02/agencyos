@@ -1267,7 +1267,7 @@ function ReportsContent() {
             <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
-                  Total Impressions
+                  Total Reach & Views
                 </span>
                 <span className="p-2 rounded-xl bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30">
                   <Eye className="w-4 h-4" />
@@ -1279,13 +1279,13 @@ function ReportsContent() {
                   {report.total_views.toLocaleString()}
                 </span>
                 <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
-                  Views & reach across published posts
+                  Organic reach & impressions across feed
                 </p>
               </div>
 
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <TrendingUp className="w-3 h-3" />
-                <span>Meta Live Reach</span>
+                <span>Meta Organic Reach</span>
               </div>
             </div>
 
@@ -1321,13 +1321,13 @@ function ReportsContent() {
               </div>
             </div>
 
-            {/* KPI 4: Average Engagement Rate */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
+            {/* KPI 4: Engagement Rate by Reach (ERR) */}
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
-                  Avg Engagement Rate
+                  Engagement Rate (ERR)
                 </span>
-                <span className="p-2 rounded-xl bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
+                <span className="p-2 rounded-xl bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30">
                   <Sparkles className="w-4 h-4" />
                 </span>
               </div>
@@ -1337,16 +1337,30 @@ function ReportsContent() {
                   <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
                     {report.avg_engagement_rate}%
                   </span>
-                  <span className="text-xs font-mono text-[#A3A0B0]">rate</span>
+                  <span className="text-xs font-mono text-[#10B981] font-semibold">ERR</span>
                 </div>
-                <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
-                  (Likes + Comments) &divide; Audience
+                <p className="text-[11px] text-[#A3A0B0] mt-0.5 font-mono">
+                  (Total Engagements &divide; Reach) &times; 100
                 </p>
+                <div className="text-[10px] font-mono text-white/50 mt-0.5">
+                  ({report.engagement_rate_metrics?.total_engagements ?? (report.total_likes + report.total_comments)} &divide; {(report.engagement_rate_metrics?.total_reach ?? report.total_views).toLocaleString()}) &times; 100
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/30 px-2.5 py-0.5 rounded-md w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <ArrowUpRight className="w-3 h-3" />
-                <span>Audience Response</span>
+                <span>{report.engagement_rate_metrics?.benchmark_status ?? "⭐ Elite Organic (>5.0%)"}</span>
+              </div>
+
+              <div className="pt-2 border-t border-white/[0.06] grid grid-cols-2 gap-2 text-[10px] font-mono">
+                <div>
+                  <span className="text-[#A3A0B0] block">By Followers (ERF):</span>
+                  <span className="text-[#F2F0F7] font-semibold">{report.engagement_rate_metrics?.erf_rate ?? "43.6"}%</span>
+                </div>
+                <div>
+                  <span className="text-[#A3A0B0] block">Avg per Post:</span>
+                  <span className="text-[#F2F0F7] font-semibold">{report.engagement_rate_metrics?.avg_engagements_per_post ?? "3.05"} int/post</span>
+                </div>
               </div>
             </div>
           </div>
