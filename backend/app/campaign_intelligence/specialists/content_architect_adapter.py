@@ -5,6 +5,7 @@ import logging
 import os
 import re
 from typing import Any, Literal
+import httpx
 import requests
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -317,10 +318,10 @@ def parse_insert_position(query: str, current_count: int) -> int:
 # LLM Intent Classification (NVIDIA NIM)
 # =====================================================================
 
-def classify_storyboard_intent_nim(query: str, current_scene_count: int) -> dict[str, Any] | None:
+async def classify_storyboard_intent_nim(query: str, current_scene_count: int) -> dict[str, Any] | None:
     """
     Call NVIDIA NIM 'nvidia/nemotron-3.5-bolt-e4b' to classify user edit intent.
-    Uses requests with a fast 5s timeout. Returns structured intent dict or None on failure.
+    Uses httpx.AsyncClient with a fast 5s timeout. Returns structured intent dict or None on failure.
     """
     api_key = getattr(settings, "NVIDIA_API_KEY", "") or os.environ.get("NVIDIA_API_KEY", "")
     if not api_key:
@@ -362,19 +363,21 @@ Output JSON only without any markdown formatting or extra text:
     }
 
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=5)
-        if r.status_code == 200:
-            content = r.json()["choices"][0]["message"]["content"]
-            cleaned = content.strip().strip("```json").strip("```").strip()
-            return json.loads(cleaned)
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.post(url, headers=headers, json=payload)
+            if r.status_code == 200:
+                content = r.json()["choices"][0]["message"]["content"]
+                cleaned = content.strip().strip("```json").strip("```").strip()
+                return json.loads(cleaned)
     except Exception as ex:
         logger.warning(f"NVIDIA NIM intent classification fallback triggered: {ex}")
     return None
 
 
-def classify_carousel_intent_nim(query: str, current_slide_count: int) -> dict[str, Any] | None:
+async def classify_carousel_intent_nim(query: str, current_slide_count: int) -> dict[str, Any] | None:
     """
     Call NVIDIA NIM 'nvidia/nemotron-3.5-bolt-e4b' to classify carousel edit intent.
+    Uses httpx.AsyncClient with a fast 5s timeout.
     """
     api_key = getattr(settings, "NVIDIA_API_KEY", "") or os.environ.get("NVIDIA_API_KEY", "")
     if not api_key:
@@ -416,11 +419,12 @@ Output JSON only without any markdown formatting or extra text:
     }
 
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=5)
-        if r.status_code == 200:
-            content = r.json()["choices"][0]["message"]["content"]
-            cleaned = content.strip().strip("```json").strip("```").strip()
-            return json.loads(cleaned)
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.post(url, headers=headers, json=payload)
+            if r.status_code == 200:
+                content = r.json()["choices"][0]["message"]["content"]
+                cleaned = content.strip().strip("```json").strip("```").strip()
+                return json.loads(cleaned)
     except Exception as ex:
         logger.warning(f"NVIDIA NIM carousel intent classification fallback: {ex}")
     return None
@@ -500,7 +504,7 @@ def classify_storyboard_operation_rules(query: str, active_payload: dict[str, An
     return "REVISE_ALL_SCENES", {}
 
 
-def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+async def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """
     Classify user query into:
     1. TARGETED_EDIT (specific scene, caption, cta, hashtags, title)
@@ -514,7 +518,7 @@ def classify_storyboard_operation(query: str, active_payload: dict[str, Any]) ->
     scenes = active_payload.get("scenes", [])
     num_scenes = len(scenes)
 
-    nim_res = classify_storyboard_intent_nim(query, num_scenes)
+    nim_res = await classify_storyboard_intent_nim(query, num_scenes)
     if nim_res and "operation" in nim_res:
         op = nim_res["operation"]
         if op == "STRUCTURAL_ADD":
@@ -592,14 +596,14 @@ def classify_carousel_operation_rules(query: str, active_payload: dict[str, Any]
     return "REVISE_ALL_SLIDES", {}
 
 
-def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+async def classify_carousel_operation(query: str, active_payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """
     Classify carousel editing operations using NVIDIA NIM with rules fallback.
     """
     slides = active_payload.get("slides", [])
     num_slides = len(slides)
 
-    nim_res = classify_carousel_intent_nim(query, num_slides)
+    nim_res = await classify_carousel_intent_nim(query, num_slides)
     if nim_res and "operation" in nim_res:
         op = nim_res["operation"]
         if op == "STRUCTURAL_ADD":
@@ -676,7 +680,7 @@ class ContentArchitectAdapter(SpecialistAdapter):
             and context.active_artifact_type == ArtifactType.storyboard.value
             and not any(kw in lower_q for kw in ["carousel", "slide deck"])
         ):
-            op_type, op_info = classify_storyboard_operation(query, context.active_artifact_payload)
+            op_type, op_info = await classify_storyboard_operation(query, context.active_artifact_payload)
 
             if op_type == "TARGETED_EDIT":
                 return await self._handle_storyboard_targeted_edit(
@@ -716,7 +720,7 @@ class ContentArchitectAdapter(SpecialistAdapter):
             and context.active_artifact_type == ArtifactType.carousel_deck.value
             and not any(kw in lower_q for kw in ["reel", "video", "storyboard"])
         ):
-            op_type, op_info = classify_carousel_operation(query, context.active_artifact_payload)
+            op_type, op_info = await classify_carousel_operation(query, context.active_artifact_payload)
 
             if op_type == "TARGETED_EDIT":
                 return await self._handle_carousel_targeted_edit(

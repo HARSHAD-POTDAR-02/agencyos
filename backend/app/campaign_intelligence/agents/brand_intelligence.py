@@ -83,6 +83,9 @@ class BrandIntelligenceAgent:
         confirmed_facts: list[str] = [
             f"Client business name: '{client.business_name}'",
         ]
+        location = getattr(client, "location", None)
+        if location:
+            confirmed_facts.append(f"Client location: '{location}'")
         if client.industry:
             confirmed_facts.append(f"Client verified industry: '{client.industry}'")
         if client.website:
@@ -90,6 +93,7 @@ class BrandIntelligenceAgent:
 
         knowledge_gaps: list[str] = []
         brand_voice: list[str] = []
+        tone_examples: list[str] = []
         approved_phrases: list[str] = []
         prohibited_terms: list[ProhibitedTerm] = []
         prohibited_claims: list[ProhibitedClaim] = []
@@ -140,6 +144,16 @@ class BrandIntelligenceAgent:
                     approved_phrases = [str(p) for p in brand_profile.approved_phrases]
                 elif isinstance(brand_profile.approved_phrases, dict):
                     approved_phrases = [str(v) for v in brand_profile.approved_phrases.values()]
+
+            # Parse tone examples
+            if getattr(brand_profile, "tone_examples", None):
+                raw_tones = brand_profile.tone_examples
+                if isinstance(raw_tones, str):
+                    tone_examples = [t.strip() for t in raw_tones.splitlines() if t.strip()]
+                    if not tone_examples:
+                        tone_examples = [t.strip() for t in raw_tones.split(",") if t.strip()]
+                elif isinstance(raw_tones, list):
+                    tone_examples = [str(t).strip() for t in raw_tones if str(t).strip()]
 
             # Parse prohibited claims & terms
             if brand_profile.prohibited_claims:
@@ -215,10 +229,12 @@ class BrandIntelligenceAgent:
             agency_id=client.agency_id,
             business_name=client.business_name,
             industry=client.industry,
+            location=location,
             website=client.website,
             brand_positioning=brand_positioning,
             brand_voice=brand_voice,
             tone_guidelines=tone_guideline,
+            tone_examples=tone_examples,
             target_audience=target_audience,
             content_pillars=content_pillars,
             approved_phrases=approved_phrases,

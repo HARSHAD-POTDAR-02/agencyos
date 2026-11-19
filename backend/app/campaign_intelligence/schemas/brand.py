@@ -71,12 +71,14 @@ class BrandContext(BaseModel):
     agency_id: uuid.UUID
     business_name: str
     industry: str | None = None
+    location: str | None = None
     website: str | None = None
     brand_positioning: str | None = None
 
     # Brand identity & tone
     brand_voice: list[str] = Field(default_factory=list)
     tone_guidelines: ToneGuideline = Field(default_factory=ToneGuideline)
+    tone_examples: list[str] = Field(default_factory=list)
     target_audience: list[str] = Field(default_factory=list)
     content_pillars: list[str] = Field(default_factory=list)
     approved_phrases: list[str] = Field(default_factory=list)
@@ -84,6 +86,7 @@ class BrandContext(BaseModel):
     # Compliance boundaries
     prohibited_terms: list[ProhibitedTerm] = Field(default_factory=list)
     prohibited_claims: list[ProhibitedClaim] = Field(default_factory=list)
+    prohibited_concepts: list[str] = Field(default_factory=list)
 
     # Offerings & commercial constraints
     verified_offers: list[VerifiedOffer] = Field(default_factory=list)

@@ -117,7 +117,7 @@ def extract_json_from_llm(raw_text: str) -> dict[str, Any] | list[Any]:
     wrapped in markdown code blocks, conversational preambles, trailing commentary,
     or truncated.
     """
-    text = raw_text.strip()
+    text = re.sub(r"<think>[\s\S]*?</think>", "", raw_text, flags=re.IGNORECASE).strip()
     decoder = json.JSONDecoder(strict=False)
 
     # 1. Match code blocks ```json ... ``` or ``` ... ```
@@ -444,11 +444,15 @@ async def invoke_structured_llm(
     effective_timeout = max(float(timeout or settings.LLM_TIMEOUT_SECONDS), 90.0) + min(60.0, prompt_scale)
 
     last_error: Exception | None = None
+    tried_keys: set[str] = set()
+
     for attempt in range(max_retries + 2):
         is_nvidia = any(
             current_model.startswith(prefix)
             for prefix in ("nvidia/", "mistralai/", "minimaxai/", "meta/", "deepseek-ai/")
         )
+        if not is_nvidia and current_key:
+            tried_keys.add(current_key)
         active_key = settings.NVIDIA_API_KEY if is_nvidia else current_key
 
         try:
@@ -497,44 +501,56 @@ async def invoke_structured_llm(
             last_error = e
             err_str = str(e).lower()
 
-            # 1. Model-level Token Limit (TPD / TPM / OTPM / 413) failover
-            is_quota_or_tpm = (
-                "tpd" in err_str 
+            # 1. Payload Too Large (413): Fail over to next model immediately without key rotation
+            is_payload_too_large = "413" in err_str or "request too large" in err_str
+            if is_payload_too_large:
+                next_model = _get_next_cascade_model(current_model)
+                if next_model:
+                    logger.warning(
+                        f"Payload too large (413) on '{current_model}'. "
+                        f"Failing over to cascade model: '{next_model}' (no key rotation)."
+                    )
+                    current_model = next_model
+                    tried_keys.clear()
+                    current_key = await key_pool.get_active_key()
+                    continue
+
+            # 2. Rate Limit & Quota (429 / TPM / TPD / OTPM): Rotate through unused pool keys FIRST
+            is_quota_or_rate_limit = (
+                "429" in err_str 
+                or "rate limit" in err_str
+                or "tpd" in err_str 
                 or "tokens per day" in err_str 
                 or "otpm" in err_str 
                 or "output tokens per minute" in err_str
                 or "tpm" in err_str
                 or "tokens per minute" in err_str
-                or "413" in err_str
-                or "request too large" in err_str
             )
-            next_model = _get_next_cascade_model(current_model)
-            if is_quota_or_tpm:
-                if next_model:
-                    logger.warning(
-                        f"Model '{current_model}' reached quota/TPM limit ({e}). "
-                        f"Instantly failing over to cascade model: '{next_model}'"
-                    )
-                    current_model = next_model
-                    current_key = await key_pool.get_active_key()
-                elif len(available_keys) > 1 and not is_nvidia:
-                    current_key = await key_pool.get_active_key()
-                continue
-
-            # 2. Key-level Rate Limit (RPM / 429) failover
-            is_rate_limit = "429" in err_str or "rate limit" in err_str
-            if is_rate_limit:
-                if next_model:
-                    logger.warning(f"Rate limit hit on '{current_model}'. Failing over to cascade model: '{next_model}'")
-                    current_model = next_model
-                    current_key = await key_pool.get_active_key()
-                    continue
-                if len(available_keys) > 1 and not is_nvidia:
-                    new_key = await key_pool.rotate_on_rate_limit(current_key)
-                    if new_key != current_key:
-                        logger.info(f"Switching from key ...{current_key[-6:]} to key ...{new_key[-6:]} due to rate limit.")
+            if is_quota_or_rate_limit:
+                if not is_nvidia:
+                    all_groq_keys = key_pool.get_keys()
+                    untried_keys = [k for k in all_groq_keys if k not in tried_keys]
+                    if untried_keys:
+                        new_key = untried_keys[0]
+                        tried_keys.add(new_key)
+                        logger.warning(
+                            f"Rate limit / TPM on Groq key (...{current_key[-6:] if current_key else 'None'}). "
+                            f"Switching to untried key (...{new_key[-6:]}) before model cascade."
+                        )
                         current_key = new_key
                         continue
+
+                # All keys exhausted or NVIDIA NIM rate limit: cascade to next model
+                next_model = _get_next_cascade_model(current_model)
+                if next_model:
+                    logger.warning(
+                        f"All keys exhausted under rate limit for '{current_model}'. "
+                        f"Failing over to cascade model: '{next_model}'"
+                    )
+                    current_model = next_model
+                    tried_keys.clear()
+                    current_key = await key_pool.get_active_key()
+                    continue
 
             retry_match = re.search(r"try again in ([\d\.]+)s", err_str)
             if retry_match and attempt < max_retries:
@@ -544,11 +560,12 @@ async def invoke_structured_llm(
                 continue
 
             if _is_transient_error(e) and attempt < max_retries:
-                if is_nvidia and next_model:
+                transient_cascade = _get_next_cascade_model(current_model)
+                if is_nvidia and transient_cascade:
                     logger.warning(
-                        f"Transient error on NVIDIA NIM '{current_model}' ({e}). Cascading to '{next_model}'."
+                        f"Transient error on NVIDIA NIM '{current_model}' ({e}). Cascading to '{transient_cascade}'."
                     )
-                    current_model = next_model
+                    current_model = transient_cascade
                     current_key = await key_pool.get_active_key()
                     continue
 
@@ -572,9 +589,10 @@ async def invoke_structured_llm(
                 except Exception as fallback_err:
                     logger.error(f"Fallback JSON extraction failed: {fallback_err}")
                     last_error = fallback_err
-                    if next_model:
-                        logger.warning(f"Cascading to '{next_model}' after fallback failure.")
-                        current_model = next_model
+                    fallback_cascade = _get_next_cascade_model(current_model)
+                    if fallback_cascade:
+                        logger.warning(f"Cascading to '{fallback_cascade}' after fallback failure.")
+                        current_model = fallback_cascade
                         current_key = await key_pool.get_active_key()
                         continue
 

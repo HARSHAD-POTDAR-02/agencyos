@@ -258,7 +258,7 @@ async def test_content_architect_node_execution():
     assert telemetry.agent_name == "content_architect"
     assert telemetry.success is True
     assert telemetry.duration_ms > 0
-    assert telemetry.model_name in (settings.GROQ_MODEL, settings.FALLBACK_MODEL)
+    assert telemetry.model_name in (settings.GROQ_MODEL, settings.FALLBACK_MODEL, settings.CAMPAIGN_CONTENT_MODEL)
 
 
 @pytest.mark.asyncio

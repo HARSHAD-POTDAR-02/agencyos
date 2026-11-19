@@ -105,13 +105,12 @@ def create_campaign_graph(
     workflow.add_node("content_architect", content_architect_node)
     workflow.add_node("quality_evaluator", quality_evaluator_node)
 
-    # 3. Parallel intelligence gathering fan-out from START
+    # 3. Sequential intelligence gathering: Brand first, then fan-out to Market & Performance
     workflow.add_edge(START, "brand_intelligence")
-    workflow.add_edge(START, "market_research")
-    workflow.add_edge(START, "performance_analysis")
+    workflow.add_edge("brand_intelligence", "market_research")
+    workflow.add_edge("brand_intelligence", "performance_analysis")
 
     # 4. Barrier synchronization: Fan-in to Campaign Strategist
-    workflow.add_edge("brand_intelligence", "campaign_strategist")
     workflow.add_edge("market_research", "campaign_strategist")
     workflow.add_edge("performance_analysis", "campaign_strategist")
 

@@ -88,6 +88,7 @@ class MarketResearchAgent:
         )
         audience = brief.target_audience or (brand_context.target_audience if brand_context else [])
         platforms = brief.platforms or ["linkedin", "instagram"]
+        location = brand_context.location if brand_context else None
 
         # 2. Gather real external research evidence
         evidence_list: list[ResearchEvidence] = await gather_market_evidence(
@@ -95,6 +96,7 @@ class MarketResearchAgent:
             target_audience=audience,
             platforms=platforms,
             custom_brief=brief.custom_brief,
+            location=location,
         )
 
         # 3. Format evidence for LLM prompt (Select top 8 highest relevance items to prevent context bloat)
@@ -145,11 +147,11 @@ RULES:
             model=self.model_name,
         )
 
-        # 5. Map cited evidence into final Pydantic models
+        # 5. Map cited evidence into final Pydantic models (strictly indexing sorted_evidence)
         audience_observations: list[AudienceObservation] = []
         for item in llm_result.target_audience_insights:
             cited_ev = [
-                evidence_list[i] for i in item.cited_evidence_indices if 0 <= i < len(evidence_list)
+                sorted_evidence[i] for i in item.cited_evidence_indices if 0 <= i < len(sorted_evidence)
             ]
             audience_observations.append(
                 AudienceObservation(
@@ -163,7 +165,7 @@ RULES:
         competitor_insights: list[CompetitorInsight] = []
         for item in llm_result.competitor_landscape:
             cited_ev = [
-                evidence_list[i] for i in item.cited_evidence_indices if 0 <= i < len(evidence_list)
+                sorted_evidence[i] for i in item.cited_evidence_indices if 0 <= i < len(sorted_evidence)
             ]
             competitor_insights.append(
                 CompetitorInsight(
@@ -178,7 +180,7 @@ RULES:
         platform_trends: list[PlatformFormatTrend] = []
         for item in llm_result.format_and_platform_trends:
             cited_ev = [
-                evidence_list[i] for i in item.cited_evidence_indices if 0 <= i < len(evidence_list)
+                sorted_evidence[i] for i in item.cited_evidence_indices if 0 <= i < len(sorted_evidence)
             ]
             platform_trends.append(
                 PlatformFormatTrend(

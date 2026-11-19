@@ -470,6 +470,148 @@ async def guarded_complete_job(
     await db.commit()
 
 
+async def guarded_handle_selective_repair(
+    db: AsyncSession,
+    job_id: uuid.UUID,
+    task_id: uuid.UUID,
+    claim_token: uuid.UUID,
+    worker_id: str,
+    execution_generation: int,
+    attempt_number: int,
+    latency_ms: int,
+    output_payload: dict[str, Any],
+    invocations: list[dict[str, Any]] | None = None,
+) -> bool:
+    """
+    Handles a selective repair request from quality evaluation without advancing the DAG.
+    1. Verifies claim_token on WorkflowJobQueue and marks current QA job completed.
+    2. Records WorkflowJobAttempt and ModelInvocation telemetry.
+    3. Records TaskOutputVersion for the audit trail.
+    4. Locates target task ('content_architecture') in the same workflow run.
+    5. If target_task.selective_repair_count < MAX_SELECTIVE_REPAIR_ATTEMPTS:
+       - Resets task.status = WorkflowTaskStatus.pending (so final_quality_audit stays pending).
+       - Calls DAGEngine.initiate_selective_repair(db, task_id=content_task.id, repair_instructions=...).
+       - Commits transaction and returns True.
+    6. If target_task.selective_repair_count >= MAX_SELECTIVE_REPAIR_ATTEMPTS:
+       - Returns False so normal guarded_complete_job completes final_quality_audit with warnings,
+         escalating to human review at client_approval.
+    """
+    from app.services.dag_engine import MAX_SELECTIVE_REPAIR_ATTEMPTS
+
+    now = datetime.now(timezone.utc)
+
+    # Check target task first before mutating queue
+    task = await db.get(WorkflowTask, task_id)
+    if not task:
+        return False
+
+    target_stmt = select(WorkflowTask).where(
+        WorkflowTask.workflow_run_id == task.workflow_run_id,
+        WorkflowTask.task_key == "content_architecture",
+    )
+    target_task = (await db.execute(target_stmt)).scalar_one_or_none()
+
+    # If already reached max attempts or target not found, fall back to normal completion with warnings
+    if not target_task or target_task.selective_repair_count >= MAX_SELECTIVE_REPAIR_ATTEMPTS:
+        logger.warning(
+            f"Selective repair limit reached ({MAX_SELECTIVE_REPAIR_ATTEMPTS}) or target task missing. "
+            f"Proceeding to normal QA completion with warnings for human escalation."
+        )
+        return False
+
+    # 1. Guard check on current QA job
+    update_job_stmt = (
+        update(WorkflowJobQueue)
+        .where(
+            WorkflowJobQueue.id == job_id,
+            WorkflowJobQueue.claim_token == claim_token,
+            WorkflowJobQueue.status == WorkflowJobStatus.running,
+        )
+        .values(
+            status=WorkflowJobStatus.completed,
+            updated_at=now,
+        )
+    )
+    job_res = await db.execute(update_job_stmt)
+    if job_res.rowcount == 0:
+        await db.rollback()
+        raise LostLeaseError(
+            f"Guarded repair rejected for job {job_id}: worker {worker_id} lost claim token {claim_token}."
+        )
+
+    # 2. Record immutable WorkflowJobAttempt
+    attempt = WorkflowJobAttempt(
+        task_id=task_id,
+        attempt_number=attempt_number,
+        execution_generation=execution_generation,
+        worker_id=worker_id,
+        claim_token=claim_token,
+        status="completed",
+        started_at=now - timedelta(milliseconds=latency_ms),
+        completed_at=now,
+        latency_ms=latency_ms,
+    )
+    db.add(attempt)
+    await db.flush()
+
+    # 3. Record ModelInvocation rows
+    agency_id = task.agency_id if task else uuid.uuid4()
+    client_id = task.client_id if task else None
+
+    if invocations:
+        for inv_data in invocations:
+            inv = ModelInvocation(
+                job_attempt_id=attempt.id,
+                task_id=task_id,
+                agency_id=agency_id,
+                client_id=client_id,
+                provider=inv_data.get("provider", "openai_compatible"),
+                model_identifier=inv_data.get("model_identifier", "default_model"),
+                provider_request_id=inv_data.get("provider_request_id"),
+                prompt_tokens=inv_data.get("prompt_tokens"),
+                completion_tokens=inv_data.get("completion_tokens"),
+                total_tokens=inv_data.get("total_tokens"),
+                cost_usd=Decimal(str(inv_data.get("cost_usd", "0.000000"))),
+                latency_ms=inv_data.get("latency_ms", 0),
+                invocation_status=inv_data.get("invocation_status", "success"),
+                is_estimated=inv_data.get("is_estimated", False),
+            )
+            db.add(inv)
+        await db.flush()
+
+    # 4. Record TaskOutputVersion for audit trail
+    new_version_num = task.current_version + 1
+    task.current_version = new_version_num
+    out_ver = TaskOutputVersion(
+        task_id=task.id,
+        version_number=new_version_num,
+        output_payload=output_payload,
+        created_by_type="agent",
+        created_by_id=worker_id,
+        change_summary="Quality evaluation rejected draft; initiated selective repair.",
+        is_active=True,
+    )
+    db.add(out_ver)
+    await db.flush()
+
+    # 5. Keep final_quality_audit in pending status so client_approval is NOT unblocked
+    task.status = WorkflowTaskStatus.pending
+
+    instructions = output_payload.get("repair_instructions", "Correct quality audit defects.")
+    await DAGEngine.initiate_selective_repair(
+        db=db,
+        task_id=target_task.id,
+        repair_instructions=instructions,
+        author_id=worker_id,
+    )
+    await db.commit()
+    logger.info(
+        f"Selective repair initiated for content_architecture ({target_task.id}). "
+        f"final_quality_audit ({task.id}) reset to pending."
+    )
+    return True
+
+
 async def guarded_fail_job(
     db: AsyncSession,
     job_id: uuid.UUID,
@@ -639,6 +781,23 @@ class WorkflowWorkerDaemon:
                 invocations = []
 
             latency_ms = int((time.monotonic() - start_time) * 1000)
+
+            # Check if this task requested a selective repair
+            if isinstance(output_payload, dict) and output_payload.get("selective_repair_requested"):
+                repair_handled = await guarded_handle_selective_repair(
+                    db=db,
+                    job_id=job_id,
+                    task_id=task_id,
+                    claim_token=claim_token,
+                    worker_id=self.worker_id,
+                    execution_generation=execution_generation,
+                    attempt_number=attempt_number,
+                    latency_ms=latency_ms,
+                    output_payload=output_payload,
+                    invocations=invocations,
+                )
+                if repair_handled:
+                    return True
 
             # Atomic guarded completion
             await guarded_complete_job(

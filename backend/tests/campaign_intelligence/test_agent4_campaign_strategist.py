@@ -304,5 +304,5 @@ async def test_campaign_strategist_node_execution():
     assert telemetry.agent_name == "campaign_strategist"
     assert telemetry.success is True
     assert telemetry.duration_ms > 0
-    assert telemetry.model_name == settings.GROQ_MODEL
+    assert telemetry.model_name in (settings.GROQ_MODEL, settings.CAMPAIGN_STRATEGY_MODEL)
 

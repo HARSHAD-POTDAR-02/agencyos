@@ -135,7 +135,11 @@ class BoundedToolRuntime:
                     pass
 
             active_model_name = str(getattr(active_llm, "model_name", None) or getattr(active_llm, "model", None) or "")
-            is_nvidia = active_model_name.startswith("nvidia/") or active_model_name.startswith("mistralai/")
+            is_nvidia = (
+                active_model_name.startswith("nvidia/")
+                or active_model_name.startswith("mistralai/")
+                or active_model_name.startswith("minimaxai/")
+            )
             # Allow up to 50s for large 120B parameter models on NVIDIA NIM, bounded by remaining execution time
             llm_turn_timeout = min(50.0, max(5.0, remaining_time - 3.0)) if is_nvidia else min(25.0, max(2.0, remaining_time))
             invocation_messages = self._compact_message_history(
@@ -173,10 +177,10 @@ class BoundedToolRuntime:
                                 logger.warning(f"[Bounded Runtime] NVIDIA NIM retry failed: {nim_retry_err}")
                                 provider_err = nim_retry_err
 
-                        # 1b. If still not recovered, cascade to high-throughput Groq fallback (qwen/qwen3.8-27b)
+                        # 1b. If still not recovered, cascade to high-throughput Groq fallback
                         if not recovered:
                             try:
-                                cascade_target = "qwen/qwen3.8-27b"
+                                cascade_target = settings.GROQ_MODEL
                                 logger.warning(
                                     f"[Bounded Runtime] NVIDIA NIM hit {type(provider_err).__name__} ({provider_err}). "
                                     f"Cascading turn {turn_count} to Groq model: '{cascade_target}'."

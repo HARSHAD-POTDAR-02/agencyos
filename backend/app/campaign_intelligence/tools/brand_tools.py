@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +20,7 @@ from app.campaign_intelligence.schemas.brand import (
     VerifiedOffer,
 )
 from app.campaign_intelligence.schemas.campaign import CampaignBrief
+from app.campaign_intelligence.tools.research_tools import _clean_html, _is_safe_url, extract_tavily
 from app.models.approval import Approval, ApprovalDecision
 from app.models.brand_profile import BrandProfile
 from app.models.campaign import Campaign
@@ -26,10 +30,123 @@ from app.models.content_version import ContentVersion
 from app.models.contract import Contract, ContractStatus, ScopeItem
 from app.models.deliverable import Deliverable, DeliverableStatus
 
+logger = logging.getLogger(__name__)
+
 
 class ClientNotFoundError(Exception):
     """Raised when client is not found or agency mismatch occurs."""
     pass
+
+
+# In-memory crawl cache with timestamp to prevent redundant network fetches
+_CRAWL_CACHE: dict[str, tuple[float, dict[str, str]]] = {}
+_CRAWL_CACHE_TTL_SECONDS = 7 * 86400  # 7-day TTL
+
+
+async def crawl_client_website(
+    client_website: str | None,
+    max_pages: int = 4,
+    db: AsyncSession | None = None,
+) -> dict[str, str]:
+    """
+    Zero-budget, SSRF-safe website crawler for client grounding.
+    Fetches homepage and up to 3 core discovery paths (about, services/products, pricing).
+    Extracts high-fidelity text using trafilatura (with fallback to _clean_html / extract_tavily).
+    Caches results with a 7-day TTL.
+    """
+    if not client_website or not client_website.strip():
+        return {}
+
+    raw_url = client_website.strip()
+    if not raw_url.startswith(("http://", "https://")):
+        raw_url = "https://" + raw_url
+
+    if not _is_safe_url(raw_url):
+        logger.warning(f"crawl_client_website: Unsafe URL rejected: {raw_url}")
+        return {}
+
+    parsed = urlparse(raw_url)
+    base_origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    # Check memory cache
+    now = time_now = time_perf = 0.0
+    try:
+        import time
+        now = time.time()
+        if base_origin in _CRAWL_CACHE:
+            cached_time, cached_data = _CRAWL_CACHE[base_origin]
+            if now - cached_time < _CRAWL_CACHE_TTL_SECONDS:
+                logger.info(f"crawl_client_website: Returning cached crawl for {base_origin} ({len(cached_data)} pages)")
+                return cached_data
+    except Exception:
+        pass
+
+    target_paths = ["/", "/about", "/about-us", "/services", "/products", "/pricing", "/menu"]
+    urls_to_try = [urljoin(base_origin, path) for path in target_paths]
+
+    crawled_pages: dict[str, str] = {}
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36 AgencyOS-BrandCrawler/1.0"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        import trafilatura
+    except ImportError:
+        trafilatura = None
+
+    async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, headers=headers, verify=False) as client:
+        for url in urls_to_try:
+            if len(crawled_pages) >= max_pages:
+                break
+            if not _is_safe_url(url):
+                continue
+
+            try:
+                resp = await client.get(url)
+                if resp.status_code == 200 and "text/html" in resp.headers.get("content-type", "").lower():
+                    html_content = resp.text
+                    extracted_text = ""
+                    if trafilatura:
+                        try:
+                            extracted_text = trafilatura.extract(html_content, include_comments=False, include_tables=True) or ""
+                        except Exception:
+                            pass
+
+                    if not extracted_text or len(extracted_text.strip()) < 150:
+                        extracted_text = _clean_html(html_content)
+
+                    clean_text = extracted_text.strip()
+                    if clean_text and len(clean_text) >= 100:
+                        # Keep up to 2,500 chars per page
+                        crawled_pages[url] = clean_text[:2500]
+            except Exception as req_err:
+                logger.debug(f"crawl_client_website: Failed fetching {url}: {req_err}")
+                continue
+
+    # Fallback to extract_tavily if direct HTTP got 0 pages
+    if not crawled_pages and raw_url:
+        try:
+            tavily_results = await extract_tavily([raw_url], timeout=8.0)
+            for res in tavily_results:
+                content = res.get("raw_content") or ""
+                if content and len(content.strip()) >= 100:
+                    crawled_pages[res.get("url") or raw_url] = content.strip()[:2500]
+        except Exception as tavily_err:
+            logger.debug(f"crawl_client_website: Tavily fallback error for {raw_url}: {tavily_err}")
+
+    if crawled_pages:
+        try:
+            import time
+            _CRAWL_CACHE[base_origin] = (time.time(), crawled_pages)
+        except Exception:
+            pass
+
+    return crawled_pages
 
 
 async def get_client_and_brand_profile(
@@ -212,29 +329,34 @@ async def get_client_verified_offers(
     # 1. Offers from confirmed BrandProfile
     if brand_profile and brand_profile.goals:
         goals_data = brand_profile.goals
-        # If goals_data has 'offers' or 'products' key
+        raw_offers: list[Any] = []
         if isinstance(goals_data, dict):
             raw_offers = goals_data.get("offers") or goals_data.get("products") or []
-            if isinstance(raw_offers, list):
-                for item in raw_offers:
-                    if isinstance(item, dict) and "name" in item:
-                        offers.append(
-                            VerifiedOffer(
-                                name=item["name"],
-                                description=item.get("description", ""),
-                                source="confirmed_brand_profile",
-                                is_verified=brand_profile.is_confirmed,
-                            )
+        elif isinstance(goals_data, list):
+            raw_offers = goals_data
+
+        if isinstance(raw_offers, list):
+            for item in raw_offers:
+                if isinstance(item, dict):
+                    name = item.get("name") or item.get("title") or item.get("offer") or str(item)
+                    desc = item.get("description") or item.get("desc") or ""
+                    offers.append(
+                        VerifiedOffer(
+                            name=str(name),
+                            description=str(desc),
+                            source="confirmed_brand_profile",
+                            is_verified=brand_profile.is_confirmed,
                         )
-                    elif isinstance(item, str):
-                        offers.append(
-                            VerifiedOffer(
-                                name=item,
-                                description="",
-                                source="confirmed_brand_profile",
-                                is_verified=brand_profile.is_confirmed,
-                            )
+                    )
+                elif isinstance(item, str) and item.strip():
+                    offers.append(
+                        VerifiedOffer(
+                            name=item.strip(),
+                            description="",
+                            source="confirmed_brand_profile",
+                            is_verified=brand_profile.is_confirmed,
                         )
+                    )
 
     # 2. Offers from active Contract notes
     contract_stmt = (

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -134,7 +135,7 @@ def build_campaign_dag_definition(
             "human_assignee_id": human_reviewer_id,
             "input_payload": {},
         },
-        # Step 8: Content Architecture (Parallel Creative 1)
+        # Step 8: Content Architecture
         {
             "task_key": "content_architecture",
             "title": "Polymorphic Content Architecture",
@@ -144,17 +145,7 @@ def build_campaign_dag_definition(
             "agent_identifier": "content_architecture",
             "input_payload": {"brief": brief_dict},
         },
-        # Step 9: Visual Asset Planning (Parallel Creative 2)
-        {
-            "task_key": "visual_asset_planning",
-            "title": "Visual Asset & Art Direction Planning",
-            "description": "Generates visual layout prompts, graphic typography, color harmony, and director cues",
-            "task_kind": TaskKind.ai_agent,
-            "assignee_type": AssigneeType.agent,
-            "agent_identifier": "visual_asset_planning",
-            "input_payload": {"brief": brief_dict},
-        },
-        # Step 10: Global Quality Audit
+        # Step 9: Global Quality Audit
         {
             "task_key": "final_quality_audit",
             "title": "Global Quality & Factual Verification Audit",
@@ -164,7 +155,7 @@ def build_campaign_dag_definition(
             "agent_identifier": "quality_evaluator",
             "input_payload": {"brief": brief_dict},
         },
-        # Step 11: Client Approval Checkpoint
+        # Step 10: Client Approval Checkpoint
         {
             "task_key": "client_approval",
             "title": "Client Final Approval Checkpoint",
@@ -174,7 +165,7 @@ def build_campaign_dag_definition(
             "human_assignee_id": human_reviewer_id,
             "input_payload": {},
         },
-        # Step 12: Publishing & Multi-Channel Execution
+        # Step 11: Publishing & Multi-Channel Execution
         {
             "task_key": "publishing_execution",
             "title": "Publishing & Multi-Channel Dispatch",
@@ -183,7 +174,7 @@ def build_campaign_dag_definition(
             "assignee_type": AssigneeType.system,
             "input_payload": {},
         },
-        # Step 13: Live Performance Feedback
+        # Step 12: Live Performance Feedback
         {
             "task_key": "performance_feedback",
             "title": "Live Performance Feedback Ingestion",
@@ -192,35 +183,22 @@ def build_campaign_dag_definition(
             "assignee_type": AssigneeType.system,
             "input_payload": {},
         },
-        # Step 14: Cortex Memory Proposals
-        {
-            "task_key": "cortex_memory_proposals",
-            "title": "Cortex Persistent Memory Extraction",
-            "description": "Extracts institutional knowledge, winning hooks, and audience patterns into persistent memory",
-            "task_kind": TaskKind.ai_agent,
-            "assignee_type": AssigneeType.agent,
-            "agent_identifier": "cortex_memory",
-            "input_payload": {"brief": brief_dict},
-        },
     ]
 
     dependencies_def: list[tuple[str, str]] = [
         ("create_workflow_plan", "agency_objective"),
         ("brand_intelligence", "create_workflow_plan"),
-        ("market_research", "create_workflow_plan"),
-        ("historical_performance", "create_workflow_plan"),
+        ("market_research", "brand_intelligence"),
+        ("historical_performance", "brand_intelligence"),
         ("campaign_strategy", "brand_intelligence"),
         ("campaign_strategy", "market_research"),
         ("campaign_strategy", "historical_performance"),
         ("human_strategy_approval", "campaign_strategy"),
         ("content_architecture", "human_strategy_approval"),
-        ("visual_asset_planning", "human_strategy_approval"),
         ("final_quality_audit", "content_architecture"),
-        ("final_quality_audit", "visual_asset_planning"),
         ("client_approval", "final_quality_audit"),
         ("publishing_execution", "client_approval"),
         ("performance_feedback", "publishing_execution"),
-        ("cortex_memory_proposals", "performance_feedback"),
     ]
 
     return tasks_def, dependencies_def
@@ -260,6 +238,23 @@ async def get_upstream_task_outputs(
     return outputs_by_key
 
 
+def _build_invocation_telemetry(agent_model_name: str, latency_ms: int) -> list[dict[str, Any]]:
+    is_nim = any(agent_model_name.startswith(p) for p in ("nvidia/", "minimaxai/", "mistralai/"))
+    provider = "nvidia_nim" if is_nim else "groq"
+    return [
+        {
+            "provider": provider,
+            "model_identifier": agent_model_name,
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
+            "cost_usd": Decimal("0.000000"),
+            "latency_ms": max(1, latency_ms),
+            "invocation_status": "success",
+        }
+    ]
+
+
 # ===========================================================================
 # Specialist Agent Handlers
 # ===========================================================================
@@ -273,22 +268,13 @@ async def execute_brand_intelligence(
     brief_data = task.input_payload.get("brief", {}) if task.input_payload else {}
     brief = CampaignBrief.model_validate(brief_data)
 
+    start_time = time.monotonic()
     agent = BrandIntelligenceAgent()
     brand_context = await agent.run(brief=brief, db=db)
+    latency_ms = int((time.monotonic() - start_time) * 1000)
 
     output = brand_context.model_dump(mode="json")
-    invocations = [
-        {
-            "provider": "groq",
-            "model_identifier": agent.model_name,
-            "prompt_tokens": 650,
-            "completion_tokens": 180,
-            "total_tokens": 830,
-            "cost_usd": Decimal("0.000498"),
-            "latency_ms": 780,
-            "invocation_status": "success",
-        }
-    ]
+    invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations
 
 
@@ -298,25 +284,23 @@ async def execute_market_research(
     db: AsyncSession,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Worker executor for Market Research agent."""
+    parents = await get_upstream_task_outputs(db, task.id)
+    brand_context_data = parents.get("brand_intelligence")
+    if not brand_context_data:
+        all_ancestors = await _get_all_ancestor_outputs(db, task.id)
+        brand_context_data = all_ancestors.get("brand_intelligence")
+    brand_context = BrandContext.model_validate(brand_context_data) if brand_context_data else None
+
     brief_data = task.input_payload.get("brief", {}) if task.input_payload else {}
     brief = CampaignBrief.model_validate(brief_data)
 
+    start_time = time.monotonic()
     agent = MarketResearchAgent()
-    research_report = await agent.run(brief=brief, brand_context=None)
+    research_report = await agent.run(brief=brief, brand_context=brand_context)
+    latency_ms = int((time.monotonic() - start_time) * 1000)
 
     output = research_report.model_dump(mode="json")
-    invocations = [
-        {
-            "provider": "nvidia_nim",
-            "model_identifier": agent.model_name,
-            "prompt_tokens": 1100,
-            "completion_tokens": 420,
-            "total_tokens": 1520,
-            "cost_usd": Decimal("0.003040"),
-            "latency_ms": 1120,
-            "invocation_status": "success",
-        }
-    ]
+    invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations
 
 
@@ -326,25 +310,23 @@ async def execute_historical_performance(
     db: AsyncSession,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Worker executor for Historical Performance agent."""
+    parents = await get_upstream_task_outputs(db, task.id)
+    brand_context_data = parents.get("brand_intelligence")
+    if not brand_context_data:
+        all_ancestors = await _get_all_ancestor_outputs(db, task.id)
+        brand_context_data = all_ancestors.get("brand_intelligence")
+    brand_context = BrandContext.model_validate(brand_context_data) if brand_context_data else None
+
     brief_data = task.input_payload.get("brief", {}) if task.input_payload else {}
     brief = CampaignBrief.model_validate(brief_data)
 
+    start_time = time.monotonic()
     agent = HistoricalPerformanceAgent()
-    playbook = await agent.run(brief=brief, db=db, brand_context=None)
+    playbook = await agent.run(brief=brief, db=db, brand_context=brand_context)
+    latency_ms = int((time.monotonic() - start_time) * 1000)
 
     output = playbook.model_dump(mode="json")
-    invocations = [
-        {
-            "provider": "groq",
-            "model_identifier": agent.model_name,
-            "prompt_tokens": 520,
-            "completion_tokens": 140,
-            "total_tokens": 660,
-            "cost_usd": Decimal("0.000396"),
-            "latency_ms": 640,
-            "invocation_status": "success",
-        }
-    ]
+    invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations
 
 
@@ -364,6 +346,7 @@ async def execute_campaign_strategy(
     market_research = MarketResearchReport.model_validate(parents["market_research"]) if "market_research" in parents else None
     performance_playbook = PerformancePlaybook.model_validate(parents["historical_performance"]) if "historical_performance" in parents else None
 
+    start_time = time.monotonic()
     agent = CampaignStrategistAgent()
     strategy = await agent.run(
         brief=brief,
@@ -371,20 +354,10 @@ async def execute_campaign_strategy(
         market_research=market_research,
         performance_playbook=performance_playbook,
     )
+    latency_ms = int((time.monotonic() - start_time) * 1000)
 
     output = strategy.model_dump(mode="json")
-    invocations = [
-        {
-            "provider": "groq",
-            "model_identifier": agent.model_name,
-            "prompt_tokens": 1400,
-            "completion_tokens": 580,
-            "total_tokens": 1980,
-            "cost_usd": Decimal("0.001188"),
-            "latency_ms": 1350,
-            "invocation_status": "success",
-        }
-    ]
+    invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations
 
 
@@ -394,82 +367,36 @@ async def execute_content_architecture(
     db: AsyncSession,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Worker executor for Content Architect agent."""
-    parents = await get_upstream_task_outputs(db, task.id)
-    
     brief_data = task.input_payload.get("brief", {}) if task.input_payload else {}
     brief = CampaignBrief.model_validate(brief_data)
 
-    # Find strategy from upstream outputs
+    # Read repair instructions if this task was triggered by selective repair
+    repair_raw = (task.input_payload or {}).get("repair_instruction")
+    repair_instructions = [str(repair_raw)] if isinstance(repair_raw, str) else (repair_raw if isinstance(repair_raw, list) else None)
+
+    # Find strategy and brand context from upstream outputs
     all_ancestor_outputs = await _get_all_ancestor_outputs(db, task.id)
     strategy_data = all_ancestor_outputs.get("campaign_strategy")
     strategy = CampaignStrategy.model_validate(strategy_data) if strategy_data else None
     brand_context_data = all_ancestor_outputs.get("brand_intelligence")
     brand_context = BrandContext.model_validate(brand_context_data) if brand_context_data else None
 
+    start_time = time.monotonic()
     agent = ContentArchitectAgent()
     if strategy:
         deliverables = await agent.run(
             strategy=strategy,
             brief=brief,
             brand_context=brand_context,
+            revision_instructions=repair_instructions,
         )
     else:
         deliverables = []
+    latency_ms = int((time.monotonic() - start_time) * 1000)
 
     output = {"deliverables": [d.model_dump(mode="json") for d in deliverables]}
-    invocations = [
-        {
-            "provider": "groq",
-            "model_identifier": agent.model_name,
-            "prompt_tokens": 2100,
-            "completion_tokens": 850,
-            "total_tokens": 2950,
-            "cost_usd": Decimal("0.001770"),
-            "latency_ms": 1820,
-            "invocation_status": "success",
-        }
-    ]
+    invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations
-
-
-async def execute_visual_asset_planning(
-    task: WorkflowTask,
-    run: WorkflowRun,
-    db: AsyncSession,
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Worker executor for Visual Asset Planning."""
-    all_ancestors = await _get_all_ancestor_outputs(db, task.id)
-    strategy_data = all_ancestors.get("campaign_strategy", {})
-
-    output = {
-        "art_direction": {
-            "primary_style": "High-contrast Technical Architecture & Systems Engineering",
-            "color_palette": ["#0F172A", "#2563EB", "#38BDF8", "#F8FAFC"],
-            "typography": "Modern Technical Sans-Serif (JetBrains Mono / Inter Display)",
-            "visual_principles": [
-                "Zero generic stock imagery of people pointing at laptops",
-                "Clean technical infrastructure topologies and pipeline diagrams",
-                "Readable on mobile at high zoom",
-            ],
-        },
-        "asset_manifest": [
-            {
-                "asset_id": "vis-asset-1",
-                "format": "carousel_card",
-                "slide_index": 1,
-                "visual_prompt": "Vector architecture diagram showing distributed microservices failure domain with graceful degradation.",
-                "aspect_ratio": "4:5",
-            },
-            {
-                "asset_id": "vis-asset-2",
-                "format": "reel_broll",
-                "scene_index": 1,
-                "visual_prompt": "Screen recording visual of terminal kubectl commands and latency telemetry dropping from 800ms to 24ms.",
-                "aspect_ratio": "9:16",
-            },
-        ],
-    }
-    return output, []
 
 
 async def execute_quality_evaluation(
@@ -493,6 +420,7 @@ async def execute_quality_evaluation(
     brand_data = all_ancestors.get("brand_intelligence")
     brand_context = BrandContext.model_validate(brand_data) if brand_data else None
 
+    start_time = time.monotonic()
     agent = QualityEvaluatorAgent()
     eval_result: QualityEvaluation = await agent.evaluate(
         deliverables=deliverables,
@@ -500,50 +428,20 @@ async def execute_quality_evaluation(
         brief=brief,
         brand_context=brand_context,
     )
+    latency_ms = int((time.monotonic() - start_time) * 1000)
 
     output = eval_result.model_dump(mode="json")
-    invocations = [
-        {
-            "provider": "groq",
-            "model_identifier": agent.model_name,
-            "prompt_tokens": 1800,
-            "completion_tokens": 350,
-            "total_tokens": 2150,
-            "cost_usd": Decimal("0.001290"),
-            "latency_ms": 940,
-            "invocation_status": "success",
-        }
-    ]
+    if eval_result.revision_required:
+        output["selective_repair_requested"] = True
+        instructions = (
+            eval_result.revision_instruction.instructions
+            if eval_result.revision_instruction
+            else ["Correct identified compliance and quality defects."]
+        )
+        output["repair_instructions"] = "; ".join(instructions)
+
+    invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations
-
-
-async def execute_cortex_memory(
-    task: WorkflowTask,
-    run: WorkflowRun,
-    db: AsyncSession,
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Worker executor for Cortex Persistent Memory proposals."""
-    all_ancestors = await _get_all_ancestor_outputs(db, task.id)
-    strategy = all_ancestors.get("campaign_strategy", {})
-
-    output = {
-        "memory_proposals": [
-            {
-                "memory_type": "brand_voice_calibration",
-                "observation": "Audience engaged most with deep technical metrics rather than generic ROI statements.",
-                "proposed_rule": "Incorporate exact p99 latency or failure domain architecture in primary hook.",
-                "confidence": 0.95,
-            },
-            {
-                "memory_type": "audience_fatigue_update",
-                "observation": "Generic 'Transform your cloud' phrasing experienced immediate drop-off.",
-                "proposed_rule": "Add 'Transform your cloud' to client Prohibited Terms.",
-                "confidence": 0.92,
-            },
-        ],
-        "status": "ready_for_curation",
-    }
-    return output, []
 
 
 async def _get_all_ancestor_outputs(
@@ -581,9 +479,7 @@ def register_all_campaign_executors(worker: WorkflowWorkerDaemon) -> None:
     worker.register_executor("historical_performance", execute_historical_performance)
     worker.register_executor("campaign_strategy", execute_campaign_strategy)
     worker.register_executor("content_architecture", execute_content_architecture)
-    worker.register_executor("visual_asset_planning", execute_visual_asset_planning)
     worker.register_executor("quality_evaluator", execute_quality_evaluation)
-    worker.register_executor("cortex_memory", execute_cortex_memory)
 
 
 async def record_human_approval(

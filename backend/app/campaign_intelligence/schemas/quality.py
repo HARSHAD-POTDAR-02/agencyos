@@ -14,6 +14,7 @@ class FindingSeverity(str, Enum):
 
 class FindingCategory(str, Enum):
     brand_compliance = "brand_compliance"
+    brand_voice = "brand_voice"
     prohibited_term = "prohibited_term"
     prohibited_claim = "prohibited_claim"
     quota_mismatch = "quota_mismatch"
