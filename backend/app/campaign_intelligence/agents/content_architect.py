@@ -51,8 +51,8 @@ class ContentArchitectAgent:
     5. Return pure data plans (NEVER perform premature database insertions).
     """
 
-    def __init__(self, model_name: str | None = None, temperature: float = 0.3):
-        self.model_name = model_name or settings.FALLBACK_MODEL
+    def __init__(self, model_name: str | None = None, temperature: float = 0.70):
+        self.model_name = model_name or settings.CAMPAIGN_CONTENT_MODEL
         self.temperature = temperature
 
     async def run(
@@ -147,6 +147,7 @@ class ContentArchitectAgent:
         tone_dont = "; ".join(brand_context.tone_guidelines.dont) if brand_context and brand_context.tone_guidelines.dont else "Hype, unsubstantiated claims"
         prohibited = ", ".join([pt.term for pt in brand_context.prohibited_terms]) if brand_context and brand_context.prohibited_terms else "None"
         offers_text = ", ".join([o.name for o in brand_context.verified_offers]) if brand_context and brand_context.verified_offers else "Standard Services"
+        factual_boundaries = brand_context.get_factual_boundary_prompt() if brand_context else ""
 
         pinned_text = ", ".join(brief.pinned_entities) if brief.pinned_entities else ""
         hero_entities_section = ""
@@ -178,16 +179,19 @@ class ContentArchitectAgent:
             )
         else:
             reel_dur_instruction = (
-                "- Target Video Duration: 20-30 seconds standard.\n"
-                "- Must include 3-5 timestamped 'reel_scenes' (e.g. 0:00-0:03, 0:03-0:12, 0:12-0:25) detailing director action, on_screen_text, spoken voiceover, and B-roll."
+                "- Target Video Duration: 30-50 seconds standard.\n"
+                "- Must include 4-6 timestamped 'reel_scenes' (e.g. 0:00-0:03, 0:03-0:15, 0:15-0:32, 0:32-0:45) detailing director action, camera movements, on_screen_text, spoken voiceover, and B-roll."
             )
 
         # 4. Construct Prompt for Content Architect
-        prompt = f"""You are the Content Architect Agent for AgencyOS.
-Your job is to convert the approved Campaign Strategy into production-ready social media deliverables.
+        prompt = f"""You are the Lead Creative Director and Content Architect for AgencyOS.
+Your job is to translate the approved Campaign Strategy into production-ready, agency-grade social media deliverables.
+
 {revision_section}
 ### CAMPAIGN STRATEGY & THEME
 - Campaign Theme: {strategy.campaign_theme}
+- Strategic Thesis: {strategy.strategic_thesis or 'Brand differentiation through authentic proof'}
+- Audience Core Tension: {strategy.core_tension or 'Addressing unsaid psychological friction'}
 - Primary Objective: {strategy.primary_objective}
 - Client Instructions: {brief.custom_brief or 'None specified'}
 - Pacing: {strategy.pacing_and_cadence}
@@ -198,7 +202,9 @@ Strategic Angles:
 Messaging Pillars:
 {pillars_text}
 
-### BRAND GUARDRAILS & OFFERS
+{factual_boundaries}
+
+### BRAND GUARDRAILS & TONE
 - Verified Offers: {offers_text}
 - Prescribed Tone (DO): {tone_do}
 - Proscribed Tone (DONT): {tone_dont}
@@ -208,29 +214,40 @@ Messaging Pillars:
 {chr(10).join(target_specs)}
 Total Deliverables to generate: EXACTLY {total_quota_count}
 
-### PRODUCTION REQUIREMENTS PER FORMAT:
+### PRODUCTION REQUIREMENTS PER FORMAT (AGENCY-GRADE STORYBOARDS):
 1. REELS:
-   - Must include 2-3 hook_options and 1 primary_hook (focused on 0-3s retention).
+   - Primary Hook (0-3s): Must provide high tension with an exact spoken line AND a physical visual pattern interrupt (e.g. prop, camera movement, surprising action).
    {reel_dur_instruction}
-   - Include audio_track_guidance and production_notes.
+   - Shot-by-Shot Storyboards (`reel_scenes`):
+     * visual_action: Exact camera angle (low-angle, Dutch tilt, handheld POV), talent physical motion, props, and lighting/environment cues.
+     * spoken_audio_or_voiceover: Authentic spoken dialogue with natural cadence, pauses, and persona vocabulary. NOT generic ad copy.
+     * on_screen_text: Exact graphic overlay text.
+     * b_roll_notes: Specific secondary footage and cutaway inserts.
+   - audio_track_guidance: Specific genre, pacing, and sound effects (SFX) cues.
+   - call_to_action: MUST directly link to a verified client offer (NO invented discounts or fake guarantees).
+
 2. CAROUSELS:
-   - Must include 4-7 structured 'carousel_slides' (Slide 1: cover, Slides 2-5: content, Slide 6: takeaway/CTA).
-   - Each slide must have a headline, body_copy, and visual_layout prompt.
-   - Include primary_hook and full social caption.
+   - Must include 4-7 structured 'carousel_slides' (Slide 1: high-retention cover, Slides 2-5: structured value/framework, Slide 6: takeaway/CTA).
+   - Each slide must have a compelling headline, scannable body_copy, and explicit visual_layout design direction.
+   - Include full social caption with verified CTA.
 
 {pacing_instruction}
 
-3. STRICT LANGUAGE REQUIREMENT:
+3. ANTI-CLICHÉ PROHIBITIONS (STRICT):
+   - NEVER use lazy marketing buzzwords: "game-changer", "supercharge", "dive in/dive into", "unlock your potential", "elevate your", "revolutionize", "in today's world", "look no further", "secret sauce".
+   - Ground all claims in real actions, tangible facts, or relatable human tensions.
+
+4. STRICT LANGUAGE REQUIREMENT:
    - All deliverable hooks, titles, captions, scene descriptions, voiceovers, slide headlines, and body copy MUST be written exclusively in the English language. Never generate deliverable content in any other language.
 """
 
-        # 5. Invoke Groq LLM
+        # 5. Invoke LLM
         output: ContentArchitectOutput = await invoke_structured_llm(
             prompt=prompt,
             schema_class=ContentArchitectOutput,
             temperature=self.temperature,
             model=self.model_name,
-            max_tokens=4500,
+            max_tokens=6500,
         )
 
         # 6. Assign stable UUIDs, day distribution, scheduled dates, and link scope_item_ids
@@ -446,7 +463,7 @@ async def content_architect_node(
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
     agent_name = "content_architect"
-    model_name = settings.FALLBACK_MODEL
+    model_name = settings.CAMPAIGN_CONTENT_MODEL
 
     strategy = state.get("campaign_strategy")
     if not strategy:

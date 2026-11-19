@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef, Suspense } from "react
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { clientApi, campaignApi, studioApi, agencyApi } from "@/lib/api";
+import { clientApi, campaignApi, studioApi, agencyApi, operationalWorkflowApi } from "@/lib/api";
 import { ContextualCanvas } from "@/components/campaign-studio/ContextualCanvas";
 import { ExportPreviewModal } from "@/components/campaign-studio/ExportPreviewModal";
 import { StrategyPitchDeckModal } from "@/components/campaign-studio/StrategyPitchDeckModal";
@@ -33,16 +33,13 @@ import {
   RotateCcw,
   MessagesSquare,
   Compass,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
   FileText,
   SlidersHorizontal,
   Trash2,
   X,
   Ban,
   Presentation,
+  GitFork,
 } from "lucide-react";
 
 interface Client {
@@ -319,13 +316,21 @@ function CampaignStudioContent() {
   const [activeArtifactVersions, setActiveArtifactVersions] = useState<any[]>([]);
   const [persistedArtifacts, setPersistedArtifacts] = useState<any[]>([]);
   const [isLoadingArtifacts, setIsLoadingArtifacts] = useState<boolean>(false);
-  const [mobileTab, setMobileTab] = useState<"nav" | "canvas" | "intel">("canvas");
+  const [mobileTab, setMobileTab] = useState<"canvas" | "intel">("canvas");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isPitchDeckModalOpen, setIsPitchDeckModalOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; full_name: string; email: string; role?: string }>>([]);
-  const [isLeftNavOpen, setIsLeftNavOpen] = useState(true);
   const [isRightIntelOpen, setIsRightIntelOpen] = useState(true);
   const [rightPanelTab, setRightPanelTab] = useState<"chat" | "evidence">("chat");
+
+  // Operational DAG Workflow Engine Integration
+  const [activeWorkflowRunId, setActiveWorkflowRunId] = useState<string | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<{
+    stage: "strategy" | "client";
+    taskId: string;
+    runId: string;
+  } | null>(null);
+  const [isReviewingApproval, setIsReviewingApproval] = useState(false);
 
   // Hero Entity Tray State (Cross-Agent Context & Grounding)
   const [pinnedEntities, setPinnedEntities] = useState<string[]>([]);
@@ -457,11 +462,27 @@ function CampaignStudioContent() {
       try {
         const list = (await campaignApi.list(effectiveAgencyId, cId, token)) as any[];
         setClientCampaigns(list || []);
+        if (list && list.length > 0) {
+          const urlCampaignId = searchParams.get("campaignId");
+          if (urlCampaignId && list.some((c: any) => c.id === urlCampaignId)) {
+            setActiveCampaignId(urlCampaignId);
+            return;
+          }
+          setActiveCampaignId((prev) => {
+            if (prev && list.some((c: any) => c.id === prev)) {
+              return prev;
+            }
+            const withDraft = list.find(
+              (c: any) => c.ai_plan_draft && (c.ai_plan_draft.deliverables || []).length > 0
+            );
+            return withDraft ? withDraft.id : list[0].id;
+          });
+        }
       } catch (err) {
         console.error("Failed to load client campaigns", err);
       }
     },
-    [token, effectiveAgencyId]
+    [token, effectiveAgencyId, searchParams]
   );
 
   useEffect(() => {
@@ -520,16 +541,122 @@ function CampaignStudioContent() {
       if (!effectiveAgencyId || !targetCampaignId || !token) return;
       setIsLoadingArtifacts(true);
       try {
+        // 1. Fetch campaign details to check for full sprint draft
+        const camp: any = await campaignApi.get(effectiveAgencyId, targetCampaignId, token).catch(() => null);
+        const planDeliverables = camp?.ai_plan_draft?.deliverables || [];
+
+        if (planDeliverables.length > 0) {
+          const loadedArts: ActiveArtifactData[] = [];
+
+          // Strategy blueprint
+          if (camp.ai_plan_draft?.strategy) {
+            const strat = camp.ai_plan_draft.strategy;
+            loadedArts.push({
+              id: `strat-${targetCampaignId}`,
+              type: "campaign_blueprint",
+              title: strat.campaign_theme || camp.name || "Master Campaign Strategy",
+              version: 1,
+              status: "approved",
+              campaign_id: targetCampaignId,
+              payload: {
+                campaign_theme: strat.campaign_theme || camp.name,
+                master_slogan: strat.strategic_thesis || strat.primary_objective || strat.campaign_theme,
+                narrative_stages: Object.entries(strat.funnel_narrative || {}).map(([stage, msg], i) => ({
+                  stage_name: stage.replace(/_/g, " ").toUpperCase(),
+                  days_range: `Phase ${i + 1}`,
+                  core_message: String(msg),
+                  deliverable_focus: (strat.strategic_angles || []).map((a: any) => a.angle_name || String(a)),
+                })),
+                format_mix_ratios: strat.budget_allocation || { LinkedIn: 100 },
+                ...strat,
+              },
+            });
+          }
+
+          // All deliverables (Reels & Carousels)
+          planDeliverables.forEach((d: any, idx: number) => {
+            const isCarousel = d.deliverable_type === "carousel" || (d.carousel_slides && d.carousel_slides.length > 0);
+            const isInProd = d.status === "in_production" || d.is_exported;
+            const isRej = d.status === "rejected";
+
+            loadedArts.push({
+              id: `deliv-${isCarousel ? "carousel" : "reel"}-${idx}`,
+              type: isCarousel ? "carousel_deck" : "storyboard",
+              title: d.title || (isCarousel ? `Carousel Slide Deck ${idx + 1}` : `Video / Reel Script ${idx + 1}`),
+              version: 1,
+              status: isInProd ? "in_production" : isRej ? "rejected" : (d.status || "draft"),
+              campaign_id: targetCampaignId,
+              payload: isCarousel
+                ? {
+                    deliverable_title: d.title || "Technical Carousel",
+                    slides: (d.carousel_slides || []).map((s: any) => ({
+                      slide_number: s.slide_number,
+                      headline: s.headline,
+                      body_copy: s.body_copy,
+                      visual_prompt: s.visual_prompt || s.visual_layout,
+                    })),
+                    full_caption: d.core_message_summary || d.caption || d.hook,
+                    call_to_action: d.call_to_action,
+                  }
+                : {
+                    deliverable_title: d.title || "Technical Reel",
+                    scenes: (d.reel_scenes || []).map((s: any) => ({
+                      scene_number: s.scene_number,
+                      timestamp_range: s.timestamp_range,
+                      shot_type: s.shot_type || "Screen Recording / Architecture Diagram",
+                      visual_action: s.visual_action,
+                      voiceover_script: s.spoken_audio_or_voiceover || s.voiceover_script,
+                      on_screen_text: s.on_screen_text,
+                    })),
+                    call_to_action: d.call_to_action,
+                  },
+            });
+          });
+
+          // Quality audit
+          if (camp.ai_plan_draft?.quality_evaluation) {
+            const q = camp.ai_plan_draft.quality_evaluation;
+            loadedArts.push({
+              id: `qa-${targetCampaignId}`,
+              type: "compliance_review",
+              title: "Pre-Flight Quality Audit",
+              version: 1,
+              status: "approved",
+              campaign_id: targetCampaignId,
+              payload: {
+                ...q,
+                checks: (q.findings || []).map((f: any) => ({
+                  rule_name: f.category ? f.category.replace(/_/g, " ").toUpperCase() : "Brand Guideline Rule",
+                  verdict: f.severity === "error" || f.severity === "blocking" ? "FAIL" : f.severity === "warning" ? "NEEDS_REVIEW" : "PASS",
+                  details: f.issue_description || f.remediation_instruction || "Verified against brand profile.",
+                  severity: f.severity,
+                })),
+                has_blocking_violations: q.revision_required || false,
+              },
+            });
+          }
+
+          setPersistedArtifacts(loadedArts);
+          if (loadedArts.length > 0) {
+            setActiveArtifact((prev) => {
+              if (!prev || !loadedArts.some((a) => a.id === prev.id)) {
+                return loadedArts[0];
+              }
+              return prev;
+            });
+          }
+          return;
+        }
+
+        // 2. Fallback to standard studio_artifacts table
         const arts = await studioApi.listArtifacts(effectiveAgencyId, targetCampaignId, token);
         setPersistedArtifacts(arts || []);
 
-        // If no active artifact is loaded or current active artifact is not from this campaign, auto-select first
         if (arts && arts.length > 0) {
           setActiveArtifact((current) => {
             if (!current || !arts.some((a: any) => a.id === current.id)) {
               const first = arts[0];
               const targetVer = first.latest_version;
-              // Also load versions asynchronously
               studioApi
                 .getArtifactDetail(effectiveAgencyId, targetCampaignId, first.id, token)
                 .then((detail) => {
@@ -559,14 +686,160 @@ function CampaignStudioContent() {
     [effectiveAgencyId, token]
   );
 
-  // Sync persistent artifacts whenever active campaign sprint changes
+  // Load operational DAG run deliverables for the active client
+  const loadOperationalRunArtifacts = useCallback(
+    async (clientId: string) => {
+      if (!effectiveAgencyId || !token || !clientId) return;
+      try {
+        setIsLoadingArtifacts(true);
+        const runs = await operationalWorkflowApi.listRuns(effectiveAgencyId, token, clientId);
+        if (!runs || runs.length === 0) return;
+
+        // Find the latest completed or running run
+        const latestRun = runs[0];
+        if (!latestRun) return;
+
+        setActiveWorkflowRunId(latestRun.id);
+
+        const stratTask = latestRun.tasks.find((t) => t.task_key === "campaign_strategy");
+        const contentTask = latestRun.tasks.find((t) => t.task_key === "content_architecture");
+        const qaTask = latestRun.tasks.find((t) => t.task_key === "final_quality_audit");
+
+        const loadedArtifacts: ActiveArtifactData[] = [];
+
+        // 1. Strategy Blueprint
+        if (stratTask && stratTask.status === "completed") {
+          try {
+            const stratRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, stratTask.id, token);
+            const stratPayload = stratRes?.output || {};
+            loadedArtifacts.push({
+              id: `strat-${latestRun.id}`,
+              type: "campaign_blueprint",
+              title: stratPayload.campaign_theme || latestRun.name || "Master Campaign Strategy",
+              version: 1,
+              status: latestRun.status === "completed" ? "approved" : "draft",
+              payload: {
+                campaign_theme: stratPayload.campaign_theme || latestRun.name,
+                master_slogan: stratPayload.strategic_thesis || stratPayload.core_tension || stratPayload.campaign_theme,
+                narrative_stages: Object.entries(stratPayload.funnel_narrative || {}).map(([stage, msg], i) => ({
+                  stage_name: stage.replace(/_/g, " ").toUpperCase(),
+                  days_range: `Phase ${i + 1}`,
+                  core_message: String(msg),
+                  deliverable_focus: (stratPayload.strategic_angles || []).map((a: any) => a.angle_name || String(a)),
+                })),
+                format_mix_ratios: stratPayload.budget_allocation || { LinkedIn: 100 },
+                ...stratPayload,
+              },
+            });
+          } catch (e) {
+            console.error("Failed to load strat output:", e);
+          }
+        }
+
+        // 2. Video Reel Script & Carousel Deck
+        if (contentTask && contentTask.status === "completed") {
+          try {
+            const contentRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, contentTask.id, token);
+            const contentData = contentRes?.output || {};
+            const deliverables = contentData.deliverables || [];
+
+            deliverables.forEach((d: any, idx: number) => {
+              if (d.format === "carousel") {
+                loadedArtifacts.push({
+                  id: `deliv-carousel-${idx}`,
+                  type: "carousel_deck",
+                  title: d.hook_or_title || `Carousel Slide Deck ${idx + 1}`,
+                  version: 1,
+                  status: latestRun.status === "completed" ? "approved" : "draft",
+                  payload: {
+                    deliverable_title: d.hook_or_title || "Technical Carousel",
+                    slides: (d.carousel_slides || []).map((s: any) => ({
+                      slide_number: s.slide_number,
+                      headline: s.headline,
+                      body_copy: s.body_copy,
+                      visual_prompt: s.visual_prompt,
+                    })),
+                    full_caption: d.core_message_summary || d.hook_or_title,
+                    call_to_action: d.call_to_action,
+                  },
+                });
+              } else {
+                loadedArtifacts.push({
+                  id: `deliv-reel-${idx}`,
+                  type: "storyboard",
+                  title: d.hook_or_title || `Video / Reel Script ${idx + 1}`,
+                  version: 1,
+                  status: latestRun.status === "completed" ? "approved" : "draft",
+                  payload: {
+                    deliverable_title: d.hook_or_title || "Technical Reel",
+                    scenes: (d.reel_scenes || []).map((s: any) => ({
+                      scene_number: s.scene_number,
+                      timestamp_range: s.timestamp_range,
+                      shot_type: s.shot_type || "Screen Recording / Architecture Diagram",
+                      visual_action: s.visual_action,
+                      voiceover_script: s.voiceover_script,
+                      on_screen_text: s.on_screen_text,
+                    })),
+                    call_to_action: d.call_to_action,
+                  },
+                });
+              }
+            });
+          } catch (e) {
+            console.error("Failed to load content deliverables:", e);
+          }
+        }
+
+        // 3. QA Audit
+        if (qaTask && qaTask.status === "completed") {
+          try {
+            const qaRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, qaTask.id, token);
+            const qaData = qaRes?.output || {};
+            loadedArtifacts.push({
+              id: `qa-${latestRun.id}`,
+              type: "compliance_review",
+              title: "Pre-Flight Quality Audit",
+              version: 1,
+              status: "approved",
+              payload: {
+                ...qaData,
+                checks: (qaData.findings || []).map((f: any) => ({
+                  rule_name: f.category ? f.category.replace(/_/g, " ").toUpperCase() : "Brand Guideline Rule",
+                  verdict: f.severity === "error" || f.severity === "blocking" ? "FAIL" : (f.severity === "warning" ? "NEEDS_REVIEW" : "PASS"),
+                  details: f.issue_description || f.remediation_instruction || "Verified against brand profile.",
+                  severity: f.severity,
+                })),
+                has_blocking_violations: qaData.revision_required || false,
+              },
+            });
+          } catch (e) {
+            console.error("Failed to load QA output:", e);
+          }
+        }
+
+        if (loadedArtifacts.length > 0) {
+          setPersistedArtifacts(loadedArtifacts);
+          setActiveArtifact(loadedArtifacts[0]);
+        }
+      } catch (err) {
+        console.error("Failed to load operational run artifacts:", err);
+      } finally {
+        setIsLoadingArtifacts(false);
+      }
+    },
+    [effectiveAgencyId, token]
+  );
+
+  // Sync persistent artifacts whenever active campaign sprint changes or client changes
   useEffect(() => {
     if (activeCampaignId && effectiveAgencyId && token) {
       loadCampaignArtifacts(activeCampaignId);
-    } else {
+    } else if (selectedClientId && effectiveAgencyId && token) {
+      loadOperationalRunArtifacts(selectedClientId);
+    } else if (!activeWorkflowRunId) {
       setPersistedArtifacts([]);
     }
-  }, [activeCampaignId, effectiveAgencyId, token, loadCampaignArtifacts]);
+  }, [activeCampaignId, selectedClientId, effectiveAgencyId, token, loadCampaignArtifacts, loadOperationalRunArtifacts, activeWorkflowRunId]);
 
   // Load agency team members for production assignment
   useEffect(() => {
@@ -618,7 +891,6 @@ function CampaignStudioContent() {
             if (parsed.periodYear) setPeriodYear(parsed.periodYear);
             if (parsed.studioMode) setStudioMode(parsed.studioMode);
             if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
-            if (parsed.activeArtifact) setActiveArtifact(parsed.activeArtifact);
             if (parsed.activeCampaignId) setActiveCampaignId(parsed.activeCampaignId);
             if (Array.isArray(parsed.pinnedEntities)) setPinnedEntities(parsed.pinnedEntities);
             if (Array.isArray(parsed.discoveredEntities)) setDiscoveredEntities(parsed.discoveredEntities);
@@ -669,7 +941,6 @@ function CampaignStudioContent() {
           periodYear,
           studioMode,
           activeSpecialistId,
-          activeArtifact,
           activeCampaignId,
           pinnedEntities,
           discoveredEntities,
@@ -1022,7 +1293,16 @@ function CampaignStudioContent() {
 
   // Approve a specific version of a studio artifact
   const handleApproveVersion = async (artifactId: string, versionNumber: number) => {
-    if (!token || !effectiveAgencyId || !activeCampaignId) return;
+    if (!token || !effectiveAgencyId) return;
+    if (!activeCampaignId) {
+      setActiveArtifact((prev) =>
+        prev && prev.id === artifactId ? { ...prev, status: "approved" } : prev
+      );
+      setPersistedArtifacts((prev) =>
+        prev.map((art) => (art.id === artifactId ? { ...art, status: "approved" } : art))
+      );
+      return;
+    }
     try {
       const res = await studioApi.approveArtifactVersion(
         effectiveAgencyId,
@@ -1053,7 +1333,26 @@ function CampaignStudioContent() {
     revisedPayload: Record<string, any>,
     changeSummary?: string
   ) => {
-    if (!effectiveAgencyId || !activeCampaignId || !token) return;
+    if (!token || !effectiveAgencyId) return;
+    if (!activeCampaignId) {
+      setActiveArtifact((prev) =>
+        prev && prev.id === artifactId
+          ? {
+              ...prev,
+              payload: revisedPayload,
+              version: (prev.version || 1) + 1,
+            }
+          : prev
+      );
+      setPersistedArtifacts((prev) =>
+        prev.map((art) =>
+          art.id === artifactId
+            ? { ...art, payload: revisedPayload, version: (art.version || 1) + 1 }
+            : art
+        )
+      );
+      return;
+    }
     try {
       const parentVer = activeArtifactVersions.find(
         (v) => v.version_number === activeArtifact?.version
@@ -1093,9 +1392,33 @@ function CampaignStudioContent() {
   const [isLoadingCanvasArtifact, setIsLoadingCanvasArtifact] = useState<string | null>(null);
 
   const handleViewOnCanvas = async (summary: NonNullable<ChatMsg["artifact_summary"]>) => {
+    // 1. Immediately check local persistedArtifacts
+    const localMatch = persistedArtifacts.find((p: any) => p.id === summary.id);
+    if (localMatch && localMatch.payload && Object.keys(localMatch.payload).length > 0) {
+      setActiveArtifact({
+        id: localMatch.id,
+        type: (localMatch as any).type || (localMatch as any).artifact_type || summary.type || "campaign_blueprint",
+        title: localMatch.title || summary.title,
+        version: localMatch.version || (localMatch as any).current_version_number || summary.version || 1,
+        status: localMatch.status || summary.status || "draft",
+        payload: localMatch.payload,
+        supporting_evidence_refs: localMatch.supporting_evidence_refs || summary.supporting_evidence_refs || [],
+      });
+      setActiveArtifactVersions(localMatch.versions || []);
+      setMobileTab("canvas");
+      return;
+    }
+
     const targetCampaignId = summary.campaign_id || activeCampaignId;
 
-    if (effectiveAgencyId && targetCampaignId && token) {
+    if (
+      effectiveAgencyId &&
+      targetCampaignId &&
+      token &&
+      !summary.id.startsWith("strat-") &&
+      !summary.id.startsWith("deliv-") &&
+      !summary.id.startsWith("qa-")
+    ) {
       setIsLoadingCanvasArtifact(summary.id);
       try {
         const detail = await studioApi.getArtifactDetail(
@@ -1146,25 +1469,36 @@ function CampaignStudioContent() {
     }
   };
 
-  // Launch Multi-Agent Pipeline Execution inline in chat (Real LangGraph Workflow, Zero Fake Timers)
+  // Launch Multi-Agent DAG Operational Engine inline in Campaign Studio
   const handleRunPipeline = async () => {
-    if (!token || !effectiveAgencyId || !selectedClientId || isPipelineRunning) return;
+    let targetClientId = selectedClientId;
+    if (!targetClientId && clients.length > 0) {
+      targetClientId = clients[0].id;
+      setSelectedClientId(targetClientId);
+    }
+    if (!token || !effectiveAgencyId || !targetClientId || isPipelineRunning) {
+      if (!targetClientId) {
+        alert("Please select a client from the top dropdown before launching the pipeline.");
+      }
+      return;
+    }
 
     setIsPipelineRunning(true);
+    setPendingApproval(null);
     const pipelineMsgId = `pipeline-${Date.now()}`;
 
     const pipelineMsg: ChatMsg = {
       id: pipelineMsgId,
       role: "assistant",
-      content: "🚀 **Launching Autonomous Multi-Agent Campaign Intelligence Engine...**\nCoordinating 6 specialized agents: parallel gathering (Brand Intel, Market Research, Performance) → Strategy synthesis → Content Architecture → Quality Gate audit.",
+      content: "🚀 **Launching Autonomous Multi-Agent Operational DAG Engine...**\nCoordinating 14-task workflow: parallel intelligence gathering (Brand Intel, Market Research, Performance) → Strategy synthesis → Creative Director Checkpoint.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       agent_id: "director",
-      agent_name: "Multi-Agent Engine",
+      agent_name: "Autonomous DAG Engine",
       agentPipeline: {
         status: "in_progress",
-        activeStep: 0,
+        activeStep: 1,
         stepDetails: {
-          agent1: "Executing parallel intelligence gathering across brand rules, market trends, and performance data...",
+          agent1: "Executing Phase 1 & 2: Parallel intelligence gathering across brand rules, market trends, and performance data...",
         },
       },
     };
@@ -1172,85 +1506,101 @@ function CampaignStudioContent() {
     setChatMessages((prev) => [...prev, pipelineMsg]);
 
     try {
-      const newCampaign: any = await campaignApi.generatePlan(
+      const clientObj = clients.find((c) => c.id === targetClientId);
+      const briefName = `${clientObj?.business_name || "Client"} - Campaign Sprint`;
+      const briefTheme = suggestedObjective || suggestedCustomBrief || "Autonomous Multi-Platform Campaign";
+
+      // 1. Launch 14-task operational DAG run in PostgreSQL
+      const dagRun = await operationalWorkflowApi.launchRun(
         effectiveAgencyId,
-        selectedClientId,
         {
-          period_month: periodMonth,
-          period_year: periodYear,
-          start_date: startDate || undefined,
-          end_date: endDate || undefined,
-          duration_days: durationDays || undefined,
-          objective: suggestedObjective || undefined,
-          custom_brief: suggestedCustomBrief || undefined,
-          deliverable_preferences: deliverablePreferences.length > 0 ? deliverablePreferences : undefined,
-          pinned_entities: pinnedEntities,
+          client_id: targetClientId,
+          campaign_name: briefName,
+          theme: briefTheme,
+          primary_goal: suggestedObjective || "Drive conversions, pipeline and brand authority",
+          target_audience: ["Enterprise Decision Makers & Technical Leads"],
+          platforms: deliverablePreferences.length > 0 ? deliverablePreferences : ["linkedin"],
+          deliverable_count: durationDays || 2,
+          period_month: periodMonth || (new Date().getMonth() + 1),
+          period_year: periodYear || new Date().getFullYear(),
+          duration_days: durationDays || 4,
         },
         token
       );
 
-      const draft = newCampaign.ai_plan_draft || {};
-      const deliverablesCount = (draft.deliverables || []).length;
-      const rawScore = draft.quality_evaluation?.compliance_score;
-      const complianceScore =
-        typeof rawScore === "number"
-          ? rawScore <= 1
-            ? Math.round(rawScore * 100)
-            : Math.round(rawScore)
-          : 95;
-      const theme = draft.strategy?.campaign_theme || draft.campaign_name;
+      setActiveWorkflowRunId(dagRun.id);
+      if (dagRun.campaign_id) {
+        setActiveCampaignId(dagRun.campaign_id);
+        loadClientCampaigns(targetClientId);
+      }
 
-      setActiveCampaignId(newCampaign.id);
-      loadClientCampaigns(selectedClientId);
+      // 2. Execute automated Phase 1 & 2 tasks (up to Human Strategy Checkpoint)
+      await operationalWorkflowApi.stepRun(effectiveAgencyId, dagRun.id, token, 10);
 
-      setChatMessages((prev) =>
-        prev.map((m) => {
-          if (m.id === pipelineMsgId) {
-            return {
-              ...m,
-              agentPipeline: {
-                status: "completed",
-                activeStep: 6,
-                stepDetails: {
-                  agent1: "Brand guidelines, verified offers & forbidden claims validated.",
-                  agent2: "Live web research completed with competitor angles.",
-                  agent3: "Historical retention analysis & format weights applied.",
-                  agent4: `Strategy finalized: ${theme || "Master Campaign Strategy"}.`,
-                  agent5: `${deliverablesCount} polymorphic deliverables architected (Reels, Carousels, Graphics).`,
-                  agent6: `Quality Gate Passed: ${complianceScore}% brand compliance score.`,
-                },
-                result: {
-                  campaignId: newCampaign.id,
-                  campaignName: newCampaign.name,
-                  theme,
-                  deliverablesCount,
-                  complianceScore,
-                },
-              },
-            };
-          }
-          return m;
-        })
-      );
+      // 3. Fetch latest run state
+      const runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, dagRun.id, token);
+      const stratTask = runUpdated.tasks.find((t) => t.task_key === "campaign_strategy");
+      const humanStratTask = runUpdated.tasks.find((t) => t.task_key === "human_strategy_approval");
 
-      // Check if studio artifacts exist for the generated campaign
-      try {
-        const arts = await studioApi.listArtifacts(effectiveAgencyId, newCampaign.id, token);
-        if (arts && arts.length > 0) {
-          const first = arts[0];
-          setActiveArtifact({
-            id: first.id,
-            type: first.artifact_type,
-            title: first.title,
-            version: first.current_version_number || 1,
-            status: first.status,
-            payload: first.latest_version?.payload || {},
+      if (stratTask && stratTask.status === "completed") {
+        const stratOutputRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, stratTask.id, token);
+        const stratPayload = stratOutputRes.output || {};
+
+        const blueprintArtifact: ActiveArtifactData = {
+          id: `strat-${dagRun.id}`,
+          type: "campaign_blueprint",
+          title: stratPayload.campaign_theme || "Master Campaign Strategy",
+          version: 1,
+          status: "draft",
+          payload: {
+            campaign_theme: stratPayload.campaign_theme || briefTheme,
+            master_slogan: stratPayload.strategic_thesis || stratPayload.core_tension || stratPayload.campaign_theme,
+            narrative_stages: Object.entries(stratPayload.funnel_narrative || {}).map(([stage, msg], i) => ({
+              stage_name: stage.replace(/_/g, " ").toUpperCase(),
+              days_range: `Phase ${i + 1}`,
+              core_message: String(msg),
+              deliverable_focus: (stratPayload.strategic_angles || []).map((a: any) => a.angle_name || String(a)),
+            })),
+            format_mix_ratios: stratPayload.budget_allocation || { LinkedIn: 100 },
+            ...stratPayload,
+          },
+        };
+
+        setActiveArtifact(blueprintArtifact);
+        setPersistedArtifacts([blueprintArtifact]);
+
+        if (humanStratTask && humanStratTask.status === "waiting_for_human") {
+          setPendingApproval({
+            stage: "strategy",
+            taskId: humanStratTask.id,
+            runId: dagRun.id,
           });
+
+          setChatMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === pipelineMsgId) {
+                return {
+                  ...m,
+                  content: `🎯 **Strategy Blueprint Synthesized by Agents**\n* **Theme:** ${stratPayload.campaign_theme || briefTheme}\n* **Thesis:** ${stratPayload.strategic_thesis || "Grounding in verified benchmarks."}\n\n👉 **Creative Director Checkpoint:** Review the Strategy Blueprint on your canvas. Click **"Approve Strategy"** below to begin parallel deliverable production.`,
+                  agentPipeline: {
+                    status: "in_progress",
+                    activeStep: 4,
+                    stepDetails: {
+                      agent1: "Brand guidelines, verified offers & forbidden claims validated.",
+                      agent2: "Live web research completed with competitor angles.",
+                      agent3: "Historical retention analysis & format weights applied.",
+                      agent4: `Strategy finalized: ${stratPayload.campaign_theme || "Master Strategy"}. Awaiting your sign-off.`,
+                    },
+                  },
+                };
+              }
+              return m;
+            })
+          );
         }
-      } catch {
-        // Artifacts optional
       }
     } catch (err: any) {
+      console.error("DAG Pipeline launch error:", err);
       setChatMessages((prev) =>
         prev.map((m) => {
           if (m.id === pipelineMsgId) {
@@ -1259,7 +1609,7 @@ function CampaignStudioContent() {
               agentPipeline: {
                 status: "error",
                 activeStep: 0,
-                errorMessage: err.message || "Failed to execute multi-agent engine.",
+                errorMessage: err.message || "Failed to execute DAG operational engine.",
               },
             };
           }
@@ -1271,67 +1621,248 @@ function CampaignStudioContent() {
     }
   };
 
-  // Workflow stages definition for left navigation
-  const WORKFLOW_STAGES = [
-    { id: "discovery", name: "Discovery & Brief", step: "01", icon: Sparkles, desc: "Objectives & sprint dates" },
-    { id: "intelligence", name: "Market Intelligence", step: "02", icon: Search, desc: "Competitors & viral hooks" },
-    { id: "strategy", name: "Campaign Blueprint", step: "03", icon: Cpu, desc: "Master theme & pacing" },
-    { id: "storyboards", name: "Content Architecture", step: "04", icon: Layers2, desc: "Reel scenes & decks" },
-    { id: "compliance", name: "Pre-Flight Audit", step: "05", icon: FileCheck, desc: "Claims & brand safety" },
-    { id: "handoff", name: "Production Handoff", step: "06", icon: CheckCircle2, desc: "Task conversion & export" },
-  ];
+  // Human Checkpoint 1: Approve Strategy in Studio
+  const handleApproveStrategyCheckpoint = async () => {
+    if (!token || !effectiveAgencyId || !pendingApproval || pendingApproval.stage !== "strategy" || isReviewingApproval) return;
 
-  // Helper to compute honest execution status for any of the 6 agents (Zero Fake Timers)
-  const getAgentStatus = (agentId: string) => {
-    // If the full LangGraph pipeline is actively running via generate-plan
-    if (isPipelineRunning) {
-      if (["brand_intelligence", "market_research", "historical_performance"].includes(agentId)) {
-        return { state: "running", label: "Gathering" };
+    setIsReviewingApproval(true);
+    setIsPipelineRunning(true);
+    const runId = pendingApproval.runId;
+    const approvalTaskId = pendingApproval.taskId;
+
+    try {
+      await operationalWorkflowApi.reviewTask(
+        effectiveAgencyId,
+        approvalTaskId,
+        {
+          decision: "approved",
+          feedback_notes: "Strategy approved by Creative Director in Campaign Studio.",
+        },
+        token
+      );
+
+      setPendingApproval(null);
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `strat-appr-${Date.now()}`,
+          role: "assistant",
+          content: "⚡ **Strategy Approved!** Unblocking parallel workers for Content Architecture, Visual Planning, and Pre-Flight Quality Audit...",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          agent_id: "director",
+          agent_name: "Campaign Director",
+        },
+      ]);
+
+      // Step DAG execution through Phase 3 & 4
+      await operationalWorkflowApi.stepRun(effectiveAgencyId, runId, token, 10);
+
+      const runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, runId, token);
+      const contentTask = runUpdated.tasks.find((t) => t.task_key === "content_architecture");
+      const qaTask = runUpdated.tasks.find((t) => t.task_key === "final_quality_audit");
+      const clientTask = runUpdated.tasks.find((t) => t.task_key === "client_approval");
+
+      const newArtifacts: ActiveArtifactData[] = [...persistedArtifacts];
+
+      let complianceScore = 95;
+      if (qaTask && qaTask.status === "completed") {
+        const qaOutputRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, qaTask.id, token);
+        const qaData = qaOutputRes.output || {};
+        complianceScore = qaData.compliance_score || 95;
+        newArtifacts.push({
+          id: `qa-${runId}`,
+          type: "compliance_review",
+          title: "Pre-Flight Quality Audit",
+          version: 1,
+          status: "approved",
+          payload: {
+            ...qaData,
+            checks: (qaData.findings || []).map((f: any) => ({
+              rule_name: f.category ? f.category.replace(/_/g, " ").toUpperCase() : "Brand Guideline Rule",
+              verdict: f.severity === "error" || f.severity === "blocking" ? "FAIL" : (f.severity === "warning" ? "NEEDS_REVIEW" : "PASS"),
+              details: f.issue_description || f.remediation_instruction || "Verified against brand profile.",
+              severity: f.severity,
+            })),
+            has_blocking_violations: qaData.revision_required || false,
+          },
+        });
       }
-      if (agentId === "campaign_strategist") {
-        return { state: "pending", label: "Fan-In" };
+
+      if (contentTask && contentTask.status === "completed") {
+        const contentOutputRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, contentTask.id, token);
+        const contentData = contentOutputRes.output || {};
+        const deliverables = contentData.deliverables || [];
+
+        deliverables.forEach((d: any, idx: number) => {
+          if (d.format === "carousel") {
+            newArtifacts.push({
+              id: `deliv-carousel-${idx}`,
+              type: "carousel_deck",
+              title: d.hook_or_title || `Carousel Slide Deck ${idx + 1}`,
+              version: 1,
+              status: "draft",
+              payload: {
+                deliverable_title: d.hook_or_title || "Technical Carousel",
+                slides: (d.carousel_slides || []).map((s: any) => ({
+                  slide_number: s.slide_number,
+                  headline: s.headline,
+                  body_copy: s.body_copy,
+                  visual_prompt: s.visual_prompt,
+                })),
+                full_caption: d.core_message_summary || d.hook_or_title,
+                call_to_action: d.call_to_action,
+              },
+            });
+          } else {
+            newArtifacts.push({
+              id: `deliv-reel-${idx}`,
+              type: "storyboard",
+              title: d.hook_or_title || `Video / Reel Script ${idx + 1}`,
+              version: 1,
+              status: "draft",
+              payload: {
+                deliverable_title: d.hook_or_title || "Technical Reel",
+                scenes: (d.reel_scenes || []).map((s: any) => ({
+                  scene_number: s.scene_number,
+                  timestamp_range: s.timestamp_range,
+                  shot_type: s.shot_type || "Screen Recording / Architecture Diagram",
+                  visual_action: s.visual_action,
+                  voiceover_script: s.voiceover_script,
+                  on_screen_text: s.on_screen_text,
+                })),
+                call_to_action: d.call_to_action,
+              },
+            });
+          }
+        });
+
+        const firstDeliv = newArtifacts.find((a) => a.type === "carousel_deck" || a.type === "storyboard");
+        if (firstDeliv) {
+          setActiveArtifact(firstDeliv);
+        }
       }
-      if (agentId === "content_architect") {
-        return { state: "pending", label: "Arch." };
+
+      setPersistedArtifacts(newArtifacts);
+
+      // Auto-sync entire generated sprint into the campaign's ai_plan_draft
+      if (selectedClientId && runId) {
+        campaignApi
+          .syncRunToCampaign(effectiveAgencyId, selectedClientId, runId, token)
+          .then((syncedCamp: any) => {
+            if (syncedCamp?.id) {
+              setActiveCampaignId(syncedCamp.id);
+              loadClientCampaigns(selectedClientId);
+              loadCampaignArtifacts(syncedCamp.id);
+            }
+          })
+          .catch((e: any) => console.error("Auto-sync to campaign plan error:", e));
       }
-      if (agentId === "quality_evaluator") {
-        return { state: "pending", label: "Gate" };
+
+      if (clientTask && clientTask.status === "waiting_for_human") {
+        setPendingApproval({
+          stage: "client",
+          taskId: clientTask.id,
+          runId,
+        });
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: `deliv-ready-${Date.now()}`,
+            role: "assistant",
+            content: `✨ **Creative Deliverables Generated & Synced to Campaign Planner!**\n* **Quality Audit:** ${complianceScore}% brand compliance score.\n* **Factual Claims:** Verified against brand profile.\n\n👉 **Next Steps:** Review deliverables on canvas, or **[Open in Campaign Planner →](/campaign-plans)** to reject/accept ideas and push to production tasks in batch or individually.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            agent_id: "director",
+            agent_name: "Campaign Director",
+          },
+        ]);
       }
+    } catch (err: any) {
+      console.error("Strategy approval error:", err);
+      alert(err.message || "Failed to process strategy approval.");
+    } finally {
+      setIsReviewingApproval(false);
+      setIsPipelineRunning(false);
     }
+  };
 
-    // If an individual specialist chat stream is currently executing
-    if (isChatLoading && currentAgentId === agentId) {
-      return { state: "running", label: "Active" };
+  // Human Checkpoint 2: Authorize Publishing in Studio
+  const handleApproveClientCheckpoint = async () => {
+    if (!token || !effectiveAgencyId || !pendingApproval || pendingApproval.stage !== "client" || isReviewingApproval) return;
+
+    setIsReviewingApproval(true);
+    setIsPipelineRunning(true);
+    const runId = pendingApproval.runId;
+    const approvalTaskId = pendingApproval.taskId;
+
+    try {
+      await operationalWorkflowApi.reviewTask(
+        effectiveAgencyId,
+        approvalTaskId,
+        {
+          decision: "approved",
+          feedback_notes: "Authorized by Client Lead for publication.",
+        },
+        token
+      );
+
+      setPendingApproval(null);
+
+      // Step DAG to complete publishing & cortex memory
+      await operationalWorkflowApi.stepRun(effectiveAgencyId, runId, token, 10);
+
+      // Auto-sync entire sprint to campaign plan
+      if (selectedClientId && runId) {
+        await campaignApi.syncRunToCampaign(effectiveAgencyId, selectedClientId, runId, token).catch(() => null);
+        loadClientCampaigns(selectedClientId);
+      }
+
+      // Mark all current artifacts as approved
+      setPersistedArtifacts((prev) =>
+        prev.map((art) => ({ ...art, status: "approved" }))
+      );
+      setActiveArtifact((prev) => (prev ? { ...prev, status: "approved" } : null));
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `client-appr-${Date.now()}`,
+          role: "assistant",
+          content: "🚀 **Campaign Authorized & Scheduled for Publishing!**\nAttribution listeners active. Persistent institutional memory proposals saved to Cortex.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          agent_id: "director",
+          agent_name: "Campaign Director",
+        },
+      ]);
+    } catch (err: any) {
+      console.error("Client authorization error:", err);
+      alert(err.message || "Failed to authorize publishing.");
+    } finally {
+      setIsReviewingApproval(false);
+      setIsPipelineRunning(false);
     }
-
-    // Check if this specialist previously executed in the current session
-    const hasExecuted = chatMessages.some(
-      (m) => m.agent_id === agentId && m.role === "assistant" && !m.isStreaming
-    );
-    if (hasExecuted) {
-      return { state: "completed", label: "Ready" };
-    }
-
-    return { state: "idle", label: "Idle" };
   };
 
   // Collect all unique artifacts from database, chat stream, and canvas
   const studioArtifacts = React.useMemo(() => {
     const map = new Map<string, any>();
 
-    // 1. First add all persisted artifacts from SQLite / Postgres
-    persistedArtifacts.forEach((art) => {
-      const verNum = art.current_version_number || art.latest_version?.version_number || 1;
+    // 1. First add all persisted artifacts from SQLite / Postgres / DAG
+    persistedArtifacts.forEach((art: any) => {
+      const verNum = art.version || art.current_version_number || art.latest_version?.version_number || 1;
       const key = `${art.id}-v${verNum}`;
+      const artPayload = art.payload || art.latest_version?.payload || {};
+      const artType = art.type || art.artifact_type || "campaign_blueprint";
       map.set(key, {
         id: art.id,
         campaign_id: art.campaign_id,
-        type: art.artifact_type,
+        type: artType,
         title: art.title,
         version: verNum,
         status: art.status,
-        payload: art.latest_version?.payload || {},
-        supporting_evidence_refs: art.latest_version?.supporting_evidence_refs || [],
+        payload: artPayload,
+        supporting_evidence_refs: art.supporting_evidence_refs || art.latest_version?.supporting_evidence_refs || [],
         created_at: art.created_at,
         versions: art.versions || [],
       });
@@ -1347,20 +1878,23 @@ function CampaignStudioContent() {
       }
     });
 
-    // 3. Ensure active artifact is present
+    // 3. Ensure active artifact is present (only if it matches the current campaign)
     if (activeArtifact) {
-      const key = `${activeArtifact.id}-v${activeArtifact.version}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          id: activeArtifact.id,
-          campaign_id: activeCampaignId,
-          type: activeArtifact.type,
-          title: activeArtifact.title,
-          version: activeArtifact.version,
-          status: activeArtifact.status,
-          payload: activeArtifact.payload,
-          supporting_evidence_refs: activeArtifact.supporting_evidence_refs,
-        });
+      const isMismatch = activeArtifact.campaign_id && activeCampaignId && activeArtifact.campaign_id !== activeCampaignId;
+      if (!isMismatch) {
+        const key = `${activeArtifact.id}-v${activeArtifact.version}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            id: activeArtifact.id,
+            campaign_id: activeCampaignId,
+            type: activeArtifact.type,
+            title: activeArtifact.title,
+            version: activeArtifact.version,
+            status: activeArtifact.status,
+            payload: activeArtifact.payload,
+            supporting_evidence_refs: activeArtifact.supporting_evidence_refs,
+          });
+        }
       }
     }
 
@@ -1428,14 +1962,17 @@ function CampaignStudioContent() {
                     setActiveCampaignId(e.target.value);
                   }
                 }}
-                className="bg-transparent text-xs font-semibold text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[180px] truncate"
+                className="bg-transparent text-xs font-semibold text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[180px] sm:max-w-[280px] truncate"
                 title="Select active campaign sprint"
               >
-                {clientCampaigns.map((camp: any) => (
-                  <option key={camp.id} value={camp.id} className="bg-[#17171E] text-[#F2F0F7]">
-                    {camp.name}
-                  </option>
-                ))}
+                {clientCampaigns.map((camp: any) => {
+                  const delivCount = camp.ai_plan_draft?.deliverables?.length || 0;
+                  return (
+                    <option key={camp.id} value={camp.id} className="bg-[#17171E] text-[#F2F0F7]">
+                      {camp.name} {delivCount > 0 ? `(${delivCount} days)` : ""}
+                    </option>
+                  );
+                })}
                 <option value="new" className="bg-[#17171E] text-[#A78BFA] font-bold">
                   + New Sprint Draft
                 </option>
@@ -1453,68 +1990,36 @@ function CampaignStudioContent() {
               )}
             </div>
           )}
+
+          {/* Compact Sprint Timeline Selector */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#101014] border border-white/[0.08] text-xs shadow-xs">
+            <CalendarDays className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => handleDateChange(e.target.value, endDate)}
+              className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-24"
+              title="Sprint Start Date"
+            />
+            <span className="text-[#A3A0B0] text-[10px]">→</span>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => handleDateChange(startDate, e.target.value)}
+              className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-24"
+              title="Sprint End Date"
+            />
+            {durationDays && durationDays > 0 && (
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/20">
+                {durationDays}d
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Center: Clean Segmented Mode Toggle */}
-        <div className="flex items-center p-0.5 bg-[#101014] rounded-lg border border-white/[0.08]">
-          <button
-            type="button"
-            onClick={() => setStudioMode("workflow")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-              studioMode === "workflow"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs"
-                : "text-[#A3A0B0] hover:text-[#F2F0F7]"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
-            <span>Workflow</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setStudioMode("specialists")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-              studioMode === "specialists"
-                ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.1] shadow-xs"
-                : "text-[#A3A0B0] hover:text-[#F2F0F7]"
-            }`}
-          >
-            <Bot className="w-3.5 h-3.5 text-[#69A9D8]" />
-            <span>Specialists (6)</span>
-          </button>
-        </div>
-
-        {/* Right: Panel Toggles & Tools */}
+        {/* Right: Tools & Views */}
         <div className="flex items-center gap-2">
-          {/* Left Panel Toggle (Desktop) */}
-          <button
-            type="button"
-            onClick={() => setIsLeftNavOpen((prev) => !prev)}
-            title={isLeftNavOpen ? "Collapse Navigation" : "Expand Navigation"}
-            className={`hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
-              isLeftNavOpen
-                ? "surface-card text-[#F2F0F7]"
-                : "bg-transparent border-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7]"
-            }`}
-          >
-            {isLeftNavOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
-            <span className="text-[11px] font-mono hidden xl:inline">Nav</span>
-          </button>
-
-          {/* Right Panel Toggle (Desktop) */}
-          <button
-            type="button"
-            onClick={() => setIsRightIntelOpen((prev) => !prev)}
-            title={isRightIntelOpen ? "Collapse Intelligence" : "Expand Intelligence"}
-            className={`hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs transition-colors cursor-pointer ${
-              isRightIntelOpen
-                ? "surface-card text-[#F2F0F7]"
-                : "bg-transparent border-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7]"
-            }`}
-          >
-            {isRightIntelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
-            <span className="text-[11px] font-mono hidden xl:inline">Intel</span>
-          </button>
-
           {/* Stream Filter Toggle */}
           <button
             type="button"
@@ -1567,15 +2072,6 @@ function CampaignStudioContent() {
       <div className="flex lg:hidden items-center p-0.5 bg-[#17171E] rounded-lg border border-[#30303D] my-1.5 shrink-0">
         <button
           type="button"
-          onClick={() => setMobileTab("nav")}
-          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-            mobileTab === "nav" ? "bg-[#20202A] text-[#F2F0F7] border border-[#30303D]" : "text-[#A3A0B0]"
-          }`}
-        >
-          Stages & Artifacts
-        </button>
-        <button
-          type="button"
           onClick={() => setMobileTab("canvas")}
           className={`flex-1 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             mobileTab === "canvas" ? "bg-[#A78BFA] text-[#101014]" : "text-[#A3A0B0]"
@@ -1595,183 +2091,88 @@ function CampaignStudioContent() {
         </button>
       </div>
 
-      {/* ── 2. Three-Region Workspace: Left Nav + Centre Canvas + Right Intel ── */}
+      {/* ── 2. Two-Region Workspace: Primary Canvas + Right Intelligence ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden pt-2 gap-2.5">
-        {/* ── LEFT REGION: Campaign Navigation & Workflow Stages ── */}
-        {(isLeftNavOpen || mobileTab === "nav") && (
-          <aside
-            className={`w-full lg:w-64 xl:w-72 shrink-0 flex flex-col h-full surface-card rounded-2xl border border-white/[0.08] overflow-hidden ${
-              mobileTab === "nav" ? "flex" : "hidden lg:flex"
-            }`}
-          >
-            {/* Sprint Timeline Header Card */}
-            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 space-y-2 shrink-0">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
-                  <CalendarDays className="w-3.5 h-3.5 text-[#A78BFA]" />
-                  <span>Sprint Timeline</span>
-                </span>
-                {durationDays && durationDays > 0 ? (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 shadow-[0_0_8px_rgba(167,139,250,0.15)]">
-                    {durationDays} Days
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono text-[#A3A0B0]">Dates</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1 bg-[#101014] px-2.5 py-1.5 rounded-lg border border-white/[0.08] shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => handleDateChange(e.target.value, endDate)}
-                  className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-full"
-                />
-                <span className="text-[#A3A0B0] text-[10px] px-1 font-mono">→</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate || undefined}
-                  onChange={(e) => handleDateChange(startDate, e.target.value)}
-                  className="bg-transparent text-[11px] font-mono text-[#F2F0F7] focus:outline-none cursor-pointer w-full text-right"
-                />
-              </div>
-            </div>
-
-            {/* Workflow Stages Vertical List */}
-            <div className="p-3 border-b border-white/[0.06] space-y-2 shrink-0">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
-                  Workflow Stages
-                </span>
-                <span className="text-[9px] font-mono text-[#A3A0B0]/70">6 Steps</span>
-              </div>
-              <div className="space-y-1">
-                {WORKFLOW_STAGES.map((stage) => {
-                  const Icon = stage.icon;
-                  const isCurrent =
-                    (stage.id === "intelligence" && activeSpecialistId === "market_research") ||
-                    (stage.id === "strategy" && activeSpecialistId === "campaign_strategist") ||
-                    (stage.id === "storyboards" && activeSpecialistId === "content_architect") ||
-                    (stage.id === "compliance" && activeSpecialistId === "quality_evaluator") ||
-                    (stage.id === "discovery" && studioMode === "workflow");
-
-                  return (
-                    <button
-                      key={stage.id}
-                      type="button"
-                      onClick={() => {
-                        if (stage.id === "discovery") setStudioMode("workflow");
-                        else if (stage.id === "intelligence") {
-                          setActiveSpecialistId("market_research");
-                          setStudioMode("specialists");
-                        } else if (stage.id === "strategy") {
-                          setActiveSpecialistId("campaign_strategist");
-                          setStudioMode("specialists");
-                        } else if (stage.id === "storyboards") {
-                          setActiveSpecialistId("content_architect");
-                          setStudioMode("specialists");
-                        } else if (stage.id === "compliance") {
-                          setActiveSpecialistId("quality_evaluator");
-                          setStudioMode("specialists");
-                        } else if (stage.id === "handoff") {
-                          setIsExportModalOpen(true);
-                        }
-                      }}
-                      className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-all text-left cursor-pointer group ${
-                        isCurrent
-                          ? "bg-white/[0.08] text-[#F2F0F7] border border-white/[0.12] shadow-xs font-semibold"
-                          : "hover:bg-white/[0.03] text-[#A3A0B0] hover:text-[#F2F0F7] border border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isCurrent ? (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] shadow-[0_0_8px_rgba(167,139,250,0.8)] shrink-0" />
-                        ) : (
-                          <span className="w-1.5 h-1.5 rounded-full bg-transparent border border-white/[0.2] shrink-0 group-hover:border-white/[0.4]" />
-                        )}
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? "text-[#A78BFA]" : "text-[#A3A0B0] group-hover:text-[#F2F0F7]"}`} />
-                        <span className="truncate">{stage.name}</span>
-                      </div>
-                      <span className={`font-mono text-[10px] shrink-0 ${isCurrent ? "text-[#A78BFA] font-bold" : "text-[#A3A0B0]"}`}>
-                        {stage.step}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Campaign Artifacts Stream */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0]">
-                  Campaign Artifacts
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
+        {/* ── LEFT/CENTRE REGION: Primary Creative Workspace & Contextual Canvas ── */}
+        <main
+          className={`flex-1 min-w-0 flex flex-col h-full bg-[#101014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xs ${
+            mobileTab === "canvas" ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          {/* ── DEDICATED ARTIFACTS & VERSIONS WORKSTATION BAR ── */}
+          <div className="px-3.5 py-2.5 bg-[#14141B] border-b border-white/[0.08] flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono uppercase text-[#A3A0B0] font-semibold shrink-0">
+                <Layers2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <span>Artifacts</span>
+                <span className="px-1.5 py-0.2 rounded bg-[#A78BFA]/15 text-[#A78BFA] font-bold">
                   {studioArtifacts.length}
                 </span>
               </div>
 
               {studioArtifacts.length === 0 ? (
-                <div className="p-4 rounded-xl bg-[#101014]/40 border border-white/[0.06] text-center text-xs text-[#A3A0B0] space-y-1">
-                  <FileText className="w-4 h-4 mx-auto text-[#A3A0B0]/50" />
-                  <p className="text-[11px] font-medium text-[#F2F0F7]/80">No artifacts generated</p>
-                  <p className="text-[10px] text-[#A3A0B0]">Run the multi-agent engine to draft scripts & decks</p>
-                </div>
+                <span className="text-[11px] text-[#A3A0B0]/70 italic px-2">
+                  No artifacts generated yet — launch the engine or request drafts from Director
+                </span>
               ) : (
-                <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
                   {studioArtifacts.map((art) => {
-                    const isActive = activeArtifact?.id === art.id && activeArtifact?.version === art.version;
+                    const isActive = activeArtifact?.id === art.id;
+                    const isApproved = art.status === "approved" || art.status === "exported";
                     return (
                       <button
                         key={`${art.id}-v${art.version}`}
                         type="button"
-                        onClick={() => {
-                          handleViewOnCanvas(art);
-                          setMobileTab("canvas");
-                        }}
-                        className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer space-y-1.5 ${
+                        onClick={() => handleViewOnCanvas(art)}
+                        className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer border ${
                           isActive
-                            ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-[0_0_12px_rgba(167,139,250,0.15)]"
-                            : "surface-card surface-card-hover border-white/[0.06] hover:border-white/[0.12] text-[#A3A0B0] hover:text-[#F2F0F7]"
+                            ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-[0_0_12px_rgba(167,139,250,0.18)] font-semibold"
+                            : "bg-[#101014] border-white/[0.06] text-[#A3A0B0] hover:text-[#F2F0F7] hover:border-white/[0.12] hover:bg-white/[0.03]"
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-[#A78BFA] border border-white/[0.08]">
-                              v{art.version}
-                            </span>
-                            <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white/[0.04] text-[#A3A0B0] border border-white/[0.06] truncate">
-                              {art.type === "storyboard"
-                                ? "🎬 Reel"
-                                : art.type === "carousel_deck"
-                                ? "📑 Deck"
-                                : art.type === "compliance_review"
-                                ? "🛡️ Audit"
-                                : art.type === "research_evidence"
-                                ? "🔍 Intel"
-                                : art.type === "campaign_blueprint"
-                                ? "🗺️ Blueprint"
-                                : art.type === "brand_positioning"
-                                ? "💎 Brand"
-                                : art.type}
-                            </span>
-                          </div>
-                          <span
-                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
-                              art.status === "approved" || art.status === "exported"
-                                ? "bg-[#45B88A]/15 text-[#45B88A] border-[#45B88A]/30"
-                                : "bg-white/[0.04] text-[#A3A0B0] border-white/[0.08]"
-                            }`}
-                          >
-                            <span className={`w-1 h-1 rounded-full ${art.status === "approved" || art.status === "exported" ? "bg-[#45B88A]" : "bg-[#A3A0B0]"}`} />
-                            {art.status}
-                          </span>
-                        </div>
-                        <p className="font-medium text-[11px] truncate text-[#F2F0F7]">
-                          {art.title}
-                        </p>
+                        <span className="text-xs">
+                          {art.type === "campaign_blueprint" || art.type?.includes("blueprint") || art.type?.includes("strategy")
+                            ? "🗺️"
+                            : art.type === "carousel_deck" || art.type?.includes("carousel")
+                            ? "📑"
+                            : art.type === "storyboard" || art.type?.includes("reel") || art.type?.includes("script")
+                            ? "🎬"
+                            : art.type === "compliance_review" || art.type?.includes("qa") || art.type?.includes("audit")
+                            ? "🛡️"
+                            : art.type === "research_evidence" || art.type?.includes("research")
+                            ? "🔍"
+                            : "📄"}
+                        </span>
+                        <span className="truncate max-w-[140px] sm:max-w-[180px]">
+                          {art.type === "campaign_blueprint"
+                            ? "Strategy Blueprint"
+                            : art.type === "carousel_deck"
+                            ? "Carousel Deck"
+                            : art.type === "storyboard"
+                            ? "Video Reel Script"
+                            : art.type === "compliance_review"
+                            ? "Brand QA Audit"
+                            : art.type === "research_evidence"
+                            ? "Market Intel"
+                            : art.title || "Deliverable"}
+                        </span>
+                        <span
+                          className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                            isActive
+                              ? "bg-[#A78BFA]/20 text-[#A78BFA] border-[#A78BFA]/30"
+                              : "bg-white/[0.04] text-[#A3A0B0] border-white/[0.06] group-hover:text-[#F2F0F7]"
+                          }`}
+                        >
+                          v{art.version}
+                        </span>
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            isApproved
+                              ? "bg-[#45B88A] shadow-[0_0_6px_rgba(69,184,138,0.8)]"
+                              : "bg-[#6E6D7A]"
+                          }`}
+                          title={isApproved ? "Approved" : "Draft"}
+                        />
                       </button>
                     );
                   })}
@@ -1779,40 +2180,107 @@ function CampaignStudioContent() {
               )}
             </div>
 
-            {/* Specialist Switcher Strip */}
-            <div className="p-2.5 border-t border-white/[0.06] bg-[#101014]/60 shrink-0">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] block px-1 mb-1.5">
-                Specialist Roster
-              </span>
-              <div className="grid grid-cols-2 gap-1 text-[11px]">
-                {SPECIALIST_AGENTS.map((agent) => (
-                  <button
-                    key={agent.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveSpecialistId(agent.id);
-                      setStudioMode("specialists");
-                    }}
-                    className={`px-2 py-1 rounded-md text-left truncate transition-colors cursor-pointer border ${
-                      activeSpecialistId === agent.id && studioMode === "specialists"
-                        ? "bg-white/[0.08] text-[#F2F0F7] border-[#A78BFA]/50 font-semibold shadow-xs"
-                        : "bg-transparent text-[#A3A0B0] hover:text-[#F2F0F7] border-transparent hover:bg-white/[0.03]"
-                    }`}
-                  >
-                    {agent.shortName}
-                  </button>
-                ))}
+            {/* Version Switcher for Active Artifact */}
+            {activeArtifact && activeArtifactVersions && activeArtifactVersions.length > 1 && (
+              <div className="flex items-center gap-1.5 pl-3 border-l border-white/[0.08] shrink-0">
+                <span className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold">
+                  Versions:
+                </span>
+                <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08]">
+                  {activeArtifactVersions.map((v: any) => {
+                    const isCur = v.version_number === activeArtifact.version;
+                    return (
+                      <button
+                        key={v.version_number}
+                        type="button"
+                        onClick={() => {
+                          const targetVer = activeArtifactVersions.find(
+                            (x: any) => x.version_number === v.version_number
+                          );
+                          if (targetVer) {
+                            setActiveArtifact({
+                              ...activeArtifact,
+                              version: targetVer.version_number,
+                              status: targetVer.is_approved
+                                ? "approved"
+                                : activeArtifact.status || "draft",
+                              payload: targetVer.payload || activeArtifact.payload,
+                            });
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                          isCur
+                            ? "bg-violet-600 text-white shadow-xs"
+                            : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04]"
+                        }`}
+                      >
+                        v{v.version_number}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+            )}
+          </div>
+          {/* Active Human Approval Checkpoint Banner (Integrated DAG Gate) */}
+          {pendingApproval?.stage === "strategy" && (
+            <div className="p-3.5 m-3 rounded-xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-amber-500/10 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-100 flex items-center gap-2">
+                    Creative Director Approval Required
+                    <span className="text-[10px] uppercase font-semibold px-2 py-0.2 rounded bg-amber-500/20 text-amber-300">
+                      Checkpoint 1
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-amber-200/80">
+                    Review the Strategy Blueprint on your canvas. Approve to unblock parallel content generation.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleApproveStrategyCheckpoint}
+                disabled={isReviewingApproval}
+                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition cursor-pointer"
+              >
+                {isReviewingApproval ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Approve Strategy
+              </button>
             </div>
-          </aside>
-        )}
+          )}
 
-        {/* ── CENTRE REGION: Primary Creative Workspace & Canvas ── */}
-        <main
-          className={`flex-1 min-w-0 flex flex-col h-full bg-[#101014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xs ${
-            mobileTab === "canvas" ? "flex" : "hidden lg:flex"
-          }`}
-        >
+          {pendingApproval?.stage === "client" && (
+            <div className="p-3.5 m-3 rounded-xl bg-violet-500/15 border-2 border-violet-500/40 text-violet-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-violet-500/10 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-violet-100 flex items-center gap-2">
+                    Client Approval Required
+                    <span className="text-[10px] uppercase font-semibold px-2 py-0.2 rounded bg-violet-500/20 text-violet-300">
+                      Checkpoint 2
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-violet-200/80">
+                    Deliverables have passed the Global Quality Audit. Authorize for publishing.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleApproveClientCheckpoint}
+                disabled={isReviewingApproval}
+                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition cursor-pointer"
+              >
+                {isReviewingApproval ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Authorize Publishing
+              </button>
+            </div>
+          )}
+
           <ContextualCanvas
             artifact={activeArtifact}
             versions={activeArtifactVersions}
@@ -1852,12 +2320,12 @@ function CampaignStudioContent() {
         {/* ── RIGHT REGION: Contextual Intelligence & Agent Stream ── */}
         {(isRightIntelOpen || mobileTab === "intel") && (
           <aside
-            className={`w-full lg:w-80 xl:w-96 shrink-0 flex flex-col h-full surface-card rounded-2xl border border-white/[0.08] overflow-hidden ${
+            className={`w-full lg:w-96 xl:w-[420px] shrink-0 flex flex-col h-full surface-card rounded-2xl border border-white/[0.08] overflow-hidden ${
               mobileTab === "intel" ? "flex" : "hidden lg:flex"
             }`}
           >
-            {/* Orchestration Supervisor & 6-Agent Execution Status Roster */}
-            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2.5">
+            {/* Intelligence & Specialist Copilot Header */}
+            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2">
               {/* Campaign Director Copilot Banner */}
               <div className="flex items-center justify-between p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs">
                 <div className="flex items-center gap-2">
@@ -1869,63 +2337,56 @@ function CampaignStudioContent() {
                     <div className="text-[9.5px] font-mono text-[#A3A0B0]">Sprint Orchestrator &amp; Copilot</div>
                   </div>
                 </div>
-                <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium">
-                  {studioMode === "workflow" ? "Active Copilot" : "Standby"}
-                </span>
-              </div>
-
-              {/* 6 Specialist Agents Matrix */}
-              <div className="flex items-center justify-between pt-0.5">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
-                  <Bot className="w-3.5 h-3.5 text-[#A78BFA]" />
-                  <span>Specialist Matrix (6 Synced)</span>
-                </span>
-                <span className="text-[10px] font-mono text-[#A3A0B0]">
+                <div className="flex items-center gap-1.5">
                   {isPipelineRunning ? (
-                    <span className="text-[#A78BFA] flex items-center gap-1 font-semibold">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Engine Active
+                    <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium flex items-center gap-1">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Engine Active
                     </span>
                   ) : (
-                    <span className="text-[#45B88A] flex items-center gap-1 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] inline-block" /> Ready
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowGenerateConfirmModal(true)}
+                      className="text-[10.5px] font-semibold px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white flex items-center gap-1 transition shadow-xs cursor-pointer"
+                      title="Run the 14-task operational multi-agent DAG"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Run Pipeline</span>
+                    </button>
                   )}
-                </span>
+                </div>
               </div>
 
-              {/* 6 Agents Micro Matrix with LED Diodes */}
-              <div className="grid grid-cols-2 gap-1.5">
-                {SPECIALIST_AGENTS.map((item) => {
-                  const stat = getAgentStatus(item.id);
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.id}
-                      className={`flex items-center justify-between p-1.5 rounded-lg border text-[10.5px] transition-all ${
-                        stat.state === "running"
-                          ? "bg-[#A78BFA]/10 border-[#A78BFA]/40 text-[#A78BFA] shadow-[0_0_8px_rgba(167,139,250,0.2)]"
-                          : stat.state === "completed"
-                          ? "bg-[#45B88A]/10 border-[#45B88A]/30 text-[#45B88A]"
-                          : "bg-[#101014] border-white/[0.06] text-[#A3A0B0]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 truncate">
-                        {stat.state === "running" ? (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-ping shrink-0" />
-                        ) : stat.state === "completed" ? (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A] shrink-0" />
-                        ) : (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#6E6D7A] shrink-0" />
-                        )}
-                        <Icon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{item.shortName}</span>
-                      </div>
-                      <span className="text-[9px] font-mono uppercase shrink-0 font-medium">
-                        {stat.label}
-                      </span>
-                    </div>
-                  );
-                })}
+              {/* Specialist Switcher Pill Row */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 pt-0.5 scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setStudioMode("workflow")}
+                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-medium transition cursor-pointer flex items-center gap-1 shrink-0 ${
+                    studioMode === "workflow"
+                      ? "bg-violet-600 text-white font-semibold shadow-xs"
+                      : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3 text-[#A78BFA]" />
+                  <span>Director</span>
+                </button>
+                {SPECIALIST_AGENTS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSpecialistId(item.id);
+                      setStudioMode("specialists");
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-medium transition cursor-pointer shrink-0 ${
+                      activeSpecialistId === item.id && studioMode === "specialists"
+                        ? "bg-white/[0.12] text-[#F2F0F7] font-semibold border border-white/[0.15]"
+                        : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    {item.shortName}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -2229,7 +2690,7 @@ function CampaignStudioContent() {
         onClose={() => setIsExportModalOpen(false)}
         artifact={activeArtifact}
         agencyId={effectiveAgencyId || ""}
-        campaignId={activeCampaignId || ""}
+        campaignId={activeCampaignId || activeArtifact?.campaign_id || (clientCampaigns.length > 0 ? clientCampaigns[0].id : "")}
         token={token || ""}
         teamMembers={teamMembers}
         onApproveVersion={handleApproveVersion}

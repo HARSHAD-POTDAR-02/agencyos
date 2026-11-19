@@ -1,0 +1,171 @@
+{
+  "timestamp": "20261119_020304",
+  "model": "mistralai/mistral-large-4-1t-a52b",
+  "stage1": {
+    "ttft_seconds": 1.63,
+    "total_seconds": 142.37,
+    "raw_reasoning": "The user wants a JSON output for STAGE 1 of a viral campaign strategy for IronForge Fitness & Performance featuring Vikram 'Vik' Sharma.\n\nKey requirements:\n- Valid standard JSON only\n- Single quotes for dialogue quotes inside JSON strings (this is tricky - standard JSON uses double quotes, but the instruction says use single quotes for dialogue quotes inside JSON strings. This likely means when writing dialogue within the string values, use single quotes instead of double quotes to avoid escaping issues, or it might mean something else. Actually, looking carefully: \"Use single quotes (') for dialogue quotes inside JSON strings.\" This means if I have dialogue like \"He said 'hello'\", I should write it as He said 'hello' inside the JSON string, not using double quotes which would require escaping. But standard JSON requires double quotes for string delimiters. So the content inside can use single quotes for quoted speech.)\n- Concise internal reasoning (but since this is the output, I just provide the JSON)\n- Brand: IronForge Fitness & Performance\n- Face: Vikram 'Vik' Sharma (32, blunt, charismatic, contrarian Indian gym coach)\n- Voice: Conversational Hinglish, punchy, confrontational hook, relatable, authentic humor, no corporate quotes\n- Audience psychology: Day 1 dopamine, Day 4 DOMS doubt, Day 8 meeting excuse, Day 15 ghosting with 'gym isn't for me'\n- Topic: \"Why 90% of people quit the gym after 15 days\"\n- Negative constraints: No generic listicles, no cheesy quotes, no vague visual directions, no unicode curly quotes inside JSON\n\nSchema requirements:\n- brand_moat_statement\n- audience_psychology_barriers (array of 3 strings matching the days)\n- seven_day_arc (array of 7 objects with day, theme, stage, core_concept)\n- three_creative_angles (array of 3 objects with angle_id, angle_name, concept, hook_first_3_seconds, visual_hook, why_it_works)\n\nLet me construct this:\n\nbrand_moat_statement: Something about Vik's raw, contrarian personality being impossible to replicate because it's authentic not performative.\n\naudience_psychology_barriers:\n- Day 4 DOMS shame\n- Day 8 Corporate meeting excuse\n- Day 15 Quiet ghosting\n\nseven_day_arc: Need to map the 15-day quit pattern into a 7-day content arc. Probably covering the psychological journey.\nDay 1: The dopamine high / new gear excitement\nDay 2: Reality sets in / first workout\nDay 3: Building momentum\nDay 4: DOMS crisis (the doubt)\nDay 5: Excuse hunting\nDay 6: The decision point\nDay 7: The 15-day prophecy / breaking the cycle\n\nthree_creative_angles:\n1. Contrarian Tough-Love Monologue - Vik directly confronting the viewer\n2. Humorous Sketch / Relatable Dialogue - maybe Vik playing both sides or a conversation with a friend\n3. Storytelling: The 15-Day Trap - narrative about the specific pattern\n\nHooks need to be in Hinglish, punchy, confrontational.\n\nLet me draft the content:\n\nAngle 1 (Contrarian):\nHook: \"Tum sochte ho gym chhodne ka bahana dhoondhna aasan hai? Galat. Woh toh already tumhare dimaag mein hai.\"\nVisual: Vik staring directly into camera, no music, just him in a gym, harsh lighting.\n\nAngle 2 (Humorous Sketch):\nHook: \"Day 15 pe tumhara dimaag ek chalak lawyer ban jaata hai jo khud ko prove karta hai ki gym tumhare liye nahi hai.\"\nVisual: Split screen or Vik arguing with himself, one side tired, one side making excuses.\n\nAngle 3 (Storytelling):\nHook: \"Main tumhe woh 15 din dikhata hoon jahan sab kuch khatam hota hai, aur phir wapas laata hoon.\"\nVisual: Quick cuts of a calendar flipping from Day 1 to Day 15 with Vik's voiceover.\n\nWait, need to make sure no unicode curly quotes. Use straight quotes.\n\nAlso, inside JSON strings, if I use dialogue quotes, use single quotes. For example: 'gym nahi hai'.\n\nLet me build the JSON carefully.\n\n{\n  \"brand_moat_statement\": \"Vik's moat is his refusal to perform motivation; he weaponizes brutal honesty and Hinglish confrontation that corporate fitness brands cannot fake without sounding like a WhatsApp forward from your uncle.\",\n  \"audience_psychology_barriers\": [\n    \"Day 4 DOMS shame\",\n    \"Day 8 Corporate meeting excuse\",\n    \"Day 15 Quiet ghosting\"\n  ],\n  \"seven_day_arc\": [\n    {\"day\": 1, \"theme\": \"The Dopamine Trap\", \"stage\": \"Awareness\", \"core_concept\": \"Expose the temporary high of new gear and first-day energy as a setup for the fall\"},\n    {\"day\": 2, \"theme\": \"Reality Slap\", \"stage\": \"Awareness\", \"core_concept\": \"Show the gap between Instagram motivation and actual first workout pain\"},\n    {\"day\": 3, \"theme\": \"The Honeymoon Phase\", \"stage\": \"Consideration\", \"core_concept\": \"Acknowledge the momentum while planting the seed that Day 4 is coming\"},\n    {\"day\": 4, \"theme\": \"DOMS Denial\", \"stage\": \"Consideration\", \"core_concept\": \"Confront the shame of not being able to walk down stairs and the urge to quit\"},\n    {\"day\": 5, \"theme\": \"Excuse Manufacturing\", \"stage\": \"Consideration\", \"core_concept\": \"Satirize the creative lies people tell themselves to skip one day\"},\n    {\"day\": 6, \"theme\": \"The Breaking Point\", \"stage\": \"Conversion\", \"core_concept\": \"Address the Day 8 meeting excuse and why one missed day becomes a pattern\"},\n    {\"day\": 7, \"theme\": \"Ghost Protocol\", \"stage\": \"Conversion\", \"core_concept\": \"Name the Day 15 silent exit and reframe quitting as a choice, not a fate\"}\n  ],\n  \"three_creative_angles\": [\n    {\n      \"angle_id\": 1,\n      \"angle_name\": \"Contrarian Tough-Love Monologue\",\n      \"concept\": \"Vik directly confronts the viewer's internal excuses in a raw, unedited rant that mirrors their own self-talk but flipped against them\",\n      \"hook_first_3_seconds\": \"Tum sochte ho ki 15 din baad gym chhodna normal hai? Bhai, woh normal nahi, woh ek chhoti maut hai.\",\n      \"visual_hook\": \"Vik stares dead into the lens from a dark gym, no background music, just harsh single-source lighting on his face, holding a water bottle like a weapon\",\n      \"why_it_works\": \"Triggers cognitive dissonance by validating their struggle while attacking their resignation, creating urgency to prove him wrong\"\n    },\n    {\n      \"angle_id\": 2,\n      \"angle_name\": \"Humorous Sketch / Relatable Dialogue\",\n      \"concept\": \"Vik plays both the quitter and the conscience in a rapid-fire dialogue, acting out the internal argument that happens on Day 15\",\n      \"hook_first_3_seconds\": \"Day 15 subah, tumhara dimaag ek chalak lawyer ban jaata hai jo kehta hai, 'Vik, gym tumhare liye nahi hai.'\",\n      \"visual_hook\": \"Quick cuts between Vik slumped on a couch (the quitter) and Vik standing aggressive in gym gear (the truth), arguing with himself in real-time\",\n      \"why_it_works\": \"Uses humor to lower defenses while making the viewer recognize their own excuse patterns, creating shareable relatability\"\n    },\n    {\n      \"angle_id\": 3,\n      \"angle_name\": \"Storytelling: The 15-Day Trap\",\n      \"concept\": \"A cinematic narrative following one person's journey from Day 1 excitement to Day 15 ghosting, with Vik as the narrator exposing each psychological trap\",\n      \"hook_first_3_seconds\": \"Main tumhe woh 15 din dikhata hoon jahan sab kuch khatam hota hai, aur phir tumhe wapas khinch kar laata hoon.\",\n      \"visual_hook\": \"Fast-paced montage of a calendar flipping Day 1 to Day 15, intercut with Vik's face getting progressively closer to camera as the days progress, ending with him breaking the fourth wall\",\n      \"why_it_works\": \"Creates narrative tension and pattern interruption by showing the full arc they don't want to see, triggering loss aversion\"\n    }\n  ]\n}\n\nCheck constraints:\n- Valid JSON? Yes.\n- Single quotes for dialogue inside JSON strings? I used single quotes in the hook: 'Vik, gym tumhare liye nahi hai.' and 'Bhai...' wait, I used \"Bhai\" without quotes. The instruction says \"Use single quotes (') for dialogue quotes inside JSON strings.\" So if I have dialogue, wrap it in single quotes. In angle 2 hook, I have: 'Vik, gym tumhare liye nahi hai.' - that's good. In angle 1, no dialogue quotes needed. In angle 3, no dialogue quotes.\n- No unicode curly quotes? I used straight quotes.\n- No generic listicles? The angles are not listicles.\n- No cheesy quotes? Checked.\n- No vague visual directions? The visual hooks are specific.\n- Audience psychology barriers match the requested format.\n- Seven day arc covers the stages appropriately.\n\nLooks good.",
+    "raw_content": "{\n  \"brand_moat_statement\": \"Vik's moat is his refusal to perform motivation; he weaponizes brutal honesty and Hinglish confrontation that corporate fitness brands cannot fake without sounding like a WhatsApp forward from your uncle.\",\n  \"audience_psychology_barriers\": [\n    \"Day 4 DOMS shame\",\n    \"Day 8 Corporate meeting excuse\",\n    \"Day 15 Quiet ghosting\"\n  ],\n  \"seven_day_arc\": [\n    {\"day\": 1, \"theme\": \"The Dopamine Trap\", \"stage\": \"Awareness\", \"core_concept\": \"Expose the temporary high of new gear and first-day energy as a setup for the fall\"},\n    {\"day\": 2, \"theme\": \"Reality Slap\", \"stage\": \"Awareness\", \"core_concept\": \"Show the gap between Instagram motivation and actual first workout pain\"},\n    {\"day\": 3, \"theme\": \"The Honeymoon Phase\", \"stage\": \"Consideration\", \"core_concept\": \"Acknowledge the momentum while planting the seed that Day 4 is coming\"},\n    {\"day\": 4, \"theme\": \"DOMS Denial\", \"stage\": \"Consideration\", \"core_concept\": \"Confront the shame of not being able to walk down stairs and the urge to quit\"},\n    {\"day\": 5, \"theme\": \"Excuse Manufacturing\", \"stage\": \"Consideration\", \"core_concept\": \"Satirize the creative lies people tell themselves to skip one day\"},\n    {\"day\": 6, \"theme\": \"The Breaking Point\", \"stage\": \"Conversion\", \"core_concept\": \"Address the Day 8 meeting excuse and why one missed day becomes a pattern\"},\n    {\"day\": 7, \"theme\": \"Ghost Protocol\", \"stage\": \"Conversion\", \"core_concept\": \"Name the Day 15 silent exit and reframe quitting as a choice, not a fate\"}\n  ],\n  \"three_creative_angles\": [\n    {\n      \"angle_id\": 1,\n      \"angle_name\": \"Contrarian Tough-Love Monologue\",\n      \"concept\": \"Vik directly confronts the viewer's internal excuses in a raw, unedited rant that mirrors their own self-talk but flipped against them\",\n      \"hook_first_3_seconds\": \"Tum sochte ho ki 15 din baad gym chhodna normal hai? Bhai, woh normal nahi, woh ek chhoti maut hai.\",\n      \"visual_hook\": \"Vik stares dead into the lens from a dark gym, no background music, just harsh single-source lighting on his face, holding a water bottle like a weapon\",\n      \"why_it_works\": \"Triggers cognitive dissonance by validating their struggle while attacking their resignation, creating urgency to prove him wrong\"\n    },\n    {\n      \"angle_id\": 2,\n      \"angle_name\": \"Humorous Sketch / Relatable Dialogue\",\n      \"concept\": \"Vik plays both the quitter and the conscience in a rapid-fire dialogue, acting out the internal argument that happens on Day 15\",\n      \"hook_first_3_seconds\": \"Day 15 subah, tumhara dimaag ek chalak lawyer ban jaata hai jo kehta hai, 'Vik, gym tumhare liye nahi hai.'\",\n      \"visual_hook\": \"Quick cuts between Vik slumped on a couch (the quitter) and Vik standing aggressive in gym gear (the truth), arguing with himself in real-time\",\n      \"why_it_works\": \"Uses humor to lower defenses while making the viewer recognize their own excuse patterns, creating shareable relatability\"\n    },\n    {\n      \"angle_id\": 3,\n      \"angle_name\": \"Storytelling: The 15-Day Trap\",\n      \"concept\": \"A cinematic narrative following one person's journey from Day 1 excitement to Day 15 ghosting, with Vik as the narrator exposing each psychological trap\",\n      \"hook_first_3_seconds\": \"Main tumhe woh 15 din dikhata hoon jahan sab kuch khatam hota hai, aur phir tumhe wapas khinch kar laata hoon.\",\n      \"visual_hook\": \"Fast-paced montage of a calendar flipping Day 1 to Day 15, intercut with Vik's face getting progressively closer to camera as the days progress, ending with him breaking the fourth wall\",\n      \"why_it_works\": \"Creates narrative tension and pattern interruption by showing the full arc they don't want to see, triggering loss aversion\"\n    }\n  ]\n}",
+    "parsed_json": {
+      "brand_moat_statement": "Vik's moat is his refusal to perform motivation; he weaponizes brutal honesty and Hinglish confrontation that corporate fitness brands cannot fake without sounding like a WhatsApp forward from your uncle.",
+      "audience_psychology_barriers": [
+        "Day 4 DOMS shame",
+        "Day 8 Corporate meeting excuse",
+        "Day 15 Quiet ghosting"
+      ],
+      "seven_day_arc": [
+        {
+          "day": 1,
+          "theme": "The Dopamine Trap",
+          "stage": "Awareness",
+          "core_concept": "Expose the temporary high of new gear and first-day energy as a setup for the fall"
+        },
+        {
+          "day": 2,
+          "theme": "Reality Slap",
+          "stage": "Awareness",
+          "core_concept": "Show the gap between Instagram motivation and actual first workout pain"
+        },
+        {
+          "day": 3,
+          "theme": "The Honeymoon Phase",
+          "stage": "Consideration",
+          "core_concept": "Acknowledge the momentum while planting the seed that Day 4 is coming"
+        },
+        {
+          "day": 4,
+          "theme": "DOMS Denial",
+          "stage": "Consideration",
+          "core_concept": "Confront the shame of not being able to walk down stairs and the urge to quit"
+        },
+        {
+          "day": 5,
+          "theme": "Excuse Manufacturing",
+          "stage": "Consideration",
+          "core_concept": "Satirize the creative lies people tell themselves to skip one day"
+        },
+        {
+          "day": 6,
+          "theme": "The Breaking Point",
+          "stage": "Conversion",
+          "core_concept": "Address the Day 8 meeting excuse and why one missed day becomes a pattern"
+        },
+        {
+          "day": 7,
+          "theme": "Ghost Protocol",
+          "stage": "Conversion",
+          "core_concept": "Name the Day 15 silent exit and reframe quitting as a choice, not a fate"
+        }
+      ],
+      "three_creative_angles": [
+        {
+          "angle_id": 1,
+          "angle_name": "Contrarian Tough-Love Monologue",
+          "concept": "Vik directly confronts the viewer's internal excuses in a raw, unedited rant that mirrors their own self-talk but flipped against them",
+          "hook_first_3_seconds": "Tum sochte ho ki 15 din baad gym chhodna normal hai? Bhai, woh normal nahi, woh ek chhoti maut hai.",
+          "visual_hook": "Vik stares dead into the lens from a dark gym, no background music, just harsh single-source lighting on his face, holding a water bottle like a weapon",
+          "why_it_works": "Triggers cognitive dissonance by validating their struggle while attacking their resignation, creating urgency to prove him wrong"
+        },
+        {
+          "angle_id": 2,
+          "angle_name": "Humorous Sketch / Relatable Dialogue",
+          "concept": "Vik plays both the quitter and the conscience in a rapid-fire dialogue, acting out the internal argument that happens on Day 15",
+          "hook_first_3_seconds": "Day 15 subah, tumhara dimaag ek chalak lawyer ban jaata hai jo kehta hai, 'Vik, gym tumhare liye nahi hai.'",
+          "visual_hook": "Quick cuts between Vik slumped on a couch (the quitter) and Vik standing aggressive in gym gear (the truth), arguing with himself in real-time",
+          "why_it_works": "Uses humor to lower defenses while making the viewer recognize their own excuse patterns, creating shareable relatability"
+        },
+        {
+          "angle_id": 3,
+          "angle_name": "Storytelling: The 15-Day Trap",
+          "concept": "A cinematic narrative following one person's journey from Day 1 excitement to Day 15 ghosting, with Vik as the narrator exposing each psychological trap",
+          "hook_first_3_seconds": "Main tumhe woh 15 din dikhata hoon jahan sab kuch khatam hota hai, aur phir tumhe wapas khinch kar laata hoon.",
+          "visual_hook": "Fast-paced montage of a calendar flipping Day 1 to Day 15, intercut with Vik's face getting progressively closer to camera as the days progress, ending with him breaking the fourth wall",
+          "why_it_works": "Creates narrative tension and pattern interruption by showing the full arc they don't want to see, triggering loss aversion"
+        }
+      ]
+    },
+    "is_valid": true
+  },
+  "stage2": {
+    "ttft_seconds": 0.9,
+    "total_seconds": 51.43,
+    "raw_reasoning": "The user wants a production script for a gym video ad in JSON format. The angle is \"The 15-Day Trap\" - a narrative showing Day 1 excitement to Day 15 ghosting, with Vik as narrator. Needs 5-6 shots, 55 seconds, Hinglish dialogue, smartphone-filmed in a real gym. Must output valid JSON only.",
+    "raw_content": "{\n  \"working_title\": \"15 Din Ka Game\",\n  \"target_duration_seconds\": 55,\n  \"pacing_notes\": \"Opening shock hook -> Fast calendar montage -> Relatable psychological breakdown per phase -> Hard-hitting fourth-wall CTA\",\n  \"shots\": [\n    {\n      \"shot_number\": 1,\n      \"timing\": \"0:00 - 0:03\",\n      \"camera\": \"Handheld medium close-up on Vik at squat rack, slow push-in toward his face, shallow depth of field\",\n      \"action_and_broll\": \"Vik mid-squat setup, chalk on hands, gym ambience blurred behind. Calendar pages flip rapidly in foreground B-roll (Day 1 -> Day 15 in 1 second). Cut to Vik looking directly into lens.\",\n      \"dialogue_hinglish\": \"Main tumhe woh 15 din dikhata hoon jahan sab kuch khatam hota hai... aur phir tumhe wapas khinch kar laata hoon.\",\n      \"onscreen_text\": \"15 DIN. SAB KHATAM. (bold impact font, red flash on 'KHATAM')\",\n      \"audio_sfx\": \"Heavy bass drop on 'KHATAM', calendar page-flip whoosh, gym clank ambience\"\n    },\n    {\n      \"shot_number\": 2,\n      \"timing\": \"0:03 - 0:15\",\n      \"camera\": \"Fast whip-pan montage, handheld, alternating between Vik's face (getting closer each cut) and gym B-roll\",\n      \"action_and_broll\": \"Day 1: Vik grinning, fist pump, fresh gym bag. Day 3: Vik tired but smiling. Day 7: Vik dragging feet to locker room. Day 10: Vik staring at phone, ignoring gym. Day 15: Empty locker, dusty shoes. Vik's face progressively closer to camera each intercut.\",\n      \"dialogue_hinglish\": \"Day 1 pe energy itni zyada. Day 3 pe 'bas aaj'. Day 7 pe bahane. Day 10 pe phone dekhna. Day 15 pe... kuch nahi. Kyun?\",\n      \"onscreen_text\": \"DAY 1 \u26a1 | DAY 3 \ud83d\ude05 | DAY 7 \ud83e\udd25 | DAY 10 \ud83d\udcf1 | DAY 15 \ud83d\udc80\",\n      \"audio_sfx\": \"Ticking clock accelerating, energy whoosh down per day, sad trombone sting on Day 15\"\n    },\n    {\n      \"shot_number\": 3,\n      \"timing\": \"0:15 - 0:28\",\n      \"camera\": \"Static medium shot, Vik walking toward camera down gym floor, steady dolly-in feel on smartphone gimbal\",\n      \"action_and_broll\": \"Vik stops at center of gym floor, gesturing with hands. Cutaways: someone scrolling phone on bench, alarm clock unanswered, gym shoes untouched.\",\n      \"dialogue_hinglish\": \"Kyunki tu motivation pe depend kar raha hai. Motivation ek mood hai, mood badalta rehta hai. System nahi badalta. Tera plan hi trap tha.\",\n      \"onscreen_text\": \"MOTIVATION = MOOD \u274c | SYSTEM = HABIT \u2705\",\n      \"audio_sfx\": \"Record scratch on 'trap', low tension drone building\"\n    },\n    {\n      \"shot_number\": 4,\n      \"timing\": \"0:28 - 0:42\",\n      \"camera\": \"Close-up on Vik in locker room mirror reflection, then spin to face camera directly, breaking fourth wall\",\n      \"action_and_broll\": \"Vik wipes sweat with towel, looks at his own reflection, then turns to lens. Quick B-roll: him racking weights, writing on whiteboard, high-fiving a member.\",\n      \"dialogue_hinglish\": \"Main Vik. IronForge mein. Main tujhe woh 15 din nahi dunga jahan tu ghost banega. Main tujhe woh system dunga jo bina motivation ke bhi chalega.\",\n      \"onscreen_text\": \"GHOST NAHI. SYSTEM. \ud83d\udd12\",\n      \"audio_sfx\": \"Mirror shimmer sound, beat switch to upbeat, gym energy rising\"\n    },\n    {\n      \"shot_number\": 5,\n      \"timing\": \"0:42 - 0:50\",\n      \"camera\": \"Wide handheld shot, Vik walking past camera toward squat rack, then turns back mid-stride\",\n      \"action_and_broll\": \"Vik grabs a barbell, loads it casually, looks at camera with a smirk. Members training in background.\",\n      \"dialogue_hinglish\": \"Aaj se 15 din ka sach: tu aayega, tu karega, tu badlega. Kyunki ab plan tera nahi, mera hai.\",\n      \"onscreen_text\": \"TU AAYEGA. TU KAREGA. TU BADLEGA.\",\n      \"audio_sfx\": \"Barbell clank, crowd cheer swell, bass hit\"\n    },\n    {\n      \"shot_number\": 6,\n      \"timing\": \"0:50 - 0:55\",\n      \"camera\": \"Tight close-up, Vik leaning into lens, pointing at viewer\",\n      \"action_and_broll\": \"Vik points directly at camera, steps back to reveal IronForge gym floor behind him.\",\n      \"dialogue_hinglish\": \"IronForge Gym. Aaj hi walk-in kar. Free 3-day form check. Bye.\",\n      \"onscreen_text\": \"IRONFORGE GYM \u2014 FREE 3-DAY PASS \ud83d\udc47 LINK IN BIO\",\n      \"audio_sfx\": \"Final bass drop, 'BYE' echo, notification ping\"\n    }\n  ],\n  \"call_to_action\": {\n    \"spoken_dialogue\": \"IronForge Gym. Aaj hi walk-in kar. Free 3-day form check. Bye.\",\n    \"visual_action\": \"Vik points at camera, smirks, turns and walks toward squat rack while credits roll\",\n    \"offer\": \"Free 3-day form-fix pass, no card required, walk-in only\"\n  }\n}",
+    "parsed_json": {
+      "working_title": "15 Din Ka Game",
+      "target_duration_seconds": 55,
+      "pacing_notes": "Opening shock hook -> Fast calendar montage -> Relatable psychological breakdown per phase -> Hard-hitting fourth-wall CTA",
+      "shots": [
+        {
+          "shot_number": 1,
+          "timing": "0:00 - 0:03",
+          "camera": "Handheld medium close-up on Vik at squat rack, slow push-in toward his face, shallow depth of field",
+          "action_and_broll": "Vik mid-squat setup, chalk on hands, gym ambience blurred behind. Calendar pages flip rapidly in foreground B-roll (Day 1 -> Day 15 in 1 second). Cut to Vik looking directly into lens.",
+          "dialogue_hinglish": "Main tumhe woh 15 din dikhata hoon jahan sab kuch khatam hota hai... aur phir tumhe wapas khinch kar laata hoon.",
+          "onscreen_text": "15 DIN. SAB KHATAM. (bold impact font, red flash on 'KHATAM')",
+          "audio_sfx": "Heavy bass drop on 'KHATAM', calendar page-flip whoosh, gym clank ambience"
+        },
+        {
+          "shot_number": 2,
+          "timing": "0:03 - 0:15",
+          "camera": "Fast whip-pan montage, handheld, alternating between Vik's face (getting closer each cut) and gym B-roll",
+          "action_and_broll": "Day 1: Vik grinning, fist pump, fresh gym bag. Day 3: Vik tired but smiling. Day 7: Vik dragging feet to locker room. Day 10: Vik staring at phone, ignoring gym. Day 15: Empty locker, dusty shoes. Vik's face progressively closer to camera each intercut.",
+          "dialogue_hinglish": "Day 1 pe energy itni zyada. Day 3 pe 'bas aaj'. Day 7 pe bahane. Day 10 pe phone dekhna. Day 15 pe... kuch nahi. Kyun?",
+          "onscreen_text": "DAY 1 \u26a1 | DAY 3 \ud83d\ude05 | DAY 7 \ud83e\udd25 | DAY 10 \ud83d\udcf1 | DAY 15 \ud83d\udc80",
+          "audio_sfx": "Ticking clock accelerating, energy whoosh down per day, sad trombone sting on Day 15"
+        },
+        {
+          "shot_number": 3,
+          "timing": "0:15 - 0:28",
+          "camera": "Static medium shot, Vik walking toward camera down gym floor, steady dolly-in feel on smartphone gimbal",
+          "action_and_broll": "Vik stops at center of gym floor, gesturing with hands. Cutaways: someone scrolling phone on bench, alarm clock unanswered, gym shoes untouched.",
+          "dialogue_hinglish": "Kyunki tu motivation pe depend kar raha hai. Motivation ek mood hai, mood badalta rehta hai. System nahi badalta. Tera plan hi trap tha.",
+          "onscreen_text": "MOTIVATION = MOOD \u274c | SYSTEM = HABIT \u2705",
+          "audio_sfx": "Record scratch on 'trap', low tension drone building"
+        },
+        {
+          "shot_number": 4,
+          "timing": "0:28 - 0:42",
+          "camera": "Close-up on Vik in locker room mirror reflection, then spin to face camera directly, breaking fourth wall",
+          "action_and_broll": "Vik wipes sweat with towel, looks at his own reflection, then turns to lens. Quick B-roll: him racking weights, writing on whiteboard, high-fiving a member.",
+          "dialogue_hinglish": "Main Vik. IronForge mein. Main tujhe woh 15 din nahi dunga jahan tu ghost banega. Main tujhe woh system dunga jo bina motivation ke bhi chalega.",
+          "onscreen_text": "GHOST NAHI. SYSTEM. \ud83d\udd12",
+          "audio_sfx": "Mirror shimmer sound, beat switch to upbeat, gym energy rising"
+        },
+        {
+          "shot_number": 5,
+          "timing": "0:42 - 0:50",
+          "camera": "Wide handheld shot, Vik walking past camera toward squat rack, then turns back mid-stride",
+          "action_and_broll": "Vik grabs a barbell, loads it casually, looks at camera with a smirk. Members training in background.",
+          "dialogue_hinglish": "Aaj se 15 din ka sach: tu aayega, tu karega, tu badlega. Kyunki ab plan tera nahi, mera hai.",
+          "onscreen_text": "TU AAYEGA. TU KAREGA. TU BADLEGA.",
+          "audio_sfx": "Barbell clank, crowd cheer swell, bass hit"
+        },
+        {
+          "shot_number": 6,
+          "timing": "0:50 - 0:55",
+          "camera": "Tight close-up, Vik leaning into lens, pointing at viewer",
+          "action_and_broll": "Vik points directly at camera, steps back to reveal IronForge gym floor behind him.",
+          "dialogue_hinglish": "IronForge Gym. Aaj hi walk-in kar. Free 3-day form check. Bye.",
+          "onscreen_text": "IRONFORGE GYM \u2014 FREE 3-DAY PASS \ud83d\udc47 LINK IN BIO",
+          "audio_sfx": "Final bass drop, 'BYE' echo, notification ping"
+        }
+      ],
+      "call_to_action": {
+        "spoken_dialogue": "IronForge Gym. Aaj hi walk-in kar. Free 3-day form check. Bye.",
+        "visual_action": "Vik points at camera, smirks, turns and walks toward squat rack while credits roll",
+        "offer": "Free 3-day form-fix pass, no card required, walk-in only"
+      }
+    },
+    "is_valid": true
+  },
+  "timing_analysis": {
+    "monolithic_seconds": 218.4,
+    "stage1_ttft_seconds": 1.63,
+    "stage1_total_seconds": 142.37,
+    "stage2_ttft_seconds": 0.9,
+    "stage2_total_seconds": 51.43,
+    "cumulative_seconds": 193.8,
+    "user_time_to_interactive_decision": 142.37
+  }
+}

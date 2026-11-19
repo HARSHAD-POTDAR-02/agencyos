@@ -63,6 +63,11 @@ export interface DeliverableItem {
   hero_focus?: string[];
   reel_scenes?: ReelSceneItem[];
   carousel_slides?: CarouselSlideItem[];
+  status?: string;
+  is_exported?: boolean;
+  planned_day?: number;
+  core_message_summary?: string;
+  audio_track_guidance?: string;
 }
 
 interface DeliverableEditorModalProps {

@@ -1,0 +1,203 @@
+{
+  "timestamp": "20261119_021801",
+  "model": "minimaxai/minimax-m3.1-flash",
+  "result": {
+    "model_id": "minimaxai/minimax-m3.1-flash",
+    "provider": "NVIDIA NIM",
+    "latency_seconds": 103.69,
+    "ttft_seconds": 0.49,
+    "reasoning_length": 100,
+    "content_length": 13582,
+    "raw_reasoning": "We need output JSON only. Need complete package. Ensure 7 days, 3 angles, 5-7 shots. Craft detailed.",
+    "raw_content": "{\n  \"strategic_intelligence\": {\n    \"brand_moat_statement\": \"Vik's moat is not generic gym expertise; it is the blunt, funny, emotionally honest way he calls out the exact excuses his audience is too embarrassed to admit. He does not sell motivation, detoxes, or perfect bodies. He names the 15-day friction wall, makes the audience laugh at their own contradictions, and then gives them a practical, low-pressure way back. Competitors can copy exercises and discount offers. They cannot copy Vik's Mumbai-to-Delhi gym-boy voice, tough-love empathy, or the feeling of being personally called out without judgment.\",\n    \"audience_psychology_breakdown\": [\n      \"Day 2 dopamine: The new gear, gym selfie, and 'main aa gaya' rush create an identity fantasy. The audience feels briefly like a disciplined person, making the eventual quit feel like a betrayal of their own self-image.\",\n      \"Day 4 DOMS shame: Severe soreness is misread as proof that the body is broken or that the person is weak. Instead of reducing intensity, many people silently disappear because admitting the first week hurt feels easier than admitting the program was too much.\",\n      \"Day 8 excuse culture: An office meeting, deadline, or travel disruption becomes a permission slip to skip. The excuse is not really about time; it is a socially acceptable exit from a goal that suddenly feels emotionally expensive.\",\n      \"Hidden shame and ego defense: By Day 15, the person has ghosted the gym and quietly tells themselves 'gym isn't for me' or 'I am too busy'. This protects the ego from the more painful truth: they started with motivation instead of building a system.\",\n      \"Fear of starting over: A missed week feels like starting from zero, so the audience postpones returning indefinitely. The longer the gap, the more the gym feels like a place for people who are already disciplined.\",\n      \"Suspicion of paid programs: After being sold transformation stories, the audience expects pressure, judgment, and impossible timelines. They want someone who will not insult them, but also will not let them hide behind vague promises.\"\n    ],\n    \"seven_day_content_arc\": [\n      {\n        \"day\": 1,\n        \"theme\": \"The 15-Day Ghosting Problem\",\n        \"funnel_stage\": \"Awareness\",\n        \"core_concept\": \"Vik opens with a provocative observation: most people do not quit fitness because they lack motivation; they quit when the first wave of discomfort arrives. He frames the campaign around the invisible Day 15 wall.\"\n      },\n      {\n        \"day\": 2,\n        \"theme\": \"Motivation Is a Lie You Tell Yourself\",\n        \"funnel_stage\": \"Awareness\",\n        \"core_concept\": \"A fast, relatable sketch contrasts the Day 1 gym selfie with the Day 2 reality of sore legs and a Monday meeting. The message is that a burst of dopamine was never a plan.\"\n      },\n      {\n        \"day\": 3,\n        \"theme\": \"DOMS Is Not a Personality Test\",\n        \"funnel_stage\": \"Consideration\",\n        \"core_concept\": \"Vik explains in blunt Hinglish why soreness makes beginners quit, then shows a simple intensity adjustment. The audience learns that discomfort does not need to be suffered silently or treated as failure.\"\n      },\n      {\n        \"day\": 4,\n        \"theme\": \"The Office Meeting Escape Clause\",\n        \"funnel_stage\": \"Consideration\",\n        \"core_concept\": \"Using a mock interrogation scene, Vik exposes the excuse mechanism: 'ek meeting aayi' becomes 'aaj se gym nahi'. He demonstrates how a minimum viable session can prevent a full identity collapse.\"\n      },\n      {\n        \"day\": 5,\n        \"theme\": \"The Gym Ghost Has No Name\",\n        \"funnel_stage\": \"Consideration\",\n        \"core_concept\": \"Vik speaks directly to the person who has been quietly avoiding the gym. He removes the shame first, then introduces the idea that consistency is a recovery skill, not a personality trait.\"\n      },\n      {\n        \"day\": 6,\n        \"theme\": \"A 3-Day Form Correction Pass\",\n        \"funnel_stage\": \"Conversion\",\n        \"core_concept\": \"Vik presents a free 3-day form correction pass as a low-risk re-entry: no transformation pressure, no fake promises, just coached movement, technique feedback, and a plan for returning after a lapse.\"\n      },\n      {\n        \"day\": 7,\n        \"theme\": \"Day 15 Is Not the Deadline\",\n        \"funnel_stage\": \"Conversion\",\n        \"core_concept\": \"The campaign closes with Vik challenging the audience to stop measuring fitness by uninterrupted weeks and start measuring it by how quickly they return after missing a day. He invites viewers to claim the free pass.\"\n      }\n    ]\n  },\n  \"creative_angles\": [\n    {\n      \"angle_name\": \"Angle 1: Contrarian Tough-Love Monologue\",\n      \"creative_concept\": \"Vik stands almost inside the camera, speaking directly to the viewer as if he has just caught them lying about their gym plans. He breaks down the Day 1-to-Day 15 illusion with sharp observations, then lands on a simple truth: the problem is not discipline, it is the design of the first month. The tone is confrontational but generous: he insults the excuse, not the person.\",\n      \"hook_first_3_seconds\": \"Tumne gym chhodha nahi, bas apni excuse ko gym bula liya.\",\n      \"why_it_works\": \"The hook creates immediate cognitive dissonance. The viewer expects a standard fitness lecture, but Vik reframes quitting as a clever psychological defense. It gives the audience permission to laugh at themselves while still feeling personally addressed.\"\n    },\n    {\n      \"angle_name\": \"Angle 2: The Gym Selfie Interrogation\",\n      \"creative_concept\": \"A quick comedy sketch in which Vik plays both the hyped beginner and the skeptical gym coach. The beginner announces a transformation plan on Day 1; by Day 4 he cannot walk downstairs, and by Day 8 he invents a work emergency. Vik catches every excuse and replaces it with a smaller, realistic action.\",\n      \"hook_first_3_seconds\": \"Day 1: 'Main aaj se fit hounga!' Day 4: 'Mere pair nahi chal rahe.' Day 8: 'Meeting hai, gym nahi.'\",\n      \"why_it_works\": \"Rapid day labels make the audience feel seen without needing a listicle. The escalating punchline creates a pattern-interrupt, while the exaggerated beginner voice makes the audience laugh at their own behavior before receiving the practical solution.\"\n    },\n    {\n      \"angle_name\": \"Angle 3: The 15-Day Trap\",\n      \"creative_concept\": \"A narrative mini-film following one person's gym membership from the confident purchase of new gear to the silent Day 15 disappearance. Vik appears as the voice of the audience's inner coach, narrating the hidden excuses and showing the exact moment the plan becomes unrealistic. The payoff is a return to the gym with a smaller, sustainable promise.\",\n      \"hook_first_3_seconds\": \"Usne naye shoes khareede, selfie maari, aur 15 din mein gym se bhag gaya. Problem kya thi? Motivation nahi.\",\n      \"why_it_works\": \"The specific timeline and visual details trigger recognition and curiosity. The audience wants to know what happened between the selfie and the disappearance, while the final reveal reframes the failure as a fixable system problem rather than a character flaw.\"\n    }\n  ],\n  \"production_execution_script\": {\n    \"chosen_angle\": \"Angle 1: Contrarian Tough-Love Monologue\",\n    \"working_title\": \"Tumne Gym Chhodha Nahi, Excuse Ko Gym Bula Liya\",\n    \"target_duration_seconds\": 55,\n    \"pacing\": \"Fast opening -> Relatable conversational middle -> Punchy hard-hitting close\",\n    \"shot_by_shot\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:03\",\n        \"camera_direction\": \"Handheld phone, chest-to-face medium close-up, slight low angle, Vik stepping into frame from the side and leaning toward the lens.\",\n        \"visual_action_and_broll\": \"Vik points directly at the camera. Behind him, a rack of neatly arranged weights and a wall clock are visible. He cuts the clock with his hand as he speaks.\",\n        \"dialogue_hinglish\": \"Tumne gym chhodha nahi, bas apni excuse ko gym bula liya.\",\n        \"onscreen_text\": \"QUIT KARNE SE PEHLE YE PADH LO\",\n        \"audio_sfx_cues\": \"Hard bass hit on entry, brief gym ambience, clock tick accent under the last word.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:03 - 0:11\",\n        \"camera_direction\": \"Same handheld phone, quick push-in to a tighter close-up, then a hard cut to a locked waist-up shot.\",\n        \"visual_action_and_broll\": \"Vik holds up a phone showing a generic gym selfie, then drops it and mimics taking a selfie with exaggerated confidence. He switches to a tired posture.\",\n        \"dialogue_hinglish\": \"Day 1: naye shoes, nayi t-shirt, gym selfie. 'Main aa gaya, bro!' Motivation ka full recharge. Phir Day 2 ka mood? 'Bhai, ye body mera hai hi nahi.'\",\n        \"onscreen_text\": \"DAY 1: FULL MOTIVATION\\nDAY 2: 'YEH KYA HAI?'\",\n        \"audio_sfx_cues\": \"Phone camera shutter click, short comedic 'ding', then a low bass drop on 'nahi'.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:11 - 0:21\",\n        \"camera_direction\": \"Cut to a static wide shot of Vik walking stiffly across the gym floor, then cut back to a shoulder-level handheld close-up.\",\n        \"visual_action_and_broll\": \"He walks like his legs are made of cement, sits on a bench, and rubs his thighs. He points at the camera with a knowing look.\",\n        \"dialogue_hinglish\": \"Day 4, DOMS aaya. Ab do options hain: ya toh samajhna ki body adapt ho rahi hai, ya ye sochna ki 'main itna weak hoon' aur quietly khatam karna. Bhai, soreness insult nahi, signal hai.\",\n        \"onscreen_text\": \"DOMS = FAILURE? NAHI.\",\n        \"audio_sfx_cues\": \"Heavy, slow footsteps, a soft strained breath, subtle heartbeat pulse under the explanation.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:21 - 0:32\",\n        \"camera_direction\": \"Handheld medium shot, Vik seated on the bench, camera slightly off-axis like an interview. He counts excuses on his fingers and taps each one toward the lens.\",\n        \"visual_action_and_broll\": \"He pulls out a phone, shows a fake calendar with 'meeting' highlighted, then deletes the meeting and replaces it with '20 min walk + 1 set'. He keeps the phone visible for one beat.\",\n        \"dialogue_hinglish\": \"Day 8: 'Office meeting hai.' Day 10: 'Bahut kaam hai.' Day 12: 'Aaj mood nahi hai.' Har excuse ek exit door hai. Tujhe full gym karna zaroori nahi. Aaj 20 minute walk kar, 1 set kar, bas apne aap ko wapas la.\",\n        \"onscreen_text\": \"EXCUSE -> MINIMUM VIABLE WORKOUT\",\n        \"audio_sfx_cues\": \"Phone notification blip for each excuse, door-close sound effect on 'exit door', clean upbeat beat begins underneath.\"\n      },\n      {\n        \"shot_number\": 5,\n        \"timing\": \"0:32 - 0:42\",\n        \"camera_direction\": \"Slow handheld push-in on Vik's face, eye-level, background music ducks to make his voice feel intimate and direct.\",\n        \"visual_action_and_broll\": \"Vik leans forward, taps his temple, then gestures toward the empty space beside him in the gym as if inviting the viewer to step into it.\",\n        \"dialogue_hinglish\": \"Day 15 tak tum ghost ban jaate ho. Phir bolte ho, 'gym mere liye nahi hai.' Arre bhai, gym tere liye hai, teri 15-day plan tere liye nahi tha. Consistency talent nahi, comeback ki skill hai.\",\n        \"onscreen_text\": \"GHOSTING IS NOT THE END.\\nCOMEBACK IS THE SKILL.\",\n        \"audio_sfx_cues\": \"Music drops almost to silence, a single low pulse on 'comback', subtle gym ambience returns.\"\n      },\n      {\n        \"shot_number\": 6,\n        \"timing\": \"0:42 - 0:50\",\n        \"camera_direction\": \"Cut to a bright medium shot near the entrance, Vik standing and holding a clipboard or phone. Camera remains handheld but stable, framing him with the gym floor leading behind him.\",\n        \"visual_action_and_broll\": \"He taps a checklist on the clipboard: 'Form check, first 3 sessions, no pressure.' He extends his hand toward the camera as if handing over a pass.\",\n        \"dialogue_hinglish\": \"Isliye hum ek kaam kar rahe hain: free 3-day form correction pass. Na koi 30-day detox, na 'six-pack guaranteed' ka drama. Bas technique, safe intensity, aur wapas aane ka plan.\",\n        \"onscreen_text\": \"FREE 3-DAY FORM CORRECTION PASS\",\n        \"audio_sfx_cues\": \"Checklist tick sound, brighter music lift, a subtle stamp effect when the pass is mentioned.\"\n      },\n      {\n        \"shot_number\": 7,\n        \"timing\": \"0:50 - 0:55\",\n        \"camera_direction\": \"Tight close-up, slight handheld movement, Vik stepping closer until his face nearly fills the frame. End on a direct eye contact.\",\n        \"visual_action_and_broll\": \"He points at the caption area below the camera, then gives a short nod and holds the pose for half a second.\",\n        \"dialogue_hinglish\": \"Comment mein likh 'PASS'. Aur sun: Day 15 tumhara deadline nahi hai. Tumhara comeback hai. IronForge, wapas aao.\",\n        \"onscreen_text\": \"COMMENT 'PASS' TO CLAIM YOUR FREE SESSIONS\",\n        \"audio_sfx_cues\": \"Final bass hit, quick notification ping, music cuts cleanly on the brand line.\"\n      }\n    ],\n    \"cta\": {\n      \"spoken_dialogue\": \"Comment mein likh 'PASS'. Tumhe free 3-day form correction pass milega, aur humein pata chal jayega ki tum wapas aane ke liye ready ho.\",\n      \"visual_action\": \"Vik points to the comment section, taps the camera twice for emphasis, then steps back with a confident nod as the end card appears.\",\n      \"offer_type\": \"Free 3-day form correction pass with technique coaching, safe intensity guidance, and a simple return-to-training plan for people who have stopped.\"\n    }\n  }\n}",
+    "parsed_json": {
+      "strategic_intelligence": {
+        "brand_moat_statement": "Vik's moat is not generic gym expertise; it is the blunt, funny, emotionally honest way he calls out the exact excuses his audience is too embarrassed to admit. He does not sell motivation, detoxes, or perfect bodies. He names the 15-day friction wall, makes the audience laugh at their own contradictions, and then gives them a practical, low-pressure way back. Competitors can copy exercises and discount offers. They cannot copy Vik's Mumbai-to-Delhi gym-boy voice, tough-love empathy, or the feeling of being personally called out without judgment.",
+        "audience_psychology_breakdown": [
+          "Day 2 dopamine: The new gear, gym selfie, and 'main aa gaya' rush create an identity fantasy. The audience feels briefly like a disciplined person, making the eventual quit feel like a betrayal of their own self-image.",
+          "Day 4 DOMS shame: Severe soreness is misread as proof that the body is broken or that the person is weak. Instead of reducing intensity, many people silently disappear because admitting the first week hurt feels easier than admitting the program was too much.",
+          "Day 8 excuse culture: An office meeting, deadline, or travel disruption becomes a permission slip to skip. The excuse is not really about time; it is a socially acceptable exit from a goal that suddenly feels emotionally expensive.",
+          "Hidden shame and ego defense: By Day 15, the person has ghosted the gym and quietly tells themselves 'gym isn't for me' or 'I am too busy'. This protects the ego from the more painful truth: they started with motivation instead of building a system.",
+          "Fear of starting over: A missed week feels like starting from zero, so the audience postpones returning indefinitely. The longer the gap, the more the gym feels like a place for people who are already disciplined.",
+          "Suspicion of paid programs: After being sold transformation stories, the audience expects pressure, judgment, and impossible timelines. They want someone who will not insult them, but also will not let them hide behind vague promises."
+        ],
+        "seven_day_content_arc": [
+          {
+            "day": 1,
+            "theme": "The 15-Day Ghosting Problem",
+            "funnel_stage": "Awareness",
+            "core_concept": "Vik opens with a provocative observation: most people do not quit fitness because they lack motivation; they quit when the first wave of discomfort arrives. He frames the campaign around the invisible Day 15 wall."
+          },
+          {
+            "day": 2,
+            "theme": "Motivation Is a Lie You Tell Yourself",
+            "funnel_stage": "Awareness",
+            "core_concept": "A fast, relatable sketch contrasts the Day 1 gym selfie with the Day 2 reality of sore legs and a Monday meeting. The message is that a burst of dopamine was never a plan."
+          },
+          {
+            "day": 3,
+            "theme": "DOMS Is Not a Personality Test",
+            "funnel_stage": "Consideration",
+            "core_concept": "Vik explains in blunt Hinglish why soreness makes beginners quit, then shows a simple intensity adjustment. The audience learns that discomfort does not need to be suffered silently or treated as failure."
+          },
+          {
+            "day": 4,
+            "theme": "The Office Meeting Escape Clause",
+            "funnel_stage": "Consideration",
+            "core_concept": "Using a mock interrogation scene, Vik exposes the excuse mechanism: 'ek meeting aayi' becomes 'aaj se gym nahi'. He demonstrates how a minimum viable session can prevent a full identity collapse."
+          },
+          {
+            "day": 5,
+            "theme": "The Gym Ghost Has No Name",
+            "funnel_stage": "Consideration",
+            "core_concept": "Vik speaks directly to the person who has been quietly avoiding the gym. He removes the shame first, then introduces the idea that consistency is a recovery skill, not a personality trait."
+          },
+          {
+            "day": 6,
+            "theme": "A 3-Day Form Correction Pass",
+            "funnel_stage": "Conversion",
+            "core_concept": "Vik presents a free 3-day form correction pass as a low-risk re-entry: no transformation pressure, no fake promises, just coached movement, technique feedback, and a plan for returning after a lapse."
+          },
+          {
+            "day": 7,
+            "theme": "Day 15 Is Not the Deadline",
+            "funnel_stage": "Conversion",
+            "core_concept": "The campaign closes with Vik challenging the audience to stop measuring fitness by uninterrupted weeks and start measuring it by how quickly they return after missing a day. He invites viewers to claim the free pass."
+          }
+        ]
+      },
+      "creative_angles": [
+        {
+          "angle_name": "Angle 1: Contrarian Tough-Love Monologue",
+          "creative_concept": "Vik stands almost inside the camera, speaking directly to the viewer as if he has just caught them lying about their gym plans. He breaks down the Day 1-to-Day 15 illusion with sharp observations, then lands on a simple truth: the problem is not discipline, it is the design of the first month. The tone is confrontational but generous: he insults the excuse, not the person.",
+          "hook_first_3_seconds": "Tumne gym chhodha nahi, bas apni excuse ko gym bula liya.",
+          "why_it_works": "The hook creates immediate cognitive dissonance. The viewer expects a standard fitness lecture, but Vik reframes quitting as a clever psychological defense. It gives the audience permission to laugh at themselves while still feeling personally addressed."
+        },
+        {
+          "angle_name": "Angle 2: The Gym Selfie Interrogation",
+          "creative_concept": "A quick comedy sketch in which Vik plays both the hyped beginner and the skeptical gym coach. The beginner announces a transformation plan on Day 1; by Day 4 he cannot walk downstairs, and by Day 8 he invents a work emergency. Vik catches every excuse and replaces it with a smaller, realistic action.",
+          "hook_first_3_seconds": "Day 1: 'Main aaj se fit hounga!' Day 4: 'Mere pair nahi chal rahe.' Day 8: 'Meeting hai, gym nahi.'",
+          "why_it_works": "Rapid day labels make the audience feel seen without needing a listicle. The escalating punchline creates a pattern-interrupt, while the exaggerated beginner voice makes the audience laugh at their own behavior before receiving the practical solution."
+        },
+        {
+          "angle_name": "Angle 3: The 15-Day Trap",
+          "creative_concept": "A narrative mini-film following one person's gym membership from the confident purchase of new gear to the silent Day 15 disappearance. Vik appears as the voice of the audience's inner coach, narrating the hidden excuses and showing the exact moment the plan becomes unrealistic. The payoff is a return to the gym with a smaller, sustainable promise.",
+          "hook_first_3_seconds": "Usne naye shoes khareede, selfie maari, aur 15 din mein gym se bhag gaya. Problem kya thi? Motivation nahi.",
+          "why_it_works": "The specific timeline and visual details trigger recognition and curiosity. The audience wants to know what happened between the selfie and the disappearance, while the final reveal reframes the failure as a fixable system problem rather than a character flaw."
+        }
+      ],
+      "production_execution_script": {
+        "chosen_angle": "Angle 1: Contrarian Tough-Love Monologue",
+        "working_title": "Tumne Gym Chhodha Nahi, Excuse Ko Gym Bula Liya",
+        "target_duration_seconds": 55,
+        "pacing": "Fast opening -> Relatable conversational middle -> Punchy hard-hitting close",
+        "shot_by_shot": [
+          {
+            "shot_number": 1,
+            "timing": "0:00 - 0:03",
+            "camera_direction": "Handheld phone, chest-to-face medium close-up, slight low angle, Vik stepping into frame from the side and leaning toward the lens.",
+            "visual_action_and_broll": "Vik points directly at the camera. Behind him, a rack of neatly arranged weights and a wall clock are visible. He cuts the clock with his hand as he speaks.",
+            "dialogue_hinglish": "Tumne gym chhodha nahi, bas apni excuse ko gym bula liya.",
+            "onscreen_text": "QUIT KARNE SE PEHLE YE PADH LO",
+            "audio_sfx_cues": "Hard bass hit on entry, brief gym ambience, clock tick accent under the last word."
+          },
+          {
+            "shot_number": 2,
+            "timing": "0:03 - 0:11",
+            "camera_direction": "Same handheld phone, quick push-in to a tighter close-up, then a hard cut to a locked waist-up shot.",
+            "visual_action_and_broll": "Vik holds up a phone showing a generic gym selfie, then drops it and mimics taking a selfie with exaggerated confidence. He switches to a tired posture.",
+            "dialogue_hinglish": "Day 1: naye shoes, nayi t-shirt, gym selfie. 'Main aa gaya, bro!' Motivation ka full recharge. Phir Day 2 ka mood? 'Bhai, ye body mera hai hi nahi.'",
+            "onscreen_text": "DAY 1: FULL MOTIVATION\nDAY 2: 'YEH KYA HAI?'",
+            "audio_sfx_cues": "Phone camera shutter click, short comedic 'ding', then a low bass drop on 'nahi'."
+          },
+          {
+            "shot_number": 3,
+            "timing": "0:11 - 0:21",
+            "camera_direction": "Cut to a static wide shot of Vik walking stiffly across the gym floor, then cut back to a shoulder-level handheld close-up.",
+            "visual_action_and_broll": "He walks like his legs are made of cement, sits on a bench, and rubs his thighs. He points at the camera with a knowing look.",
+            "dialogue_hinglish": "Day 4, DOMS aaya. Ab do options hain: ya toh samajhna ki body adapt ho rahi hai, ya ye sochna ki 'main itna weak hoon' aur quietly khatam karna. Bhai, soreness insult nahi, signal hai.",
+            "onscreen_text": "DOMS = FAILURE? NAHI.",
+            "audio_sfx_cues": "Heavy, slow footsteps, a soft strained breath, subtle heartbeat pulse under the explanation."
+          },
+          {
+            "shot_number": 4,
+            "timing": "0:21 - 0:32",
+            "camera_direction": "Handheld medium shot, Vik seated on the bench, camera slightly off-axis like an interview. He counts excuses on his fingers and taps each one toward the lens.",
+            "visual_action_and_broll": "He pulls out a phone, shows a fake calendar with 'meeting' highlighted, then deletes the meeting and replaces it with '20 min walk + 1 set'. He keeps the phone visible for one beat.",
+            "dialogue_hinglish": "Day 8: 'Office meeting hai.' Day 10: 'Bahut kaam hai.' Day 12: 'Aaj mood nahi hai.' Har excuse ek exit door hai. Tujhe full gym karna zaroori nahi. Aaj 20 minute walk kar, 1 set kar, bas apne aap ko wapas la.",
+            "onscreen_text": "EXCUSE -> MINIMUM VIABLE WORKOUT",
+            "audio_sfx_cues": "Phone notification blip for each excuse, door-close sound effect on 'exit door', clean upbeat beat begins underneath."
+          },
+          {
+            "shot_number": 5,
+            "timing": "0:32 - 0:42",
+            "camera_direction": "Slow handheld push-in on Vik's face, eye-level, background music ducks to make his voice feel intimate and direct.",
+            "visual_action_and_broll": "Vik leans forward, taps his temple, then gestures toward the empty space beside him in the gym as if inviting the viewer to step into it.",
+            "dialogue_hinglish": "Day 15 tak tum ghost ban jaate ho. Phir bolte ho, 'gym mere liye nahi hai.' Arre bhai, gym tere liye hai, teri 15-day plan tere liye nahi tha. Consistency talent nahi, comeback ki skill hai.",
+            "onscreen_text": "GHOSTING IS NOT THE END.\nCOMEBACK IS THE SKILL.",
+            "audio_sfx_cues": "Music drops almost to silence, a single low pulse on 'comback', subtle gym ambience returns."
+          },
+          {
+            "shot_number": 6,
+            "timing": "0:42 - 0:50",
+            "camera_direction": "Cut to a bright medium shot near the entrance, Vik standing and holding a clipboard or phone. Camera remains handheld but stable, framing him with the gym floor leading behind him.",
+            "visual_action_and_broll": "He taps a checklist on the clipboard: 'Form check, first 3 sessions, no pressure.' He extends his hand toward the camera as if handing over a pass.",
+            "dialogue_hinglish": "Isliye hum ek kaam kar rahe hain: free 3-day form correction pass. Na koi 30-day detox, na 'six-pack guaranteed' ka drama. Bas technique, safe intensity, aur wapas aane ka plan.",
+            "onscreen_text": "FREE 3-DAY FORM CORRECTION PASS",
+            "audio_sfx_cues": "Checklist tick sound, brighter music lift, a subtle stamp effect when the pass is mentioned."
+          },
+          {
+            "shot_number": 7,
+            "timing": "0:50 - 0:55",
+            "camera_direction": "Tight close-up, slight handheld movement, Vik stepping closer until his face nearly fills the frame. End on a direct eye contact.",
+            "visual_action_and_broll": "He points at the caption area below the camera, then gives a short nod and holds the pose for half a second.",
+            "dialogue_hinglish": "Comment mein likh 'PASS'. Aur sun: Day 15 tumhara deadline nahi hai. Tumhara comeback hai. IronForge, wapas aao.",
+            "onscreen_text": "COMMENT 'PASS' TO CLAIM YOUR FREE SESSIONS",
+            "audio_sfx_cues": "Final bass hit, quick notification ping, music cuts cleanly on the brand line."
+          }
+        ],
+        "cta": {
+          "spoken_dialogue": "Comment mein likh 'PASS'. Tumhe free 3-day form correction pass milega, aur humein pata chal jayega ki tum wapas aane ke liye ready ho.",
+          "visual_action": "Vik points to the comment section, taps the camera twice for emphasis, then steps back with a confident nod as the end card appears.",
+          "offer_type": "Free 3-day form correction pass with technique coaching, safe intensity guidance, and a simple return-to-training plan for people who have stopped."
+        }
+      }
+    },
+    "json_status": "standard JSON",
+    "is_valid_json": true
+  },
+  "judge_evaluation": {
+    "scores": {
+      "strategic_intelligence": 13,
+      "creative_originality": 11,
+      "hook_quality": 8,
+      "storytelling": 8,
+      "script_quality": 8,
+      "visual_direction": 9,
+      "audience_psychology": 9,
+      "campaign_diversity_and_sequencing": 7,
+      "brand_voice_consistency": 5,
+      "cta_effectiveness": 3,
+      "production_feasibility": 2,
+      "structured_output_reliability": 2,
+      "total_score": 95
+    },
+    "key_strengths": [
+      "Laser\u2011sharp strategic insight that makes Vik\u2019s voice the core moat and ties every piece to a walk\u2011in incentive.",
+      "Highly detailed, production\u2011ready shot list with clear camera moves, audio cues and on\u2011screen text.",
+      "Deep audience\u2011psychology breakdown that hits the exact guilt\u2011and\u2011excuse triggers of the 15\u2011day quitter."
+    ],
+    "critical_weaknesses": [
+      "Creative concepts, while solid, lean on familiar fitness\u2011tropes; a bolder contrarian twist could make the campaign stand out more.",
+      "The hook, though good, could be even more visceral or surprising to guarantee a scroll\u2011stop in the first 2 seconds."
+    ],
+    "hook_analysis": "The opening line \u201cTumne gym chhodha nahi, bas apni excuse ko gym bula liya.\u201d creates instant cognitive dissonance and speaks directly to the viewer\u2019s self\u2011deception, which is a strong pattern interrupt. It would benefit from an accompanying visual shock (e.g., a sudden cut to a broken gym bag) or a louder sound bite to amplify the surprise factor within the first 2 seconds.",
+    "script_realism_analysis": "The Hinglish dialogue feels authentic for a Mumbai/Delhi gym culture \u2013 it uses colloquialisms like \u201cbhai\u201d, \u201cyaar\u201d, and mixes English terms naturally. A few lines (\u201cMotivation ka full recharge\u201d) read a touch too polished; sprinkling more street\u2011level slang or filler words (e.g., \u201carre yaar\u201d, \u201csach bolun\u201d) would increase the raw, unfiltered vibe that Vik\u2019s persona thrives on.",
+    "verdict_summary": "Overall the candidate delivers a near\u2011perfect campaign brief. It nails strategic alignment, audience insight, visual execution and conversion mechanics, earning a 95/100. The main room for improvement lies in pushing the creative originality and hook intensity a notch higher to guarantee viral breakout."
+  },
+  "comparison_context": {
+    "mistral_large_4_score": 88,
+    "gpt_oss_120b_score": 83,
+    "minimax_flash_score": 95
+  }
+}

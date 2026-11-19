@@ -1,0 +1,24 @@
+{
+  "status": "success",
+  "campaign_theme": "The Six-Hour Seal",
+  "strategic_thesis": "Authentic dum biryani cannot be rushed, so the brands that sell speed are selling something else; the only proof that matters is a sealed handi that takes six hours over coal embers and cracks open to reveal what shortcuts cannot produce.",
+  "core_tension": "The audience wants convenience but has quietly learned to distrust it in food: they are tired of reheated, uniformly pre-assembled meals yet still expect instant availability. Copper & Clay forces a choice between speed and genuine craft, and its 80-portion ceiling makes refusal to compromise feel like a privilege rather than a limitation.",
+  "deliverables_count": 2,
+  "deliverables_summary": [
+    {
+      "title": "Crack the Clock",
+      "primary_hook": "Six hours sealed. One second to crack.",
+      "call_to_action": "Reserve the Chef's Reserved Dawat Tasting Pass for the 80-portion limited evening service.",
+      "scenes_count": 5
+    },
+    {
+      "title": "Eighty Portions, One Evening",
+      "primary_hook": "When the eighty portions are gone, the kitchen closes.",
+      "call_to_action": "Reserve the Chef's Reserved Dawat Tasting Pass for the 80-portion limited evening service.",
+      "scenes_count": 5
+    }
+  ],
+  "compliance_score": 1.0,
+  "is_approved": true,
+  "findings_count": 0
+}

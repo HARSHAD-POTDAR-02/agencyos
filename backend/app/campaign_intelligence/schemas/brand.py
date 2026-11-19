@@ -110,3 +110,26 @@ class BrandContext(BaseModel):
         description="Missing brand data fields reported transparently without fabrication"
     )
 
+    def get_factual_boundary_prompt(self) -> str:
+        """Render strict 3-tier factual guidance for downstream generation models."""
+        facts = [f"  * {f}" for f in self.confirmed_facts] if self.confirmed_facts else ["  * Confirmed brand identity and profile."]
+        offers = [f"  * {o.name}: {o.description}" for o in self.verified_offers] if self.verified_offers else ["  * Standard verified offerings (Strictly NO invented discounts, promo codes, or unapproved freebies)."]
+        
+        prohibitions = []
+        for p in self.prohibited_claims:
+            prohibitions.append(f"  * Claim Prohibition: {p.claim} ({p.reason or 'forbidden'})")
+        for t in self.prohibited_terms:
+            prohibitions.append(f"  * Banned Keyword: '{t.term}' ({t.reason or 'banned'})")
+        if not prohibitions:
+            prohibitions = ["  * Never invent discounts, false medical/clinical claims, fake statistics, or fabricated case studies."]
+            
+        gaps = [f"  * Unknown: {g}" for g in self.knowledge_gaps] if self.knowledge_gaps else ["  * Do not assume unverified client pricing, third-party endorsements, or external accreditations."]
+        
+        return (
+            "### STRICT FACTUAL BOUNDARIES & VERIFIED INFORMATION:\n"
+            "1. CONFIRMED FACTS (Safe to cite as empirical truth):\n" + "\n".join(facts) + "\n\n"
+            "2. VERIFIED OFFERS (Strictly use ONLY these approved offers in CTAs):\n" + "\n".join(offers) + "\n\n"
+            "3. STRICT PROHIBITIONS & UNVERIFIED CLAIMS (MUST NEVER INVENT):\n" + "\n".join(prohibitions) + "\n\n"
+            "4. KNOWLEDGE GAPS (Information unknown to system - DO NOT FABRICATE):\n" + "\n".join(gaps)
+        )
+

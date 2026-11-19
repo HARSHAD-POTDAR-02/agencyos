@@ -62,7 +62,7 @@ class BrandIntelligenceAgent:
     """
 
     def __init__(self, model_name: str | None = None, temperature: float = 0.1):
-        self.model_name = model_name or settings.FALLBACK_MODEL
+        self.model_name = model_name or settings.GROQ_MODEL
         self.temperature = temperature
 
     async def run(
@@ -297,7 +297,7 @@ async def brand_intelligence_node(
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
     agent_name = "brand_intelligence"
-    model_name = settings.FALLBACK_MODEL
+    model_name = settings.GROQ_MODEL
 
     try:
         async with db_session_factory() as db:

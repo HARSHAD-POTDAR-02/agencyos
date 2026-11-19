@@ -65,8 +65,8 @@ class CampaignStrategistAgent:
     5. Perform deterministic rule validation before finalizing the strategy.
     """
 
-    def __init__(self, model_name: str | None = None, temperature: float = 0.2):
-        self.model_name = model_name or settings.GROQ_MODEL
+    def __init__(self, model_name: str | None = None, temperature: float = 0.55):
+        self.model_name = model_name or settings.CAMPAIGN_STRATEGY_MODEL
         self.temperature = temperature
 
     async def run(
@@ -79,7 +79,7 @@ class CampaignStrategistAgent:
         """
         Execute strategic synthesis across all intelligence inputs.
         """
-        # 1. Format Brand Context Intelligence
+        # 1. Format Brand Context Intelligence with strict factual boundaries
         brand_text_parts: list[str] = []
         if brand_context:
             brand_text_parts.append(f"- Business Name: {brand_context.business_name}")
@@ -88,8 +88,9 @@ class CampaignStrategistAgent:
             brand_text_parts.append(f"- Content Pillars: {', '.join(brand_context.content_pillars) if brand_context.content_pillars else 'Core Value Props'}")
             brand_text_parts.append(f"- Prescribed Tone (DO): {'; '.join(brand_context.tone_guidelines.do) if brand_context.tone_guidelines.do else 'Professional'}")
             brand_text_parts.append(f"- Proscribed Tone (DONT): {'; '.join(brand_context.tone_guidelines.dont) if brand_context.tone_guidelines.dont else 'Hype'}")
-            if brand_context.verified_offers:
-                brand_text_parts.append(f"- Verified Offers: {', '.join([o.name for o in brand_context.verified_offers])}")
+            
+            # Append 3-tier factual boundaries
+            brand_text_parts.append("\n" + brand_context.get_factual_boundary_prompt())
         else:
             brand_text_parts.append("No confirmed brand context available; inferring from brief.")
         brand_summary = "\n".join(brand_text_parts)
@@ -174,23 +175,31 @@ Synthesize the internal brand reality, external market research, and historical 
 ### YOUR TASK
 Formulate a master Campaign Strategy strictly conforming to the JSON schema:
 1. campaign_theme: A powerful, conceptual narrative umbrella that unites the entire campaign (avoid generic phrases like 'Autumn Blast' or 'Q4 Growth').
-2. primary_objective: Clear, measurable business objective.
-3. target_audience_definition: Distinct profile integrating the pain points identified by Market Research.
-4. strategic_angles: 3-4 distinct conceptual angles. For each angle provide:
+2. strategic_thesis: The provocative central strategic argument or angle that creates an unfair moat for this client.
+3. core_tension: The specific psychological friction point, unspoken truth, or ego defense of the target audience.
+4. primary_objective: Clear, measurable business objective.
+5. target_audience_definition: Distinct profile integrating the pain points identified by Market Research.
+6. funnel_narrative: Phased narrative journey mapping:
+   - "top_of_funnel": Pattern interrupt & cultural tension
+   - "middle_of_funnel": Mechanism, proof, & re-framing the problem
+   - "bottom_of_funnel": Verified low-friction conversion climax
+7. strategic_angles: 3-4 distinct conceptual angles (e.g. contrarian demonstration, myth-busting, customer friction teardown). For each angle provide:
    - angle_name: Catchy angle title
    - rationale: Why this angle works based on audience triggers and competitor gaps
    - target_audience_segment: Which specific segment this targets
    - aligned_content_pillar: Which brand pillar it reinforces
    - supporting_evidence: Specific facts, market trends, or historical data justifying this angle
-5. messaging_pillars: 3 foundational message pillars, each with a core message, clear call to action, and target emotions.
-6. platform_distribution_strategy: Explicit strategic role for each platform in {', '.join(target_platforms)} (e.g. LinkedIn for high-dwell technical teardowns; Instagram for visual proof).
-7. pacing_and_cadence: {pacing_instruction}
-8. success_benchmarks: Target engagement rate, save rates, or lead indicators based on historical baselines or platform benchmarks.
-9. assumptions_and_risks: Key strategic risks (fatigue, competitor saturation) and mitigation steps.
-10. STRICT LANGUAGE REQUIREMENT: All strategy components, pillar descriptions, themes, and angles MUST be written exclusively in English.
+8. messaging_pillars: 3 foundational message pillars, each with a core message, clear call to action (strictly matching verified offers), and target emotions.
+9. platform_distribution_strategy: Explicit strategic role for each platform in {', '.join(target_platforms)} (e.g. LinkedIn for high-dwell technical teardowns; Instagram for visual proof).
+10. pacing_and_cadence: {pacing_instruction}
+11. success_benchmarks: Target engagement rate, save rates, or lead indicators based on historical baselines or platform benchmarks.
+12. assumptions_and_risks: Key strategic risks (fatigue, competitor saturation) and mitigation steps.
+13. STRICT ANTI-HALLUCINATION & LANGUAGE REQUIREMENT:
+   - NEVER invent discounts, false statistics, or unverified claims.
+   - All strategy components, pillar descriptions, themes, and angles MUST be written exclusively in English.
 """
 
-        # 5. Invoke Groq LLM
+        # 5. Invoke LLM
         strategy: CampaignStrategy = await invoke_structured_llm(
             prompt=prompt,
             schema_class=CampaignStrategy,
@@ -221,7 +230,7 @@ async def campaign_strategist_node(
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
     agent_name = "campaign_strategist"
-    model_name = settings.GROQ_MODEL
+    model_name = settings.CAMPAIGN_STRATEGY_MODEL
 
     try:
         agent = CampaignStrategistAgent(model_name=model_name)

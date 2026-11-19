@@ -19,6 +19,7 @@ from app.routers import (
     campaigns,
     clients,
     deliverables,
+    operational_workflows,
     portal,
     publishing,
     social,
@@ -90,6 +91,7 @@ app.include_router(deliverables.router)
 app.include_router(portal.router)
 app.include_router(social.router)
 app.include_router(publishing.router)
+app.include_router(operational_workflows.router)
 
 # ---------------------------------------------------------------------------
 # Static file serving for uploads

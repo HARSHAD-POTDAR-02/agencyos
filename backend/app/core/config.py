@@ -29,8 +29,11 @@ class Settings(BaseSettings):
     SERPER_API_KEY: str = ""
     LLM_PROVIDER: str = "groq"
     GROQ_MODEL: str = "openai/gpt-oss-120b"
-    FALLBACK_MODEL: str = "qwen/qwen3.8-27b"
+    FALLBACK_MODEL: str = "openai/gpt-oss-120b"
     EXPERIMENTAL_MODEL: str = "openai/gpt-oss-20b"
+    CAMPAIGN_STRATEGY_MODEL: str = "minimaxai/minimax-m3.1-flash"
+    CAMPAIGN_CONTENT_MODEL: str = "minimaxai/minimax-m3.1-flash"
+    CAMPAIGN_EVALUATION_MODEL: str = "openai/gpt-oss-120b"
     LLM_TEMPERATURE: float = 0.2
     LLM_MAX_TOKENS: int = 2500
     LLM_TIMEOUT_SECONDS: int = 120

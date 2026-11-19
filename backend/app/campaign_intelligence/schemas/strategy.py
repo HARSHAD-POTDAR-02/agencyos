@@ -57,6 +57,18 @@ class CampaignStrategy(BaseModel):
     campaign_theme: str
     primary_objective: str
     target_audience_definition: str
+    strategic_thesis: str | None = Field(
+        default=None,
+        description="The central strategic thesis or provocative core argument"
+    )
+    core_tension: str | None = Field(
+        default=None,
+        description="The fundamental psychological friction point or unspoken truth addressed"
+    )
+    funnel_narrative: dict[str, str] = Field(
+        default_factory=dict,
+        description="Phased narrative journey (e.g. Awareness, Consideration, Conversion)"
+    )
     strategic_angles: list[StrategicAngle] = Field(default_factory=list)
     messaging_pillars: list[MessagingPillar] = Field(default_factory=list)
     platform_distribution_strategy: dict[str, str] = Field(
@@ -79,6 +91,36 @@ class CampaignStrategy(BaseModel):
                 cadence = data.get("cadence") or data.get("pacing") or data.get("weekly_cadence")
                 data["pacing_and_cadence"] = str(cadence) if cadence else "2-3 posts per week across 4 weeks"
         return data
+
+    @field_validator("funnel_narrative", mode="before")
+    @classmethod
+    def normalize_funnel_narrative(cls, v: Any) -> dict[str, str]:
+        if isinstance(v, dict):
+            return {str(k): str(val) for k, val in v.items()}
+        if isinstance(v, str):
+            for parser in (ast.literal_eval, json.loads):
+                try:
+                    p = parser(v)
+                    if isinstance(p, dict):
+                        return {str(k): str(val) for k, val in p.items()}
+                except Exception:
+                    pass
+            parts = re.findall(r"([a-zA-Z0-9_\s\-]+)[:=]\s*([^;\n]+)", v)
+            if parts:
+                return {p[0].strip(): p[1].strip() for p in parts}
+            if v.strip():
+                return {"narrative": v.strip()}
+            return {}
+        if isinstance(v, list):
+            res = {}
+            for idx, item in enumerate(v):
+                if isinstance(item, dict):
+                    for k, val in item.items():
+                        res[str(k)] = str(val)
+                elif item:
+                    res[f"stage_{idx + 1}"] = str(item)
+            return res
+        return {}
 
     @field_validator("platform_distribution_strategy", mode="before")
     @classmethod

@@ -70,7 +70,7 @@ class MarketResearchAgent:
     """
 
     def __init__(self, model_name: str | None = None, temperature: float = 0.2):
-        self.model_name = model_name or settings.FALLBACK_MODEL
+        self.model_name = model_name or settings.GROQ_MODEL
         self.temperature = temperature
 
     async def run(
@@ -215,7 +215,7 @@ async def market_research_node(
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
     agent_name = "market_research"
-    model_name = settings.FALLBACK_MODEL
+    model_name = settings.GROQ_MODEL
 
     try:
         agent = MarketResearchAgent(model_name=model_name)

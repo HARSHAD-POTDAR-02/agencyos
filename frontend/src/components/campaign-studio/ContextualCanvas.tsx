@@ -29,6 +29,7 @@ import {
   GitBranch,
   Edit3,
   Presentation,
+  CalendarDays,
 } from "lucide-react";
 
 interface ContextualCanvasProps {
@@ -200,7 +201,7 @@ export function ContextualCanvas({
 
   if (!artifact) {
     return (
-      <div className="h-full flex flex-col bg-[#101014] framer-canvas-grid overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col bg-[#101014] framer-canvas-grid overflow-hidden">
         {/* ── Artboard Top Control Strip ── */}
         <div className="p-3 border-b border-white/[0.08] bg-[#17171E]/90 backdrop-blur-md shrink-0 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -229,7 +230,7 @@ export function ContextualCanvas({
         </div>
 
         {/* ── Interactive Artboard Viewport ── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-36 space-y-6">
           {renderHeroEntityTray()}
 
           {/* Studio Welcome & Sprint Launcher */}
@@ -357,7 +358,7 @@ export function ContextualCanvas({
   const isApproved = artifact.status === "approved" || isExported;
 
   return (
-    <div className="h-full flex flex-col bg-[#101014]">
+    <div className="flex-1 min-h-0 flex flex-col bg-[#101014] overflow-hidden">
       {/* ── Canvas Fixed Header Strip ── */}
       <div className="p-3 border-b border-white/[0.08] bg-[#17171E] shrink-0 flex flex-wrap items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -466,30 +467,11 @@ export function ContextualCanvas({
             </button>
           )}
 
-          {!isApproved && onApproveVersion && (
-            <button
-              type="button"
-              onClick={handleApprove}
-              disabled={isApproving}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#45B88A] hover:bg-[#45B88A]/90 text-[#101014] font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer font-sans"
-            >
-              {isApproving ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              )}
-              <span>Approve v{artifact.version}</span>
-            </button>
-          )}
-
           {isExported && (
-            <Link
-              href="/tasks"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 font-semibold text-xs hover:bg-[#A78BFA]/25 transition-colors font-mono"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30 font-semibold text-xs font-sans">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
               <span>In Production</span>
-            </Link>
+            </span>
           )}
 
           {onPitchDeckClick && (
@@ -504,16 +486,14 @@ export function ContextualCanvas({
             </button>
           )}
 
-          {onExportClick && (
-            <button
-              type="button"
-              onClick={() => onExportClick(artifact)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs transition-all shadow-xs cursor-pointer font-sans"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>{isExported ? "Re-export" : "Export to Production"}</span>
-            </button>
-          )}
+          <Link
+            href={artifact.campaign_id ? `/campaign-plans?campaignId=${artifact.campaign_id}` : "/campaign-plans"}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs shadow-xs transition-all cursor-pointer font-sans"
+            title="Review, tweak & launch all deliverables in Campaign Planner"
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Campaign Planner →</span>
+          </Link>
 
           {onCloseCanvas && (
             <button
@@ -529,7 +509,7 @@ export function ContextualCanvas({
       </div>
 
       {/* ── Canvas Scrollable Body ── */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-36 space-y-6">
         {renderHeroEntityTray()}
 
         {artifact.type === "storyboard" && (

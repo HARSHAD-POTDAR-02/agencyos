@@ -1,0 +1,797 @@
+[
+  {
+    "scenario": {
+      "id": "skincare",
+      "category": "Premium Skincare Brand",
+      "brand_name": "Kavach Clinical Skincare",
+      "client_persona": "Dr. Aanya Mehta (Dermatologist & Biochemist, calm, elegant, surgical, debunks 10-step influencer routines).",
+      "target_audience": "25-42 working women tired of 'glass skin' fake promises, suffering from damaged barriers due to over-exfoliation.",
+      "marketing_goal": "Sell high-ticket barrier-repair peptide serum (\u20b93,200) by building clinical authority.",
+      "topic": "Why your 10-step skincare routine is actively destroying your skin barrier",
+      "negative_constraints": [
+        "DO NOT say 'Glow like a queen!' or 'Unlock your inner goddess!'",
+        "DO NOT do generic bottle-tapping ASMR.",
+        "DO NOT write cheesy influencer speak."
+      ]
+    },
+    "minimax": {
+      "model": "minimaxai/minimax-m3.1-flash",
+      "provider": "NVIDIA NIM",
+      "ttft_seconds": 0.59,
+      "total_seconds": 51.59,
+      "reasoning_length": 129,
+      "content_length": 6480,
+      "parsed_json": {
+        "brand_moat_statement": "Dr. Aanya Mehta is not an influencer selling aspiration; she is a dermatologist and biochemist who can explain the biology of a damaged barrier, correct a harmful routine, and defend a clinical formulation without hype. While competitors chase 'glass skin' aesthetics, she builds authority by dismantling them. Her calm, surgical precision makes a \u20b93,200 peptide serum feel like rational healthcare rather than an impulse purchase, creating trust that content creators cannot manufacture.",
+        "audience_pain_insight": "The audience is not failing because their products are insufficient. They are failing because they have been conditioned to believe that more steps equal better skin. Every extra active layer creates the illusion of progress while quietly prolonging stinging, tightness, redness, and sensitivity. The unspoken fear is that the damage may be self-inflicted, and the deeper frustration is that no trusted expert has told them to stop.",
+        "viral_angle": {
+          "angle_name": "The 10-Step Confession",
+          "hook_first_3_seconds": "Your ten-step routine is not discipline. It is a barrier injury.",
+          "visual_hook": "A bathroom counter crowded with ten skincare products. A hand sweeps them aside in one motion, leaving a single bare bottle and Dr. Aanya standing still in the background.",
+          "why_it_works": "The opening attacks a behavior the audience performs daily, creating immediate cognitive friction and a threat of self-inflicted harm. It also promises permission to stop, which is emotionally relieving for an audience exhausted by contradictory advice."
+        },
+        "production_script": {
+          "working_title": "Your 10-Step Routine Is Damaging Your Skin",
+          "target_duration_seconds": 50,
+          "pacing": "Controlled and clinical, with no hype or fast-cut creator energy. Long, stable takes let Dr. Aanya speak with quiet authority. The pace briefly accelerates during the stack of active ingredients, then slows for the diagnosis, product reveal, and CTA.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Locked-off medium shot at counter height, 50mm lens, then a clean push-in as the products are cleared away.",
+              "visual_action": "Ten skincare bottles and jars fill the marble bathroom counter. A woman's hand hesitates over them, then removes every item except one plain serum bottle. Dr. Aanya enters the frame behind the counter, composed and unsmiling.",
+              "spoken_dialogue": "Your ten-step routine is not discipline. It is a barrier injury.",
+              "onscreen_text": "10 STEPS = MORE DAMAGE?",
+              "audio_sfx": "A sharp ceramic clink as the final product is removed, followed by a low, minimal clinical pulse."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Tight close-up of Dr. Aanya's face, 85mm lens, shallow depth of field. Cut to an overhead flat lay as she places products in a straight line.",
+              "visual_action": "Dr. Aanya places a cleanser, exfoliant, vitamin C serum, retinoid, and acid toner in a row. Each placement is precise. She taps the crowded lineup once, then separates it with a slim glass divider.",
+              "spoken_dialogue": "Cleanser. Vitamin C. Retinoid. Acids. Exfoliants. Individually, these can be useful. Layered carelessly, they keep interrupting your skin's recovery. Your barrier is a living lipid structure, not a surface you can 'fix' by adding another step. When it is repeatedly stripped, it cannot hold moisture properly. That is why your skin feels tight, reactive, and somehow dull at the same time.",
+              "onscreen_text": "REPEATED ACTIVES CAN DISRUPT YOUR BARRIER",
+              "audio_sfx": "Subtle product taps on marble. A restrained ticking pulse begins beneath the voiceover."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Slow lateral slide across a split-screen: irritated, redness-mapped skin on the left; a calm clinical model under soft daylight on the right. Cut to a macro shot of the serum texture.",
+              "visual_action": "Dr. Aanya draws a simple barrier diagram on frosted glass: a brick wall with a weakened mortar line. She replaces the crowded products with a single peptide serum, then presses one clean fingertip onto the serum.",
+              "spoken_dialogue": "And here is the part influencer advice rarely mentions: more ingredients do not create a stronger barrier. Fewer, well-chosen ingredients give your skin the chance to repair. Peptides signal repair. Ceramides and fatty acids help rebuild the lipid structure. Hyaluronic acid supports hydration. The goal is not a routine that looks impressive in a bathroom. It is skin that feels comfortable by week four.",
+              "onscreen_text": "REPAIR > ROUTINE SIZE",
+              "audio_sfx": "A soft low-frequency swell as the diagram stabilizes. Gentle serum drop sound, without exaggerated squelching."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Hero close-up of the Kavach peptide serum, 100mm macro lens, slow 180-degree rotation. Cut to a steady medium shot of Dr. Aanya with the product beside her.",
+              "visual_action": "Dr. Aanya sets the serum beside the glass divider, leaving the ten-product area empty. She looks directly into the lens while the formula remains clearly visible and legible.",
+              "spoken_dialogue": "Stop punishing your skin to look perfect. Simplify the routine, then give the barrier what it actually needs. This is Kavach Clinical Peptide Serum, a \u20b93,200 formula built around barrier repair, not overnight transformation. Use the skin assessment on our page to find your starting protocol. Less guessing. Better biology.",
+              "onscreen_text": "KAVACH CLINICAL PEPTIDE SERUM | \u20b93,200",
+              "audio_sfx": "Music resolves into a clean, confident tone. A single soft click marks the CTA."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Take the two-minute skin assessment, build your simplified repair protocol, and decide whether Kavach is right for your barrier.",
+            "visual_action": "Dr. Aanya's hand turns the serum so the label faces the camera. On-screen, a simple three-step repair checklist appears: cleanse, treat, protect.",
+            "offer": "A free two-minute barrier assessment that generates a simplified starting routine, with the option to purchase the \u20b93,200 peptide serum after review."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Dr. Aanya Mehta is not an influencer selling aspiration; she is a dermatologist and biochemist who can explain the biology of a damaged barrier, correct a harmful routine, and defend a clinical formulation without hype. While competitors chase 'glass skin' aesthetics, she builds authority by dismantling them. Her calm, surgical precision makes a \u20b93,200 peptide serum feel like rational healthcare rather than an impulse purchase, creating trust that content creators cannot manufacture.\",\n  \"audience_pain_insight\": \"The audience is not failing because their products are insufficient. They are failing because they have been conditioned to believe that more steps equal better skin. Every extra active layer creates the illusion of progress while quietly prolonging stinging, tightness, redness, and sensitivity. The unspoken fear is that the damage may be self-inflicted, and the deeper frustration is that no trusted expert has told them to stop.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The 10-Step Confession\",\n    \"hook_first_3_seconds\": \"Your ten-step routine is not discipline. It is a barrier injury.\",\n    \"visual_hook\": \"A bathroom counter crowded with ten skincare products. A hand sweeps them aside in one motion, leaving a single bare bottle and Dr. Aanya standing still in the background.\",\n    \"why_it_works\": \"The opening attacks a behavior the audience performs daily, creating immediate cognitive friction and a threat of self-inflicted harm. It also promises permission to stop, which is emotionally relieving for an audience exhausted by contradictory advice.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Your 10-Step Routine Is Damaging Your Skin\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Controlled and clinical, with no hype or fast-cut creator energy. Long, stable takes let Dr. Aanya speak with quiet authority. The pace briefly accelerates during the stack of active ingredients, then slows for the diagnosis, product reveal, and CTA.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Locked-off medium shot at counter height, 50mm lens, then a clean push-in as the products are cleared away.\",\n        \"visual_action\": \"Ten skincare bottles and jars fill the marble bathroom counter. A woman's hand hesitates over them, then removes every item except one plain serum bottle. Dr. Aanya enters the frame behind the counter, composed and unsmiling.\",\n        \"spoken_dialogue\": \"Your ten-step routine is not discipline. It is a barrier injury.\",\n        \"onscreen_text\": \"10 STEPS = MORE DAMAGE?\",\n        \"audio_sfx\": \"A sharp ceramic clink as the final product is removed, followed by a low, minimal clinical pulse.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Tight close-up of Dr. Aanya's face, 85mm lens, shallow depth of field. Cut to an overhead flat lay as she places products in a straight line.\",\n        \"visual_action\": \"Dr. Aanya places a cleanser, exfoliant, vitamin C serum, retinoid, and acid toner in a row. Each placement is precise. She taps the crowded lineup once, then separates it with a slim glass divider.\",\n        \"spoken_dialogue\": \"Cleanser. Vitamin C. Retinoid. Acids. Exfoliants. Individually, these can be useful. Layered carelessly, they keep interrupting your skin's recovery. Your barrier is a living lipid structure, not a surface you can 'fix' by adding another step. When it is repeatedly stripped, it cannot hold moisture properly. That is why your skin feels tight, reactive, and somehow dull at the same time.\",\n        \"onscreen_text\": \"REPEATED ACTIVES CAN DISRUPT YOUR BARRIER\",\n        \"audio_sfx\": \"Subtle product taps on marble. A restrained ticking pulse begins beneath the voiceover.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Slow lateral slide across a split-screen: irritated, redness-mapped skin on the left; a calm clinical model under soft daylight on the right. Cut to a macro shot of the serum texture.\",\n        \"visual_action\": \"Dr. Aanya draws a simple barrier diagram on frosted glass: a brick wall with a weakened mortar line. She replaces the crowded products with a single peptide serum, then presses one clean fingertip onto the serum.\",\n        \"spoken_dialogue\": \"And here is the part influencer advice rarely mentions: more ingredients do not create a stronger barrier. Fewer, well-chosen ingredients give your skin the chance to repair. Peptides signal repair. Ceramides and fatty acids help rebuild the lipid structure. Hyaluronic acid supports hydration. The goal is not a routine that looks impressive in a bathroom. It is skin that feels comfortable by week four.\",\n        \"onscreen_text\": \"REPAIR > ROUTINE SIZE\",\n        \"audio_sfx\": \"A soft low-frequency swell as the diagram stabilizes. Gentle serum drop sound, without exaggerated squelching.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Hero close-up of the Kavach peptide serum, 100mm macro lens, slow 180-degree rotation. Cut to a steady medium shot of Dr. Aanya with the product beside her.\",\n        \"visual_action\": \"Dr. Aanya sets the serum beside the glass divider, leaving the ten-product area empty. She looks directly into the lens while the formula remains clearly visible and legible.\",\n        \"spoken_dialogue\": \"Stop punishing your skin to look perfect. Simplify the routine, then give the barrier what it actually needs. This is Kavach Clinical Peptide Serum, a \u20b93,200 formula built around barrier repair, not overnight transformation. Use the skin assessment on our page to find your starting protocol. Less guessing. Better biology.\",\n        \"onscreen_text\": \"KAVACH CLINICAL PEPTIDE SERUM | \u20b93,200\",\n        \"audio_sfx\": \"Music resolves into a clean, confident tone. A single soft click marks the CTA.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Take the two-minute skin assessment, build your simplified repair protocol, and decide whether Kavach is right for your barrier.\",\n      \"visual_action\": \"Dr. Aanya's hand turns the serum so the label faces the camera. On-screen, a simple three-step repair checklist appears: cleanse, treat, protect.\",\n      \"offer\": \"A free two-minute barrier assessment that generates a simplified starting routine, with the option to purchase the \u20b93,200 peptide serum after review.\"\n    }\n  }\n}"
+    },
+    "gpt_oss": {
+      "model": "openai/gpt-oss-120b",
+      "provider": "Groq LPU",
+      "ttft_seconds": 1.33,
+      "total_seconds": 3.4,
+      "content_length": 4000,
+      "parsed_json": {
+        "brand_moat_statement": "Dr. Aanya Mehta\u2019s combined authority as a dermatologist and biochemist lets her scientifically debunk the 10\u2011step hype with lab\u2011grade data, creating a trust barrier that influencers can\u2019t replicate.",
+        "audience_pain_insight": "Women feel guilty for spending hours on ineffective routines while their skin barrier silently deteriorates, craving a simple, science\u2011backed fix they can trust.",
+        "viral_angle": {
+          "angle_name": "The 10\u2011Step Trap",
+          "hook_first_3_seconds": "Your 10\u2011step routine is sabotaging your skin, and here's why.",
+          "visual_hook": "Split\u2011screen: left side a glossy influencer bathroom with dozens of products; right side a high\u2011speed microscope revealing a cracked skin barrier.",
+          "why_it_works": "Contrast triggers the loss\u2011aversion instinct, while Dr. Mehta\u2019s clinical presence provides instant credibility, forcing viewers to re\u2011evaluate their habits."
+        },
+        "production_script": {
+          "working_title": "The 10\u2011Step Trap: How Your Routine Breaks Your Barrier",
+          "target_duration_seconds": 50,
+          "pacing": "Calm, deliberate, surgical\u2014each sentence lands like a precise scalpel cut, with measured pauses for emphasis.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Static close\u2011up on Dr. Mehta\u2019s face, shallow depth of field; slow dolly in.",
+              "visual_action": "Dr. Mehta stands in a minimalist lab, a glass beaker glints behind her; a quick cut to the split\u2011screen microscope view.",
+              "spoken_dialogue": "Your 10\u2011step routine is sabotaging your skin, and here's why.",
+              "onscreen_text": "STOP the 10\u2011STEP TRAP",
+              "audio_sfx": "Sharp, clinical whoosh followed by a faint heartbeat pulse"
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Over\u2011the\u2011shoulder of Dr. Mehta reviewing a digital skin\u2011barrier map; slow pan across the map.",
+              "visual_action": "Animated graphic shows barrier thickness decreasing with each product layer; a red line spikes with \u201cover\u2011exfoliation\u201d.",
+              "spoken_dialogue": "Each extra cleanser, acid, or peel strips away lipids, leaving micro\u2011tears that let moisture escape. The more steps you add, the wider the cracks.",
+              "onscreen_text": "MORE STEPS = MORE DAMAGE",
+              "audio_sfx": "Subtle ticking clock, rising tension synth"
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Medium shot, dolly out to reveal a sleek bottle of Kavach Barrier\u2011Repair Peptide Serum on a sterile tray.",
+              "visual_action": "Dr. Mehta gently tilts the bottle; a 3\u2011D peptide chain animation flows onto the skin model, sealing cracks instantly.",
+              "spoken_dialogue": "Our peptide serum delivers a bio\u2011engineered repair complex that rebuilds the lipid matrix from within\u2014no more endless steps, just one clinically proven solution.",
+              "onscreen_text": "ONE SERUM. SCIENCE\u2011DRIVEN REPAIR.",
+              "audio_sfx": "Soft chime as peptide animation glows, ambient lab hum"
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Close\u2011up on Dr. Mehta\u2019s hand placing the serum beside a simple three\u2011step routine chart.",
+              "visual_action": "Chart flips to show: Cleanse \u2192 Serum \u2192 Protect. A subtle \u201cSwipe Up\u201d graphic appears.",
+              "spoken_dialogue": "Ditch the overload. Trust the science that actually restores your barrier. Swipe up to start your skin\u2019s recovery today.",
+              "onscreen_text": "SWIPE UP \u2022 FREE Skin Barrier Quiz",
+              "audio_sfx": "Gentle crescendo ending with a reassuring tone"
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Tap now for a free barrier\u2011assessment quiz and exclusive access to our peptide serum.",
+            "visual_action": "Animated swipe\u2011up arrow morphs into a QR code that pulses lightly.",
+            "offer": "Free 2\u2011minute skin barrier quiz + limited\u2011time \u20b9500 discount on first serum purchase"
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Dr. Aanya Mehta\u2019s combined authority as a dermatologist and biochemist lets her scientifically debunk the 10\u2011step hype with lab\u2011grade data, creating a trust barrier that influencers can\u2019t replicate.\",\n  \"audience_pain_insight\": \"Women feel guilty for spending hours on ineffective routines while their skin barrier silently deteriorates, craving a simple, science\u2011backed fix they can trust.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The 10\u2011Step Trap\",\n    \"hook_first_3_seconds\": \"Your 10\u2011step routine is sabotaging your skin, and here's why.\",\n    \"visual_hook\": \"Split\u2011screen: left side a glossy influencer bathroom with dozens of products; right side a high\u2011speed microscope revealing a cracked skin barrier.\",\n    \"why_it_works\": \"Contrast triggers the loss\u2011aversion instinct, while Dr. Mehta\u2019s clinical presence provides instant credibility, forcing viewers to re\u2011evaluate their habits.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"The 10\u2011Step Trap: How Your Routine Breaks Your Barrier\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Calm, deliberate, surgical\u2014each sentence lands like a precise scalpel cut, with measured pauses for emphasis.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Static close\u2011up on Dr. Mehta\u2019s face, shallow depth of field; slow dolly in.\",\n        \"visual_action\": \"Dr. Mehta stands in a minimalist lab, a glass beaker glints behind her; a quick cut to the split\u2011screen microscope view.\",\n        \"spoken_dialogue\": \"Your 10\u2011step routine is sabotaging your skin, and here's why.\",\n        \"onscreen_text\": \"STOP the 10\u2011STEP TRAP\",\n        \"audio_sfx\": \"Sharp, clinical whoosh followed by a faint heartbeat pulse\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Over\u2011the\u2011shoulder of Dr. Mehta reviewing a digital skin\u2011barrier map; slow pan across the map.\",\n        \"visual_action\": \"Animated graphic shows barrier thickness decreasing with each product layer; a red line spikes with \u201cover\u2011exfoliation\u201d.\",\n        \"spoken_dialogue\": \"Each extra cleanser, acid, or peel strips away lipids, leaving micro\u2011tears that let moisture escape. The more steps you add, the wider the cracks.\",\n        \"onscreen_text\": \"MORE STEPS = MORE DAMAGE\",\n        \"audio_sfx\": \"Subtle ticking clock, rising tension synth\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Medium shot, dolly out to reveal a sleek bottle of Kavach Barrier\u2011Repair Peptide Serum on a sterile tray.\",\n        \"visual_action\": \"Dr. Mehta gently tilts the bottle; a 3\u2011D peptide chain animation flows onto the skin model, sealing cracks instantly.\",\n        \"spoken_dialogue\": \"Our peptide serum delivers a bio\u2011engineered repair complex that rebuilds the lipid matrix from within\u2014no more endless steps, just one clinically proven solution.\",\n        \"onscreen_text\": \"ONE SERUM. SCIENCE\u2011DRIVEN REPAIR.\",\n        \"audio_sfx\": \"Soft chime as peptide animation glows, ambient lab hum\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Close\u2011up on Dr. Mehta\u2019s hand placing the serum beside a simple three\u2011step routine chart.\",\n        \"visual_action\": \"Chart flips to show: Cleanse \u2192 Serum \u2192 Protect. A subtle \u201cSwipe Up\u201d graphic appears.\",\n        \"spoken_dialogue\": \"Ditch the overload. Trust the science that actually restores your barrier. Swipe up to start your skin\u2019s recovery today.\",\n        \"onscreen_text\": \"SWIPE UP \u2022 FREE Skin Barrier Quiz\",\n        \"audio_sfx\": \"Gentle crescendo ending with a reassuring tone\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Tap now for a free barrier\u2011assessment quiz and exclusive access to our peptide serum.\",\n      \"visual_action\": \"Animated swipe\u2011up arrow morphs into a QR code that pulses lightly.\",\n      \"offer\": \"Free 2\u2011minute skin barrier quiz + limited\u2011time \u20b9500 discount on first serum purchase\"\n    }\n  }\n}"
+    },
+    "judgment": {
+      "model_a_score": 89,
+      "model_b_score": 73,
+      "winner": "Model A (MiniMax)",
+      "winner_reason": "Model A translates Dr. Aanya Mehta's calm, surgical authority into a tightly\u2011structured, strategically\u2011aligned narrative. It offers deeper audience insight, a more original visual concept, a sharper 3\u2011second hook, richer storytelling, and a tone that stays true to the persona without influencer clich\u00e9s. These strengths drive higher marks across strategic intelligence, originality, hook quality, storytelling, tone adaptation, visual direction, audience psychology, authenticity, and brand moat depth.",
+      "hook_verdict": "Model A\u2019s hook \u2013 \u201cYour ten\u2011step routine is not discipline. It is a barrier injury.\u201d \u2013 is more provocative and creates immediate cognitive friction, whereas Model B\u2019s \u201cYour 10\u2011step routine is sabotaging your skin, and here's why.\u201d is clear but less surprising.",
+      "tone_adaptation_verdict": "Model A adapts to Dr. Aanya\u2019s persona without resorting to marketing clich\u00e9s"
+    }
+  },
+  {
+    "scenario": {
+      "id": "restaurant",
+      "category": "Local Heritage Restaurant",
+      "brand_name": "Bawarchi Legacy Kitchen",
+      "client_persona": "Chef Samar Qureshi (4th-generation Lucknowi khansama, passionate, obsessed with slow firewood dum, sensory).",
+      "target_audience": "City food lovers and families sick of mass-produced, reheated cloud kitchen biryani.",
+      "marketing_goal": "Drive weekend table bookings and physical footfall to the restaurant.",
+      "topic": "The 6-hour firewood dum process that cloud kitchens physically cannot fake",
+      "negative_constraints": [
+        "DO NOT say 'Tag a foodie who loves biryani!'",
+        "DO NOT use generic pop music or loud food montages.",
+        "DO NOT write cheesy discount slogans ('Buy 1 Get 1')."
+      ]
+    },
+    "minimax": {
+      "model": "minimaxai/minimax-m3.1-flash",
+      "provider": "NVIDIA NIM",
+      "ttft_seconds": 0.68,
+      "total_seconds": 75.92,
+      "reasoning_length": 994,
+      "content_length": 6651,
+      "parsed_json": {
+        "brand_moat_statement": "Chef Samar Qureshi is not simply cooking biryani; she is defending a four-generation Lucknowi khansama tradition built around patience, firewood, and sensory craft. Most competitors can copy a recipe, recreate a restaurant interior, or photograph a biryani, but they cannot compress six hours of sealed dum into a delivery microwave. Her authority comes from inherited technique plus the visible, time-stamped evidence of her process, making authenticity something the audience can witness rather than merely claim.",
+        "audience_pain_insight": "City food lovers are not tired of biryani; they are tired of the emotional letdown of ordering it and tasting something reheated, uniform, and forgettable. Families want the meal to feel like an occasion again, but cloud kitchens have trained them to expect sameness everywhere. The deeper friction is doubt: they no longer trust a food delivery app to deliver something genuinely handmade.",
+        "viral_angle": {
+          "angle_name": "The 6-Hour Proof",
+          "hook_first_3_seconds": "If your biryani is ready in twelve minutes, it isn't biryani. It's a reheated idea of one.",
+          "visual_hook": "A tight macro shot of Chef Samar's hand lifting the heavy lid of a sealed dum pot. Steam rolls toward the lens, revealing a visible layer of saffron rice and tender meat beneath the sealed pastry.",
+          "why_it_works": "The opening challenges a hidden assumption with immediate contrast: speed versus patience. It creates curiosity about what six hours actually changes, while the live steam and hand-made seal provide sensory proof that a digital kitchen cannot easily reproduce."
+        },
+        "production_script": {
+          "working_title": "Your Biryani Deserves Six Hours",
+          "target_duration_seconds": 50,
+          "pacing": "Slow-build sensory storytelling with deliberate cuts. The film begins confrontational and close, then settles into a calm, reverent rhythm: fire, seal, steam, texture, and taste. Chef Samar speaks with intimate confidence rather than performance, while natural sound carries the emotion. The final beat returns to warmth, family, and the physical dining room.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Extreme close-up, 50mm macro lens, shallow depth of field. Begin on the rising steam, then pull back slightly as Chef Samar lifts the dum lid.",
+              "visual_action": "Chef Samar's flour-dusted hand grips the lid of a heavy iron pot. She lifts it slowly; hot steam escapes, revealing saffron-stained rice, caramelised onions, and a deeply browned piece of meat. Her eyes meet the lens immediately.",
+              "spoken_dialogue": "If your biryani is ready in twelve minutes, it isn't biryani. It's a reheated idea of one.",
+              "onscreen_text": "12 minutes \u2260 dum biryani",
+              "audio_sfx": "No music at first. Sharp lid scrape, pressurized steam release, then a low single dholak pulse."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Medium close-up of Chef Samar beside the wood-fired stove, followed by slow 35mm tracking shots across the flames, stacked firewood, sealed pots, and her hands checking the coal bed.",
+              "visual_action": "She places split firewood into the clay stove and adjusts the coals with an iron poker. Cut to a clock face marked at 10:30 AM, then a second clock at 4:30 PM. Her hands seal the pot with dough, brush the pastry with egg, and finish the rim with a deliberate palm press. The camera lingers on her fingerprint in the dough.",
+              "spoken_dialogue": "My family has cooked on firewood for four generations. We seal the pot at ten thirty, and we don't open it before four thirty. Six hours. No shortcuts. No microwave. The smoke enters the rice slowly, and the meat learns to fall apart.",
+              "onscreen_text": "10:30 AM \u2014 sealed. 4:30 PM \u2014 opened. Six hours of dum.",
+              "audio_sfx": "Firewood crackle, metal poker against coals, dough sealing, soft dholak rhythm building underneath the natural sounds."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Close-up food cinematography at 85mm. Move slowly across the opened biryani, then cut to a stable medium shot of Chef Samar breaking apart a piece of meat with her fingers.",
+              "visual_action": "Chef Samar opens the sealed pot in the restaurant's open kitchen. A golden crust breaks over saffron rice. She lifts a piece of meat with her fingers; it separates effortlessly. She places a spoonful on a small plate, closes her eyes for a moment, then gestures toward the camera as if offering the first taste.",
+              "spoken_dialogue": "You can taste the difference before you take another bite. The rice holds each grain. The masala has gone deep into the meat. This is what slow dum gives you: aroma you can smell from the lane, and a texture a reheated parcel can never return.",
+              "onscreen_text": "Slow-cooked aroma. Separating meat. Rice that holds its grain.",
+              "audio_sfx": "Pot seal cracking, crisp crust breaking, gentle spoon against ceramic. Dholak recedes; ambient kitchen sound becomes the focus."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Warm handheld 35mm move from Chef Samar to the dining room, then settle into a composed wide shot of a family sharing the freshly opened biryani.",
+              "visual_action": "Chef Samar carries the dum pot toward a reserved family table. Steam rises as the lid comes off in front of guests. A child watches the crust break; an adult serves the first spoonful. Chef Samar stands beside the table, quietly watching the room come alive.",
+              "spoken_dialogue": "A cloud kitchen can send you a meal. Come to the kitchen, and let us give you an occasion. This weekend, taste what six patient hours can do.",
+              "onscreen_text": "Weekend dum tables are open. Come taste the real thing.",
+              "audio_sfx": "Gentle tabla tap and warm string note entering as the family begins eating. Keep real conversation and cutlery sounds audible beneath it."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Reserve your weekend table by phone or on Google Maps, and come hungry for dum.",
+            "visual_action": "Chef Samar points to a simple on-screen booking button showing the restaurant name, Google Maps listing, and phone number. End on the warm dining room with the biryani pot at the centre of the table.",
+            "offer": "Book a weekend dum table through the phone number or Google Maps listing shown on screen; walk-ins are welcome."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Chef Samar Qureshi is not simply cooking biryani; she is defending a four-generation Lucknowi khansama tradition built around patience, firewood, and sensory craft. Most competitors can copy a recipe, recreate a restaurant interior, or photograph a biryani, but they cannot compress six hours of sealed dum into a delivery microwave. Her authority comes from inherited technique plus the visible, time-stamped evidence of her process, making authenticity something the audience can witness rather than merely claim.\",\n  \"audience_pain_insight\": \"City food lovers are not tired of biryani; they are tired of the emotional letdown of ordering it and tasting something reheated, uniform, and forgettable. Families want the meal to feel like an occasion again, but cloud kitchens have trained them to expect sameness everywhere. The deeper friction is doubt: they no longer trust a food delivery app to deliver something genuinely handmade.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The 6-Hour Proof\",\n    \"hook_first_3_seconds\": \"If your biryani is ready in twelve minutes, it isn't biryani. It's a reheated idea of one.\",\n    \"visual_hook\": \"A tight macro shot of Chef Samar's hand lifting the heavy lid of a sealed dum pot. Steam rolls toward the lens, revealing a visible layer of saffron rice and tender meat beneath the sealed pastry.\",\n    \"why_it_works\": \"The opening challenges a hidden assumption with immediate contrast: speed versus patience. It creates curiosity about what six hours actually changes, while the live steam and hand-made seal provide sensory proof that a digital kitchen cannot easily reproduce.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Your Biryani Deserves Six Hours\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Slow-build sensory storytelling with deliberate cuts. The film begins confrontational and close, then settles into a calm, reverent rhythm: fire, seal, steam, texture, and taste. Chef Samar speaks with intimate confidence rather than performance, while natural sound carries the emotion. The final beat returns to warmth, family, and the physical dining room.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Extreme close-up, 50mm macro lens, shallow depth of field. Begin on the rising steam, then pull back slightly as Chef Samar lifts the dum lid.\",\n        \"visual_action\": \"Chef Samar's flour-dusted hand grips the lid of a heavy iron pot. She lifts it slowly; hot steam escapes, revealing saffron-stained rice, caramelised onions, and a deeply browned piece of meat. Her eyes meet the lens immediately.\",\n        \"spoken_dialogue\": \"If your biryani is ready in twelve minutes, it isn't biryani. It's a reheated idea of one.\",\n        \"onscreen_text\": \"12 minutes \u2260 dum biryani\",\n        \"audio_sfx\": \"No music at first. Sharp lid scrape, pressurized steam release, then a low single dholak pulse.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Medium close-up of Chef Samar beside the wood-fired stove, followed by slow 35mm tracking shots across the flames, stacked firewood, sealed pots, and her hands checking the coal bed.\",\n        \"visual_action\": \"She places split firewood into the clay stove and adjusts the coals with an iron poker. Cut to a clock face marked at 10:30 AM, then a second clock at 4:30 PM. Her hands seal the pot with dough, brush the pastry with egg, and finish the rim with a deliberate palm press. The camera lingers on her fingerprint in the dough.\",\n        \"spoken_dialogue\": \"My family has cooked on firewood for four generations. We seal the pot at ten thirty, and we don't open it before four thirty. Six hours. No shortcuts. No microwave. The smoke enters the rice slowly, and the meat learns to fall apart.\",\n        \"onscreen_text\": \"10:30 AM \u2014 sealed. 4:30 PM \u2014 opened. Six hours of dum.\",\n        \"audio_sfx\": \"Firewood crackle, metal poker against coals, dough sealing, soft dholak rhythm building underneath the natural sounds.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Close-up food cinematography at 85mm. Move slowly across the opened biryani, then cut to a stable medium shot of Chef Samar breaking apart a piece of meat with her fingers.\",\n        \"visual_action\": \"Chef Samar opens the sealed pot in the restaurant's open kitchen. A golden crust breaks over saffron rice. She lifts a piece of meat with her fingers; it separates effortlessly. She places a spoonful on a small plate, closes her eyes for a moment, then gestures toward the camera as if offering the first taste.\",\n        \"spoken_dialogue\": \"You can taste the difference before you take another bite. The rice holds each grain. The masala has gone deep into the meat. This is what slow dum gives you: aroma you can smell from the lane, and a texture a reheated parcel can never return.\",\n        \"onscreen_text\": \"Slow-cooked aroma. Separating meat. Rice that holds its grain.\",\n        \"audio_sfx\": \"Pot seal cracking, crisp crust breaking, gentle spoon against ceramic. Dholak recedes; ambient kitchen sound becomes the focus.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Warm handheld 35mm move from Chef Samar to the dining room, then settle into a composed wide shot of a family sharing the freshly opened biryani.\",\n        \"visual_action\": \"Chef Samar carries the dum pot toward a reserved family table. Steam rises as the lid comes off in front of guests. A child watches the crust break; an adult serves the first spoonful. Chef Samar stands beside the table, quietly watching the room come alive.\",\n        \"spoken_dialogue\": \"A cloud kitchen can send you a meal. Come to the kitchen, and let us give you an occasion. This weekend, taste what six patient hours can do.\",\n        \"onscreen_text\": \"Weekend dum tables are open. Come taste the real thing.\",\n        \"audio_sfx\": \"Gentle tabla tap and warm string note entering as the family begins eating. Keep real conversation and cutlery sounds audible beneath it.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Reserve your weekend table by phone or on Google Maps, and come hungry for dum.\",\n      \"visual_action\": \"Chef Samar points to a simple on-screen booking button showing the restaurant name, Google Maps listing, and phone number. End on the warm dining room with the biryani pot at the centre of the table.\",\n      \"offer\": \"Book a weekend dum table through the phone number or Google Maps listing shown on screen; walk-ins are welcome.\"\n    }\n  }\n}"
+    },
+    "gpt_oss": {
+      "model": "openai/gpt-oss-120b",
+      "provider": "Groq LPU",
+      "ttft_seconds": 1.85,
+      "total_seconds": 3.87,
+      "content_length": 3827,
+      "parsed_json": {
+        "brand_moat_statement": "Chef Samar Qureshi, a 4th\u2011generation Lucknowi khansama, guards a secret 6\u2011hour firewood dum that only his lineage and obsessive sensory craft can deliver, creating a heritage\u2011driven moat no cloud kitchen can replicate.",
+        "audience_pain_insight": "Food lovers feel a silent disappointment when every bite of mass\u2011produced biryani tastes flat, because they crave the authentic, lingering aroma of real fire\u2011cooked heritage that they can\u2019t name but instantly miss.",
+        "viral_angle": {
+          "angle_name": "Firewood Whisper",
+          "hook_first_3_seconds": "What if I told you a biryani can\u2019t be rushed?",
+          "visual_hook": "A close\u2011up of glowing firewood embers as a hand sprinkles saffron over a sealed pot, steam rising in slow motion.",
+          "why_it_works": "It triggers curiosity and the sensory imagination, leveraging the scarcity principle (only fire can create this) and the authority of a master chef."
+        },
+        "production_script": {
+          "working_title": "6 Hours of Fire: Bawarchi\u2019s Unfake Biryani",
+          "target_duration_seconds": 50,
+          "pacing": "Deliberate, meditative rhythm that mirrors the slow dum process\u2014steady cuts, lingering soundscapes, and a calm, passionate voice.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Slow dolly into the smoky kitchen, shallow depth of field focusing on ember glow; lens pulls slightly forward.",
+              "visual_action": "Chef Samar lights firewood, tosses a pinch of charcoal into the flame; saffron dust falls onto a sealed copper pot.",
+              "spoken_dialogue": "What if I told you a biryani can\u2019t be rushed?",
+              "onscreen_text": "6\u2011hour firewood dum",
+              "audio_sfx": "Crackle of fire, soft tabla drone, faint rustle of saffron."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Overhead tracking shot, smooth glide across the work\u2011top; focus shifts from hand to ingredients.",
+              "visual_action": "Chef layers marinated meat, basmati rice, rose water, and whole spices into the pot; each layer is brushed with ghee.",
+              "spoken_dialogue": "Every grain waits for the wood\u2019s sigh, every spice listens to the flame.",
+              "onscreen_text": "Patience is the secret",
+              "audio_sfx": "Gentle simmer, soft sitar notes, occasional pop of ghee."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Time\u2011lapse from side view; clock hands spin, firewood glows, smoke curls upward.",
+              "visual_action": "The pot is sealed with a dough lid, firewood burns steadily; a visual timer shows 6\u2011hour progression.",
+              "spoken_dialogue": "Six hours later, the lid lifts\u2026 and the aroma writes its own story.",
+              "onscreen_text": "You can\u2019t fake this",
+              "audio_sfx": "Rising ambient kitchen hum, crescendo of tabla, faint crackle fading into a deep breath."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Close\u2011up of Chef lifting the lid; slow\u2011motion steam swirl; cut to family at table smiling.",
+              "visual_action": "Steam bursts, golden biryani glistens; Chef scoops a fragrant serving onto a plate; family raises forks in anticipation.",
+              "spoken_dialogue": "Come taste the heritage that only fire can tell.",
+              "onscreen_text": "Reserve your table this weekend",
+              "audio_sfx": "Gentle tabla rhythm, soft clink of plates, ambient murmurs of delighted diners."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Book your table for Saturday night and let the fire write your dinner.",
+            "visual_action": "On\u2011screen button appears: 'Reserve Now \u2013 Link in Bio', with a subtle flame animation.",
+            "offer": "No pre\u2011payment required, just a seat at the fire."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Chef Samar Qureshi, a 4th\u2011generation Lucknowi khansama, guards a secret 6\u2011hour firewood dum that only his lineage and obsessive sensory craft can deliver, creating a heritage\u2011driven moat no cloud kitchen can replicate.\",\n  \"audience_pain_insight\": \"Food lovers feel a silent disappointment when every bite of mass\u2011produced biryani tastes flat, because they crave the authentic, lingering aroma of real fire\u2011cooked heritage that they can\u2019t name but instantly miss.\",\n  \"viral_angle\": {\n    \"angle_name\": \"Firewood Whisper\",\n    \"hook_first_3_seconds\": \"What if I told you a biryani can\u2019t be rushed?\",\n    \"visual_hook\": \"A close\u2011up of glowing firewood embers as a hand sprinkles saffron over a sealed pot, steam rising in slow motion.\",\n    \"why_it_works\": \"It triggers curiosity and the sensory imagination, leveraging the scarcity principle (only fire can create this) and the authority of a master chef.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"6 Hours of Fire: Bawarchi\u2019s Unfake Biryani\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Deliberate, meditative rhythm that mirrors the slow dum process\u2014steady cuts, lingering soundscapes, and a calm, passionate voice.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Slow dolly into the smoky kitchen, shallow depth of field focusing on ember glow; lens pulls slightly forward.\",\n        \"visual_action\": \"Chef Samar lights firewood, tosses a pinch of charcoal into the flame; saffron dust falls onto a sealed copper pot.\",\n        \"spoken_dialogue\": \"What if I told you a biryani can\u2019t be rushed?\",\n        \"onscreen_text\": \"6\u2011hour firewood dum\",\n        \"audio_sfx\": \"Crackle of fire, soft tabla drone, faint rustle of saffron.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Overhead tracking shot, smooth glide across the work\u2011top; focus shifts from hand to ingredients.\",\n        \"visual_action\": \"Chef layers marinated meat, basmati rice, rose water, and whole spices into the pot; each layer is brushed with ghee.\",\n        \"spoken_dialogue\": \"Every grain waits for the wood\u2019s sigh, every spice listens to the flame.\",\n        \"onscreen_text\": \"Patience is the secret\",\n        \"audio_sfx\": \"Gentle simmer, soft sitar notes, occasional pop of ghee.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Time\u2011lapse from side view; clock hands spin, firewood glows, smoke curls upward.\",\n        \"visual_action\": \"The pot is sealed with a dough lid, firewood burns steadily; a visual timer shows 6\u2011hour progression.\",\n        \"spoken_dialogue\": \"Six hours later, the lid lifts\u2026 and the aroma writes its own story.\",\n        \"onscreen_text\": \"You can\u2019t fake this\",\n        \"audio_sfx\": \"Rising ambient kitchen hum, crescendo of tabla, faint crackle fading into a deep breath.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Close\u2011up of Chef lifting the lid; slow\u2011motion steam swirl; cut to family at table smiling.\",\n        \"visual_action\": \"Steam bursts, golden biryani glistens; Chef scoops a fragrant serving onto a plate; family raises forks in anticipation.\",\n        \"spoken_dialogue\": \"Come taste the heritage that only fire can tell.\",\n        \"onscreen_text\": \"Reserve your table this weekend\",\n        \"audio_sfx\": \"Gentle tabla rhythm, soft clink of plates, ambient murmurs of delighted diners.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Book your table for Saturday night and let the fire write your dinner.\",\n      \"visual_action\": \"On\u2011screen button appears: 'Reserve Now \u2013 Link in Bio', with a subtle flame animation.\",\n      \"offer\": \"No pre\u2011payment required, just a seat at the fire.\"\n    }\n  }\n}"
+    },
+    "judgment": {
+      "model_a_score": 89,
+      "model_b_score": 82,
+      "winner": "Model A (MiniMax)",
+      "winner_reason": "Model A delivers a tighter strategic fit, a more original and punchy hook, richer storytelling, and a tone that feels authentically Chef Samar\u2019s voice without resorting to generic heritage clich\u00e9s. Its visual plan is detailed yet feasible, and the CTA is crystal\u2011clear, giving it a clear edge across the weighted criteria.",
+      "hook_verdict": "Model A\u2019s hook \u2013 \u201cIf your biryani is ready in twelve minutes, it isn\u2019t biryani. It\u2019s a reheated idea of one.\u201d \u2013 is a bold, confrontational statement that instantly challenges the viewer\u2019s assumptions and creates curiosity. Model B\u2019s hook \u2013 \u201cWhat if I told you a biryani can\u2019t be rushed?\u201d \u2013 is softer and more generic. Therefore Model A\u2019s 0\u20113\u2011second hook is stronger.",
+      "tone_adaptation_verdict": "Model A adapts to Chef Samar\u2019s persona with intimate, confident language (\u201cmy family\u201d, \u201cwe seal the pot\u201d) and avoids overused heritage buzzwords, whereas Model B leans on broader, clich\u00e9\u2011prone phrasing like \u201cheritage that only fire can tell.\u201d Model A wins on tone adaptation."
+    }
+  },
+  {
+    "scenario": {
+      "id": "real_estate",
+      "category": "Real Estate Consultant",
+      "brand_name": "Veritas Property Advisory",
+      "client_persona": "Karan Malhotra (Ex-investment banker turned luxury property advisor, sharp, numbers-driven, transparent, zero fluff).",
+      "target_audience": "First-time luxury homebuyers (budget \u20b91.5 Cr - \u20b94 Cr) terrified of hidden builder delays, fake carpet area math, and false ROI.",
+      "marketing_goal": "Generate qualified buyer consultation calls (high trust, high ticket).",
+      "topic": "The 'Super Built-Up' scam: How builders legally charge you for 300 sq ft of thin air",
+      "negative_constraints": [
+        "DO NOT say 'Buy your dream home today!'",
+        "DO NOT wave keys at the camera.",
+        "DO NOT show generic facade drone shots without substance."
+      ]
+    },
+    "minimax": {
+      "model": "minimaxai/minimax-m3.1-flash",
+      "provider": "NVIDIA NIM",
+      "ttft_seconds": 0.87,
+      "total_seconds": 62.74,
+      "reasoning_length": 678,
+      "content_length": 7183,
+      "parsed_json": {
+        "brand_moat_statement": "Karan Malhotra is not selling optimism or aspirational lifestyle; he is applying an ex-investment banker's diligence framework to a purchase where most buyers lack both vocabulary and negotiating power. He can decode the pricing sheet, quantify the gap between what buyers pay for and what they can actually use, and show exactly where to push back. That combination of financial literacy, blunt transparency, and builder-side credibility creates trust that lifestyle-focused brokers cannot manufacture.",
+        "audience_pain_insight": "First-time luxury buyers are not merely afraid of being overcharged; they are afraid of looking uninformed in a high-stakes negotiation. The builder's sales pitch creates urgency, while the buyer silently worries: 'If I question this number, will I lose the best unit?' So they calculate nothing, ask no follow-up questions, and discover the cost of their silence years later.",
+        "viral_angle": {
+          "angle_name": "The 25% Invoice Nobody Sees",
+          "hook_first_3_seconds": "Your 1,500 sq ft flat may not contain 1,500 sq ft of home.",
+          "visual_hook": "A printed payment schedule slams onto the table. Karan's finger lands on the number '1,500 sq ft' as a red line strikes through it and a calculator instantly displays '25% extra area.'",
+          "why_it_works": "The opening attacks a specific, expensive anxiety with a number rather than a vague warning. It also triggers loss aversion: the viewer immediately wants to know whether their own agreement contains the same hidden premium. The calculator visual turns a technical disclosure into an instantly legible personal threat."
+        },
+        "production_script": {
+          "working_title": "The 'Super Built-Up' Scam: The 25% Invoice Nobody Sees",
+          "target_duration_seconds": 50,
+          "pacing": "Fast, evidence-led and controlled. Karan speaks directly to camera with no greeting, no hype and no lifestyle montage. Each section introduces a number, proves the claim on screen, then converts it into rupees. Cuts are tight and purposeful, matching an investment banker presenting a risk memo rather than a broker pitching a dream.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Extreme close-up, 50mm lens, overhead angle on the payment schedule; quick push-in as Karan's finger hits the area line, then a sharp cut to a tight medium shot of his face.",
+              "visual_action": "Karan slides a printed payment schedule into frame and taps 'Super Built-Up Area: 1,500 sq ft.' A red strike-through appears, followed by a calculator overlay reading '1,200 carpet + 300 non-usable = 25% markup.'",
+              "spoken_dialogue": "Your 1,500 sq ft flat may not contain 1,500 sq ft of home.",
+              "onscreen_text": "1,500 sq ft = 1,200 sq ft + 300 sq ft of thin air",
+              "audio_sfx": "Paper slam, sharp calculator keystroke, then a low ticking clock under a restrained score."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Locked medium shot at eye level, 35mm lens, with a clean side insert of a floor plan. Occasional punch-in on the highlighted zones.",
+              "visual_action": "Karan draws a simple floor-plan diagram on a glass board. He shades the living and bedroom area in blue, then marks balconies, shafts, corridors and shared spaces in red. He writes 'CARPET' beside the blue zone and 'SUPER BUILT-UP' beside the entire outline.",
+              "spoken_dialogue": "Let's be precise. 'Super built-up area' is a pricing and accounting convention, not necessarily fraud. It can include your balcony, wall thickness, service shafts and common spaces. The problem is simple: many buyers assume every square foot inside that outline is usable private space. Now check the rate sheet. If the builder charges \u20b93,000 per square foot on super built-up area, your 1,200 square feet of carpet becomes a \u20b94.5 crore invoice. The same home priced on carpet is \u20b93.6 crore. That is \u20b990 lakh for space you do not fully control or even use.",
+              "onscreen_text": "Same home. Two pricing bases. \u20b990 lakh difference.",
+              "audio_sfx": "Marker squeaks, two soft calculator confirmations, subtle score pulse when '\u20b990 lakh' appears."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Tight close-up of Karan, 85mm lens, minimal movement; cut to an overhead insert of three documents arranged as a diligence checklist.",
+              "visual_action": "Karan holds up three sheets one by one: the area statement, the price sheet and the payment plan. He places them beside the floor plan, then circles three questions in red: 'Area basis?', 'Usable efficiency?', 'Delay compensation?'",
+              "spoken_dialogue": "Before you pay a rupee, ask three questions. One: is the rate per square foot applied to carpet, built-up or super built-up area? Two: what percentage of my money buys actual usable private space? Three: if the project is delayed, is the refund my only remedy, or do I retain an interest-bearing claim? This is not about distrusting builders. It is about refusing to finance a builder's accounting choice with your money. A luxury home can be a good investment, but only if the numbers survive scrutiny.",
+              "onscreen_text": "Ask before you pay: 1) Area basis 2) Usable efficiency 3) Delay protection",
+              "audio_sfx": "Three crisp document taps, faint pen circles, score tightening under the final line."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Steady medium close-up, 50mm lens, with a slow push-in as Karan leans toward the lens. Final cut to a clean end card with the floor plan and a checklist.",
+              "visual_action": "Karan removes the payment schedule from the frame, leaving the three-question checklist visible. He points once at the camera, then gestures toward the end-card button and booking QR code.",
+              "spoken_dialogue": "Here is the difference: a broker wants you excited about the address. My job is to make sure the price sheet, the usable area and the delay clause all make sense before you commit. If you are buying between \u20b91.5 crore and \u20b94 crore, send me your payment plan. I will review the area math, flag the red flags and tell you what to negotiate. No pressure, no pitch, just the numbers.",
+              "onscreen_text": "Send your payment plan. Get a free numbers check.",
+              "audio_sfx": "Music resolves on a clean low note; subtle click as the QR code appears."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Send me your payment plan on WhatsApp. I will review the area math, flag the red flags and tell you what to negotiate. No pressure, no pitch, just the numbers.",
+            "visual_action": "Karan points to a WhatsApp icon and booking QR code. The end card displays 'Free 15-Minute Payment Plan Review' with three bullet points: 'Area math', 'Usable efficiency', 'Delay protection'.",
+            "offer": "A free 15-minute payment plan review for buyers with a \u20b91.5 crore to \u20b94 crore budget, followed by an optional paid advisory engagement only if the client wants negotiation support."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Karan Malhotra is not selling optimism or aspirational lifestyle; he is applying an ex-investment banker's diligence framework to a purchase where most buyers lack both vocabulary and negotiating power. He can decode the pricing sheet, quantify the gap between what buyers pay for and what they can actually use, and show exactly where to push back. That combination of financial literacy, blunt transparency, and builder-side credibility creates trust that lifestyle-focused brokers cannot manufacture.\",\n  \"audience_pain_insight\": \"First-time luxury buyers are not merely afraid of being overcharged; they are afraid of looking uninformed in a high-stakes negotiation. The builder's sales pitch creates urgency, while the buyer silently worries: 'If I question this number, will I lose the best unit?' So they calculate nothing, ask no follow-up questions, and discover the cost of their silence years later.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The 25% Invoice Nobody Sees\",\n    \"hook_first_3_seconds\": \"Your 1,500 sq ft flat may not contain 1,500 sq ft of home.\",\n    \"visual_hook\": \"A printed payment schedule slams onto the table. Karan's finger lands on the number '1,500 sq ft' as a red line strikes through it and a calculator instantly displays '25% extra area.'\",\n    \"why_it_works\": \"The opening attacks a specific, expensive anxiety with a number rather than a vague warning. It also triggers loss aversion: the viewer immediately wants to know whether their own agreement contains the same hidden premium. The calculator visual turns a technical disclosure into an instantly legible personal threat.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"The 'Super Built-Up' Scam: The 25% Invoice Nobody Sees\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Fast, evidence-led and controlled. Karan speaks directly to camera with no greeting, no hype and no lifestyle montage. Each section introduces a number, proves the claim on screen, then converts it into rupees. Cuts are tight and purposeful, matching an investment banker presenting a risk memo rather than a broker pitching a dream.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Extreme close-up, 50mm lens, overhead angle on the payment schedule; quick push-in as Karan's finger hits the area line, then a sharp cut to a tight medium shot of his face.\",\n        \"visual_action\": \"Karan slides a printed payment schedule into frame and taps 'Super Built-Up Area: 1,500 sq ft.' A red strike-through appears, followed by a calculator overlay reading '1,200 carpet + 300 non-usable = 25% markup.'\",\n        \"spoken_dialogue\": \"Your 1,500 sq ft flat may not contain 1,500 sq ft of home.\",\n        \"onscreen_text\": \"1,500 sq ft = 1,200 sq ft + 300 sq ft of thin air\",\n        \"audio_sfx\": \"Paper slam, sharp calculator keystroke, then a low ticking clock under a restrained score.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Locked medium shot at eye level, 35mm lens, with a clean side insert of a floor plan. Occasional punch-in on the highlighted zones.\",\n        \"visual_action\": \"Karan draws a simple floor-plan diagram on a glass board. He shades the living and bedroom area in blue, then marks balconies, shafts, corridors and shared spaces in red. He writes 'CARPET' beside the blue zone and 'SUPER BUILT-UP' beside the entire outline.\",\n        \"spoken_dialogue\": \"Let's be precise. 'Super built-up area' is a pricing and accounting convention, not necessarily fraud. It can include your balcony, wall thickness, service shafts and common spaces. The problem is simple: many buyers assume every square foot inside that outline is usable private space. Now check the rate sheet. If the builder charges \u20b93,000 per square foot on super built-up area, your 1,200 square feet of carpet becomes a \u20b94.5 crore invoice. The same home priced on carpet is \u20b93.6 crore. That is \u20b990 lakh for space you do not fully control or even use.\",\n        \"onscreen_text\": \"Same home. Two pricing bases. \u20b990 lakh difference.\",\n        \"audio_sfx\": \"Marker squeaks, two soft calculator confirmations, subtle score pulse when '\u20b990 lakh' appears.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Tight close-up of Karan, 85mm lens, minimal movement; cut to an overhead insert of three documents arranged as a diligence checklist.\",\n        \"visual_action\": \"Karan holds up three sheets one by one: the area statement, the price sheet and the payment plan. He places them beside the floor plan, then circles three questions in red: 'Area basis?', 'Usable efficiency?', 'Delay compensation?'\",\n        \"spoken_dialogue\": \"Before you pay a rupee, ask three questions. One: is the rate per square foot applied to carpet, built-up or super built-up area? Two: what percentage of my money buys actual usable private space? Three: if the project is delayed, is the refund my only remedy, or do I retain an interest-bearing claim? This is not about distrusting builders. It is about refusing to finance a builder's accounting choice with your money. A luxury home can be a good investment, but only if the numbers survive scrutiny.\",\n        \"onscreen_text\": \"Ask before you pay: 1) Area basis 2) Usable efficiency 3) Delay protection\",\n        \"audio_sfx\": \"Three crisp document taps, faint pen circles, score tightening under the final line.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Steady medium close-up, 50mm lens, with a slow push-in as Karan leans toward the lens. Final cut to a clean end card with the floor plan and a checklist.\",\n        \"visual_action\": \"Karan removes the payment schedule from the frame, leaving the three-question checklist visible. He points once at the camera, then gestures toward the end-card button and booking QR code.\",\n        \"spoken_dialogue\": \"Here is the difference: a broker wants you excited about the address. My job is to make sure the price sheet, the usable area and the delay clause all make sense before you commit. If you are buying between \u20b91.5 crore and \u20b94 crore, send me your payment plan. I will review the area math, flag the red flags and tell you what to negotiate. No pressure, no pitch, just the numbers.\",\n        \"onscreen_text\": \"Send your payment plan. Get a free numbers check.\",\n        \"audio_sfx\": \"Music resolves on a clean low note; subtle click as the QR code appears.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Send me your payment plan on WhatsApp. I will review the area math, flag the red flags and tell you what to negotiate. No pressure, no pitch, just the numbers.\",\n      \"visual_action\": \"Karan points to a WhatsApp icon and booking QR code. The end card displays 'Free 15-Minute Payment Plan Review' with three bullet points: 'Area math', 'Usable efficiency', 'Delay protection'.\",\n      \"offer\": \"A free 15-minute payment plan review for buyers with a \u20b91.5 crore to \u20b94 crore budget, followed by an optional paid advisory engagement only if the client wants negotiation support.\"\n    }\n  }\n}"
+    },
+    "gpt_oss": {
+      "model": "openai/gpt-oss-120b",
+      "provider": "Groq LPU",
+      "ttft_seconds": 1.66,
+      "total_seconds": 3.78,
+      "content_length": 3915,
+      "parsed_json": {
+        "brand_moat_statement": "Karan Malhotra\u2019s ex\u2011investment\u2011banker pedigree gives him razor\u2011sharp financial rigor, while his zero\u2011fluff, transparent communication builds trust that no typical realtor can match \u2013 creating an unfair competitive moat of data\u2011driven credibility.",
+        "audience_pain_insight": "First\u2011time luxury buyers secretly fear that they\u2019re paying for invisible square footage, and that hidden \u2018Super Built\u2011Up\u2019 math will erode their hard\u2011earned money without any recourse.",
+        "viral_angle": {
+          "angle_name": "Thin Air Audit",
+          "hook_first_3_seconds": "What if I told you 300 square feet of your home is just\u2026 air?",
+          "visual_hook": "Karan holds a clear acrylic block with a faint grid, turning it toward the camera as the background fades to a stark white, instantly highlighting emptiness.",
+          "why_it_works": "It triggers curiosity and loss aversion by visualizing the invisible scam, while Karan\u2019s authoritative tone promises a concrete solution."
+        },
+        "production_script": {
+          "working_title": "The \u2018Super Built\u2011Up\u2019 Scam: 300\u202fsq\u202fft of Thin Air",
+          "target_duration_seconds": 50,
+          "pacing": "Fast\u2011paced, data\u2011driven cuts with crisp narration; each segment delivers a single insight in 4\u20116 seconds, matching Karan\u2019s sharp, numbers\u2011focused persona.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Close\u2011up on Karan\u2019s face, slight dolly\u2011in; shallow depth of field.",
+              "visual_action": "Karan holds a transparent acrylic ruler and a blueprint, turning the ruler to catch light.",
+              "spoken_dialogue": "What if I told you 300 square feet of your home is just\u2026 air?",
+              "onscreen_text": "300\u202fsq\u202fft = thin air?",
+              "audio_sfx": "Soft ticking metronome, low synth pad"
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Over\u2011the\u2011shoulder of Karan flipping a glossy builder brochure; slight push\u2011in as he points.",
+              "visual_action": "Highlight the term \u2018Super Built\u2011Up\u2019 in bold; animated overlay shows the term expanding by 25% with a glowing arrow.",
+              "spoken_dialogue": "Builders love the term \u2018Super Built\u2011Up\u2019 \u2013 it adds a 25% premium that you never see in the walls.",
+              "onscreen_text": "Super Built\u2011Up = 25% hidden premium",
+              "audio_sfx": "Paper rustle, subtle whoosh as the overlay expands"
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Slow pan across a 3\u2011D apartment model; depth\u2011of\u2011field shifts to reveal empty space.",
+              "visual_action": "Karan uses a laser pointer to trace the \u2018missing\u2019 300\u202fsq\u202fft; the traced area fades to transparent, numbers pop up counting the loss.",
+              "spoken_dialogue": "Here\u2019s the math: 1,500\u202fsq\u202fft carpet becomes 1,800\u202fsq\u202fft super built\u2011up. You pay for 300\u202fsq\u202fft that never exist.",
+              "onscreen_text": "Pay for 300\u202fsq\u202fft of nothing",
+              "audio_sfx": "Laser beep, soft drum beat building tension"
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Medium shot of Karan at a sleek desk; laptop screen shows Veritas Property Advisory dashboard.",
+              "visual_action": "He clicks \u2018Schedule Audit\u2019; a calendar widget slides in, then a bright \u2018Free 15\u2011min Audit\u2019 button pulses.",
+              "spoken_dialogue": "I audit every square foot, so you only pay for walls you can touch. Book a free 15\u2011minute audit \u2013 no strings attached.",
+              "onscreen_text": "Free 15\u2011min audit \u2013 link below",
+              "audio_sfx": "Confident chime, uplifting instrumental rise"
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Click the link, schedule your audit, and let\u2019s turn numbers into certainty.",
+            "visual_action": "Animated button \u2018Schedule My Free Audit\u2019 appears; Karan points to it as it pulses.",
+            "offer": "Free 15\u2011minute, no\u2011obligation property audit"
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Karan Malhotra\u2019s ex\u2011investment\u2011banker pedigree gives him razor\u2011sharp financial rigor, while his zero\u2011fluff, transparent communication builds trust that no typical realtor can match \u2013 creating an unfair competitive moat of data\u2011driven credibility.\",\n  \"audience_pain_insight\": \"First\u2011time luxury buyers secretly fear that they\u2019re paying for invisible square footage, and that hidden \u2018Super Built\u2011Up\u2019 math will erode their hard\u2011earned money without any recourse.\",\n  \"viral_angle\": {\n    \"angle_name\": \"Thin Air Audit\",\n    \"hook_first_3_seconds\": \"What if I told you 300 square feet of your home is just\u2026 air?\",\n    \"visual_hook\": \"Karan holds a clear acrylic block with a faint grid, turning it toward the camera as the background fades to a stark white, instantly highlighting emptiness.\",\n    \"why_it_works\": \"It triggers curiosity and loss aversion by visualizing the invisible scam, while Karan\u2019s authoritative tone promises a concrete solution.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"The \u2018Super Built\u2011Up\u2019 Scam: 300\u202fsq\u202fft of Thin Air\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Fast\u2011paced, data\u2011driven cuts with crisp narration; each segment delivers a single insight in 4\u20116 seconds, matching Karan\u2019s sharp, numbers\u2011focused persona.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Close\u2011up on Karan\u2019s face, slight dolly\u2011in; shallow depth of field.\",\n        \"visual_action\": \"Karan holds a transparent acrylic ruler and a blueprint, turning the ruler to catch light.\",\n        \"spoken_dialogue\": \"What if I told you 300 square feet of your home is just\u2026 air?\",\n        \"onscreen_text\": \"300\u202fsq\u202fft = thin air?\",\n        \"audio_sfx\": \"Soft ticking metronome, low synth pad\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Over\u2011the\u2011shoulder of Karan flipping a glossy builder brochure; slight push\u2011in as he points.\",\n        \"visual_action\": \"Highlight the term \u2018Super Built\u2011Up\u2019 in bold; animated overlay shows the term expanding by 25% with a glowing arrow.\",\n        \"spoken_dialogue\": \"Builders love the term \u2018Super Built\u2011Up\u2019 \u2013 it adds a 25% premium that you never see in the walls.\",\n        \"onscreen_text\": \"Super Built\u2011Up = 25% hidden premium\",\n        \"audio_sfx\": \"Paper rustle, subtle whoosh as the overlay expands\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Slow pan across a 3\u2011D apartment model; depth\u2011of\u2011field shifts to reveal empty space.\",\n        \"visual_action\": \"Karan uses a laser pointer to trace the \u2018missing\u2019 300\u202fsq\u202fft; the traced area fades to transparent, numbers pop up counting the loss.\",\n        \"spoken_dialogue\": \"Here\u2019s the math: 1,500\u202fsq\u202fft carpet becomes 1,800\u202fsq\u202fft super built\u2011up. You pay for 300\u202fsq\u202fft that never exist.\",\n        \"onscreen_text\": \"Pay for 300\u202fsq\u202fft of nothing\",\n        \"audio_sfx\": \"Laser beep, soft drum beat building tension\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Medium shot of Karan at a sleek desk; laptop screen shows Veritas Property Advisory dashboard.\",\n        \"visual_action\": \"He clicks \u2018Schedule Audit\u2019; a calendar widget slides in, then a bright \u2018Free 15\u2011min Audit\u2019 button pulses.\",\n        \"spoken_dialogue\": \"I audit every square foot, so you only pay for walls you can touch. Book a free 15\u2011minute audit \u2013 no strings attached.\",\n        \"onscreen_text\": \"Free 15\u2011min audit \u2013 link below\",\n        \"audio_sfx\": \"Confident chime, uplifting instrumental rise\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Click the link, schedule your audit, and let\u2019s turn numbers into certainty.\",\n      \"visual_action\": \"Animated button \u2018Schedule My Free Audit\u2019 appears; Karan points to it as it pulses.\",\n      \"offer\": \"Free 15\u2011minute, no\u2011obligation property audit\"\n    }\n  }\n}"
+    },
+    "judgment": {
+      "model_a_score": 90,
+      "model_b_score": 73,
+      "winner": "Model A (MiniMax)",
+      "winner_reason": "Model A delivers a razor\u2011sharp, data\u2011first narrative that mirrors Karan Malhotra\u2019s ex\u2011investment\u2011banker mindset. It provides a detailed diligence checklist, concrete rupee calculations, and a no\u2011fluff CTA that directly addresses the buyer\u2019s fear of looking uninformed. The tone is blunt, transparent, and entirely free of marketing clich\u00e9s, which aligns perfectly with the persona.",
+      "hook_verdict": "Model A\u2019s hook \u2013 \u201cYour 1,500\u202fsq\u202fft flat may not contain 1,500\u202fsq\u202fft of home.\u201d \u2013 is more powerful than Model B\u2019s \u201cWhat if I told you 300\u202fsq\u202fft of your home is just\u2026 air?\u201d because it uses the viewer\u2019s own unit size, instantly triggers loss aversion, and embeds a numeric cue that resonates with a numbers\u2011driven audience.",
+      "tone_adaptation_verdict": "Model A adapts to the persona without clich\u00e9s. Its script is stripped of hype, uses precise financial language, and speaks directly in a consultant\u2011style voice, whereas Model B slips in softer marketing phrases like \u201cno strings attached\u201d and a more generic sales tone."
+    }
+  },
+  {
+    "scenario": {
+      "id": "saas",
+      "category": "B2B SaaS Founder",
+      "brand_name": "PipelinePulse",
+      "client_persona": "Rohan Deshmukh (Ex-VP of Sales turned B2B SaaS founder, blunt, battle-tested, hates CRM data-entry chores).",
+      "target_audience": "B2B Sales VPs, CROs, and Founders losing 35% of pipeline to ghosted enterprise deals.",
+      "marketing_goal": "Drive enterprise demo bookings and trial sign-ups.",
+      "topic": "Why 70% of deals marked 'Closing This Month' are already dead (and reps are lying to your CRM)",
+      "negative_constraints": [
+        "DO NOT say 'Are you struggling to scale your business?'",
+        "DO NOT use empty corporate buzzwords ('synergy, paradigm shift, holistic').",
+        "DO NOT write a cheesy cartoon explainer."
+      ]
+    },
+    "minimax": {
+      "model": "minimaxai/minimax-m3.1-flash",
+      "provider": "NVIDIA NIM",
+      "ttft_seconds": 0.35,
+      "total_seconds": 41.65,
+      "reasoning_length": 218,
+      "content_length": 6331,
+      "parsed_json": {
+        "brand_moat_statement": "Rohan Deshmukh is not selling software from the outside. He built PipelinePulse after running sales teams, watching reps pad forecasts, and getting blindsided by deals that vanished after the CRM said 'commit'. He can call out the exact tactics that keep pipeline reports looking clean while revenue stalls, then show operators how to fix it without adding another layer of data entry. That battlefield credibility makes his advice feel like an internal sales audit, not a vendor pitch.",
+        "audience_pain_insight": "The audience is not merely losing deals. It is losing control of the forecast and being forced to defend a number they no longer trust. When 70% of 'Closing This Month' deals are dead, leaders still have to sit in forecast meetings and pretend confidence. The real fear is not looking bad; it is discovering that their entire operating rhythm has been built on numbers nobody can verify.",
+        "viral_angle": {
+          "angle_name": "The Forecast Autopsy",
+          "hook_first_3_seconds": "Seventy percent of your 'Closing This Month' deals are already dead.",
+          "visual_hook": "A CRM pipeline board fills the frame. A large red '70% DEAD' stamp slams across the 'Closing This Month' column as the forecast total visibly crashes.",
+          "why_it_works": "The opening attacks a metric the audience defends every week, then threatens the credibility of the forecast they are presenting. It creates immediate reputational urgency: the viewer must keep watching to learn whether their pipeline is being overstated and who is responsible."
+        },
+        "production_script": {
+          "working_title": "Your CRM Is Lying. Your Pipeline Is Too.",
+          "target_duration_seconds": 50,
+          "pacing": "Fast, blunt, and evidence-led. Rohan speaks directly to camera with short sentences, then cuts to visual proof. No setup, no corporate warm-up, and no exaggerated animation. The rhythm feels like a former VP interrupting a forecast meeting with the truth.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Extreme close-up of a laptop screen, 24mm lens, with a fast push-in that locks on the 'Closing This Month' column.",
+              "visual_action": "A CRM board shows multiple late-stage opportunities. A red '70% DEAD' stamp hits the screen, and the projected revenue number drops from $4.2M to $1.1M. Rohan's hand pulls the laptop toward camera.",
+              "spoken_dialogue": "Seventy percent of your 'Closing This Month' deals are already dead.",
+              "onscreen_text": "70% OF 'CLOSING THIS MONTH' = DEAD",
+              "audio_sfx": "Hard impact hit, brief digital glitch, then a low, tense pulse."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Medium close-up of Rohan in a dim home office, 50mm lens, locked camera with subtle handheld movement. Cutaway inserts of a CRM stage dropdown and a calendar with empty meeting slots.",
+              "visual_action": "Rohan leans forward and points at the screen. Cut to a rep clicking 'Commit' without a mutual action plan. Another cut shows a buyer rescheduling a demo for the third time. Rohan taps a printed pipeline sheet and crosses out entire rows.",
+              "spoken_dialogue": "I ran sales. I saw the trick. A rep marks the deal 'Commit' because the buyer said 'next week.' No signed order form. No confirmed implementation date. No next meeting on the calendar. Then the rep updates the CRM so the forecast looks finished. The deal isn't late. It never had a close date. It had a hope date.",
+              "onscreen_text": "NO ORDER FORM. NO NEXT MEETING. NO DEAL.",
+              "audio_sfx": "Dry UI clicks, a pen scratch, and a sharp marker swipe."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Over-the-shoulder shot of Rohan reviewing a live PipelinePulse dashboard, 35mm lens, slow lateral slide. Tight screen inserts highlight stale activity and missing buyer engagement.",
+              "visual_action": "Rohan filters the pipeline by buyer engagement and stage age. Dead opportunities surface in a 'Likely Lost' view. He opens one record to reveal a 47-day silence, a single internal activity, and no verified next step. He then drags a real deal into a shared close-plan checklist.",
+              "spoken_dialogue": "PipelinePulse checks what the CRM never did. It finds deals with no buyer activity, no mutual action plan, and no verified next step. Then it tells you what to do next: get the buyer on the calendar, confirm the decision process, and stop counting it as revenue until it survives. No rep has to update three tabs. No VP has to rebuild the forecast by hand.",
+              "onscreen_text": "VERIFY THE DEAL. THEN COUNT THE DEAL.",
+              "audio_sfx": "Subtle interface clicks, a soft verification ping, and the tense pulse resolving into a steady beat."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Return to tight medium close-up of Rohan, 50mm lens, with a slow push-in. End on a clean screen capture of the PipelinePulse dashboard and booking page.",
+              "visual_action": "Rohan removes his headset and addresses the camera directly. The final frame shows a clean forecast, a live close-plan checklist, and a 'Book Enterprise Demo' button.",
+              "spoken_dialogue": "Your forecast should not need a s\u00e9ance. Bring me your worst pipeline. In fifteen minutes, I'll show you which deals are real, which are dead, and what your team should do next. Stop letting a hopeful CRM stage run your company.",
+              "onscreen_text": "SEE YOUR REAL PIPELINE IN 15 MINUTES",
+              "audio_sfx": "Music stops on the final line, followed by a single clean confirmation tone."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Book a PipelinePulse enterprise demo today, or start a trial with your own pipeline. Bring the deals you think are closing. That's where we'll start.",
+            "visual_action": "Rohan clicks 'Book Enterprise Demo.' The screen splits into two clear options: 'Book Enterprise Demo' and 'Start Free Trial,' with a cursor moving toward the demo button.",
+            "offer": "A 15-minute pipeline audit using the prospect's own data, with no sales presentation attached; trial sign-up is available as the self-serve alternative."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Rohan Deshmukh is not selling software from the outside. He built PipelinePulse after running sales teams, watching reps pad forecasts, and getting blindsided by deals that vanished after the CRM said 'commit'. He can call out the exact tactics that keep pipeline reports looking clean while revenue stalls, then show operators how to fix it without adding another layer of data entry. That battlefield credibility makes his advice feel like an internal sales audit, not a vendor pitch.\",\n  \"audience_pain_insight\": \"The audience is not merely losing deals. It is losing control of the forecast and being forced to defend a number they no longer trust. When 70% of 'Closing This Month' deals are dead, leaders still have to sit in forecast meetings and pretend confidence. The real fear is not looking bad; it is discovering that their entire operating rhythm has been built on numbers nobody can verify.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The Forecast Autopsy\",\n    \"hook_first_3_seconds\": \"Seventy percent of your 'Closing This Month' deals are already dead.\",\n    \"visual_hook\": \"A CRM pipeline board fills the frame. A large red '70% DEAD' stamp slams across the 'Closing This Month' column as the forecast total visibly crashes.\",\n    \"why_it_works\": \"The opening attacks a metric the audience defends every week, then threatens the credibility of the forecast they are presenting. It creates immediate reputational urgency: the viewer must keep watching to learn whether their pipeline is being overstated and who is responsible.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Your CRM Is Lying. Your Pipeline Is Too.\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Fast, blunt, and evidence-led. Rohan speaks directly to camera with short sentences, then cuts to visual proof. No setup, no corporate warm-up, and no exaggerated animation. The rhythm feels like a former VP interrupting a forecast meeting with the truth.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Extreme close-up of a laptop screen, 24mm lens, with a fast push-in that locks on the 'Closing This Month' column.\",\n        \"visual_action\": \"A CRM board shows multiple late-stage opportunities. A red '70% DEAD' stamp hits the screen, and the projected revenue number drops from $4.2M to $1.1M. Rohan's hand pulls the laptop toward camera.\",\n        \"spoken_dialogue\": \"Seventy percent of your 'Closing This Month' deals are already dead.\",\n        \"onscreen_text\": \"70% OF 'CLOSING THIS MONTH' = DEAD\",\n        \"audio_sfx\": \"Hard impact hit, brief digital glitch, then a low, tense pulse.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Medium close-up of Rohan in a dim home office, 50mm lens, locked camera with subtle handheld movement. Cutaway inserts of a CRM stage dropdown and a calendar with empty meeting slots.\",\n        \"visual_action\": \"Rohan leans forward and points at the screen. Cut to a rep clicking 'Commit' without a mutual action plan. Another cut shows a buyer rescheduling a demo for the third time. Rohan taps a printed pipeline sheet and crosses out entire rows.\",\n        \"spoken_dialogue\": \"I ran sales. I saw the trick. A rep marks the deal 'Commit' because the buyer said 'next week.' No signed order form. No confirmed implementation date. No next meeting on the calendar. Then the rep updates the CRM so the forecast looks finished. The deal isn't late. It never had a close date. It had a hope date.\",\n        \"onscreen_text\": \"NO ORDER FORM. NO NEXT MEETING. NO DEAL.\",\n        \"audio_sfx\": \"Dry UI clicks, a pen scratch, and a sharp marker swipe.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Over-the-shoulder shot of Rohan reviewing a live PipelinePulse dashboard, 35mm lens, slow lateral slide. Tight screen inserts highlight stale activity and missing buyer engagement.\",\n        \"visual_action\": \"Rohan filters the pipeline by buyer engagement and stage age. Dead opportunities surface in a 'Likely Lost' view. He opens one record to reveal a 47-day silence, a single internal activity, and no verified next step. He then drags a real deal into a shared close-plan checklist.\",\n        \"spoken_dialogue\": \"PipelinePulse checks what the CRM never did. It finds deals with no buyer activity, no mutual action plan, and no verified next step. Then it tells you what to do next: get the buyer on the calendar, confirm the decision process, and stop counting it as revenue until it survives. No rep has to update three tabs. No VP has to rebuild the forecast by hand.\",\n        \"onscreen_text\": \"VERIFY THE DEAL. THEN COUNT THE DEAL.\",\n        \"audio_sfx\": \"Subtle interface clicks, a soft verification ping, and the tense pulse resolving into a steady beat.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Return to tight medium close-up of Rohan, 50mm lens, with a slow push-in. End on a clean screen capture of the PipelinePulse dashboard and booking page.\",\n        \"visual_action\": \"Rohan removes his headset and addresses the camera directly. The final frame shows a clean forecast, a live close-plan checklist, and a 'Book Enterprise Demo' button.\",\n        \"spoken_dialogue\": \"Your forecast should not need a s\u00e9ance. Bring me your worst pipeline. In fifteen minutes, I'll show you which deals are real, which are dead, and what your team should do next. Stop letting a hopeful CRM stage run your company.\",\n        \"onscreen_text\": \"SEE YOUR REAL PIPELINE IN 15 MINUTES\",\n        \"audio_sfx\": \"Music stops on the final line, followed by a single clean confirmation tone.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Book a PipelinePulse enterprise demo today, or start a trial with your own pipeline. Bring the deals you think are closing. That's where we'll start.\",\n      \"visual_action\": \"Rohan clicks 'Book Enterprise Demo.' The screen splits into two clear options: 'Book Enterprise Demo' and 'Start Free Trial,' with a cursor moving toward the demo button.\",\n      \"offer\": \"A 15-minute pipeline audit using the prospect's own data, with no sales presentation attached; trial sign-up is available as the self-serve alternative.\"\n    }\n  }\n}"
+    },
+    "gpt_oss": {
+      "model": "openai/gpt-oss-120b",
+      "provider": "Groq LPU",
+      "ttft_seconds": 1.92,
+      "total_seconds": 3.79,
+      "content_length": 3571,
+      "parsed_json": {
+        "brand_moat_statement": "Rohan's battle\u2011tested sales background and his outright hatred for fake CRM data give PipelinePulse an authentic edge \u2013 he knows the lies, he lives the pain, and he builds a tool that cuts the crap at the source.",
+        "audience_pain_insight": "Sales leaders secretly fear that their own numbers are a house of cards; they tolerate the lie because admitting it feels like admitting personal failure.",
+        "viral_angle": {
+          "angle_name": "The Pipeline Lie Expos\u00e9",
+          "hook_first_3_seconds": "You ever notice 'Closing this month' is the biggest lie in your pipeline?",
+          "visual_hook": "Rohan slams a stack of printed CRM reports onto a cluttered desk, eyes blazing at the camera.",
+          "why_it_works": "It triggers the audience's fear of being duped and the anger of wasted effort, using a confrontational opening that mirrors their own frustration."
+        },
+        "production_script": {
+          "working_title": "Why Your 'Closing This Month' Deals Are Already Dead",
+          "target_duration_seconds": 50,
+          "pacing": "Fast\u2011paced, gritty, with blunt language and rapid cuts that match Rohan's no\u2011nonsense style.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Handheld close\u2011up, slight push\u2011in as Rohan leans forward.",
+              "visual_action": "Rohan slams a stack of printed CRM reports onto a messy desk, looks directly into the lens.",
+              "spoken_dialogue": "You ever notice 'Closing this month' is the biggest lie in your pipeline?",
+              "onscreen_text": "THE LIE",
+              "audio_sfx": "Desk thud, low\u2011pulse electronic beat starts."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Cut to over\u2011the\u2011shoulder view of a CRM dashboard, then back to Rohan.",
+              "visual_action": "Rohan scrolls through a CRM, highlights ghosted deals, then tosses a paper airplane labeled 'Ghost' into a trash can.",
+              "spoken_dialogue": "Seventy percent of those deals are already dead, and your reps are feeding you fiction to keep the numbers looking good.",
+              "onscreen_text": "70% DEAD",
+              "audio_sfx": "Keyboard clicks, paper rustle, soft trash\u2011can thump."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Medium shot of Rohan at a whiteboard, steady dolly left\u2011to\u2011right.",
+              "visual_action": "He draws a funnel with holes, then plugs each hole with the PipelinePulse logo, turning the funnel solid.",
+              "spoken_dialogue": "I built PipelinePulse to cut the noise, auto\u2011detect dead deals, and give you real pipeline you can actually act on.",
+              "onscreen_text": "REAL PIPELINE",
+              "audio_sfx": "Marker squeak, subtle rising synth."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Tight on Rohan, slight rack focus to a laptop screen showing a live demo.",
+              "visual_action": "Rohan points at a live deal\u2011health indicator that lights green as dead deals disappear.",
+              "spoken_dialogue": "Stop guessing. Book a 15\u2011minute demo, see the dead deals disappear in real time.",
+              "onscreen_text": "BOOK DEMO \u2013 15 MIN",
+              "audio_sfx": "Upbeat crescendo, click sound as the demo screen loads."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Click the link, lock in your demo, and stop bleeding pipeline.",
+            "visual_action": "Animated button slides in: 'Schedule Demo Now' with a ticking timer icon.",
+            "offer": "Free 30\u2011day trial, no credit card required."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Rohan's battle\u2011tested sales background and his outright hatred for fake CRM data give PipelinePulse an authentic edge \u2013 he knows the lies, he lives the pain, and he builds a tool that cuts the crap at the source.\",\n  \"audience_pain_insight\": \"Sales leaders secretly fear that their own numbers are a house of cards; they tolerate the lie because admitting it feels like admitting personal failure.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The Pipeline Lie Expos\u00e9\",\n    \"hook_first_3_seconds\": \"You ever notice 'Closing this month' is the biggest lie in your pipeline?\",\n    \"visual_hook\": \"Rohan slams a stack of printed CRM reports onto a cluttered desk, eyes blazing at the camera.\",\n    \"why_it_works\": \"It triggers the audience's fear of being duped and the anger of wasted effort, using a confrontational opening that mirrors their own frustration.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Why Your 'Closing This Month' Deals Are Already Dead\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Fast\u2011paced, gritty, with blunt language and rapid cuts that match Rohan's no\u2011nonsense style.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Handheld close\u2011up, slight push\u2011in as Rohan leans forward.\",\n        \"visual_action\": \"Rohan slams a stack of printed CRM reports onto a messy desk, looks directly into the lens.\",\n        \"spoken_dialogue\": \"You ever notice 'Closing this month' is the biggest lie in your pipeline?\",\n        \"onscreen_text\": \"THE LIE\",\n        \"audio_sfx\": \"Desk thud, low\u2011pulse electronic beat starts.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Cut to over\u2011the\u2011shoulder view of a CRM dashboard, then back to Rohan.\",\n        \"visual_action\": \"Rohan scrolls through a CRM, highlights ghosted deals, then tosses a paper airplane labeled 'Ghost' into a trash can.\",\n        \"spoken_dialogue\": \"Seventy percent of those deals are already dead, and your reps are feeding you fiction to keep the numbers looking good.\",\n        \"onscreen_text\": \"70% DEAD\",\n        \"audio_sfx\": \"Keyboard clicks, paper rustle, soft trash\u2011can thump.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Medium shot of Rohan at a whiteboard, steady dolly left\u2011to\u2011right.\",\n        \"visual_action\": \"He draws a funnel with holes, then plugs each hole with the PipelinePulse logo, turning the funnel solid.\",\n        \"spoken_dialogue\": \"I built PipelinePulse to cut the noise, auto\u2011detect dead deals, and give you real pipeline you can actually act on.\",\n        \"onscreen_text\": \"REAL PIPELINE\",\n        \"audio_sfx\": \"Marker squeak, subtle rising synth.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Tight on Rohan, slight rack focus to a laptop screen showing a live demo.\",\n        \"visual_action\": \"Rohan points at a live deal\u2011health indicator that lights green as dead deals disappear.\",\n        \"spoken_dialogue\": \"Stop guessing. Book a 15\u2011minute demo, see the dead deals disappear in real time.\",\n        \"onscreen_text\": \"BOOK DEMO \u2013 15 MIN\",\n        \"audio_sfx\": \"Upbeat crescendo, click sound as the demo screen loads.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Click the link, lock in your demo, and stop bleeding pipeline.\",\n      \"visual_action\": \"Animated button slides in: 'Schedule Demo Now' with a ticking timer icon.\",\n      \"offer\": \"Free 30\u2011day trial, no credit card required.\"\n    }\n  }\n}"
+    },
+    "judgment": {
+      "model_a_score": 91,
+      "model_b_score": 70,
+      "winner": "Model A (MiniMax)",
+      "winner_reason": "Model A delivers a far sharper, battle\u2011tested voice that mirrors Rohan's blunt persona, provides deeper strategic insight, a more original visual concept, and a crystal\u2011clear, low\u2011friction CTA. Its hook is a hard\u2011hitting statistic, its storytelling flows like an audit briefing, and its tone stays free of marketing clich\u00e9s, giving it a decisive edge over Model B.",
+      "hook_verdict": "Model A\u2019s 0\u20113\u2011second hook \u2013 \u201cSeventy percent of your 'Closing This Month' deals are already dead.\u201d \u2013 is a direct, data\u2011driven shock statement that instantly challenges the viewer\u2019s core metric. Model B\u2019s hook \u2013 \u201cYou ever notice 'Closing this month' is the biggest lie in your pipeline?\u201d \u2013 is a rhetorical question that is less immediate and less visceral. Model A\u2019s hook wins.",
+      "tone_adaptation_verdict": "Model A adapts to Rohan\u2019s persona with raw, first\u2011person language (\u201cI ran sales\u2026 No order form. No next meeting. No deal.\u201d) and avoids typical SaaS buzzwords, preserving authenticity. Model B, while blunt, slips in clich\u00e9s like \u201cstop bleeding pipeline\u201d and a more generic marketing voice. Model A wins on tone adaptation."
+    }
+  },
+  {
+    "scenario": {
+      "id": "introvert_trainer",
+      "category": "Introverted Personal Trainer",
+      "brand_name": "QuietStrength Movement Lab",
+      "client_persona": "Arjun Nair (Introverted, quiet, calm, methodical biomechanics specialist, speaks softly with surgical clarity, hates gym-bro hype/screaming, focuses on chronic back pain & posture restoration).",
+      "target_audience": "Desk workers with chronic lower back pain, neck stiffness, and gym anxiety who feel intimidated by loud commercial gyms.",
+      "marketing_goal": "Generate 1-on-1 biomechanics diagnostic consultations.",
+      "topic": "Why screaming 'one more rep' is worsening your lower back compression",
+      "negative_constraints": [
+        "DO NOT write shouting, hype, or 'Beast mode' slogans.",
+        "DO NOT write loud aggressive music cues.",
+        "DO NOT write high-fives or mirror-flexing."
+      ]
+    },
+    "minimax": {
+      "model": "minimaxai/minimax-m3.1-flash",
+      "provider": "NVIDIA NIM",
+      "ttft_seconds": 0.85,
+      "total_seconds": 52.85,
+      "reasoning_length": 110,
+      "content_length": 6388,
+      "parsed_json": {
+        "brand_moat_statement": "Arjun Nair's moat is the trust he builds by making biomechanics feel calm, precise, and non-judgmental. While commercial gyms sell intensity, QuietStrength Movement Lab diagnoses the exact mechanical cause of a client's pain. Arjun's soft, methodical delivery gives anxious desk workers permission to slow down, while his posture-restoration expertise turns a frustrating symptom into a solvable, measurable problem. He does not ask people to push through pain; he asks them to be assessed.",
+        "audience_pain_insight": "Desk workers with lower back pain often assume the solution is more effort, louder motivation, or simply tolerating discomfort. The unspoken truth is that they are not lacking willpower; they are repeating a movement pattern that compresses their own spine. Gym anxiety deepens the problem because they copy aggressive coaching cues even when their body is already signaling that something is wrong.",
+        "viral_angle": {
+          "angle_name": "The Rep That Quietly Makes It Worse",
+          "hook_first_3_seconds": "That 'one more rep' is not motivating you. It may be compressing your lower back.",
+          "visual_hook": "A close-up of a hand pressing firmly into the lumbar spine of a seated desk worker, followed by a slow pull-away as the person's shoulders visibly drop in relief.",
+          "why_it_works": "The opening challenges a familiar coaching command with a specific, clinically relevant consequence. It creates a small cognitive conflict: the audience has heard 'one more rep' as encouragement, but may have felt their back tighten during it. The contrast between the loud cultural cue and Arjun's calm delivery also immediately signals that this brand will not shame, intimidate, or hype them."
+        },
+        "production_script": {
+          "working_title": "Why 'One More Rep' Is Compressing Your Lower Back",
+          "target_duration_seconds": 50,
+          "pacing": "Slow, controlled, and instructional. Each movement is demonstrated clearly, with brief pauses that let the viewer notice tension in their own body. No rapid cuts, no motivational montages, and no escalating music.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Tight close-up on the lumbar spine and lower back of a seated desk worker, shot on a 90mm lens with a completely locked frame.",
+              "visual_action": "Arjun's hand presses gently against the lower back. The viewer's attention shifts to a visible crease of tension above the beltline. The worker stops moving and exhales.",
+              "spoken_dialogue": "'That 'one more rep' is not motivating you. It may be compressing your lower back.'",
+              "onscreen_text": "The rep your back is paying for",
+              "audio_sfx": "Quiet room tone, a soft chair creak, and one low, restrained tonal note. No beat drop."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Medium side-profile shot at eye level, 50mm lens, with a subtle push-in as Arjun positions the worker.",
+              "visual_action": "Arjun places one hand on the worker's ribcage and the other near the pelvis. He guides the torso into a gentle backward lean, then shows the worker leaning far forward with the hips staying in place. A simple on-screen line traces the backward tilt of the spine.",
+              "spoken_dialogue": "'During a heavy rep, your breath braces hard and your pelvis stays fixed. If your torso collapses forward, the load concentrates across the lower spine instead of moving through the hips and legs. The squeeze you feel is not proof of effort. It is a mechanical signal.'",
+              "onscreen_text": "Forward collapse = lumbar compression",
+              "audio_sfx": "Soft fabric movement, controlled breathing, and a faint single-piano note held beneath the voice."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Locked overhead shot of the desk and chair, followed by a clean cut to a 70mm close-up of Arjun's hands indicating the ribcage, pelvis, and abdominal brace.",
+              "visual_action": "A laptop, a closed notebook, and a glass of water sit on a tidy desk. Arjun adjusts the chair height by a few centimeters and places a folded lumbar support behind the worker. He then marks three points with a pencil on a simple spine diagram: ribcage, pelvis, and abdominal brace.",
+              "spoken_dialogue": "'The fix is usually not louder effort. It is better timing. Exhale as you lean back, keep the pelvis available, and let the hips do more of the work. If your back pinches, the load is misplaced. We change the movement before we add the weight.'",
+              "onscreen_text": "Exhale. Reorganize. Then load.",
+              "audio_sfx": "Quiet page turn, pencil on paper, chair adjustment, and soft breathing. Music remains minimal and warm."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Calm medium shot of Arjun seated beside the desk worker, framed at the same eye level as the viewer. The camera stays still as the worker performs one slow, comfortable repetition.",
+              "visual_action": "The worker leans back with a relaxed face and smooth breathing. Arjun nods once, then turns slightly toward the camera. A simple booking card appears beside his calm, direct gaze.",
+              "spoken_dialogue": "'You do not have to train through compression to be disciplined. Bring your posture and your pain history to a one-on-one biomechanics diagnostic. We will find what is loading your back, and build the movement around your body.'",
+              "onscreen_text": "1-on-1 biomechanics diagnostic",
+              "audio_sfx": "One gentle tonal resolve, soft breathing, and a quiet interface click as the booking card appears."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "'Book a one-on-1 biomechanics diagnostic. Come with your pain history, not your gym confidence. That is where the useful information starts.'",
+            "visual_action": "Arjun slides a slim diagnostic booking card across the desk. The card shows the service name, a simple calendar icon, and a restrained 'Book a diagnostic' button. The worker picks it up while sitting comfortably.",
+            "offer": "A low-friction, one-on-1 biomechanics diagnostic consultation focused on lower back pain, posture, and identifying the movement pattern causing compression."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Arjun Nair's moat is the trust he builds by making biomechanics feel calm, precise, and non-judgmental. While commercial gyms sell intensity, QuietStrength Movement Lab diagnoses the exact mechanical cause of a client's pain. Arjun's soft, methodical delivery gives anxious desk workers permission to slow down, while his posture-restoration expertise turns a frustrating symptom into a solvable, measurable problem. He does not ask people to push through pain; he asks them to be assessed.\",\n  \"audience_pain_insight\": \"Desk workers with lower back pain often assume the solution is more effort, louder motivation, or simply tolerating discomfort. The unspoken truth is that they are not lacking willpower; they are repeating a movement pattern that compresses their own spine. Gym anxiety deepens the problem because they copy aggressive coaching cues even when their body is already signaling that something is wrong.\",\n  \"viral_angle\": {\n    \"angle_name\": \"The Rep That Quietly Makes It Worse\",\n    \"hook_first_3_seconds\": \"That 'one more rep' is not motivating you. It may be compressing your lower back.\",\n    \"visual_hook\": \"A close-up of a hand pressing firmly into the lumbar spine of a seated desk worker, followed by a slow pull-away as the person's shoulders visibly drop in relief.\",\n    \"why_it_works\": \"The opening challenges a familiar coaching command with a specific, clinically relevant consequence. It creates a small cognitive conflict: the audience has heard 'one more rep' as encouragement, but may have felt their back tighten during it. The contrast between the loud cultural cue and Arjun's calm delivery also immediately signals that this brand will not shame, intimidate, or hype them.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Why 'One More Rep' Is Compressing Your Lower Back\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Slow, controlled, and instructional. Each movement is demonstrated clearly, with brief pauses that let the viewer notice tension in their own body. No rapid cuts, no motivational montages, and no escalating music.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Tight close-up on the lumbar spine and lower back of a seated desk worker, shot on a 90mm lens with a completely locked frame.\",\n        \"visual_action\": \"Arjun's hand presses gently against the lower back. The viewer's attention shifts to a visible crease of tension above the beltline. The worker stops moving and exhales.\",\n        \"spoken_dialogue\": \"'That 'one more rep' is not motivating you. It may be compressing your lower back.'\",\n        \"onscreen_text\": \"The rep your back is paying for\",\n        \"audio_sfx\": \"Quiet room tone, a soft chair creak, and one low, restrained tonal note. No beat drop.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Medium side-profile shot at eye level, 50mm lens, with a subtle push-in as Arjun positions the worker.\",\n        \"visual_action\": \"Arjun places one hand on the worker's ribcage and the other near the pelvis. He guides the torso into a gentle backward lean, then shows the worker leaning far forward with the hips staying in place. A simple on-screen line traces the backward tilt of the spine.\",\n        \"spoken_dialogue\": \"'During a heavy rep, your breath braces hard and your pelvis stays fixed. If your torso collapses forward, the load concentrates across the lower spine instead of moving through the hips and legs. The squeeze you feel is not proof of effort. It is a mechanical signal.'\",\n        \"onscreen_text\": \"Forward collapse = lumbar compression\",\n        \"audio_sfx\": \"Soft fabric movement, controlled breathing, and a faint single-piano note held beneath the voice.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Locked overhead shot of the desk and chair, followed by a clean cut to a 70mm close-up of Arjun's hands indicating the ribcage, pelvis, and abdominal brace.\",\n        \"visual_action\": \"A laptop, a closed notebook, and a glass of water sit on a tidy desk. Arjun adjusts the chair height by a few centimeters and places a folded lumbar support behind the worker. He then marks three points with a pencil on a simple spine diagram: ribcage, pelvis, and abdominal brace.\",\n        \"spoken_dialogue\": \"'The fix is usually not louder effort. It is better timing. Exhale as you lean back, keep the pelvis available, and let the hips do more of the work. If your back pinches, the load is misplaced. We change the movement before we add the weight.'\",\n        \"onscreen_text\": \"Exhale. Reorganize. Then load.\",\n        \"audio_sfx\": \"Quiet page turn, pencil on paper, chair adjustment, and soft breathing. Music remains minimal and warm.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Calm medium shot of Arjun seated beside the desk worker, framed at the same eye level as the viewer. The camera stays still as the worker performs one slow, comfortable repetition.\",\n        \"visual_action\": \"The worker leans back with a relaxed face and smooth breathing. Arjun nods once, then turns slightly toward the camera. A simple booking card appears beside his calm, direct gaze.\",\n        \"spoken_dialogue\": \"'You do not have to train through compression to be disciplined. Bring your posture and your pain history to a one-on-one biomechanics diagnostic. We will find what is loading your back, and build the movement around your body.'\",\n        \"onscreen_text\": \"1-on-1 biomechanics diagnostic\",\n        \"audio_sfx\": \"One gentle tonal resolve, soft breathing, and a quiet interface click as the booking card appears.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"'Book a one-on-1 biomechanics diagnostic. Come with your pain history, not your gym confidence. That is where the useful information starts.'\",\n      \"visual_action\": \"Arjun slides a slim diagnostic booking card across the desk. The card shows the service name, a simple calendar icon, and a restrained 'Book a diagnostic' button. The worker picks it up while sitting comfortably.\",\n      \"offer\": \"A low-friction, one-on-1 biomechanics diagnostic consultation focused on lower back pain, posture, and identifying the movement pattern causing compression.\"\n    }\n  }\n}"
+    },
+    "gpt_oss": {
+      "model": "openai/gpt-oss-120b",
+      "provider": "Groq LPU",
+      "ttft_seconds": 1.15,
+      "total_seconds": 3.19,
+      "content_length": 4156,
+      "parsed_json": {
+        "brand_moat_statement": "Arjun Nair\u2019s quiet, methodical biomechanics expertise creates a sanctuary of trust for anxious desk workers, differentiating QuietStrength as the only movement lab that heals without hype, making competitors\u2019 loud\u2011room tactics feel invasive and ineffective.",
+        "audience_pain_insight": "These professionals silently endure back pain while fearing judgment in noisy gyms; they crave a calm, science\u2011backed solution that validates their discomfort without forcing them to shout louder than their spine can handle.",
+        "viral_angle": {
+          "angle_name": "Silent Science Shock",
+          "hook_first_3_seconds": "When you scream 'one more rep', your spine hears it louder than you think.",
+          "visual_hook": "A high\u2011speed X\u2011ray animation of a lumbar vertebra compressing in sync with a faint sound wave that spikes as a shout is imagined.",
+          "why_it_works": "It leverages the contrast between a soft spoken voice and the hidden internal damage, triggering curiosity and the audience\u2019s fear of unseen injury while reinforcing the brand\u2019s calm authority."
+        },
+        "production_script": {
+          "working_title": "The Quiet Cost of Loud Gym Hype",
+          "target_duration_seconds": 50,
+          "pacing": "Measured, deliberate pacing with gentle pauses; each sentence delivered in Arjun\u2019s soft, surgical tone, mirroring a calm breathing rhythm.",
+          "shots": [
+            {
+              "shot_number": 1,
+              "timing": "0:00 - 0:04",
+              "camera": "Static close\u2011up on a 3\u2011D lumbar spine model; shallow depth of field, slow dolly in.",
+              "visual_action": "Spine model glows as a faint waveform rises, then spikes sharply.",
+              "spoken_dialogue": "When you scream 'one more rep', your spine hears it louder than you think.",
+              "onscreen_text": "LOUD REPS = QUIET DAMAGE",
+              "audio_sfx": "Soft ambient hum; subtle 'whoosh' as waveform spikes."
+            },
+            {
+              "shot_number": 2,
+              "timing": "0:04 - 0:18",
+              "camera": "Medium shot of Arjun seated at a desk with ergonomic setup; slight push\u2011in.",
+              "visual_action": "Arjun gently places a hand on his own lower back, then points to a laptop screen showing a live posture analysis.",
+              "spoken_dialogue": "Most of us sit for eight hours, and the only thing louder than a gym chant is the compression building in our discs.",
+              "onscreen_text": "8\u202fhrs sitting = hidden compression",
+              "audio_sfx": "Light keyboard clicks; faint echo of a distant gym chant fading away."
+            },
+            {
+              "shot_number": 3,
+              "timing": "0:18 - 0:35",
+              "camera": "Over\u2011the\u2011shoulder view of the posture analysis software; slow pan across data points.",
+              "visual_action": "Graph animates showing increased lumbar load when a simulated 'shout' is added; Arjun annotates with a soft marker.",
+              "spoken_dialogue": "When you add that extra shout, the force multiplies, pushing the vertebrae into a tighter space\u2014exactly what causes chronic lower\u2011back pain.",
+              "onscreen_text": "SHOUT + REPS = \u2191 spinal load",
+              "audio_sfx": "Gentle metronome beat; subtle 'ping' each time the graph spikes."
+            },
+            {
+              "shot_number": 4,
+              "timing": "0:35 - 0:50",
+              "camera": "Close\u2011up of Arjun\u2019s calm face; slight slow\u2011zoom as he leans forward slightly.",
+              "visual_action": "He opens a tablet showing a booking calendar; a soft hand\u2011drawn arrow points to a free slot.",
+              "spoken_dialogue": "Let\u2019s replace the shout with a precise, quiet diagnostic. Book a 15\u2011minute biomechanics consult, and we\u2019ll restore your posture\u2014without the noise.",
+              "onscreen_text": "Quiet. Precise. Pain\u2011Free.",
+              "audio_sfx": "Warm, minimal piano chord; soft click of a calendar confirmation."
+            }
+          ],
+          "call_to_action": {
+            "spoken_dialogue": "Tap the link below, pick a time that fits your schedule, and experience strength that speaks softly.",
+            "visual_action": "Screen fades to a clean landing page with a single \u2018Book Your Quiet Consultation\u2019 button; subtle pulse animation.",
+            "offer": "Free 15\u2011minute biomechanics diagnostic \u2013 no commitment, just clarity."
+          }
+        }
+      },
+      "is_valid": true,
+      "raw_content": "{\n  \"brand_moat_statement\": \"Arjun Nair\u2019s quiet, methodical biomechanics expertise creates a sanctuary of trust for anxious desk workers, differentiating QuietStrength as the only movement lab that heals without hype, making competitors\u2019 loud\u2011room tactics feel invasive and ineffective.\",\n  \"audience_pain_insight\": \"These professionals silently endure back pain while fearing judgment in noisy gyms; they crave a calm, science\u2011backed solution that validates their discomfort without forcing them to shout louder than their spine can handle.\",\n  \"viral_angle\": {\n    \"angle_name\": \"Silent Science Shock\",\n    \"hook_first_3_seconds\": \"When you scream 'one more rep', your spine hears it louder than you think.\",\n    \"visual_hook\": \"A high\u2011speed X\u2011ray animation of a lumbar vertebra compressing in sync with a faint sound wave that spikes as a shout is imagined.\",\n    \"why_it_works\": \"It leverages the contrast between a soft spoken voice and the hidden internal damage, triggering curiosity and the audience\u2019s fear of unseen injury while reinforcing the brand\u2019s calm authority.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"The Quiet Cost of Loud Gym Hype\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Measured, deliberate pacing with gentle pauses; each sentence delivered in Arjun\u2019s soft, surgical tone, mirroring a calm breathing rhythm.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera\": \"Static close\u2011up on a 3\u2011D lumbar spine model; shallow depth of field, slow dolly in.\",\n        \"visual_action\": \"Spine model glows as a faint waveform rises, then spikes sharply.\",\n        \"spoken_dialogue\": \"When you scream 'one more rep', your spine hears it louder than you think.\",\n        \"onscreen_text\": \"LOUD REPS = QUIET DAMAGE\",\n        \"audio_sfx\": \"Soft ambient hum; subtle 'whoosh' as waveform spikes.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera\": \"Medium shot of Arjun seated at a desk with ergonomic setup; slight push\u2011in.\",\n        \"visual_action\": \"Arjun gently places a hand on his own lower back, then points to a laptop screen showing a live posture analysis.\",\n        \"spoken_dialogue\": \"Most of us sit for eight hours, and the only thing louder than a gym chant is the compression building in our discs.\",\n        \"onscreen_text\": \"8\u202fhrs sitting = hidden compression\",\n        \"audio_sfx\": \"Light keyboard clicks; faint echo of a distant gym chant fading away.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera\": \"Over\u2011the\u2011shoulder view of the posture analysis software; slow pan across data points.\",\n        \"visual_action\": \"Graph animates showing increased lumbar load when a simulated 'shout' is added; Arjun annotates with a soft marker.\",\n        \"spoken_dialogue\": \"When you add that extra shout, the force multiplies, pushing the vertebrae into a tighter space\u2014exactly what causes chronic lower\u2011back pain.\",\n        \"onscreen_text\": \"SHOUT + REPS = \u2191 spinal load\",\n        \"audio_sfx\": \"Gentle metronome beat; subtle 'ping' each time the graph spikes.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera\": \"Close\u2011up of Arjun\u2019s calm face; slight slow\u2011zoom as he leans forward slightly.\",\n        \"visual_action\": \"He opens a tablet showing a booking calendar; a soft hand\u2011drawn arrow points to a free slot.\",\n        \"spoken_dialogue\": \"Let\u2019s replace the shout with a precise, quiet diagnostic. Book a 15\u2011minute biomechanics consult, and we\u2019ll restore your posture\u2014without the noise.\",\n        \"onscreen_text\": \"Quiet. Precise. Pain\u2011Free.\",\n        \"audio_sfx\": \"Warm, minimal piano chord; soft click of a calendar confirmation.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Tap the link below, pick a time that fits your schedule, and experience strength that speaks softly.\",\n      \"visual_action\": \"Screen fades to a clean landing page with a single \u2018Book Your Quiet Consultation\u2019 button; subtle pulse animation.\",\n      \"offer\": \"Free 15\u2011minute biomechanics diagnostic \u2013 no commitment, just clarity.\"\n    }\n  }\n}"
+    },
+    "judgment": {
+      "model_a_score": 98,
+      "model_b_score": 86,
+      "winner": "Model A (MiniMax)",
+      "winner_reason": "Model A consistently captures Arjun's introverted, methodical persona with precise, calm language, a concrete hook that directly addresses the back\u2011compression problem, and a seamless narrative that guides the viewer from pain insight to a low\u2011friction CTA. Its visual plan is realistic, its brand moat is deeply articulated, and every element aligns with the target audience\u2019s psychology without resorting to hype or clich\u00e9s.",
+      "hook_verdict": "Model A\u2019s hook \u2013 \u201cThat 'one more rep' is not motivating you. It may be compressing your lower back.\u201d \u2013 is clearer, more immediate, and directly ties the familiar gym cue to the viewer\u2019s pain, making it more compelling for introverted desk workers than Model B\u2019s more metaphorical \u201cWhen you scream 'one more rep', your spine hears it louder than you think.\u201d",
+      "tone_adaptation_verdict": "Model A adapts to the introverted, calm, surgical tone of Arjun without any hype\u2011laden language or clich\u00e9s, whereas Model B includes marketing\u2011style phrasing (e.g., \u201cSilent Science Shock\u201d) that feels less authentic to the persona."
+    }
+  }
+]

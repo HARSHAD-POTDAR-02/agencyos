@@ -93,8 +93,8 @@ class QualityEvaluatorAgent:
        - Routes actionable revision instructions back to Content Architect, Campaign Strategist, or Human.
     """
 
-    def __init__(self, model_name: str | None = None, temperature: float = 0.1):
-        self.model_name = model_name or settings.GROQ_MODEL
+    def __init__(self, model_name: str | None = None, temperature: float = 0.15):
+        self.model_name = model_name or settings.CAMPAIGN_EVALUATION_MODEL
         self.temperature = temperature
 
     async def evaluate(
@@ -161,6 +161,22 @@ class QualityEvaluatorAgent:
         findings.extend(feas_findings)
         checks_passed += feas_passed
         total_checks += feas_total
+
+        # -------------------------------------------------------------
+        # 3b. Deterministic Audit: Anti-Cliché Verification
+        # -------------------------------------------------------------
+        cliche_findings, cliche_passed, cliche_total = self._audit_banned_cliches(deliverables)
+        findings.extend(cliche_findings)
+        checks_passed += cliche_passed
+        total_checks += cliche_total
+
+        # -------------------------------------------------------------
+        # 3c. Deterministic Audit: Verified Offers & Discount Gating
+        # -------------------------------------------------------------
+        offer_findings, offer_passed, offer_total = self._audit_verified_offers_and_discounts(deliverables, brand_context)
+        findings.extend(offer_findings)
+        checks_passed += offer_passed
+        total_checks += offer_total
 
         # -------------------------------------------------------------
         # 4. Semantic Audit: Prohibited Claims & Strategic Alignment
@@ -447,6 +463,97 @@ class QualityEvaluatorAgent:
 
         return findings, checks_passed, total_checks
 
+    def _audit_banned_cliches(
+        self,
+        deliverables: list[DeliverablePlan],
+    ) -> tuple[list[QualityFinding], int, int]:
+        """Detect generic marketing buzzwords and clichés."""
+        banned_patterns = [
+            (r"\bgame-?changer\b", "game-changer"),
+            (r"\bsupercharge\b", "supercharge"),
+            (r"\bdive (?:right )?in(?:to)?\b", "dive into"),
+            (r"\bunlock (?:your|the)\b", "unlock your/the"),
+            (r"\belevate your\b", "elevate your"),
+            (r"\brevolutionize\b", "revolutionize"),
+            (r"\bin today'?s fast-?paced world\b", "in today's fast-paced world"),
+            (r"\blook no further\b", "look no further"),
+            (r"\bwithout further ado\b", "without further ado"),
+            (r"\bsecret sauce\b", "secret sauce"),
+            (r"\btake it to the next level\b", "take it to the next level"),
+        ]
+
+        findings: list[QualityFinding] = []
+        checks_passed = 0
+        total_checks = 0
+
+        for idx, deliv in enumerate(deliverables):
+            total_checks += 1
+            searchable_text = f"{deliv.title} {deliv.primary_hook} {deliv.caption}".lower()
+            detected = []
+            for pat, label in banned_patterns:
+                if re.search(pat, searchable_text):
+                    detected.append(label)
+
+            if detected:
+                findings.append(
+                    QualityFinding(
+                        category=FindingCategory.brand_voice,
+                        severity=FindingSeverity.warning,
+                        deliverable_index=idx,
+                        deliverable_title=deliv.title,
+                        issue_description=f"Deliverable #{idx+1} '{deliv.title}' contains banned cliché(s): {', '.join(detected)}.",
+                        remediation_instruction="Replace generic marketing buzzwords with grounded, persona-authentic language.",
+                    )
+                )
+            else:
+                checks_passed += 1
+
+        return findings, checks_passed, total_checks
+
+    def _audit_verified_offers_and_discounts(
+        self,
+        deliverables: list[DeliverablePlan],
+        brand_context: BrandContext | None,
+    ) -> tuple[list[QualityFinding], int, int]:
+        """Detect unverified discounts, freebies, or fake promotional claims."""
+        findings: list[QualityFinding] = []
+        checks_passed = 0
+        total_checks = 0
+
+        if not brand_context or not brand_context.verified_offers:
+            return findings, 0, 0
+
+        verified_text = " ".join([f"{o.name} {o.description}" for o in brand_context.verified_offers]).lower()
+        discount_pattern = re.compile(
+            r"(\b\d+%\s*off\b|\bflat\s*\d+%\b|\bfree\s+(?:membership|trial|lifetime|giveaway|consultation)\b|\bdiscount\s+code\b|\bpromo\s+code\b)",
+            re.IGNORECASE
+        )
+
+        for idx, deliv in enumerate(deliverables):
+            total_checks += 1
+            cta_text = f"{deliv.call_to_action} {deliv.caption}"
+            match = discount_pattern.search(cta_text)
+            if match:
+                matched_str = match.group(0).lower()
+                # If the matched discount isn't explicitly in verified offers, flag it
+                if matched_str not in verified_text:
+                    findings.append(
+                        QualityFinding(
+                            category=FindingCategory.prohibited_claim,
+                            severity=FindingSeverity.critical,
+                            deliverable_index=idx,
+                            deliverable_title=deliv.title,
+                            issue_description=f"Deliverable #{idx+1} '{deliv.title}' features an unverified promotional offer/discount: '{matched_str}'.",
+                            remediation_instruction="Remove invented discounts and use only approved verified offers: " + ", ".join([o.name for o in brand_context.verified_offers]),
+                        )
+                    )
+                else:
+                    checks_passed += 1
+            else:
+                checks_passed += 1
+
+        return findings, checks_passed, total_checks
+
     async def _audit_semantic_compliance(
         self,
         deliverables: list[DeliverablePlan],
@@ -567,7 +674,7 @@ async def quality_evaluator_node(state: CampaignState) -> dict[str, Any]:
     agent_name = "quality_evaluator"
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
-    model_name = settings.GROQ_MODEL
+    model_name = settings.CAMPAIGN_EVALUATION_MODEL
 
     try:
         deliverables = state.get("deliverable_plans") or []

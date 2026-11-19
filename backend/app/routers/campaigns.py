@@ -70,6 +70,7 @@ from app.schemas.campaign import (
     CampaignOut,
     ChatBriefRequest,
     ChatBriefResponse,
+    ConvertToTasksRequest,
     ConvertToTasksResponse,
     DeliverableCreate,
     DeliverableOut,
@@ -1634,6 +1635,8 @@ async def export_studio_artifact_pipeline_endpoint(
         default_due_date=payload.default_due_date,
         target_format=payload.target_format,
         deliverable_name=payload.deliverable_name,
+        artifact_type=payload.artifact_type,
+        artifact_payload=payload.artifact_payload,
     )
     await db.commit()
 
@@ -1856,8 +1859,8 @@ REQUIREMENTS:
         rev_output: RevisedReelOutput = await invoke_structured_llm(
             prompt=prompt,
             schema_class=RevisedReelOutput,
-            temperature=0.3,
-            model=settings.GROQ_MODEL,
+            temperature=0.65,
+            model=settings.CAMPAIGN_CONTENT_MODEL,
         )
 
         revised_deliv = {
@@ -1903,8 +1906,8 @@ REQUIREMENTS:
         rev_car: RevisedCarouselOutput = await invoke_structured_llm(
             prompt=prompt,
             schema_class=RevisedCarouselOutput,
-            temperature=0.3,
-            model=settings.GROQ_MODEL,
+            temperature=0.65,
+            model=settings.CAMPAIGN_CONTENT_MODEL,
         )
         revised_deliv = {
             **curr_deliv,
@@ -1942,8 +1945,8 @@ USER INSTRUCTION:
         rev_gen: RevisedGenericOutput = await invoke_structured_llm(
             prompt=prompt,
             schema_class=RevisedGenericOutput,
-            temperature=0.3,
-            model=settings.GROQ_MODEL,
+            temperature=0.65,
+            model=settings.CAMPAIGN_CONTENT_MODEL,
         )
         revised_deliv = {
             **curr_deliv,
@@ -1970,10 +1973,13 @@ USER INSTRUCTION:
 async def convert_campaign_to_tasks(
     agency_id: uuid.UUID,
     campaign_id: uuid.UUID,
+    payload: ConvertToTasksRequest | None = None,
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> ConvertToTasksResponse:
-    """Convert an approved AI campaign plan's deliverables into concrete pipeline deliverables and tasks."""
+    """Convert an approved AI campaign plan's deliverables into concrete pipeline deliverables and tasks.
+    Supports converting specific days or all non-rejected deliverables in batch.
+    """
     campaign = await assert_campaign_belongs_to_agency(campaign_id, agency_id, db)
 
     if not campaign.ai_plan_draft or "deliverables" not in campaign.ai_plan_draft:
@@ -1982,9 +1988,16 @@ async def convert_campaign_to_tasks(
             detail="Campaign does not have an AI plan draft to convert.",
         )
 
-    deliverables_data = campaign.ai_plan_draft.get("deliverables", [])
+    draft = dict(campaign.ai_plan_draft)
+    deliverables_data = list(draft.get("deliverables") or [])
     deliverables_created = 0
     tasks_created = 0
+
+    # Fetch existing deliverables for this campaign to prevent duplicates
+    existing_stmt = select(Deliverable).where(Deliverable.campaign_id == campaign_id)
+    existing_res = await db.execute(existing_stmt)
+    existing_delivs = existing_res.scalars().all()
+    existing_titles = {d.title.lower().strip() for d in existing_delivs}
 
     # Resolve agency specialists by registered role for automatic role-based assignment
     mem_stmt = (
@@ -2000,7 +2013,23 @@ async def convert_campaign_to_tasks(
         if role_key not in specialist_map:
             specialist_map[role_key] = m.user_id
 
+    target_days = set(payload.day_numbers) if payload and payload.day_numbers else None
+
     for item in deliverables_data:
+        day_num = item.get("planned_day") or item.get("day_number")
+
+        # Filter by specific days if requested
+        if target_days is not None and day_num not in target_days:
+            continue
+
+        # Skip rejected deliverables
+        if item.get("status") == "rejected":
+            continue
+
+        # Skip already exported deliverables
+        if item.get("is_exported") or item.get("status") == "in_production":
+            continue
+
         dtype = (item.get("deliverable_type") or "reel").lower()
         planned_dt: date | None = None
         if item.get("scheduled_date"):
@@ -2011,8 +2040,14 @@ async def convert_campaign_to_tasks(
 
         # Create Deliverable with explicit planned_date and hero entity prominence
         hero_tag = item.get("hero_entity")
-        raw_title = item.get("title") or f"Day {item.get('day_number', 1)}: {item.get('hook', 'Deliverable')[:50]}"
+        raw_title = item.get("title") or f"Day {day_num or 1}: {item.get('hook', 'Deliverable')[:50]}"
         final_title = f"{hero_tag}: {raw_title}" if (hero_tag and hero_tag.lower() not in raw_title.lower()) else raw_title
+
+        # Check if already exists in DB
+        if final_title.lower().strip() in existing_titles or raw_title.lower().strip() in existing_titles:
+            item["is_exported"] = True
+            item["status"] = "in_production"
+            continue
 
         deliv = Deliverable(
             id=uuid.uuid4(),
@@ -2025,6 +2060,7 @@ async def convert_campaign_to_tasks(
         )
         db.add(deliv)
         await db.flush()
+        existing_titles.add(final_title.lower().strip())
         deliverables_created += 1
 
         # Create polymorphic production workflow tasks for this deliverable
@@ -2076,7 +2112,19 @@ async def convert_campaign_to_tasks(
             db.add(t)
             tasks_created += 1
 
-    campaign.status = CampaignStatus.in_production
+        # Mark as exported in plan draft
+        item["is_exported"] = True
+        item["status"] = "in_production"
+
+    # Persist updated deliverables in campaign.ai_plan_draft
+    draft["deliverables"] = deliverables_data
+    campaign.ai_plan_draft = draft
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(campaign, "ai_plan_draft")
+
+    # If any deliverables were converted, update campaign status to in_production
+    if deliverables_created > 0 or any(d.get("is_exported") for d in deliverables_data):
+        campaign.status = CampaignStatus.in_production
 
     # Auto-promote client from onboarding to active now that tasks are in production
     client = await db.get(Client, campaign.client_id)
@@ -2144,4 +2192,142 @@ async def delete_campaign(
     await db.delete(campaign)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/agencies/{agency_id}/clients/{client_id}/campaigns/sync-run/{run_id}",
+    response_model=CampaignOut,
+    status_code=status.HTTP_200_OK,
+)
+async def sync_campaign_from_run(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    run_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> CampaignOut:
+    """Sync an operational DAG workflow run directly into a campaign's ai_plan_draft."""
+    from app.models.operational_workflow import WorkflowRun, WorkflowTask, TaskOutputVersion
+    from sqlalchemy.orm.attributes import flag_modified
+
+    # Verify run exists and belongs to client/agency
+    run_res = await db.execute(
+        select(WorkflowRun).where(
+            WorkflowRun.id == run_id,
+            WorkflowRun.agency_id == agency_id,
+            WorkflowRun.client_id == client_id,
+        )
+    )
+    run = run_res.scalars().first()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found.")
+
+    # Fetch tasks
+    t_res = await db.execute(select(WorkflowTask).filter_by(workflow_run_id=run_id))
+    tasks = {t.task_key: t for t in t_res.scalars().all()}
+
+    raw_delivs = []
+    if "content_architecture" in tasks:
+        c_res = await db.execute(select(TaskOutputVersion).filter_by(task_id=tasks["content_architecture"].id))
+        c_ver = c_res.scalars().first()
+        if c_ver and isinstance(c_ver.output_payload, dict):
+            raw_delivs = c_ver.output_payload.get("deliverables", [])
+
+    strat_out = {}
+    if "campaign_strategy" in tasks:
+        s_res = await db.execute(select(TaskOutputVersion).filter_by(task_id=tasks["campaign_strategy"].id))
+        s_ver = s_res.scalars().first()
+        if s_ver and isinstance(s_ver.output_payload, dict):
+            strat_out = s_ver.output_payload
+
+    qa_out = {}
+    if "final_quality_audit" in tasks:
+        qa_res = await db.execute(select(TaskOutputVersion).filter_by(task_id=tasks["final_quality_audit"].id))
+        qa_ver = qa_res.scalars().first()
+        if qa_ver and isinstance(qa_ver.output_payload, dict):
+            qa_out = qa_ver.output_payload
+
+    # Fetch client
+    client = await get_client_for_agency(client_id, agency_id, db)
+
+    # Find or bind campaign directly to this workflow run
+    campaign = None
+    if run.campaign_id:
+        campaign = await db.get(Campaign, run.campaign_id)
+
+    now = datetime.now(timezone.utc)
+    if not campaign:
+        theme_name = strat_out.get("campaign_theme") or run.title or "AI Campaign Sprint"
+        campaign = Campaign(
+            id=uuid.uuid4(),
+            client_id=client_id,
+            name=f"{client.business_name} - {theme_name}",
+            status=CampaignStatus.planning,
+            period_month=now.month,
+            period_year=now.year,
+            objective=strat_out.get("primary_objective") or run.title,
+        )
+        db.add(campaign)
+        await db.flush()
+        run.campaign_id = campaign.id
+    elif strat_out.get("campaign_theme") and "AI Campaign Sprint" in campaign.name or campaign.name.endswith("- Campaign Sprint"):
+        # Upgrade temporary campaign sprint name with the synthesized creative theme
+        campaign.name = f"{client.business_name} - {strat_out['campaign_theme']}"
+
+    # Existing deliverables in production for this campaign
+    existing_delivs = (await db.execute(select(Deliverable).filter_by(campaign_id=campaign.id))).scalars().all()
+    existing_titles = [d.title.lower() for d in existing_delivs]
+
+    formatted_delivs = []
+    for idx, d in enumerate(raw_delivs):
+        day_num = d.get("planned_day") or (idx + 1)
+        title = d.get("title") or f"Day {day_num} Deliverable"
+        is_exported = any(d.get("title", "").lower() in et or (day_num == 1 and "technical reel" in et) for et in existing_titles)
+
+        item = {
+            "day_number": day_num,
+            "planned_day": day_num,
+            "title": title,
+            "deliverable_type": d.get("deliverable_type") or ("carousel" if d.get("format") == "carousel" else "reel"),
+            "platform": d.get("platform") or "instagram",
+            "pillar": d.get("strategic_angle") or "Authority & Growth",
+            "hook": d.get("primary_hook") or (d.get("hook_options", [""])[0] if d.get("hook_options") else d.get("hook_or_title") or ""),
+            "core_message_summary": d.get("caption") or d.get("core_message_summary") or "",
+            "call_to_action": d.get("call_to_action") or "Learn more",
+            "hero_entity": d.get("hero_entity") or client.business_name,
+            "scheduled_date": d.get("scheduled_date"),
+            "date_label": d.get("date_label") or f"Day {day_num}",
+            "reel_scenes": d.get("reel_scenes") or [],
+            "carousel_slides": d.get("carousel_slides") or [],
+            "production_notes": d.get("production_notes") or "",
+            "audio_track_guidance": d.get("audio_track_guidance") or "",
+            "hashtags": d.get("hashtags") or [],
+            "is_exported": is_exported,
+            "status": "in_production" if is_exported else "draft",
+        }
+        formatted_delivs.append(item)
+
+    plan_draft = {
+        "campaign_name": campaign.name,
+        "start_date": raw_delivs[0].get("scheduled_date") if raw_delivs else None,
+        "end_date": raw_delivs[-1].get("scheduled_date") if raw_delivs else None,
+        "duration_days": len(formatted_delivs),
+        "objective": strat_out.get("primary_objective") or campaign.objective,
+        "brand_voice": client.brand_voice or "Authentic & Professional",
+        "content_pillars": [a.get("angle_name") if isinstance(a, dict) else str(a) for a in strat_out.get("strategic_angles", [])],
+        "total_deliverables_planned": len(formatted_delivs),
+        "generator": "AgencyOS Multi-Agent DAG Engine",
+        "deliverables": formatted_delivs,
+        "strategy": strat_out,
+        "quality_evaluation": qa_out,
+        "workflow_status": "completed",
+    }
+
+    campaign.ai_plan_draft = plan_draft
+    flag_modified(campaign, "ai_plan_draft")
+    await db.commit()
+    await db.refresh(campaign)
+
+    return CampaignOut.model_validate(campaign)
+
 

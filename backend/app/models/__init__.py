@@ -30,3 +30,20 @@ from app.models.studio_artifact import (  # noqa: F401
     StudioArtifactType,
     StudioArtifactStatus,
 )
+from app.models.operational_workflow import (  # noqa: F401
+    WorkflowRun,
+    WorkflowRunStatus,
+    WorkflowTask,
+    WorkflowTaskStatus,
+    TaskKind,
+    AssigneeType,
+    WorkflowDependency,
+    WorkflowJobQueue,
+    WorkflowJobStatus,
+    WorkflowJobAttempt,
+    JobErrorCategory,
+    TaskOutputVersion,
+    WorkflowTaskReview,
+    ReviewDecision,
+    ModelInvocation,
+)

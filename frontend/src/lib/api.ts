@@ -32,7 +32,17 @@ async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> 
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail ?? `HTTP ${res.status}`);
+    let errorMsg = `HTTP ${res.status}`;
+    if (typeof error.detail === "string") {
+      errorMsg = error.detail;
+    } else if (Array.isArray(error.detail)) {
+      errorMsg = error.detail.map((d: any) => d.msg || d.detail || JSON.stringify(d)).join("; ");
+    } else if (error.detail && typeof error.detail === "object") {
+      errorMsg = error.detail.msg || error.detail.detail || JSON.stringify(error.detail);
+    } else if (typeof error.message === "string") {
+      errorMsg = error.message;
+    }
+    throw new Error(errorMsg);
   }
 
   if (res.status === 204) {
@@ -349,8 +359,21 @@ export const campaignApi = {
     }
   },
 
-  convertToTasks: (agencyId: string, campaignId: string, token: string) =>
-    apiFetch(`/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`, { method: "POST", token }),
+  convertToTasks: (agencyId: string, campaignId: string, token: string, dayNumbers?: number[]) =>
+    apiFetch<{ campaign_id: string; deliverables_created: number; tasks_created: number; status: string }>(
+      `/agencies/${agencyId}/campaigns/${campaignId}/convert-to-tasks`,
+      {
+        method: "POST",
+        body: dayNumbers ? { day_numbers: dayNumbers } : undefined,
+        token,
+      }
+    ),
+
+  syncRunToCampaign: (agencyId: string, clientId: string, runId: string, token: string) =>
+    apiFetch<any>(
+      `/agencies/${agencyId}/clients/${clientId}/campaigns/sync-run/${runId}`,
+      { method: "POST", token }
+    ),
 
   updateDeliverable: (
     agencyId: string,
@@ -456,6 +479,8 @@ export const studioApi = {
       default_due_date?: string | null;
       target_format?: string | null;
       deliverable_name?: string | null;
+      artifact_type?: string | null;
+      artifact_payload?: Record<string, any> | null;
     },
     idempotencyKey: string,
     token: string
@@ -995,4 +1020,130 @@ export const publishingApi = {
       token,
     });
   },
+};
+
+/* ── Operational Workflows (DAG) endpoints ── */
+export interface WorkflowTaskSummary {
+  id: string;
+  task_key: string;
+  title: string;
+  task_kind: "system" | "ai" | "human";
+  assignee_type: "agent" | "human";
+  status: "pending" | "ready" | "in_progress" | "waiting_for_human" | "completed" | "failed" | "blocked" | "cancelled";
+  execution_generation: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface WorkflowRunDetail {
+  id: string;
+  agency_id: string;
+  client_id: string | null;
+  campaign_id?: string | null;
+  name: string;
+  status: "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
+  total_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  created_at: string;
+  completed_at: string | null;
+  tasks: WorkflowTaskSummary[];
+  dependencies: { parent: string; child: string }[];
+}
+
+export interface StepRunResponse {
+  run_id: string;
+  completed_tasks_count: number;
+  run_status: string;
+  waiting_for_human_tasks: string[];
+}
+
+export interface TaskOutputDetail {
+  task_id: string;
+  task_key: string;
+  title: string;
+  status: string;
+  output: Record<string, any> | null;
+  version: number | null;
+}
+
+export interface TelemetrySummary {
+  run_id: string;
+  total_cost_usd: string | number;
+  total_tokens: number;
+  invocations_count: number;
+  invocations: Array<{
+    id: string;
+    provider: string;
+    model: string;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    cost_usd: string;
+    latency_ms: number;
+    status: string;
+  }>;
+}
+
+export const operationalWorkflowApi = {
+  listRuns: (agencyId: string, token: string, clientId?: string) => {
+    const qs = clientId ? `?client_id=${clientId}` : "";
+    return apiFetch<WorkflowRunDetail[]>(`/agencies/${agencyId}/operational-workflows/runs${qs}`, { token });
+  },
+
+  getRun: (agencyId: string, runId: string, token: string) =>
+    apiFetch<WorkflowRunDetail>(`/agencies/${agencyId}/operational-workflows/runs/${runId}`, { token }),
+
+  launchRun: (
+    agencyId: string,
+    data: {
+      client_id: string;
+      campaign_name: string;
+      theme: string;
+      primary_goal: string;
+      target_audience: string | string[];
+      platforms?: string[];
+      formats?: string[];
+      deliverable_count?: number;
+      key_offer?: string;
+      additional_context?: string;
+      brand_id?: string;
+      period_month?: number;
+      period_year?: number;
+      duration_days?: number;
+    },
+    token: string
+  ) =>
+    apiFetch<WorkflowRunDetail>(`/agencies/${agencyId}/operational-workflows/runs/launch`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  stepRun: (agencyId: string, runId: string, token: string, maxTicks: number = 10) =>
+    apiFetch<StepRunResponse>(`/agencies/${agencyId}/operational-workflows/runs/${runId}/step?max_ticks=${maxTicks}`, {
+      method: "POST",
+      token,
+    }),
+
+  getTaskOutput: (agencyId: string, taskId: string, token: string) =>
+    apiFetch<TaskOutputDetail>(`/agencies/${agencyId}/operational-workflows/tasks/${taskId}/output`, { token }),
+
+  reviewTask: (
+    agencyId: string,
+    taskId: string,
+    data: { decision: "approved" | "rejected" | "revision_requested"; feedback_notes?: string },
+    token: string
+  ) =>
+    apiFetch<{ task_id: string; decision: string; unblocked_tasks: string[]; message: string }>(
+      `/agencies/${agencyId}/operational-workflows/tasks/${taskId}/review`,
+      {
+        method: "POST",
+        body: data,
+        token,
+      }
+    ),
+
+  getTelemetry: (agencyId: string, runId: string, token: string) =>
+    apiFetch<TelemetrySummary>(`/agencies/${agencyId}/operational-workflows/runs/${runId}/telemetry`, { token }),
 };

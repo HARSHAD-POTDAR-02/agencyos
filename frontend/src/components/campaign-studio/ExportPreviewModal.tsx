@@ -166,17 +166,26 @@ export function ExportPreviewModal({
     setIsExporting(true);
     setErrorMessage(null);
 
+    const effectiveCampaignId = campaignId || artifact.campaign_id;
+    if (!effectiveCampaignId) {
+      setErrorMessage("No active campaign selected. Please select or create a campaign sprint before exporting.");
+      setIsExporting(false);
+      return;
+    }
+
     try {
       const response = await studioApi.exportToPipeline(
         agencyId,
-        campaignId,
+        effectiveCampaignId,
         {
           artifact_id: artifact.id,
-          expected_version_number: artifact.version,
+          expected_version_number: artifact.version || 1,
           assignee_id: assigneeId ? assigneeId : null,
           default_due_date: dueDate ? dueDate : null,
           target_format: targetFormat,
           deliverable_name: deliverableName.trim(),
+          artifact_type: artifact.type,
+          artifact_payload: artifact.payload,
         },
         idempotencyKey,
         token

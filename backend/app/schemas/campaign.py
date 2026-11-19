@@ -94,6 +94,10 @@ class GeneratePlanRequest(BaseModel):
     pinned_entities: list[str] = Field(default_factory=list)
 
 
+class ConvertToTasksRequest(BaseModel):
+    day_numbers: list[int] | None = None
+
+
 class ConvertToTasksResponse(BaseModel):
     campaign_id: uuid.UUID
     deliverables_created: int
@@ -200,12 +204,14 @@ class StudioReviseArtifactRequest(BaseModel):
 
 
 class StudioExportPipelineRequest(BaseModel):
-    artifact_id: uuid.UUID
-    expected_version_number: int
+    artifact_id: str
+    expected_version_number: int = 1
     assignee_id: uuid.UUID | None = None
     default_due_date: date | None = None
     target_format: str | None = None
     deliverable_name: str | None = None
+    artifact_type: str | None = None
+    artifact_payload: dict[str, Any] | None = None
 
 
 class StudioExportPipelineResponse(BaseModel):

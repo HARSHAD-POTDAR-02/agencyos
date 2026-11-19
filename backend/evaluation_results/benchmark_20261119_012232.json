@@ -1,0 +1,144 @@
+{
+  "timestamp": "20261119_012232",
+  "scenario": {
+    "scenario_id": "TEST-01-GYM-PERSONAL-BRAND",
+    "name": "Gym Owner Personal Brand \u2014 Personality-Driven Viral Campaign",
+    "brand_name": "IronForge Fitness & Performance",
+    "brand_persona": {
+      "owner_name": "Vikram 'Vik' Sharma",
+      "age": 32,
+      "archetype": "The Raw Truth-Teller / Tough-Love Older Brother",
+      "personality": "Extroverted, fiercely energetic, blunt, charismatic, contrarian. He despises fake fitness influencers, 30-day detox teas, and excuse culture. He talks like a real, experienced gym guy in Mumbai/Delhi: authentic Hinglish, sharp humor, deep empathy disguised as tough love. He never speaks in robotic corporate slogans.",
+      "tone_voice": "Conversational Hinglish, punchy, confrontational hook, relatable daily struggles, authentic humor, no fluff."
+    },
+    "target_audience": {
+      "demographics": "22-38 year old working professionals, IT/corporate employees, college students.",
+      "psychology": "They start the gym with massive dopamine on Jan 1st or any random Monday, buy new gear, post a gym selfie on Day 2, experience intense muscle soreness (DOMS) on Day 4, miss a day because of an office meeting on Day 8, feel guilty, and by Day 15 they completely ghost the gym. They silently feel like failures and invent excuses ('gym isn't for me', 'too busy at work').",
+      "core_conflict": "The illusion of instant motivation vs. the biological reality of the 15-day friction wall."
+    },
+    "business_goal": "Generate 300 walk-ins and trial sessions for IronForge by making Vik the most trusted, relatable fitness authority in the city.",
+    "test_topic": "Why 90% of people quit the gym after 15 days",
+    "execution_constraints": {
+      "platform": "Instagram Reels / YouTube Shorts (9:16 vertical)",
+      "duration": "45-60 seconds",
+      "format": "High-retention video script with exact camera framing, dialogue, B-roll, on-screen text, and sound cues.",
+      "negative_constraints": [
+        "DO NOT write generic listicles ('5 reasons why people quit').",
+        "DO NOT write cheesy quotes ('Don't give up on your fitness journey', 'Stay consistent!').",
+        "DO NOT write vague visual directions like 'Cinematic gym shots with energetic music'.",
+        "DO NOT write stilted translated Hindi or robotic English."
+      ]
+    }
+  },
+  "rubric_weights": {
+    "strategic_intelligence": 15,
+    "creative_originality": 15,
+    "hook_quality": 10,
+    "storytelling": 10,
+    "script_quality": 10,
+    "visual_direction": 10,
+    "audience_psychology": 10,
+    "campaign_diversity_and_sequencing": 8,
+    "brand_voice_consistency": 5,
+    "cta_effectiveness": 3,
+    "production_feasibility": 2,
+    "structured_output_reliability": 2
+  },
+  "mistral_large_4": {
+    "model_id": "mistralai/mistral-large-4-1t-a52b",
+    "provider": "NVIDIA NIM",
+    "latency_seconds": 224.75,
+    "ttft_seconds": 0.98,
+    "reasoning_length": 14979,
+    "reasoning_sample": "The user wants a complete campaign package for \"IronForge Fitness & Performance\" featuring Vikram 'Vik' Sharma. The output must be strictly valid JSON with no conversational filler before or after.\n\nKey requirements:\n- Brand: IronForge Fitness & Performance\n- Owner: Vikram 'Vik' Sharma - extroverted, energetic, blunt, charismatic, contrarian, despises fake influencers/detox teas/excuse culture, authentic Hinglish (Mumbai/Delhi gym guy style), tough love with empathy\n- Voice: Conversational Hinglish, punchy, confrontational hook, relatable, authentic humor, no fluff\n- Audience psychology: Jan 1...",
+    "raw_content": "",
+    "parsed_json": null,
+    "json_error": "Expecting value: line 1 column 1 (char 0)",
+    "is_valid_json": false
+  },
+  "gpt_oss_120b": {
+    "model_id": "openai/gpt-oss-120b",
+    "provider": "Groq",
+    "latency_seconds": 6.14,
+    "reasoning_length": 1415,
+    "reasoning_sample": "We need to output JSON only, no extra text. Must include all required fields. Ensure not to include filler. Provide brand moat statement, audience psychology breakdown list of three items, seven_day_content_arc with 7 days each containing day, theme, funnel_stage, core_concept. Then creative_angles array with three angles each with fields. Then production_execution_script with chosen_angle (pick one), working_title, target_duration_seconds, pacing, shot_by_shot array with at least 5-7 shots, each with required fields. Then CTA object.\n\nNeed to respect constraints: no generic listicles, no chee...",
+    "raw_content": "{\n  \"strategic_intelligence\": {\n    \"brand_moat_statement\": \"Vik ka unapologetic, no\u2011filter Mumbai\u2011Delhi gym vibe\u2014blunt, sarcastic, tough love\u2014creates a personality moat no fake influencer can copy. His Hinglish swagger makes every IronForge member feel like they\u2019re hanging out with a real gym bro, not a brand mascot, turning loyalty into a cultural badge.\",\n    \"audience_psychology_breakdown\": [\n      \"Day\u20114 DOMS guilt loop \u2013 muscles scream, mind makes excuses.\",\n      \"Day\u20118 \u2018office meeting\u2019 rationalisation \u2013 work > self\u2011care, hidden shame of feeling lazy.\",\n      \"Day\u201115 ghosting \u2013 internal narrative \u2018I\u2019m not cut out for gyms\u2019, protecting ego from failure.\"\n    ],\n    \"seven_day_content_arc\": [\n      {\n        \"day\": 1,\n        \"theme\": \"The First\u2011Day High\",\n        \"funnel_stage\": \"Awareness\",\n        \"core_concept\": \"Show the dopamine rush of buying gear and posting selfies, then smash it with Vik\u2019s \u2018stop pretending you\u2019re a model\u2019 line.\"\n      },\n      {\n        \"day\": 2,\n        \"theme\": \"DOMS Reality Check\",\n        \"funnel_stage\": \"Awareness\",\n        \"core_concept\": \"Vik walks through the gym, pointing out why sore muscles are normal, not a sign to quit.\"\n      },\n      {\n        \"day\": 3,\n        \"theme\": \"Excuse\u2011Busting Myth #1\",\n        \"funnel_stage\": \"Consideration\",\n        \"core_concept\": \"Contrarian take on \u2018I\u2019m too busy\u2019 \u2013 Vik shows a 5\u2011minute micro\u2011workout you can squeeze between meetings.\"\n      },\n      {\n        \"day\": 4,\n        \"theme\": \"The 15\u2011Day Friction Wall\",\n        \"funnel_stage\": \"Consideration\",\n        \"core_concept\": \"Explain the biology of habit formation and why 15 days feels like a wall, with Vik\u2019s tough\u2011love analogy.\"\n      },\n      {\n        \"day\": 5,\n        \"theme\": \"Social Proof \u2013 Real IronForge Stories\",\n        \"funnel_stage\": \"Consideration\",\n        \"core_concept\": \"Quick testimonials from members who smashed the 15\u2011day wall using Vik\u2019s method.\"\n      },\n      {\n        \"day\": 6,\n        \"theme\": \"Free 3\u2011Day Form Fix\",\n        \"funnel_stage\": \"Conversion\",\n        \"core_concept\": \"Offer a zero\u2011cost, on\u2011site form correction pass; Vik demonstrates a common mistake and fixes it.\"\n      },\n      {\n        \"day\": 7,\n        \"theme\": \"Commit\u2011Or\u2011Quit Challenge\",\n        \"funnel_stage\": \"Conversion\",\n        \"core_concept\": \"Launch a 15\u2011day \u201cNo\u2011Excuse\u201d challenge with a leaderboard; Vik calls out procrastinators live.\"\n      }\n    ]\n  },\n  \"creative_angles\": [\n    {\n      \"angle_name\": \"Angle 1 (Contrarian / Tough\u2011Love Monologue)\",\n      \"creative_concept\": \"Vik stands in front of a mirror, looks straight into the camera and rips apart the \u2018gym motivation\u2019 myth, calling out viewers by name with blunt humor.\",\n      \"hook_first_3_seconds\": \"\u201cAaj kal ka sabse bada fitness scam? \u2018Motivation\u2019 ka selfie!\u201d\",\n      \"why_it_works\": \"Triggers reactance by attacking a widely accepted belief, making viewers pause to defend themselves, then pulls them into Vik\u2019s authority.\"\n    },\n    {\n      \"angle_name\": \"Angle 2 (Humorous Sketch / Relatable Dialogue)\",\n      \"creative_concept\": \"Two friends in a office break\u2011room: one bragging about Day\u20112 gym selfie, the other groaning about DOMS. Vik barges in, swaps the coffee for a kettlebell and drops truth bombs.\",\n      \"hook_first_3_seconds\": \"\u201cOffice ki chai ko kettlebell se replace karte hain, bhai!\u201d\",\n      \"why_it_works\": \"Uses comedy to mirror the audience\u2019s daily excuse environment, then injects a vivid visual cue that sticks.\"\n    },\n    {\n      \"angle_name\": \"Angle 3 (Storytelling / The 15\u2011Day Trap)\",\n      \"creative_concept\": \"Mini\u2011narrative: Vik narrates a \u2018day\u2011by\u2011day\u2019 saga of a fictional rookie named \u2018Rohit\u2019 who crashes at Day\u201115, then rewinds to show the exact moment Vik could have saved him.\",\n      \"hook_first_3_seconds\": \"\u201cRohit ne gym join ki, aur 15 din baad\u2026 *silence*\u201d\",\n      \"why_it_works\": \"Creates a cliff\u2011hanger that forces the brain to stay, while the story mirrors the viewer\u2019s own timeline, generating empathy and urgency.\"\n    }\n  ],\n  \"production_execution_script\": {\n    \"chosen_angle\": \"Angle 3 (Storytelling / The 15\u2011Day Trap)\",\n    \"working_title\": \"\u201c15 Din Ka Gym Trap \u2013 Vik Ki Hard Truth\u201d\",\n    \"target_duration_seconds\": 55,\n    \"pacing\": \"Fast opening -> Relatable conversational middle -> Punchy hard\u2011hitting close\",\n    \"shot_by_shot\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:03\",\n        \"camera_direction\": \"Handheld medium shot, close\u2011up on Vik\u2019s face, slight push\u2011in as he leans forward.\",\n        \"visual_action_and_broll\": \"Vik stands in IronForge\u2019s locker room, neon \u201815\u2011Day Wall\u2019 sign flickering behind him.\",\n        \"dialogue_hinglish\": \"\u201cRohit ne gym join ki, aur 15 din baad\u2026 *silence*\u201d\",\n        \"onscreen_text\": \"\u201c15\u2011Din Ka Gym Trap\u201d in bold, kinetic typography.\",\n        \"audio_sfx_cues\": \"Sharp beat drop, echo of a ticking clock.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:10\",\n        \"camera_direction\": \"Cut to over\u2011the\u2011shoulder tracking shot following Rohit (actor) entering the gym, sweaty gym bag swinging.\",\n        \"visual_action_and_broll\": \"Rohit smiles, snaps a selfie, then lifts a barbell with exaggerated effort.\",\n        \"dialogue_hinglish\": \"Vik (voice\u2011over): \u201cDay\u20111 ka high, selfie se start, par body ko reality ka \u2018hello\u2019 milta hai.\u201d\",\n        \"onscreen_text\": \"\u201cDay\u20111: Hype\u201d flashing under the selfie.\",\n        \"audio_sfx_cues\": \"Upbeat synth, camera shutter sound.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:11 - 0:20\",\n        \"camera_direction\": \"Static wide shot of the gym floor, slow\u2011zoom on Rohit\u2019s face grimacing during a squat.\",\n        \"visual_action_and_broll\": \"Close\u2011up of quads shaking, sweat droplets, then a quick cut to a calendar flipping to Day\u20114.\",\n        \"dialogue_hinglish\": \"Vik (on\u2011camera, now in the middle of the floor): \u201cDay\u20114 pe DOMS aata hai, aur tum sochte ho \u2018bas, enough!\u2019\u201d\",\n        \"onscreen_text\": \"\u201cDay\u20114: DOMS\u201d in red, shaking effect.\",\n        \"audio_sfx_cues\": \"Heavy bass thump, subtle groan sound.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:21 - 0:30\",\n        \"camera_direction\": \"Handheld close\u2011up on Vik\u2019s hand grabbing a phone, scrolling through a meeting invite.\",\n        \"visual_action_and_broll\": \"Vik rolls his eyes, then flips the phone to reveal a 5\u2011minute kettlebell routine on screen.\",\n        \"dialogue_hinglish\": \"Vik: \u201cExcuse #1 \u2013 \u2018office meeting\u2019? Bhai, 5 minute kettlebell se meeting hi tod do.\u201d\",\n        \"onscreen_text\": \"\u201cExcuse #1: Too busy?\u201d with a crossed\u2011out icon.\",\n        \"audio_sfx_cues\": \u201cQuick whoosh, ticking timer.\u201d\n      },\n      {\n        \"shot_number\": 5,\n        \"timing\": \"0:31 - 0:40\",\n        \"camera_direction\": \"Dolly in on Vik standing beside a chalkboard that reads \u201815\u2011Din Wall\u2019 with a cracked line through it.\",\n        \"visual_action_and_broll\": \"Vik draws a simple habit loop diagram while gesturing.\",\n        \"dialogue_hinglish\": \"Vik: \u201cBiology bolti hai \u2013 15 din pe habit formation ka gate lock hota hai. Agar tum uss din nahi push karoge, toh\u2026 *pause* \u2026wall tumhe thok dega.\u201d\",\n        \"onscreen_text\": \u201c\u2018Break the wall\u2019 \u2013 animated hammer smashing the wall graphic.\",\n        \"audio_sfx_cues\": \u201cHammer strike SFX, rising synth.\u201d\n      },\n      {\n        \"shot_number\": 6,\n        \"timing\": \"0:41 - 0:50\",\n        \"camera_direction\": \"Fast cut to Vik holding a sign \u2018FREE 3\u2011Day Form Fix\u2019 while a member does a squat in the background.\",\n        \"visual_action_and_broll\": \"Member\u2019s form is corrected instantly; Vik winks at camera.\",\n        \"dialogue_hinglish\": \"Vik: \u201cAbhi free 3\u2011day form fix le, aur 15\u2011din ka trap se pehle hi nikal ja.\u201d\",\n        \"onscreen_text\": \u201cFree 3\u2011Day Form Fix \u2013 Swipe Up!\u201d in bold neon.\",\n        \"audio_sfx_cues\": \u201cUpbeat climax music, crowd cheer.\u201d\n      },\n      {\n        \"shot_number\": 7,\n        \"timing\": \"0:51 - 0:55\",\n        \"camera_direction\": \"Static close\u2011up on Vik\u2019s face, intense stare, slight slow\u2011motion.\",\n        \"visual_action_and_broll\": \"Vik points directly at the camera, background fades to IronForge logo.\",\n        \"dialogue_hinglish\": \"Vik: \u201cQuit karna asaan hai. Stay hard? Woh tumhara decision hai.\u201d\",\n        \"onscreen_text\": \u201c#NoExcuseChallenge\u201d flashing.\",\n        \"audio_sfx_cues\": \u201cFinal bass hit, then silence.\u201d\n      }\n    ],\n    \"cta\": {\n      \"spoken_dialogue\": \"\u201cComment \u2018READY\u2019 aur DM karo, free 3\u2011day form correction pass claim karne ke liye \u2013 bas aaj hi!\u201d\",\n      \"visual_action\": \"Vik holds up his phone, taps the screen, and the screen shows a quick swipe\u2011up animation.\",\n      \"offer_type\": \"Free 3\u2011day form correction pass (no credit card, instant booking via DM)\"\n    }\n  }\n}",
+    "parsed_json": null,
+    "json_error": "Expecting value: line 114 column 27 (char 6576)",
+    "is_valid_json": false
+  },
+  "evaluation": {
+    "scores": {
+      "model_a": {
+        "strategic_intelligence": 0,
+        "creative_originality": 0,
+        "hook_quality": 0,
+        "storytelling": 0,
+        "script_quality": 0,
+        "visual_direction": 0,
+        "audience_psychology": 0,
+        "campaign_diversity_and_sequencing": 0,
+        "brand_voice_consistency": 0,
+        "cta_effectiveness": 0,
+        "production_feasibility": 0,
+        "structured_output_reliability": 0,
+        "total_score": 0
+      },
+      "model_b": {
+        "strategic_intelligence": 13,
+        "creative_originality": 12,
+        "hook_quality": 8,
+        "storytelling": 9,
+        "script_quality": 9,
+        "visual_direction": 9,
+        "audience_psychology": 9,
+        "campaign_diversity_and_sequencing": 7,
+        "brand_voice_consistency": 5,
+        "cta_effectiveness": 3,
+        "production_feasibility": 1,
+        "structured_output_reliability": 0,
+        "total_score": 85
+      }
+    },
+    "dimension_breakdown": {
+      "hook_comparison": {
+        "model_a_hook": "No hook provided.",
+        "model_b_hook": "\"Rohit ne gym join ki, aur 15 din baad\u2026 *silence*\" \u2013 a cliff\u2011hanger that forces the brain to stay, plus two alternative 3\u2011second hooks that attack motivation myths and swap office tea for kettlebells.",
+        "verdict": "Model B wins. Its hook creates immediate curiosity and pattern\u2011interrupt, whereas Model A offers nothing."
+      },
+      "visual_direction_comparison": {
+        "model_a_visuals": "No visual direction supplied.",
+        "model_b_visuals": "Detailed shot\u2011by\u2011shot plan: handheld push\u2011in, over\u2011the\u2011shoulder tracking, static wide with slow\u2011zoom, dolly\u2011in on chalkboard, fast cuts, and final slow\u2011motion close\u2011up. Each shot includes camera movement, on\u2011screen text, SFX cues and specific actions.",
+        "verdict": "Model B is far more executable; the instructions are concrete enough to be filmed with a phone and minimal crew."
+      },
+      "script_cadence_comparison": {
+        "model_a_cadence": "No script provided.",
+        "model_b_cadence": "Raw Hinglish lines (\u201cRohit ne gym join ki\u2026\u201d, \u201cDay\u20114 pe DOMS aata hai, aur tum sochte ho \u2018bas, enough!\u2019\u201d, \u201cExcuse #1 \u2013 \u2018office meeting\u2019? Bhai, 5 minute kettlebell se meeting hi tod do.\u201d) that feel like spoken banter, with pauses for impact and a punchy CTA at the end.",
+        "verdict": "Model B delivers authentic, punchy dialogue that matches the tough\u2011love brother persona. Model A has none."
+      }
+    },
+    "key_strengths": {
+      "model_a": [],
+      "model_b": [
+        "Deep strategic alignment with Vik\u2019s personality\u2011first brand.",
+        "Clear 7\u2011day funnel progression from awareness to conversion.",
+        "Highly specific visual and audio directions ready for phone\u2011only production.",
+        "Authentic Hinglish script that captures Mumbai/Delhi gym banter."
+      ]
+    },
+    "critical_weaknesses": {
+      "model_a": [
+        "Complete lack of content \u2013 no strategy, script, or visual plan.",
+        "Invalid JSON (no output at all)."
+      ],
+      "model_b": [
+        "Output contains curly quotes and other non\u2011JSON characters, making the payload invalid.",
+        "Production feasibility score reduced because the plan assumes an extra actor (Rohit) and multiple set\u2011ups that may stretch a 45\u2011minute shoot."
+      ]
+    },
+    "overall_verdict": {
+      "winner": "Model B",
+      "summary": "Model B provides a fully fleshed\u2011out 7\u2011day Instagram campaign that leverages Vik Sharma's tough\u2011love, Hinglish voice, and the psychological pain points of the 15\u2011day quitter. Its hooks, storytelling arc, and visual blueprint are concrete and conversion\u2011focused, earning it a decisive lead despite a technical JSON formatting error. Recommendation for AgencyOS: adopt Model B's creative framework, correct the JSON syntax (replace curly quotes with straight quotes), and streamline the shoot to a single\u2011camera phone setup with one extra actor to stay within the 45\u2011minute production window."
+    }
+  }
+}

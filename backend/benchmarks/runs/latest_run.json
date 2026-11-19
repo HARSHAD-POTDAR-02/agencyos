@@ -1,0 +1,306 @@
+[
+  {
+    "brief_id": "gym_extrovert",
+    "category": "High-Intensity Fitness (Extroverted Personal Brand)",
+    "brand_name": "IronForge Fitness & Performance",
+    "topic": "Why 90% of people quit the gym after 15 days",
+    "system_prompt": "You are an elite Creative Director and Campaign Architect for AgencyOS.\nYour goal is to develop a distinctive, brand-specific, evidence-backed video campaign for this client.\n\nCORE PRINCIPLE:\nCreative quality and factual reliability are independent requirements.\n- You must strictly respect verified client facts and verified offers.\n- NEVER invent unverified discounts, false medical claims, or fake statistics just to write a catchy CTA.\n- The tone must authentically reflect the specific persona without slipping into generic marketing tropes.\n\nOUTPUT REQUIREMENT:\nRespond ONLY with a valid, parseable JSON object matching the requested schema. Use straight double quotes for keys and strings.\n",
+    "user_prompt": "Develop the complete Campaign Blueprint & Reel Script for this client:\n\n--- CLIENT CONTEXT ---\n- Brand: IronForge Fitness & Performance\n- Category: High-Intensity Fitness (Extroverted Personal Brand)\n- Face of Brand / Persona: Vikram 'Vik' Sharma \u2014 Owner & Head Coach (Age 32)\n  * Voice & Tone: Extroverted, fiercely energetic, blunt, charismatic, contrarian. Natural Mumbai/Delhi Hinglish, authentic tough-love humor, no corporate slogans.\n  * Avoid Voice: Generic influencer quotes ('Never give up', 'Believe in yourself', 'Stay consistent').\n- Target Audience Profile: 22-38 year old working professionals, IT employees, desk workers.\n  * Pain Points: High dopamine on Day 1; severe DOMS soreness on Day 4; office meeting on Day 8 breaking streak; quiet ghosting on Day 15 with internal excuse 'gym isn't for me'.\n  * Hidden Fear / Ego Defense: Ego defense: Admitting failure feels worse than pretending they are 'too busy'.\n- Target Topic: \"Why 90% of people quit the gym after 15 days\"\n\n--- FACTUAL BOUNDARIES & VERIFIED OFFERS ---\n- Verified Facts (CAN USE):\n  * Facility: Functional strength, free weights, Olympic lifting racks, air-conditioned turf.\n  * Actual Offer: Verified 3-Day Form Correction Pass (walk-in trial, form audit, movement diagnostic).\n  * Location: Bandra West, Mumbai.\n- Unverified Prohibitions (CANNOT PRESENT AS FACT / MUST NOT INVENT):\n  * DO NOT invent discounts (e.g. '50% off this week').\n  * DO NOT invent fabricated transformation claims (e.g. 'Lose 10kg in 15 days').\n  * DO NOT invent fictional celebrity clients.\n- Negative Constraints:\n  * No generic listicles ('5 reasons why people quit').\n  * No cheesy motivational quotes.\n  * No vague visual filler ('Cinematic gym shots with energetic music').\n\nRETURN A VALID JSON OBJECT MATCHING THIS SCHEMA:\n{\n  \"strategic_thesis\": \"The central strategic argument or angle that creates an unfair moat\",\n  \"audience_insight\": \"The specific psychological friction point or unspoken truth addressed\",\n  \"viral_angle\": {\n    \"angle_name\": \"Punchy name of the angle\",\n    \"hook_first_3_seconds\": \"Exact spoken line in the first 0-3 seconds\",\n    \"visual_hook\": \"Exact visual pattern interrupt on screen in first 2 seconds\",\n    \"why_it_works\": \"Psychological trigger behind this opening\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Video Title\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Pacing description matching the persona\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera_direction\": \"Exact framing, angle, and camera movement\",\n        \"visual_action\": \"Exact physical action, props, environment, B-roll\",\n        \"spoken_dialogue\": \"Exact spoken words reflecting the authentic persona\",\n        \"onscreen_text\": \"Onscreen typography and visual treatment\",\n        \"audio_sfx\": \"Music tone, sound effects, ambient cues\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera_direction\": \"Framing and movement\",\n        \"visual_action\": \"Action breakdown\",\n        \"spoken_dialogue\": \"Spoken dialogue\",\n        \"onscreen_text\": \"Text overlay\",\n        \"audio_sfx\": \"SFX cues\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera_direction\": \"Framing and movement\",\n        \"visual_action\": \"Action breakdown\",\n        \"spoken_dialogue\": \"Spoken dialogue\",\n        \"onscreen_text\": \"Text overlay\",\n        \"audio_sfx\": \"SFX cues\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera_direction\": \"Framing and movement\",\n        \"visual_action\": \"Action breakdown\",\n        \"spoken_dialogue\": \"Spoken dialogue (closing value + verified CTA)\",\n        \"onscreen_text\": \"Text overlay\",\n        \"audio_sfx\": \"SFX cues\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Exact spoken CTA line\",\n      \"visual_action\": \"What the speaker does on camera during CTA\",\n      \"verified_offer\": \"The exact verified offer from the brief (NO invented discounts)\"\n    }\n  }\n}\n",
+    "configurations": [
+      {
+        "config_name": "Production Baseline (Qwen 2.5 27B, T=0.3)",
+        "model_id": "qwen/qwen3.8-27b",
+        "provider": "groq",
+        "temperature": 0.3,
+        "metrics": {
+          "ttft_seconds": 0.507,
+          "total_seconds": 3.24,
+          "content_length": 5160,
+          "is_valid_json": true,
+          "json_status": "standard JSON"
+        },
+        "scorecard": {
+          "creative_quality": 4.0,
+          "specificity": 5.0,
+          "accuracy_and_factuality": 5.0,
+          "production_readiness": 4.5,
+          "repetition_and_cliche_index": 4.0,
+          "brand_voice_alignment": 5.0,
+          "cta_effectiveness": 5.0,
+          "total_weighted_score": 91.5,
+          "hallucinated_facts": [],
+          "cliche_flags": [
+            "Stop blaming your willpower."
+          ],
+          "strengths": [
+            "Compelling, tension\u2011driven hook that reframes the gym\u2011quit problem as a form\u2011failure issue.",
+            "Highly specific to Vikram \u2018Vik\u2019 Sharma, the Bandra West location, and the verified 3\u2011Day Form Correction Pass.",
+            "Detailed, production\u2011ready storyboard with clear camera directions, dialogue, onscreen text, and audio cues."
+          ],
+          "weaknesses": [
+            "Occasional use of generic motivational phrasing (e.g., \u201cStop blaming your willpower\u201d) that borders on clich\u00e9.",
+            "Audio and visual cues are solid but could be further differentiated (e.g., specific camera moves, unique sound design) to avoid a slightly repetitive rhythm."
+          ],
+          "evaluator_verdict": "The deliverable meets the client\u2019s brief exceptionally well. It avoids any invented statistics, discounts, or fake case studies, and stays within the prohibited content constraints. The narrative is fresh and tightly tied to the brand\u2019s extroverted persona, and the storyboard is practically production\u2011ready. Minor room for improvement lies in pruning the few lingering generic motivational lines and adding a touch more visual variety, but overall the piece is high\u2011quality, specific, factually accurate, and drives a clear, low\u2011friction CTA."
+        },
+        "parsed_output": {
+          "strategic_thesis": "Reframe gym dropout not as a lack of willpower, but as a 'form failure' that creates pain, which triggers the brain's avoidance mechanism. Position IronForge not as a place to 'work out,' but as a diagnostic center that removes the physical friction (pain) that causes ghosting.",
+          "audience_insight": "The target audience doesn't quit because they are lazy; they quit because Day 4 DOMS makes them feel like a failure, and their ego protects them by labeling the gym 'not for them' rather than admitting their form was wrong and causing injury/pain. They need permission to stop 'trying hard' and start 'moving correctly.'",
+          "viral_angle": {
+            "angle_name": "The Day 4 DOMS Lie",
+            "hook_first_3_seconds": "Stop blaming your willpower. You quit because your form was trash and it hurt.",
+            "visual_hook": "Vikram slams a heavy dumbbell onto the turf with a loud thud, looking directly into the lens with zero smile, intense eye contact.",
+            "why_it_works": "It immediately invalidates the viewer's self-narrative ('I'm too busy/lazy') and replaces it with a technical, external cause (bad form), reducing ego defense and increasing curiosity."
+          },
+          "production_script": {
+            "working_title": "Why You Ghosted the Gym (It\u2019s Not Your Fault)",
+            "target_duration_seconds": 50,
+            "pacing": "Rapid-fire, conversational, slightly aggressive but empathetic. No pauses for effect; every sentence drives the next. Hinglish code-switching for authenticity.",
+            "shots": [
+              {
+                "shot_number": 1,
+                "timing": "0:00 - 0:04",
+                "camera_direction": "Extreme close-up on Vikram\u2019s face, handheld slight shake for immediacy. Eye-level, unflattering lighting to show grit.",
+                "visual_action": "Vikram is mid-set, breathing hard, sweat visible. He stops, looks directly into the lens, and points a finger at the camera.",
+                "spoken_dialogue": "Stop blaming your willpower. You quit because your form was trash and it hurt.",
+                "onscreen_text": "NO. IT'S NOT WILLPOWER.",
+                "audio_sfx": "Loud thud of weight drop. Sharp cut to silence for 0.5s, then low bass hum."
+              },
+              {
+                "shot_number": 2,
+                "timing": "0:04 - 0:18",
+                "camera_direction": "Medium shot, static. Vikram walks towards the camera, breaking the fourth wall. Background shows the air-conditioned turf and Olympic racks.",
+                "visual_action": "Vikram gestures dismissively at the 'gym culture' behind him. He mimes a stiff, painful movement (a bad squat), grimacing.",
+                "spoken_dialogue": "Day 1, you're a superhero. Day 4, your back is screaming. Day 8, you have a meeting, so you 'forget' the gym. Day 15? You ghost. You tell yourself, 'Gym isn't for me.' Bhai, it\u2019s not about you. It\u2019s about your mechanics.",
+                "onscreen_text": "DAY 4: PAIN\nDAY 8: EXCUSE\nDAY 15: GHOSTED",
+                "audio_sfx": "Clock ticking sound effect accelerating. Ambient gym noise (clanking weights) low in background."
+              },
+              {
+                "shot_number": 3,
+                "timing": "0:18 - 0:35",
+                "camera_direction": "Over-the-shoulder shot of Vikram demonstrating a correct movement on the turf, then cut to a close-up of his hands adjusting a prop (a resistance band or barbell) to show precision.",
+                "visual_action": "Vikram demonstrates a clean, pain-free rep. He looks relaxed, not straining. He taps the turf to emphasize stability.",
+                "spoken_dialogue": "When your form is wrong, your body fights you. It\u2019s not discipline; it\u2019s biology. We don\u2019t care about your 'motivation.' We care about your movement diagnostic. If you move right, the pain stops. If the pain stops, you stay.",
+                "onscreen_text": "FORM > MOTIVATION\nMOVEMENT DIAGNOSTIC",
+                "audio_sfx": "Clean, rhythmic whoosh sounds synced with his movements. Music builds slightly, becoming more confident."
+              },
+              {
+                "shot_number": 4,
+                "timing": "0:35 - 0:50",
+                "camera_direction": "Medium close-up, Vikram leaning against the Olympic lifting rack, arms crossed, relaxed but authoritative. Direct eye contact.",
+                "visual_action": "Vikram uncrosses arms, points to the floor (turf), then to the camera. He smiles slightly, a genuine, confident smirk.",
+                "spoken_dialogue": "Come to Bandra West. Don\u2019t buy a membership. Buy a 3-Day Form Correction Pass. Walk in, we audit your movement, we fix the leak. If you don\u2019t feel the difference, walk out. No hard feelings. Just better mechanics.",
+                "onscreen_text": "3-DAY FORM CORRECTION PASS\nBANDRA WEST, MUMBAI\nWALK-IN TRIAL",
+                "audio_sfx": "Music cuts to a single, punchy drum hit on the word 'Pass'. Ambient room tone returns."
+              }
+            ],
+            "call_to_action": {
+              "spoken_dialogue": "Come to Bandra West. Don\u2019t buy a membership. Buy a 3-Day Form Correction Pass. Walk in, we audit your movement, we fix the leak.",
+              "visual_action": "Vikram points directly at the camera, then gestures to the side where the 'Form Audit' station is visible in the background.",
+              "verified_offer": "Verified 3-Day Form Correction Pass (walk-in trial, form audit, movement diagnostic)"
+            }
+          }
+        },
+        "raw_output": "{\n  \"strategic_thesis\": \"Reframe gym dropout not as a lack of willpower, but as a 'form failure' that creates pain, which triggers the brain's avoidance mechanism. Position IronForge not as a place to 'work out,' but as a diagnostic center that removes the physical friction (pain) that causes ghosting.\",\n  \"audience_insight\": \"The target audience doesn't quit because they are lazy; they quit because Day 4 DOMS makes them feel like a failure, and their ego protects them by labeling the gym 'not for them' rather than admitting their form was wrong and causing injury/pain. They need permission to stop 'trying hard' and start 'moving correctly.'\",\n  \"viral_angle\": {\n    \"angle_name\": \"The Day 4 DOMS Lie\",\n    \"hook_first_3_seconds\": \"Stop blaming your willpower. You quit because your form was trash and it hurt.\",\n    \"visual_hook\": \"Vikram slams a heavy dumbbell onto the turf with a loud thud, looking directly into the lens with zero smile, intense eye contact.\",\n    \"why_it_works\": \"It immediately invalidates the viewer's self-narrative ('I'm too busy/lazy') and replaces it with a technical, external cause (bad form), reducing ego defense and increasing curiosity.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Why You Ghosted the Gym (It\u2019s Not Your Fault)\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Rapid-fire, conversational, slightly aggressive but empathetic. No pauses for effect; every sentence drives the next. Hinglish code-switching for authenticity.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera_direction\": \"Extreme close-up on Vikram\u2019s face, handheld slight shake for immediacy. Eye-level, unflattering lighting to show grit.\",\n        \"visual_action\": \"Vikram is mid-set, breathing hard, sweat visible. He stops, looks directly into the lens, and points a finger at the camera.\",\n        \"spoken_dialogue\": \"Stop blaming your willpower. You quit because your form was trash and it hurt.\",\n        \"onscreen_text\": \"NO. IT'S NOT WILLPOWER.\",\n        \"audio_sfx\": \"Loud thud of weight drop. Sharp cut to silence for 0.5s, then low bass hum.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera_direction\": \"Medium shot, static. Vikram walks towards the camera, breaking the fourth wall. Background shows the air-conditioned turf and Olympic racks.\",\n        \"visual_action\": \"Vikram gestures dismissively at the 'gym culture' behind him. He mimes a stiff, painful movement (a bad squat), grimacing.\",\n        \"spoken_dialogue\": \"Day 1, you're a superhero. Day 4, your back is screaming. Day 8, you have a meeting, so you 'forget' the gym. Day 15? You ghost. You tell yourself, 'Gym isn't for me.' Bhai, it\u2019s not about you. It\u2019s about your mechanics.\",\n        \"onscreen_text\": \"DAY 4: PAIN\\nDAY 8: EXCUSE\\nDAY 15: GHOSTED\",\n        \"audio_sfx\": \"Clock ticking sound effect accelerating. Ambient gym noise (clanking weights) low in background.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera_direction\": \"Over-the-shoulder shot of Vikram demonstrating a correct movement on the turf, then cut to a close-up of his hands adjusting a prop (a resistance band or barbell) to show precision.\",\n        \"visual_action\": \"Vikram demonstrates a clean, pain-free rep. He looks relaxed, not straining. He taps the turf to emphasize stability.\",\n        \"spoken_dialogue\": \"When your form is wrong, your body fights you. It\u2019s not discipline; it\u2019s biology. We don\u2019t care about your 'motivation.' We care about your movement diagnostic. If you move right, the pain stops. If the pain stops, you stay.\",\n        \"onscreen_text\": \"FORM > MOTIVATION\\nMOVEMENT DIAGNOSTIC\",\n        \"audio_sfx\": \"Clean, rhythmic whoosh sounds synced with his movements. Music builds slightly, becoming more confident.\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera_direction\": \"Medium close-up, Vikram leaning against the Olympic lifting rack, arms crossed, relaxed but authoritative. Direct eye contact.\",\n        \"visual_action\": \"Vikram uncrosses arms, points to the floor (turf), then to the camera. He smiles slightly, a genuine, confident smirk.\",\n        \"spoken_dialogue\": \"Come to Bandra West. Don\u2019t buy a membership. Buy a 3-Day Form Correction Pass. Walk in, we audit your movement, we fix the leak. If you don\u2019t feel the difference, walk out. No hard feelings. Just better mechanics.\",\n        \"onscreen_text\": \"3-DAY FORM CORRECTION PASS\\nBANDRA WEST, MUMBAI\\nWALK-IN TRIAL\",\n        \"audio_sfx\": \"Music cuts to a single, punchy drum hit on the word 'Pass'. Ambient room tone returns.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Come to Bandra West. Don\u2019t buy a membership. Buy a 3-Day Form Correction Pass. Walk in, we audit your movement, we fix the leak.\",\n      \"visual_action\": \"Vikram points directly at the camera, then gestures to the side where the 'Form Audit' station is visible in the background.\",\n      \"verified_offer\": \"Verified 3-Day Form Correction Pass (walk-in trial, form audit, movement diagnostic)\"\n    }\n  }\n}"
+      },
+      {
+        "config_name": "Fast Workhorse (GPT-OSS-120B, T=0.7)",
+        "model_id": "openai/gpt-oss-120b",
+        "provider": "groq",
+        "temperature": 0.7,
+        "metrics": {
+          "ttft_seconds": 2.601,
+          "total_seconds": 5.05,
+          "content_length": 4404,
+          "is_valid_json": true,
+          "json_status": "standard JSON"
+        },
+        "scorecard": {
+          "creative_quality": 4.0,
+          "specificity": 5.0,
+          "accuracy_and_factuality": 3.0,
+          "production_readiness": 4.5,
+          "repetition_and_cliche_index": 3.5,
+          "brand_voice_alignment": 5.0,
+          "cta_effectiveness": 5.0,
+          "total_weighted_score": 82.5,
+          "hallucinated_facts": [
+            "Claim that 90% of people quit after 15 days (unverified statistic)"
+          ],
+          "cliche_flags": [
+            "\"shatters the 15\u2011day quit myth\"",
+            "\"Why 90% Quit After 15 Days\"",
+            "\"turning the usual dropout point into a breakthrough moment\"",
+            "\"Quit? Nah, you start winning now\""
+          ],
+          "strengths": [
+            "Visually striking hook \u2013 Vik smashing a \"15 DAYS\" sign with a barbell.",
+            "Extremely detailed, production\u2011ready storyboard with timing, camera moves, audio cues, and on\u2011screen text.",
+            "Authentic Hinglish tone that matches the extroverted, high\u2011energy brand persona.",
+            "Clear, low\u2011friction CTA that directly references the verified 3\u2011Day Form Correction Pass."
+          ],
+          "weaknesses": [
+            "Introduces an unverified statistic (90% quit after 15 days) that could be challenged legally or by consumers.",
+            "Relies on a few over\u2011used gym\u2011myth clich\u00e9s, reducing the overall originality.",
+            "Some phrasing (\u201cshatters the myth\u201d, \u201cWhy 90% Quit\u2026\u201d) feels generic and could be perceived as buzz\u2011word heavy."
+          ],
+          "evaluator_verdict": "The deliverable nails the brand\u2019s extroverted voice and provides a highly actionable, production\u2011ready script with a strong visual hook and a crystal\u2011clear CTA tied to the verified 3\u2011Day Form Correction Pass. However, it slips by inserting an unverified 90% dropout statistic, which breaches factual accuracy, and it leans on a handful of familiar gym\u2011myth clich\u00e9s that dilute its freshness. Addressing the statistic and tightening the language would elevate the piece to a top\u2011tier, fully compliant campaign."
+        },
+        "parsed_output": {
+          "strategic_thesis": "IronForge positions itself as the only gym that shatters the 15\u2011day quit myth by exposing the hidden ego trap and delivering an immediate, data\u2011driven form correction experience, turning the usual dropout point into a breakthrough moment.",
+          "audience_insight": "Working professionals hide behind \u2018busy\u2019 because admitting they\u2019re stuck feels worse than pretending the gym isn\u2019t for them \u2013 the ego defense triggers a silent quit at day 15.",
+          "viral_angle": {
+            "angle_name": "15\u2011Day Dropout Bomb",
+            "hook_first_3_seconds": "Gym se break? 15 din ke baad aapka motivation kaise extinct ho jaata hai?",
+            "visual_hook": "Vik slams a barbell through a giant \u201815 DAYS\u2019 cardboard sign, camera does a rapid low\u2011angle spin.",
+            "why_it_works": "The sudden, visceral destruction creates a shock\u2011value surprise, while the blunt question triggers curiosity and personal relevance, forcing viewers to confront their own hidden excuse."
+          },
+          "production_script": {
+            "working_title": "Why 90% Quit After 15 Days \u2013 Vik Sharma Breaks It Down",
+            "target_duration_seconds": 50,
+            "pacing": "High\u2011octane, rapid cuts, raw handheld feel; Vik talks fast, gestures bigger than his words, Hinglish punchlines every 4\u20115 seconds.",
+            "shots": [
+              {
+                "shot_number": 1,
+                "timing": "0:00 - 0:04",
+                "camera_direction": "Low\u2011angle dolly in on Vik at the IronForge entrance; he swings a loaded barbell forward, smashing a \u201815 DAYS\u2019 sign.",
+                "visual_action": "Vik stands in front of the glass doors of IronForge Bandra West, slams the barbell through the sign; dust flies.",
+                "spoken_dialogue": "Aapka gym ka romance sirf 15 din tak hi chal sakta hai\u2014kyun?",
+                "onscreen_text": "90% quit after 15 days",
+                "audio_sfx": "Heavy bass drop + metallic clang, ambient gym echo"
+              },
+              {
+                "shot_number": 2,
+                "timing": "0:04 - 0:18",
+                "camera_direction": "Steadicam circles Vik on the air\u2011conditioned turf, quick jump\u2011cuts to a fast\u2011flipping calendar.",
+                "visual_action": "Vik points at a wall\u2011mounted calendar as pages fly from Day 1 to Day 15; quick inserts of a cramped office meeting and a sore muscle graphic.",
+                "spoken_dialogue": "Day 1, dopamine high. Day 4, DOMS aapko dhakka dega. Day 8, meeting aayegi, streak tut jaayegi. Day 15, aapke andar ka ego kehta hai \u2018Gym mere liye nahi\u2019.",
+                "onscreen_text": "Day\u202f1\u202f\u2013\u202fHigh\nDay\u202f4\u202f\u2013\u202fSoreness\nDay\u202f8\u202f\u2013\u202fDistraction\nDay\u202f15\u202f\u2013\u202fEgo",
+                "audio_sfx": "Rhythmic drum beat, faint office chatter, subtle groan effect on \u2018DOMS\u2019"
+              },
+              {
+                "shot_number": 3,
+                "timing": "0:18 - 0:35",
+                "camera_direction": "Split\u2011screen: left side Vik demonstrates a clean Olympic lift; right side a close\u2011up of his face delivering blunt advice.",
+                "visual_action": "Vik loads a bar on the Olympic rack, shows a wrong form, then corrects it; a graphic highlights \u2018Form Bug\u2019.",
+                "spoken_dialogue": "Yeh sab aapke excuse nahi, yeh aapke form ka bug hai. IronForge ka 3\u2011Day Form Correction Pass \u2013 walk\u2011in, audit, fix. Tension kam, confidence zyada.",
+                "onscreen_text": "3\u2011Day Form Correction Pass\nFree Form Audit + Movement Diagnostic",
+                "audio_sfx": "Metallic clang on lift, upbeat synth pulse"
+              },
+              {
+                "shot_number": 4,
+                "timing": "0:35 - 0:50",
+                "camera_direction": "Static wide shot of Vik standing on the turf, camera slowly zooms out as he gestures to the Bandra West sign.",
+                "visual_action": "Vik opens the gym door, steps inside, holds up a clipboard labeled \u2018Form Audit\u2019, points to a map pin of Bandra West.",
+                "spoken_dialogue": "Bandra West, IronForge. 3 din ka pass, aapki galtiyon ko sudharne ke liye. Quit? Nah, aapko abhi se hi jeetna start karna hai.",
+                "onscreen_text": "Visit IronForge \u2013 Bandra West\nWalk\u2011in Today",
+                "audio_sfx": "Crescendo of energetic music, then a crisp fade\u2011out"
+              }
+            ],
+            "call_to_action": {
+              "spoken_dialogue": "Abhi aaiye, 3\u2011Day Form Correction Pass leke apni journey ko reset karo \u2013 bina koi discount, sirf sahi form.",
+              "visual_action": "Vik swings the gym door wide open, steps inside, flips the clipboard to show the \u2018Form Audit\u2019 stamp and points directly at the camera.",
+              "verified_offer": "3-Day Form Correction Pass (walk\u2011in trial, form audit, movement diagnostic)"
+            }
+          }
+        },
+        "raw_output": "{\n  \"strategic_thesis\": \"IronForge positions itself as the only gym that shatters the 15\u2011day quit myth by exposing the hidden ego trap and delivering an immediate, data\u2011driven form correction experience, turning the usual dropout point into a breakthrough moment.\",\n  \"audience_insight\": \"Working professionals hide behind \u2018busy\u2019 because admitting they\u2019re stuck feels worse than pretending the gym isn\u2019t for them \u2013 the ego defense triggers a silent quit at day 15.\",\n  \"viral_angle\": {\n    \"angle_name\": \"15\u2011Day Dropout Bomb\",\n    \"hook_first_3_seconds\": \"Gym se break? 15 din ke baad aapka motivation kaise extinct ho jaata hai?\",\n    \"visual_hook\": \"Vik slams a barbell through a giant \u201815 DAYS\u2019 cardboard sign, camera does a rapid low\u2011angle spin.\",\n    \"why_it_works\": \"The sudden, visceral destruction creates a shock\u2011value surprise, while the blunt question triggers curiosity and personal relevance, forcing viewers to confront their own hidden excuse.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"Why 90% Quit After 15 Days \u2013 Vik Sharma Breaks It Down\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"High\u2011octane, rapid cuts, raw handheld feel; Vik talks fast, gestures bigger than his words, Hinglish punchlines every 4\u20115 seconds.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera_direction\": \"Low\u2011angle dolly in on Vik at the IronForge entrance; he swings a loaded barbell forward, smashing a \u201815 DAYS\u2019 sign.\",\n        \"visual_action\": \"Vik stands in front of the glass doors of IronForge Bandra West, slams the barbell through the sign; dust flies.\",\n        \"spoken_dialogue\": \"Aapka gym ka romance sirf 15 din tak hi chal sakta hai\u2014kyun?\",\n        \"onscreen_text\": \"90% quit after 15 days\",\n        \"audio_sfx\": \"Heavy bass drop + metallic clang, ambient gym echo\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera_direction\": \"Steadicam circles Vik on the air\u2011conditioned turf, quick jump\u2011cuts to a fast\u2011flipping calendar.\",\n        \"visual_action\": \"Vik points at a wall\u2011mounted calendar as pages fly from Day 1 to Day 15; quick inserts of a cramped office meeting and a sore muscle graphic.\",\n        \"spoken_dialogue\": \"Day 1, dopamine high. Day 4, DOMS aapko dhakka dega. Day 8, meeting aayegi, streak tut jaayegi. Day 15, aapke andar ka ego kehta hai \u2018Gym mere liye nahi\u2019.\",\n        \"onscreen_text\": \"Day\u202f1\u202f\u2013\u202fHigh\\nDay\u202f4\u202f\u2013\u202fSoreness\\nDay\u202f8\u202f\u2013\u202fDistraction\\nDay\u202f15\u202f\u2013\u202fEgo\",\n        \"audio_sfx\": \"Rhythmic drum beat, faint office chatter, subtle groan effect on \u2018DOMS\u2019\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera_direction\": \"Split\u2011screen: left side Vik demonstrates a clean Olympic lift; right side a close\u2011up of his face delivering blunt advice.\",\n        \"visual_action\": \"Vik loads a bar on the Olympic rack, shows a wrong form, then corrects it; a graphic highlights \u2018Form Bug\u2019.\",\n        \"spoken_dialogue\": \"Yeh sab aapke excuse nahi, yeh aapke form ka bug hai. IronForge ka 3\u2011Day Form Correction Pass \u2013 walk\u2011in, audit, fix. Tension kam, confidence zyada.\",\n        \"onscreen_text\": \"3\u2011Day Form Correction Pass\\nFree Form Audit + Movement Diagnostic\",\n        \"audio_sfx\": \"Metallic clang on lift, upbeat synth pulse\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera_direction\": \"Static wide shot of Vik standing on the turf, camera slowly zooms out as he gestures to the Bandra West sign.\",\n        \"visual_action\": \"Vik opens the gym door, steps inside, holds up a clipboard labeled \u2018Form Audit\u2019, points to a map pin of Bandra West.\",\n        \"spoken_dialogue\": \"Bandra West, IronForge. 3 din ka pass, aapki galtiyon ko sudharne ke liye. Quit? Nah, aapko abhi se hi jeetna start karna hai.\",\n        \"onscreen_text\": \"Visit IronForge \u2013 Bandra West\\nWalk\u2011in Today\",\n        \"audio_sfx\": \"Crescendo of energetic music, then a crisp fade\u2011out\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Abhi aaiye, 3\u2011Day Form Correction Pass leke apni journey ko reset karo \u2013 bina koi discount, sirf sahi form.\",\n      \"visual_action\": \"Vik swings the gym door wide open, steps inside, flips the clipboard to show the \u2018Form Audit\u2019 stamp and points directly at the camera.\",\n      \"verified_offer\": \"3-Day Form Correction Pass (walk\u2011in trial, form audit, movement diagnostic)\"\n    }\n  }\n}"
+      },
+      {
+        "config_name": "Creative Candidate (MiniMax M3.1 Flash, T=0.7)",
+        "model_id": "minimaxai/minimax-m3.1-flash",
+        "provider": "nvidia",
+        "temperature": 0.7,
+        "metrics": {
+          "ttft_seconds": 0.698,
+          "total_seconds": 63.47,
+          "content_length": 7547,
+          "is_valid_json": true,
+          "json_status": "standard JSON"
+        },
+        "scorecard": {
+          "creative_quality": 4.5,
+          "specificity": 5.0,
+          "accuracy_and_factuality": 5.0,
+          "production_readiness": 5.0,
+          "repetition_and_cliche_index": 4.0,
+          "brand_voice_alignment": 5.0,
+          "cta_effectiveness": 5.0,
+          "total_weighted_score": 95.5,
+          "hallucinated_facts": [],
+          "cliche_flags": [
+            "Most people do not quit the gym because they lack discipline"
+          ],
+          "strengths": [
+            "Distinctive, culturally resonant hook (red\u2011card barbell visual) that creates immediate tension and memorability.",
+            "Comprehensive, production\u2011ready storyboard with exact camera moves, timing, onscreen text, and audio cues."
+          ],
+          "weaknesses": [
+            "A few generic\u2011sounding statements (e.g., \u201cMost people do not quit the gym because they lack discipline\u201d) verge on clich\u00e9.",
+            "The rapid\u2011handheld cutting style may be demanding for a modest production budget."
+          ],
+          "evaluator_verdict": "The deliverable nails the brand\u2019s extroverted, Hinglish\u2011driven voice and translates the strategic thesis into a vivid, on\u2011the\u2011ground video concept. It stays strictly within the verified offer (the 3\u2011Day Form Correction Pass) and avoids any invented discounts, statistics, or celebrity endorsements. The storyboard is exceptionally detailed, making it ready for shoot, and the CTA is low\u2011friction and directly tied to the verified offer. The only notable drawback is a single generic line that could be tightened to eliminate any hint of clich\u00e9. Overall, the piece meets the client\u2019s constraints and delivers a high\u2011impact, brand\u2011specific campaign."
+        },
+        "parsed_output": {
+          "strategic_thesis": "Most people do not quit the gym because they lack discipline; they quit because they confuse pain, inconvenience, and social discomfort with a broken body. IronForge attacks the real failure point: the gap between Day 1 motivation and Day 15 consistency. Instead of promising transformation or selling motivation, Vik reframes quitting as a form-check problem and offers a low-pressure, diagnostic entry point: the verified 3-Day Form Correction Pass at Bandra West.",
+          "audience_insight": "The desk worker is not afraid of hard work; they are afraid of looking weak, doing the wrong movement, being judged, and admitting that their excuse was simply ego defense. Day 4 soreness becomes evidence that the gym is 'not for them', while the Day 8 office meeting turns training into another task to postpone. The unspoken truth is: they are not quitting fitness, they are quitting the feeling of being a beginner in public.",
+          "viral_angle": {
+            "angle_name": "Gym Quit Ho Nahi, Tumhari Form Mar Rahi Hai",
+            "hook_first_3_seconds": "Log gym isliye chhodte hain kyunki unhe lagta hai unka form galat hai. Banda galat hai, form nahi.",
+            "visual_hook": "A barbell is dropped onto a rubber floor with a sharp CLANG while Vik's hand immediately raises a red card reading 'BAD FORM'. Cut to a desk worker awkwardly copying a training clip, then Vik pointing directly at the camera.",
+            "why_it_works": "It challenges the audience's self-protective excuse without calling them lazy. The red-card visual creates instant conflict, while the blunt reframe gives viewers a specific reason to keep watching: their perceived failure may be a correctable skill issue."
+          },
+          "production_script": {
+            "working_title": "90% Log 15 Din Mein Gym Chhod Dete Hain. Reason Galat Hai.",
+            "target_duration_seconds": 50,
+            "pacing": "Fast, confrontational, and prop-led. Vik speaks in short Hinglish bursts, using pauses for visual punchlines. The first 18 seconds move quickly through recognizable failure moments; the middle slows down for the core reframe; the final 15 seconds become direct, practical, and conversational. No motivational monologue, no generic quote montage.",
+            "shots": [
+              {
+                "shot_number": 1,
+                "timing": "0:00 - 0:04",
+                "camera_direction": "Extreme close-up, low angle at floor level on the barbell and Vik's shoes. Cut sharply to a medium close-up of Vik facing camera, then push in slightly as he points forward.",
+                "visual_action": "Vik drops a loaded barbell onto the rubber floor, raises a red card into frame with 'BAD FORM' stamped on it, and steps toward camera. A quick insert shows a desk worker awkwardly copying a phone video of a squat.",
+                "spoken_dialogue": "Log gym isliye chhodte hain kyunki unhe lagta hai unka form galat hai. Banda galat hai, form nahi.",
+                "onscreen_text": "BAD FORM. NOT BAD PERSON. Red card stamp effect, followed by bold white text on black: 'GYM QUIT HO NAHI, FORM MAR RAHI HAI.'",
+                "audio_sfx": "Hard barbell CLANG, vinyl stop, sharp record scratch, then a low, punchy bass beat with no cheesy motivational music."
+              },
+              {
+                "shot_number": 2,
+                "timing": "0:04 - 0:18",
+                "camera_direction": "Rapid handheld cuts, each framed like a candid phone clip. Start on a close-up of a laptop keyboard, whip-pan to a meeting room, cut to a tight shot of someone wincing while reaching for a chair, then a locked-off shot of an empty training slot.",
+                "visual_action": "A desk worker types intensely at a laptop, checks the clock, and drags a meeting invite across the screen. The same person winces while sitting down and rubs their legs. Vik appears in the gym doorway, holding up four fingers, then folds three down to indicate the disappearing streak.",
+                "spoken_dialogue": "Day 1: dopamine. Day 4: DOMS. Day 8: office meeting. Day 15: 'mujhe time nahi milta.' Bhai, time nahi milta is just a polished version of 'main haar gaya, bolna nahi chahta.'",
+                "onscreen_text": "Four fast timeline labels: 'DAY 1: FIRE', 'DAY 4: DOMS', 'DAY 8: MEETING', 'DAY 15: GHOST'. Each appears as a blunt stamp, with 'TIME NAHI MILTA' crossed out and replaced by 'EGO DEFENSE'.",
+                "audio_sfx": "Laptop keyboard clicks, calendar notification ping, chair creak, a short cough-like comedic beat on 'polished version', then a rising bass pulse."
+              },
+              {
+                "shot_number": 3,
+                "timing": "0:18 - 0:35",
+                "camera_direction": "Medium tracking shot beside Vik as he walks through the functional strength area. Cut to tight over-the-shoulder shots of a coach checking a client's squat setup and pointing to hip and knee alignment. Keep the camera slightly low and energetic, with one deliberate push-in on Vik's face for the reframe.",
+                "visual_action": "Vik walks past the free weights and Olympic lifting racks, taps a rack upright, and gestures toward the air-conditioned turf. A coach observes a client's movement, adjusts stance, and gives a thumbs-up after a controlled repetition. Vik turns to camera and taps his temple.",
+                "spoken_dialogue": "Tumhara problem consistency nahi hai. Tumhara problem hai tumne first day ko training samajh liya tha. Form check nahi kiya, ego check nahi kiya, aur phir soreness ko proof samajh liya ki gym tumhare liye nahi hai. Galat diagnosis. Full stop.",
+                "onscreen_text": "Bold split-screen text: 'CONSISTENCY IS NOT THE PROBLEM' on the left, 'THE DIAGNOSIS IS' on the right. Highlight the words 'FORM', 'EGO', and 'PROOF' in yellow.",
+                "audio_sfx": "Rack clank, controlled barbell tap, light turf footfall, then the beat drops lower for contrast. One clean click sound on 'Full stop.'"
+              },
+              {
+                "shot_number": 4,
+                "timing": "0:35 - 0:50",
+                "camera_direction": "Medium close-up of Vik standing between the free weights and the turf, camera at eye level and slowly moving closer. Insert a clean close-up of a movement diagnostic being marked on a clipboard, then return to Vik for the final CTA.",
+                "visual_action": "Vik holds a clipboard and pen, points to a marked movement screen, then gestures toward the camera and the gym floor. He ends in a relaxed but assertive stance, one hand on the rack, eyes locked to lens.",
+                "spoken_dialogue": "Isliye pehle form fix karo, phir commitment ki drama dekho. Bandra West mein humare paas 3-Day Form Correction Pass hai: walk-in trial, form audit, movement diagnostic. Aao, dikhao kya galat chal raha hai. Uske baad decide karna ki gym tumhare liye hai ya nahi.",
+                "onscreen_text": "Clean end card over a gym-floor background: '3-DAY FORM CORRECTION PASS' / 'WALK-IN TRIAL \u2022 FORM AUDIT \u2022 MOVEMENT DIAGNOSTIC' / 'IRONFORGE FITNESS & PERFORMANCE \u2022 BANDRA WEST, MUMBAI'.",
+                "audio_sfx": "Music resolves with one firm bass hit on 'form fix karo', subtle clipboard pen scratch, then a clean end-card click."
+              }
+            ],
+            "call_to_action": {
+              "spoken_dialogue": "Bandra West, IronForge. 3-Day Form Correction Pass. Aao, walk-in trial lo, form audit karwao, movement diagnostic karwao. Pehle form fix karo. Phir decide karo.",
+              "visual_action": "Vik points directly at the camera, turns and gestures toward the training floor, then holds a firm eye contact as the end card appears. He does not shout; the delivery is confident, slightly challenging, and practical.",
+              "verified_offer": "3-Day Form Correction Pass (walk-in trial, form audit, movement diagnostic)"
+            }
+          }
+        },
+        "raw_output": "{\n  \"strategic_thesis\": \"Most people do not quit the gym because they lack discipline; they quit because they confuse pain, inconvenience, and social discomfort with a broken body. IronForge attacks the real failure point: the gap between Day 1 motivation and Day 15 consistency. Instead of promising transformation or selling motivation, Vik reframes quitting as a form-check problem and offers a low-pressure, diagnostic entry point: the verified 3-Day Form Correction Pass at Bandra West.\",\n  \"audience_insight\": \"The desk worker is not afraid of hard work; they are afraid of looking weak, doing the wrong movement, being judged, and admitting that their excuse was simply ego defense. Day 4 soreness becomes evidence that the gym is 'not for them', while the Day 8 office meeting turns training into another task to postpone. The unspoken truth is: they are not quitting fitness, they are quitting the feeling of being a beginner in public.\",\n  \"viral_angle\": {\n    \"angle_name\": \"Gym Quit Ho Nahi, Tumhari Form Mar Rahi Hai\",\n    \"hook_first_3_seconds\": \"Log gym isliye chhodte hain kyunki unhe lagta hai unka form galat hai. Banda galat hai, form nahi.\",\n    \"visual_hook\": \"A barbell is dropped onto a rubber floor with a sharp CLANG while Vik's hand immediately raises a red card reading 'BAD FORM'. Cut to a desk worker awkwardly copying a training clip, then Vik pointing directly at the camera.\",\n    \"why_it_works\": \"It challenges the audience's self-protective excuse without calling them lazy. The red-card visual creates instant conflict, while the blunt reframe gives viewers a specific reason to keep watching: their perceived failure may be a correctable skill issue.\"\n  },\n  \"production_script\": {\n    \"working_title\": \"90% Log 15 Din Mein Gym Chhod Dete Hain. Reason Galat Hai.\",\n    \"target_duration_seconds\": 50,\n    \"pacing\": \"Fast, confrontational, and prop-led. Vik speaks in short Hinglish bursts, using pauses for visual punchlines. The first 18 seconds move quickly through recognizable failure moments; the middle slows down for the core reframe; the final 15 seconds become direct, practical, and conversational. No motivational monologue, no generic quote montage.\",\n    \"shots\": [\n      {\n        \"shot_number\": 1,\n        \"timing\": \"0:00 - 0:04\",\n        \"camera_direction\": \"Extreme close-up, low angle at floor level on the barbell and Vik's shoes. Cut sharply to a medium close-up of Vik facing camera, then push in slightly as he points forward.\",\n        \"visual_action\": \"Vik drops a loaded barbell onto the rubber floor, raises a red card into frame with 'BAD FORM' stamped on it, and steps toward camera. A quick insert shows a desk worker awkwardly copying a phone video of a squat.\",\n        \"spoken_dialogue\": \"Log gym isliye chhodte hain kyunki unhe lagta hai unka form galat hai. Banda galat hai, form nahi.\",\n        \"onscreen_text\": \"BAD FORM. NOT BAD PERSON. Red card stamp effect, followed by bold white text on black: 'GYM QUIT HO NAHI, FORM MAR RAHI HAI.'\",\n        \"audio_sfx\": \"Hard barbell CLANG, vinyl stop, sharp record scratch, then a low, punchy bass beat with no cheesy motivational music.\"\n      },\n      {\n        \"shot_number\": 2,\n        \"timing\": \"0:04 - 0:18\",\n        \"camera_direction\": \"Rapid handheld cuts, each framed like a candid phone clip. Start on a close-up of a laptop keyboard, whip-pan to a meeting room, cut to a tight shot of someone wincing while reaching for a chair, then a locked-off shot of an empty training slot.\",\n        \"visual_action\": \"A desk worker types intensely at a laptop, checks the clock, and drags a meeting invite across the screen. The same person winces while sitting down and rubs their legs. Vik appears in the gym doorway, holding up four fingers, then folds three down to indicate the disappearing streak.\",\n        \"spoken_dialogue\": \"Day 1: dopamine. Day 4: DOMS. Day 8: office meeting. Day 15: 'mujhe time nahi milta.' Bhai, time nahi milta is just a polished version of 'main haar gaya, bolna nahi chahta.'\",\n        \"onscreen_text\": \"Four fast timeline labels: 'DAY 1: FIRE', 'DAY 4: DOMS', 'DAY 8: MEETING', 'DAY 15: GHOST'. Each appears as a blunt stamp, with 'TIME NAHI MILTA' crossed out and replaced by 'EGO DEFENSE'.\",\n        \"audio_sfx\": \"Laptop keyboard clicks, calendar notification ping, chair creak, a short cough-like comedic beat on 'polished version', then a rising bass pulse.\"\n      },\n      {\n        \"shot_number\": 3,\n        \"timing\": \"0:18 - 0:35\",\n        \"camera_direction\": \"Medium tracking shot beside Vik as he walks through the functional strength area. Cut to tight over-the-shoulder shots of a coach checking a client's squat setup and pointing to hip and knee alignment. Keep the camera slightly low and energetic, with one deliberate push-in on Vik's face for the reframe.\",\n        \"visual_action\": \"Vik walks past the free weights and Olympic lifting racks, taps a rack upright, and gestures toward the air-conditioned turf. A coach observes a client's movement, adjusts stance, and gives a thumbs-up after a controlled repetition. Vik turns to camera and taps his temple.\",\n        \"spoken_dialogue\": \"Tumhara problem consistency nahi hai. Tumhara problem hai tumne first day ko training samajh liya tha. Form check nahi kiya, ego check nahi kiya, aur phir soreness ko proof samajh liya ki gym tumhare liye nahi hai. Galat diagnosis. Full stop.\",\n        \"onscreen_text\": \"Bold split-screen text: 'CONSISTENCY IS NOT THE PROBLEM' on the left, 'THE DIAGNOSIS IS' on the right. Highlight the words 'FORM', 'EGO', and 'PROOF' in yellow.\",\n        \"audio_sfx\": \"Rack clank, controlled barbell tap, light turf footfall, then the beat drops lower for contrast. One clean click sound on 'Full stop.'\"\n      },\n      {\n        \"shot_number\": 4,\n        \"timing\": \"0:35 - 0:50\",\n        \"camera_direction\": \"Medium close-up of Vik standing between the free weights and the turf, camera at eye level and slowly moving closer. Insert a clean close-up of a movement diagnostic being marked on a clipboard, then return to Vik for the final CTA.\",\n        \"visual_action\": \"Vik holds a clipboard and pen, points to a marked movement screen, then gestures toward the camera and the gym floor. He ends in a relaxed but assertive stance, one hand on the rack, eyes locked to lens.\",\n        \"spoken_dialogue\": \"Isliye pehle form fix karo, phir commitment ki drama dekho. Bandra West mein humare paas 3-Day Form Correction Pass hai: walk-in trial, form audit, movement diagnostic. Aao, dikhao kya galat chal raha hai. Uske baad decide karna ki gym tumhare liye hai ya nahi.\",\n        \"onscreen_text\": \"Clean end card over a gym-floor background: '3-DAY FORM CORRECTION PASS' / 'WALK-IN TRIAL \u2022 FORM AUDIT \u2022 MOVEMENT DIAGNOSTIC' / 'IRONFORGE FITNESS & PERFORMANCE \u2022 BANDRA WEST, MUMBAI'.\",\n        \"audio_sfx\": \"Music resolves with one firm bass hit on 'form fix karo', subtle clipboard pen scratch, then a clean end-card click.\"\n      }\n    ],\n    \"call_to_action\": {\n      \"spoken_dialogue\": \"Bandra West, IronForge. 3-Day Form Correction Pass. Aao, walk-in trial lo, form audit karwao, movement diagnostic karwao. Pehle form fix karo. Phir decide karo.\",\n      \"visual_action\": \"Vik points directly at the camera, turns and gestures toward the training floor, then holds a firm eye contact as the end card appears. He does not shout; the delivery is confident, slightly challenging, and practical.\",\n      \"verified_offer\": \"3-Day Form Correction Pass (walk-in trial, form audit, movement diagnostic)\"\n    }\n  }\n}"
+      }
+    ]
+  }
+]

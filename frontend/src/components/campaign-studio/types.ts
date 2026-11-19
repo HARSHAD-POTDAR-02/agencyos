@@ -136,6 +136,7 @@ export interface BrandPositioningPayload {
 
 export interface ActiveArtifactData {
   id: string;
+  campaign_id?: string;
   type: string;
   title: string;
   version: number;
@@ -151,6 +152,8 @@ export interface ExportPipelineRequest {
   default_due_date?: string | null;
   target_format?: string | null;
   deliverable_name?: string | null;
+  artifact_type?: string | null;
+  artifact_payload?: Record<string, any> | null;
 }
 
 export interface ExportPipelineResponse {

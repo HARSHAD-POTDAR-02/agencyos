@@ -233,10 +233,33 @@ def _is_transient_error(exc: Exception) -> bool:
 
 
 MODEL_CASCADE = [
-    "qwen/qwen3.8-27b",
+    "minimaxai/minimax-m3.1-flash",
     "openai/gpt-oss-120b",
     "nvidia/nemotron-3.5-bolt-e4b",
 ]
+
+CAMPAIGN_MODELS: dict[str, dict[str, Any]] = {
+    "strategy": {
+        "model": "minimaxai/minimax-m3.1-flash",
+        "temperature": 0.55,
+        "max_tokens": 5000,
+    },
+    "content_creation": {
+        "model": "minimaxai/minimax-m3.1-flash",
+        "temperature": 0.70,
+        "max_tokens": 7000,
+    },
+    "creative_evaluation": {
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.15,
+        "max_tokens": 3000,
+    },
+    "fallback": {
+        "model": "openai/gpt-oss-120b",
+        "temperature": 0.30,
+        "max_tokens": 4096,
+    },
+}
 
 
 def _get_next_cascade_model(current_model: str) -> str | None:
@@ -268,9 +291,26 @@ def get_llm(
     effective_timeout = timeout or settings.LLM_TIMEOUT_SECONDS
 
     # 1. NVIDIA NIM Router
-    if chosen_model.startswith("nvidia/") or chosen_model.startswith("mistralai/"):
+    is_nvidia_model = any(
+        chosen_model.startswith(prefix) 
+        for prefix in ("nvidia/", "mistralai/", "minimaxai/", "meta/", "deepseek-ai/")
+    )
+    if is_nvidia_model:
         nvidia_key = api_key if (api_key and api_key.startswith("nvapi-")) else settings.NVIDIA_API_KEY
-        token_limit = max(effective_max_tokens, 16384)
+        token_limit = max(effective_max_tokens, 4096)
+        
+        # MiniMax models: Use ChatOpenAI directly with reasoning_effort="low" for clean low-latency streaming
+        if chosen_model.startswith("minimaxai/"):
+            return ChatOpenAI(
+                base_url=settings.NVIDIA_BASE_URL,
+                api_key=nvidia_key,
+                model=chosen_model,
+                temperature=effective_temp,
+                max_tokens=token_limit,
+                timeout=max(effective_timeout, 120),
+                extra_body={"reasoning_effort": "low"},
+            )
+
         if ChatNVIDIA is not None:
             return ChatNVIDIA(
                 model=chosen_model,
@@ -405,13 +445,16 @@ async def invoke_structured_llm(
 
     last_error: Exception | None = None
     for attempt in range(max_retries + 2):
-        is_nvidia = current_model.startswith("nvidia/") or current_model.startswith("mistralai/")
+        is_nvidia = any(
+            current_model.startswith(prefix)
+            for prefix in ("nvidia/", "mistralai/", "minimaxai/", "meta/", "deepseek-ai/")
+        )
         active_key = settings.NVIDIA_API_KEY if is_nvidia else current_key
 
         try:
             if is_nvidia:
                 # NVIDIA NIM: invoke directly with bounded reasoning budget for fast structured generation
-                if ChatNVIDIA is not None:
+                if ChatNVIDIA is not None and not current_model.startswith("minimaxai/"):
                     fast_client = ChatNVIDIA(
                         model=current_model,
                         api_key=active_key,

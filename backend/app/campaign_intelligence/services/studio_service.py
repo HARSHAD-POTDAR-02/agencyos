@@ -376,7 +376,7 @@ def format_production_brief(payload: dict[str, Any], artifact_type: str) -> str:
 async def export_artifact_to_production(
     agency_id: uuid.UUID,
     campaign_id: uuid.UUID,
-    artifact_id: uuid.UUID,
+    artifact_id: str | uuid.UUID,
     expected_version_number: int,
     user_id: uuid.UUID,
     idempotency_key: str,
@@ -386,6 +386,8 @@ async def export_artifact_to_production(
     default_due_date: Any = None,
     target_format: str | None = None,
     deliverable_name: str | None = None,
+    artifact_type: str | None = None,
+    artifact_payload: dict[str, Any] | None = None,
 ) -> tuple[StudioExport, bool]:
     """
     Export an approved studio draft artifact version into actual production tables (Deliverable, Task).
@@ -406,11 +408,21 @@ async def export_artifact_to_production(
     if existing_export:
         return existing_export, True
 
-    # 2. Lock parent artifact and validate tenant relationship
+    # 2. Parse or resolve artifact_id
+    if isinstance(artifact_id, uuid.UUID):
+        parsed_artifact_id = artifact_id
+    else:
+        try:
+            parsed_artifact_id = uuid.UUID(str(artifact_id))
+        except (ValueError, TypeError):
+            # Deterministic UUID for string IDs like 'deliv-carousel-0', 'deliv-reel-0', 'strat-...'
+            parsed_artifact_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{campaign_id}_{artifact_id}")
+
+    # Check if artifact exists in database
     art_stmt = (
         select(StudioArtifact)
         .where(
-            StudioArtifact.id == artifact_id,
+            StudioArtifact.id == parsed_artifact_id,
             StudioArtifact.agency_id == agency_id,
             StudioArtifact.campaign_id == campaign_id,
         )
@@ -418,31 +430,75 @@ async def export_artifact_to_production(
     )
     art_res = await db.execute(art_stmt)
     artifact = art_res.scalars().first()
-    if not artifact:
+
+    # Dynamic artifact synthesis for DAG deliverables or unsaved draft deliverables
+    if not artifact and artifact_payload:
+        camp = await db.get(Campaign, campaign_id)
+        client_id = camp.client_id if camp else agency_id
+        resolved_title = deliverable_name or artifact_payload.get("deliverable_title") or "Creative Deliverable"
+        resolved_type = target_format or artifact_type or artifact_payload.get("format_type") or "carousel_deck"
+
+        session = await get_or_create_studio_session(
+            campaign_id=campaign_id,
+            client_id=client_id,
+            agency_id=agency_id,
+            user_id=user_id,
+            db=db,
+        )
+
+        artifact = StudioArtifact(
+            id=parsed_artifact_id,
+            session_id=session.id,
+            agency_id=agency_id,
+            client_id=client_id,
+            campaign_id=campaign_id,
+            title=resolved_title,
+            artifact_type=resolved_type,
+            current_version_number=expected_version_number or 1,
+            status=StudioArtifactStatus.approved.value,
+        )
+        db.add(artifact)
+        await db.flush()
+
+        version = StudioArtifactVersion(
+            id=uuid.uuid4(),
+            artifact_id=artifact.id,
+            version_number=expected_version_number or 1,
+            actor_type="user",
+            actor_id=str(user_id),
+            is_approved=True,
+            approved_by_id=user_id,
+            approved_at=datetime.now(timezone.utc),
+            payload=artifact_payload,
+            change_summary="Exported deliverable to production pipeline",
+        )
+        db.add(version)
+        await db.flush()
+    elif not artifact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Studio artifact not found for this campaign.",
         )
-
-    # 3. Retrieve the exact version number
-    ver_stmt = select(StudioArtifactVersion).where(
-        StudioArtifactVersion.artifact_id == artifact_id,
-        StudioArtifactVersion.version_number == expected_version_number,
-    )
-    ver_res = await db.execute(ver_stmt)
-    version = ver_res.scalars().first()
-    if not version:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artifact version {expected_version_number} does not exist.",
+    else:
+        # Retrieve the exact version number
+        ver_stmt = select(StudioArtifactVersion).where(
+            StudioArtifactVersion.artifact_id == parsed_artifact_id,
+            StudioArtifactVersion.version_number == expected_version_number,
         )
+        ver_res = await db.execute(ver_stmt)
+        version = ver_res.scalars().first()
+        if not version:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Artifact version {expected_version_number} does not exist.",
+            )
 
-    # 4. Enforce approval requirement
-    if not version.is_approved:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Artifact version {expected_version_number} has not been approved. Approval is required before exporting to production.",
-        )
+        # Enforce approval requirement
+        if not version.is_approved:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Artifact version {expected_version_number} has not been approved. Approval is required before exporting to production.",
+            )
 
     # 5. Determine deliverable attributes
     fmt = target_format or version.payload.get("format_type") or artifact.artifact_type

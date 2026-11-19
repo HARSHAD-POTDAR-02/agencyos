@@ -33,13 +33,10 @@ import {
   Building2,
   RefreshCw,
   Trash2,
-  ShieldCheck,
   TrendingUp,
-  BarChart3,
   Video,
   Layers2,
   Check,
-  Search,
   FileCheck,
   Cpu,
   ChevronRight,
@@ -47,6 +44,9 @@ import {
   Loader2,
   Copy,
   Presentation,
+  Rocket,
+  XCircle,
+  RotateCcw,
 } from "lucide-react";
 
 interface Client {
@@ -218,7 +218,11 @@ function CampaignPlansContent() {
           }
         }
         if (data.length > 0) {
-          setSelectedCampaign(data[0]);
+          // Auto-select the campaign that has active deliverables in its plan draft, or fallback to first
+          const withDraft = data.find(
+            (c) => c.ai_plan_draft && (c.ai_plan_draft.deliverables || []).length > 0
+          );
+          setSelectedCampaign(withDraft || data[0]);
         } else {
           setSelectedCampaign(null);
         }
@@ -235,17 +239,118 @@ function CampaignPlansContent() {
     }
   }, [selectedClientId, loadCampaigns]);
 
-  // Convert AI plan to concrete tasks & deliverables
-  const handleConvertToTasks = async () => {
+  const [pushingDay, setPushingDay] = useState<number | null>(null);
+
+  // Push a single deliverable to production Kanban
+  const handlePushSingleDeliverable = async (deliverable: DeliverableItem) => {
     if (!token || !effectiveAgencyId || !selectedCampaign) return;
-    setConverting(true);
+    const dayNum = deliverable.day_number;
+    setPushingDay(dayNum);
     setNotification(null);
 
     try {
       const res: any = await campaignApi.convertToTasks(
         effectiveAgencyId,
         selectedCampaign.id,
+        token,
+        [dayNum]
+      );
+      setNotification({
+        type: "success",
+        text: `Day ${dayNum} pushed to production! Created ${res.tasks_created} tasks on Kanban board.`,
+      });
+
+      // Update local state immediately
+      if (selectedCampaign.ai_plan_draft) {
+        const draft = { ...selectedCampaign.ai_plan_draft };
+        const delivs = (draft.deliverables || []).map((d: any) =>
+          (d.day_number || d.planned_day) === dayNum
+            ? { ...d, is_exported: true, status: "in_production" }
+            : d
+        );
+        draft.deliverables = delivs;
+        const updated = { ...selectedCampaign, ai_plan_draft: draft };
+        setSelectedCampaign(updated);
+        setCampaigns((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      }
+      await loadCampaigns(selectedClientId);
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        text: err.message || `Failed to push Day ${dayNum} to production.`,
+      });
+    } finally {
+      setPushingDay(null);
+    }
+  };
+
+  // Reject or restore an individual idea
+  const handleToggleReject = async (deliverable: DeliverableItem) => {
+    if (!token || !effectiveAgencyId || !selectedCampaign) return;
+    const dayNum = deliverable.day_number;
+    const newStatus = deliverable.status === "rejected" ? "draft" : "rejected";
+
+    // Optimistically update local state
+    if (selectedCampaign.ai_plan_draft) {
+      const draft = { ...selectedCampaign.ai_plan_draft };
+      const delivs = (draft.deliverables || []).map((d: any) =>
+        (d.day_number || d.planned_day) === dayNum ? { ...d, status: newStatus } : d
+      );
+      draft.deliverables = delivs;
+      const updated = { ...selectedCampaign, ai_plan_draft: draft };
+      setSelectedCampaign(updated);
+      setCampaigns((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    }
+
+    try {
+      await campaignApi.updateDeliverable(
+        effectiveAgencyId,
+        selectedClientId,
+        selectedCampaign.id,
+        dayNum,
+        { deliverable: { ...deliverable, status: newStatus } },
         token
+      );
+      setNotification({
+        type: "success",
+        text:
+          newStatus === "rejected"
+            ? `Day ${dayNum} rejected. It will be excluded from production push.`
+            : `Day ${dayNum} restored to active sprint.`,
+      });
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        text: err.message || `Failed to update Day ${dayNum} status.`,
+      });
+    }
+  };
+
+  // Convert AI plan to concrete tasks & deliverables (Batch)
+  const handleConvertToTasks = async () => {
+    if (!token || !effectiveAgencyId || !selectedCampaign) return;
+    setConverting(true);
+    setNotification(null);
+
+    try {
+      // Find all non-rejected, non-exported days
+      const activeDays = (selectedCampaign.ai_plan_draft?.deliverables || [])
+        .filter((d: any) => d.status !== "rejected" && !d.is_exported && d.status !== "in_production")
+        .map((d: any) => d.day_number || d.planned_day);
+
+      if (activeDays.length === 0) {
+        setNotification({
+          type: "error",
+          text: "No eligible deliverables to convert. All items are either rejected or already in production.",
+        });
+        return;
+      }
+
+      const res: any = await campaignApi.convertToTasks(
+        effectiveAgencyId,
+        selectedCampaign.id,
+        token,
+        activeDays
       );
       setNotification({
         type: "success",
@@ -299,6 +404,16 @@ function CampaignPlansContent() {
   const pillars = draft?.content_pillars || [];
   const quality = draft?.quality_evaluation;
   const strategy = draft?.strategy;
+
+  const pendingPushCount = deliverables.filter(
+    (d: any) => !d.is_exported && d.status !== "in_production" && d.status !== "rejected"
+  ).length;
+  const inProductionCount = deliverables.filter(
+    (d: any) => d.is_exported || d.status === "in_production"
+  ).length;
+  const rejectedCount = deliverables.filter(
+    (d: any) => d.status === "rejected"
+  ).length;
 
   const filteredDeliverables =
     selectedPillarFilter === "all"
@@ -381,13 +496,16 @@ function CampaignPlansContent() {
                   const match = campaigns.find((c) => c.id === e.target.value);
                   if (match) setSelectedCampaign(match);
                 }}
-                className="bg-transparent text-xs font-medium text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[200px] truncate font-mono"
+                className="bg-transparent text-xs font-medium text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[280px] md:max-w-[380px] truncate font-sans"
               >
-                {campaigns.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#17171E] text-[#F2F0F7]">
-                    {c.name} ({c.status})
-                  </option>
-                ))}
+                {campaigns.map((c) => {
+                  const delivCount = c.ai_plan_draft?.deliverables?.length || 0;
+                  return (
+                    <option key={c.id} value={c.id} className="bg-[#17171E] text-[#F2F0F7]">
+                      {c.name} {delivCount > 0 ? `(${delivCount} days)` : `(${c.status})`}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
@@ -439,6 +557,18 @@ function CampaignPlansContent() {
                     {selectedCampaign.status === "in_production" ? "In Production" : "AI Draft • Pending Approval"}
                   </span>
 
+                  {inProductionCount > 0 && (
+                    <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30">
+                      ✓ {inProductionCount} in Production
+                    </span>
+                  )}
+
+                  {rejectedCount > 0 && (
+                    <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-[#E16F7B]/10 text-[#E16F7B] border border-[#E16F7B]/30">
+                      ✕ {rejectedCount} Rejected
+                    </span>
+                  )}
+
                   {quality && (
                     <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
                       🛡️ {quality.compliance_score <= 1 ? Math.round(quality.compliance_score * 100) : Math.round(quality.compliance_score)}% Brand Compliant
@@ -474,7 +604,7 @@ function CampaignPlansContent() {
                   <span>Pitch Deck 🎬</span>
                 </button>
 
-                {selectedCampaign.status !== "in_production" ? (
+                {pendingPushCount > 0 ? (
                   <button
                     onClick={handleConvertToTasks}
                     disabled={converting}
@@ -483,16 +613,16 @@ function CampaignPlansContent() {
                     {converting ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Converting...</span>
+                        <span>Pushing to Production...</span>
                       </>
                     ) : (
                       <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Approve & Convert to Tasks 🚀</span>
+                        <Rocket className="w-3.5 h-3.5" />
+                        <span>Push {pendingPushCount} to Production 🚀</span>
                       </>
                     )}
                   </button>
-                ) : (
+                ) : inProductionCount > 0 ? (
                   <Link
                     href="/tasks"
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30 text-xs font-semibold hover:bg-[#45B88A]/20 transition-all shadow-xs"
@@ -500,7 +630,7 @@ function CampaignPlansContent() {
                     <Kanban className="w-3.5 h-3.5" />
                     <span>View in Production Kanban →</span>
                   </Link>
-                )}
+                ) : null}
 
                 {/* Delete Campaign Button */}
                 <button
@@ -563,60 +693,6 @@ function CampaignPlansContent() {
             </div>
           )}
 
-          {/* Multi-Agent Research Insights Drawers */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Brand Intelligence Drawer */}
-            <div className="p-4 rounded-2xl surface-card border border-white/[0.08] text-xs space-y-2 shadow-xs">
-              <div className="flex items-center gap-2 font-bold text-[#F2F0F7]">
-                <ShieldCheck className="w-4 h-4 text-[#45B88A]" />
-                <span className="font-heading">Agent 1: Brand Intelligence</span>
-              </div>
-              <p className="text-[#A3A0B0] text-[11px]">
-                Brand Voice: <span className="text-[#F2F0F7] font-medium">{draft?.brand_voice || "Authentic & Professional"}</span>
-              </p>
-              {draft?.brand_context_summary?.verified_offers && (
-                <div className="text-[11px] text-[#A3A0B0] font-mono">
-                  <span className="font-medium text-[#F2F0F7]">Verified Offers:</span>{" "}
-                  {draft.brand_context_summary.verified_offers.join(", ")}
-                </div>
-              )}
-            </div>
-
-            {/* Market & Trend Research Drawer */}
-            <div className="p-4 rounded-2xl surface-card border border-white/[0.08] text-xs space-y-2 shadow-xs">
-              <div className="flex items-center gap-2 font-bold text-[#F2F0F7]">
-                <Search className="w-4 h-4 text-[#69A9D8]" />
-                <span className="font-heading">Agent 2: Market Evidence</span>
-              </div>
-              <p className="text-[#A3A0B0] text-[11px]">
-                Analyzed live web signals & competitor angles for {draft?.brand_context_summary?.industry || "industry"}.
-              </p>
-              {draft?.market_research_summary?.top_topics && (
-                <div className="text-[11px] text-[#A3A0B0] truncate font-mono">
-                  <span className="font-medium text-[#F2F0F7]">Trending Topics:</span>{" "}
-                  {draft.market_research_summary.top_topics.slice(0, 2).join(", ")}
-                </div>
-              )}
-            </div>
-
-            {/* Historical Performance Drawer */}
-            <div className="p-4 rounded-2xl surface-card border border-white/[0.08] text-xs space-y-2 shadow-xs">
-              <div className="flex items-center gap-2 font-bold text-[#F2F0F7]">
-                <BarChart3 className="w-4 h-4 text-[#A78BFA]" />
-                <span className="font-heading">Agent 3: Retention Calibrator</span>
-              </div>
-              <p className="text-[#A3A0B0] text-[11px]">
-                Applied short-form video retention weights and carousel pacing to avoid content fatigue.
-              </p>
-              {draft?.performance_summary?.recommended_formats && (
-                <div className="text-[11px] text-[#A3A0B0] font-mono">
-                  <span className="font-medium text-[#F2F0F7]">Preferred Formats:</span>{" "}
-                  {draft.performance_summary.recommended_formats.join(", ")}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Deliverables Section Controls (Linear Toolstrip) */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <div className="flex items-center gap-2.5">
@@ -676,12 +752,16 @@ function CampaignPlansContent() {
                 const isReel = item.deliverable_type.toLowerCase().includes("reel") || item.deliverable_type.toLowerCase().includes("video");
                 const isCarousel = item.deliverable_type.toLowerCase().includes("carousel");
                 const isExpanded = expandedDay === item.day_number;
+                const isInProduction = item.is_exported || item.status === "in_production";
+                const isRejected = item.status === "rejected";
 
                 return (
                   <div
                     key={item.day_number}
                     className={`flex flex-col justify-between p-3.5 rounded-2xl border transition-all text-xs surface-card shadow-xs ${
-                      isExpanded
+                      isRejected
+                        ? "opacity-60 border-white/[0.04] bg-[#141418]"
+                        : isExpanded
                         ? "border-[#A78BFA] ring-1 ring-[#A78BFA]/30"
                         : "border-white/[0.08] hover:border-white/[0.18]"
                     }`}
@@ -719,6 +799,15 @@ function CampaignPlansContent() {
                           >
                             {item.deliverable_type}
                           </span>
+                          {isInProduction ? (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30">
+                              PROD
+                            </span>
+                          ) : isRejected ? (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#E16F7B]/10 text-[#E16F7B] border border-[#E16F7B]/30">
+                              REJECTED
+                            </span>
+                          ) : null}
                         </div>
                       </div>
 
@@ -844,27 +933,87 @@ function CampaignPlansContent() {
                       )}
                     </div>
 
-                    {/* Card Footer Toggle */}
-                    <div className="mt-3 pt-2 border-t border-white/[0.06] flex items-center justify-between">
-                      <button
-                        onClick={() => copyToClipboard(item.hook || "", item.day_number)}
-                        className="text-[10px] text-[#A3A0B0] hover:text-[#F2F0F7] flex items-center gap-1 cursor-pointer font-mono"
-                      >
-                        {copiedHookDay === item.day_number ? (
-                          <Check className="w-3 h-3 text-[#45B88A]" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                        <span>{copiedHookDay === item.day_number ? "Copied" : "Copy Hook"}</span>
-                      </button>
+                    {/* Card Footer Actions & Controls */}
+                    <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between gap-1.5 flex-wrap">
+                      {/* Left: Rejection & Single Push Controls */}
+                      {isInProduction ? (
+                        <span className="text-[10px] text-[#45B88A] font-mono font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-[#45B88A]" />
+                          <span>In Production</span>
+                        </span>
+                      ) : isRejected ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleReject(item);
+                          }}
+                          className="text-[10px] font-semibold text-[#A3A0B0] hover:text-[#F2F0F7] bg-white/[0.05] hover:bg-white/[0.1] px-2 py-0.5 rounded-md border border-white/[0.08] transition-all cursor-pointer flex items-center gap-1"
+                          title="Restore this deliverable into active sprint"
+                        >
+                          <RotateCcw className="w-2.5 h-2.5" />
+                          <span>Restore</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleReject(item);
+                            }}
+                            className="text-[10px] font-semibold text-[#E16F7B] hover:bg-[#E16F7B]/20 bg-[#E16F7B]/10 px-2 py-0.5 rounded-md border border-[#E16F7B]/20 transition-all cursor-pointer flex items-center gap-1"
+                            title="Reject this idea and exclude from production"
+                          >
+                            <XCircle className="w-2.5 h-2.5" />
+                            <span>Reject</span>
+                          </button>
 
-                      <button
-                        onClick={() => setExpandedDay(isExpanded ? null : item.day_number)}
-                        className="text-[10px] font-medium text-[#A78BFA] hover:underline cursor-pointer flex items-center gap-0.5"
-                      >
-                        <span>{isExpanded ? "Collapse" : "Expand"}</span>
-                        {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePushSingleDeliverable(item);
+                            }}
+                            disabled={pushingDay === item.day_number}
+                            className="text-[10px] font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] px-2 py-0.5 rounded-md transition-all cursor-pointer flex items-center gap-1 shadow-xs disabled:opacity-50"
+                            title="Send this single deliverable to production Kanban"
+                          >
+                            {pushingDay === item.day_number ? (
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            ) : (
+                              <Rocket className="w-2.5 h-2.5" />
+                            )}
+                            <span>Push</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Right: Copy & Expand */}
+                      <div className="flex items-center gap-2 ml-auto">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(item.hook || "", item.day_number)}
+                          className="text-[10px] text-[#A3A0B0] hover:text-[#F2F0F7] flex items-center gap-1 cursor-pointer font-mono"
+                          title="Copy Hook Text"
+                        >
+                          {copiedHookDay === item.day_number ? (
+                            <Check className="w-3 h-3 text-[#45B88A]" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                          <span>{copiedHookDay === item.day_number ? "Copied" : "Hook"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDay(isExpanded ? null : item.day_number)}
+                          className="text-[10px] font-medium text-[#A78BFA] hover:underline cursor-pointer flex items-center gap-0.5"
+                        >
+                          <span>{isExpanded ? "Less" : "More"}</span>
+                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -876,11 +1025,15 @@ function CampaignPlansContent() {
               {filteredDeliverables.map((item) => {
                 const isReel = item.deliverable_type.toLowerCase().includes("reel") || item.deliverable_type.toLowerCase().includes("video");
                 const isCarousel = item.deliverable_type.toLowerCase().includes("carousel");
+                const isInProduction = item.is_exported || item.status === "in_production";
+                const isRejected = item.status === "rejected";
 
                 return (
                   <div
                     key={item.day_number}
-                    className="p-5 rounded-2xl border border-white/[0.08] surface-card shadow-xs space-y-4 text-xs"
+                    className={`p-5 rounded-2xl border surface-card shadow-xs space-y-4 text-xs transition-all ${
+                      isRejected ? "opacity-60 border-white/[0.04] bg-[#141418]" : "border-white/[0.08]"
+                    }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/[0.06]">
                       <div className="flex items-center gap-3">
@@ -895,6 +1048,15 @@ function CampaignPlansContent() {
                             <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-[#101014] text-[#A3A0B0] border border-white/[0.08]">
                               {item.platform} • {item.deliverable_type}
                             </span>
+                            {isInProduction ? (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30">
+                                In Production
+                              </span>
+                            ) : isRejected ? (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-[#E16F7B]/10 text-[#E16F7B] border border-[#E16F7B]/30">
+                                Rejected
+                              </span>
+                            ) : null}
                             {item.hero_entity && (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
                                 <span>⭐ Hero:</span>
@@ -915,8 +1077,55 @@ function CampaignPlansContent() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isInProduction ? (
+                          <Link
+                            href="/tasks"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/30 text-xs font-semibold hover:bg-[#45B88A]/20 transition-all shadow-xs"
+                          >
+                            <Kanban className="w-3.5 h-3.5" />
+                            <span>In Production</span>
+                          </Link>
+                        ) : isRejected ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleReject(item)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] text-xs font-semibold transition-all cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Restore Idea</span>
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleReject(item)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E16F7B]/10 hover:bg-[#E16F7B]/20 text-[#E16F7B] border border-[#E16F7B]/30 text-xs font-semibold transition-all cursor-pointer"
+                              title="Reject idea and exclude from production"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Reject</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handlePushSingleDeliverable(item)}
+                              disabled={pushingDay === item.day_number}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                              title="Push this deliverable directly to production tasks"
+                            >
+                              {pushingDay === item.day_number ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Rocket className="w-3.5 h-3.5" />
+                              )}
+                              <span>Push to Tasks</span>
+                            </button>
+                          </>
+                        )}
+
                         <button
+                          type="button"
                           onClick={() => setEditingDeliverable(item)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/15 hover:bg-[#A78BFA]/25 text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
                         >
@@ -924,6 +1133,7 @@ function CampaignPlansContent() {
                           <span>Deep Dive & Edit with AI</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => copyToClipboard(item.hook || "", item.day_number)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-[#101014] hover:bg-[#20202A] text-[#F2F0F7] transition-colors cursor-pointer text-xs font-mono shadow-xs"
                         >
