@@ -212,6 +212,12 @@ def _process_extracted_webpage(
     lines = [line.strip() for line in raw_content.splitlines() if line.strip()]
     cleaned_lines = [l for l in lines if is_substantive_content_line(l)]
 
+    if not cleaned_lines and len(raw_content.strip()) > 50:
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', raw_content) if len(s.strip()) > 20]
+        cleaned_lines = [s for s in sentences if is_substantive_content_line(s)]
+        if not cleaned_lines:
+            cleaned_lines = sentences[:6]
+
     # Find sentences with metrics or key entities
     key_excerpts: list[str] = []
     extracted_metrics: list[str] = []

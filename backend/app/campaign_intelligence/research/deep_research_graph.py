@@ -408,7 +408,7 @@ MANDATORY PLANNING RULES:
    - 'directory_or_outlets': For operational footprint, branch count, store or office locations.
    - 'press_and_positioning': For social content, marketing angles, brand positioning, press coverage.
 4. DIMENSION ACCOUNTING: Ensure specific requested dimensions (pricing tiers, subscription models, packaging, customer review complaints) are explicitly captured in research_questions.
-5. BUDGET ALLOCATION: Allocate 1 or 2 tool calls per sub-topic. Total tool calls across all sub-topics must not exceed {state.get('max_global_budget', 6)}.
+5. BUDGET ALLOCATION: Allocate 2 tool calls per sub-topic (1 search + 1 extract). Decompose into 2-3 focused sub-topics so total tool calls across all sub-topics fit within {state.get('max_global_budget', 6)}. Ensure each sub-topic gets both a search and a deep page extract call.
 6. SEARCH QUERY PRECISION: Provide specific, keyword-rich search queries. For 'independent_reviews', queries MUST target reviews, complaints, or forums (e.g. 'brand reviews complaints delay'). For 'official_menu_or_store', queries MUST target official store, catalog, or pricing pages."""
 
     try:
@@ -520,8 +520,8 @@ def _select_best_url_for_topic(
         if any(netloc == bd or netloc.endswith("." + bd) for bd in BLOCKED_HOST_DOMAINS):
             continue
 
-        score = float(r.get("score", 0.0)) * 5.0
-        snippet = (r.get("content") or r.get("snippet", "")).lower()
+        score = float(r.get("relevance_score") or r.get("score", 0.0)) * 5.0
+        snippet = (r.get("snippet") or r.get("content", "")).lower()
         title = (r.get("title") or "").lower()
 
         if len(snippet) > 80:
@@ -561,6 +561,16 @@ def _select_best_url_for_topic(
         scored_candidates.append((score, u))
 
     if not scored_candidates:
+        # Fallback: select top safe, non-walled-garden URL from search results
+        for r in results:
+            cand_url = r.get("url", "")
+            if not cand_url or not _is_safe_url(cand_url):
+                continue
+            cand_netloc = (urlparse(cand_url.lower()).netloc or "")
+            if any(cand_netloc == bd or cand_netloc.endswith("." + bd) for bd in BLOCKED_HOST_DOMAINS):
+                continue
+            if _normalize_url(cand_url) not in already_inspected:
+                return cand_url
         return None
 
     scored_candidates.sort(key=lambda x: x[0], reverse=True)
@@ -654,7 +664,12 @@ async def topic_worker_node(state: DeepResearchState) -> dict[str, Any]:
 
     # Step B: Deeply inspect primary webpage if tool budget allows
     budget_remaining = state["max_global_budget"] - (state["used_tool_budget"] + tools_used)
-    if top_extract_url and tools_used < topic.max_tool_budget and budget_remaining > 0:
+    should_extract = (
+        bool(top_extract_url)
+        and budget_remaining > 0
+        and (tools_used < topic.max_tool_budget or len(inspected) < 3)
+    )
+    if should_extract:
         logs.append(f"  Tool: extract_webpages -> '{top_extract_url[:60]}...'")
         if on_event:
             try:
@@ -1137,12 +1152,24 @@ def build_deep_research_graph():
     return workflow.compile()
 
 
-def _map_platform(platform_str: str) -> SocialPlatform:
-    lower = (platform_str or "").lower()
-    for sp in SocialPlatform:
-        if sp.value in lower:
-            return sp
-    return SocialPlatform.instagram
+def _map_platform(platform_str: str, source_url: str = "") -> SocialPlatform:
+    """Map competitor platform and source URL to canonical SocialPlatform.
+    Avoids stamping (instagram) on competitors discovered on web/pricing/blog pages.
+    """
+    combined = f"{platform_str or ''} {source_url or ''}".lower()
+    if "instagram.com" in combined or "instagram" in (platform_str or "").lower():
+        return SocialPlatform.instagram
+    if "tiktok.com" in combined or "tiktok" in (platform_str or "").lower():
+        return SocialPlatform.tiktok
+    if "linkedin.com" in combined or "linkedin" in (platform_str or "").lower():
+        return SocialPlatform.linkedin
+    if "youtube.com" in combined or "youtube" in (platform_str or "").lower():
+        return SocialPlatform.youtube
+    if "facebook.com" in combined or "facebook" in (platform_str or "").lower():
+        return SocialPlatform.facebook
+    if any(k in combined for k in ("official", "store", "shop", "homepage", "company", "pricing")):
+        return SocialPlatform.official_site
+    return SocialPlatform.web
 
 
 async def run_deep_research(
@@ -1211,7 +1238,7 @@ async def run_deep_research(
         competitor_activities.append(
             CompetitorActivity(
                 competitor_name=c.competitor_name,
-                platform=_map_platform(c.platform),
+                platform=_map_platform(c.platform, src_url),
                 observed_creative_angle=c.observed_creative_angle,
                 observed_format=c.observed_format,
                 citation=citation,

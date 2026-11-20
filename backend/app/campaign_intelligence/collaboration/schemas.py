@@ -17,6 +17,8 @@ class SocialPlatform(str, Enum):
     linkedin = "linkedin"
     facebook = "facebook"
     youtube = "youtube"
+    web = "web"
+    official_site = "official_site"
 
 
 class ComplianceVerdict(str, Enum):

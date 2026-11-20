@@ -75,6 +75,58 @@ class PerformanceInterpretationOutput(BaseModel):
         return {}
 
 
+def _get_industry_creative_hypotheses(
+    brief: CampaignBrief,
+    brand_context: BrandContext | None = None,
+) -> list[str]:
+    """Derive industry-adapted testable creative hypotheses (Zero fabricated CTR/hold-rate stats)."""
+    industry_raw = ""
+    if brand_context and brand_context.industry:
+        industry_raw = brand_context.industry.lower()
+    elif brief.custom_brief or brief.objective:
+        combined = f"{brief.objective} {brief.custom_brief or ''}".lower()
+        for ind in ["restaurant", "cafe", "food", "clinic", "dental", "medical", "healthcare", "d2c", "ecommerce", "retail", "fashion", "saas", "b2b", "software"]:
+            if ind in combined:
+                industry_raw = ind
+                break
+
+    if any(k in industry_raw for k in ["food", "restaurant", "cafe", "dining", "bar", "hospitality", "bakery", "chef"]):
+        return [
+            "Sensory & Plating Hook: Showcase signature dish finishing and texture details within the opening 2 seconds to maximize culinary interest.",
+            "Social Proof Dining Walkthrough: Demonstrate authentic customer dining ambience, course arrival reactions, and hospitality highlights.",
+            "Culinary Provenance & Kitchen Craft: Reveal behind-the-scenes prep methods, artisanal technique, and premium ingredient sourcing.",
+            "Menu Milestone Angle: Feature seasonal menu additions or signature tasting flights with explicit tasting notes.",
+        ]
+    elif any(k in industry_raw for k in ["health", "clinic", "medical", "dental", "care", "wellness", "doctor", "therapy", "pharma"]):
+        return [
+            "Clinical Misconception Breakdown: Dispel widespread symptom anxieties or myths within the first 3 seconds using clear medical authority.",
+            "Step-by-Step Procedure Transparency: Demystify what happens during a consultation or treatment to reduce patient fear and uncertainty.",
+            "Patient Care Standard & Hygiene: Highlight sanitized clinic environment, professional accreditation, and practitioner qualifications.",
+            "Consultation Readiness FAQ: Address top barrier-to-booking questions, realistic recovery timelines, and preparation steps.",
+        ]
+    elif any(k in industry_raw for k in ["d2c", "ecommerce", "e-commerce", "retail", "fashion", "beauty", "apparel", "product", "goods"]):
+        return [
+            "Immediate Problem-Solution Demonstration: Contrast common category frustration against direct product benefit in the first 3 seconds.",
+            "Macro Tactile Inspection: Close-up focus on material craftsmanship, ingredient quality, finish, and unboxing presentation.",
+            "Side-by-Side Mechanism Contrast: Clearly articulate key differentiators versus legacy mass-market alternatives without naming competitors.",
+            "Day-in-the-Life Routine Integration: Show practical daily usage scenarios highlighting ergonomic utility and aesthetic appeal.",
+        ]
+    elif any(k in industry_raw for k in ["b2b", "saas", "tech", "software", "enterprise", "agency", "consulting", "fintech"]):
+        return [
+            "Workflow Bottleneck Agitation: Address a specific time-consuming operational or spreadsheet breakdown familiar to team leads.",
+            "System Architecture & Teardown: Provide an objective step-by-step walkthrough of how automated workflows replace manual error loops.",
+            "Implementation Blueprint: Outline clear phase-by-phase rollout expectations and timeline to eliminate onboarding hesitation.",
+            "Peer Framework Breakdown: Share actionable industry rubrics or decision checklists that establish strategic credibility.",
+        ]
+    else:
+        return [
+            "Target Audience Pain Point Hook: Open with an incisive question isolating the primary challenge facing prospective clients.",
+            "Operational Process Transparency: Walk through the proprietary methodology step-by-step to demonstrate structured expertise.",
+            "Founder Conviction / Alternative Approach: Explain why traditional industry approaches fail and how this specific model solves the gap.",
+            "Deliverable Clarity & Value Blueprint: Itemize exactly what the client receives with clear expectations and tangible milestones.",
+        ]
+
+
 class HistoricalPerformanceAgent:
     """
     Agent 3: Historical Performance Analysis
@@ -179,52 +231,7 @@ class HistoricalPerformanceAgent:
             else:
                 default_mix = {"carousel": 4, "reel": 2}
 
-            # Industry-adapted testable creative hypotheses (Zero fabricated CTR/hold-rate stats)
-            industry_raw = ""
-            if brand_context and brand_context.industry:
-                industry_raw = brand_context.industry.lower()
-            elif brief.custom_brief or brief.objective:
-                combined = f"{brief.objective} {brief.custom_brief or ''}".lower()
-                for ind in ["restaurant", "cafe", "food", "clinic", "dental", "medical", "healthcare", "d2c", "ecommerce", "retail", "fashion", "saas", "b2b", "software"]:
-                    if ind in combined:
-                        industry_raw = ind
-                        break
-
-            if any(k in industry_raw for k in ["food", "restaurant", "cafe", "dining", "bar", "hospitality", "bakery", "chef"]):
-                cold_start_hypotheses = [
-                    "Sensory & Plating Hook: Showcase signature dish finishing and texture details within the opening 2 seconds to maximize culinary interest.",
-                    "Social Proof Dining Walkthrough: Demonstrate authentic customer dining ambience, course arrival reactions, and hospitality highlights.",
-                    "Culinary Provenance & Kitchen Craft: Reveal behind-the-scenes prep methods, artisanal technique, and premium ingredient sourcing.",
-                    "Menu Milestone Angle: Feature seasonal menu additions or signature tasting flights with explicit tasting notes.",
-                ]
-            elif any(k in industry_raw for k in ["health", "clinic", "medical", "dental", "care", "wellness", "doctor", "therapy", "pharma"]):
-                cold_start_hypotheses = [
-                    "Clinical Misconception Breakdown: Dispel widespread symptom anxieties or myths within the first 3 seconds using clear medical authority.",
-                    "Step-by-Step Procedure Transparency: Demystify what happens during a consultation or treatment to reduce patient fear and uncertainty.",
-                    "Patient Care Standard & Hygiene: Highlight sanitized clinic environment, professional accreditation, and practitioner qualifications.",
-                    "Consultation Readiness FAQ: Address top barrier-to-booking questions, realistic recovery timelines, and preparation steps.",
-                ]
-            elif any(k in industry_raw for k in ["d2c", "ecommerce", "e-commerce", "retail", "fashion", "beauty", "apparel", "product", "goods"]):
-                cold_start_hypotheses = [
-                    "Immediate Problem-Solution Demonstration: Contrast common category frustration against direct product benefit in the first 3 seconds.",
-                    "Macro Tactile Inspection: Close-up focus on material craftsmanship, ingredient quality, finish, and unboxing presentation.",
-                    "Side-by-Side Mechanism Contrast: Clearly articulate key differentiators versus legacy mass-market alternatives without naming competitors.",
-                    "Day-in-the-Life Routine Integration: Show practical daily usage scenarios highlighting ergonomic utility and aesthetic appeal.",
-                ]
-            elif any(k in industry_raw for k in ["b2b", "saas", "tech", "software", "enterprise", "agency", "consulting", "fintech"]):
-                cold_start_hypotheses = [
-                    "Workflow Bottleneck Agitation: Address a specific time-consuming operational or spreadsheet breakdown familiar to team leads.",
-                    "System Architecture & Teardown: Provide an objective step-by-step walkthrough of how automated workflows replace manual error loops.",
-                    "Implementation Blueprint: Outline clear phase-by-phase rollout expectations and timeline to eliminate onboarding hesitation.",
-                    "Peer Framework Breakdown: Share actionable industry rubrics or decision checklists that establish strategic credibility.",
-                ]
-            else:
-                cold_start_hypotheses = [
-                    "Target Audience Pain Point Hook: Open with an incisive question isolating the primary challenge facing prospective clients.",
-                    "Operational Process Transparency: Walk through the proprietary methodology step-by-step to demonstrate structured expertise.",
-                    "Founder Conviction / Alternative Approach: Explain why traditional industry approaches fail and how this specific model solves the gap.",
-                    "Deliverable Clarity & Value Blueprint: Itemize exactly what the client receives with clear expectations and tangible milestones.",
-                ]
+            cold_start_hypotheses = _get_industry_creative_hypotheses(brief, brand_context)
 
             cold_start_underperforming = [
                 "No historical baseline yet — avoid committing all sprint slots to a single hook style; test at least 3 distinct angles in Sprint 1.",
@@ -245,19 +252,44 @@ class HistoricalPerformanceAgent:
                 recommended_format_mix=default_mix,
             )
 
-        # 6. LLM Interpretation of Calculated Metrics
+        # 6. Deterministic Metrics Disambiguation & LLM Interpretation
+        total_interactions = sum(
+            int(s.avg_likes + s.avg_comments + s.avg_shares) * s.total_published
+            for s in format_summaries
+        )
+
         summary_text_lines = []
         for s in format_summaries:
+            format_interactions = int(s.avg_likes + s.avg_comments + s.avg_shares) * s.total_published
+            format_share_pct = (
+                round((format_interactions / total_interactions) * 100, 1)
+                if total_interactions > 0
+                else 0.0
+            )
             summary_text_lines.append(
                 f"- Format: {s.deliverable_type.upper()} on {s.platform.upper()}\n"
-                f"  Total Published: {s.total_published} | Avg Views: {s.avg_views} | Avg Likes: {s.avg_likes}\n"
-                f"  Avg Engagement Rate: {s.avg_engagement_rate}%\n"
-                f"  Top Performing Titles: {', '.join(s.top_performing_angles) if s.top_performing_angles else 'None'}"
+                f"  post_count: {s.total_published} post(s) observed\n"
+                f"  engagement_rate_pct: {s.avg_engagement_rate}% (calculated strictly as interactions/views on these {s.total_published} post(s); NOT portfolio volume share)\n"
+                f"  format_share_of_engagement_pct: {format_share_pct}% of total observed interactions across all posts\n"
+                f"  Avg Views: {s.avg_views} | Avg Likes: {s.avg_likes} | Avg Shares: {s.avg_shares}\n"
+                f"  Top Performing Angles: {', '.join(s.top_performing_angles) if s.top_performing_angles else 'None'}"
             )
         summaries_str = "\n".join(summary_text_lines)
 
         fatigue_text_lines = [f"- {f.topic_or_format} ({f.fatigue_level}): {f.recommendation}" for f in fatigue_signals]
         fatigue_str = "\n".join(fatigue_text_lines) if fatigue_text_lines else "None detected."
+
+        sparse_instructions = ""
+        if data_sufficiency == DataSufficiency.sparse:
+            sparse_instructions = f"""
+### CRITICAL SPARSE DATA GUARDRAILS (ONLY {total_posts} POST(S) OBSERVED):
+- The sample size is extremely small ({total_posts} post(s)).
+- Label deterministic metrics unambiguously: post_count, engagement_rate_pct, format_share_of_engagement_pct.
+- DO NOT confuse engagement_rate_pct (performance on {total_posts} post) with overall portfolio share or audience preference.
+- NEVER invent generic industry baseline percentage splits (e.g. NEVER output "50% Reels, 30% Carousels, 20% Statics").
+- Formulate testable sprint hypotheses prefixed with "[SPARSE_DATA_HYPOTHESIS]" to validate creative angles with controlled low-risk tests.
+- Format mix recommendations must be expressed as concrete integer deliverable counts for the sprint (e.g. {{'carousel': 2, 'reel': 2}}), respecting the client's requested preferences, NOT percentage splits.
+"""
 
         prompt = f"""You are the Historical Performance Analysis Agent for AgencyOS.
 Interpret the following calculated performance statistics for client '{brief.client_id}'.
@@ -277,18 +309,18 @@ Audience Fatigue Signals:
 - Objective: {brief.objective}
 - Format Preferences: {', '.join(brief.deliverable_preferences) if brief.deliverable_preferences else 'Any'}
 - Platforms: {', '.join(brief.platforms) if brief.platforms else 'Any'}
-
+{sparse_instructions}
 ### YOUR TASK
 Interpret these statistical facts to produce an actionable playbook:
-1. Winning Hooks & Angles: Extract 2-4 qualitative patterns from the top-performing formats and titles.
-2. Underperforming Patterns: Identify format traps or declining patterns to avoid.
-3. Recommended Format Mix: Propose a tactical monthly deliverable count mix allocating the formats.
+1. Winning Hooks & Angles: Extract qualitative patterns from observed posts, combined with testable sprint hypotheses.
+2. Underperforming Patterns: Identify format traps, declining patterns, or sparse data limitations to avoid.
+3. Recommended Format Mix: Propose a tactical deliverable count mix allocating integer post counts for the sprint.
 
 RULES:
 - Do NOT invent or alter the calculated numbers.
 - Base your interpretations strictly on the observed statistics.
 - Never invent CTR, hold rates, conversion rates, or industry benchmarks not provided in the input.
-- Never output hallucinated percentage metrics.
+- Never output hallucinated percentage metrics or generic percentage splits (like "50% Reels, 30% Carousels, 20% Statics").
 """
 
         try:
@@ -308,6 +340,38 @@ RULES:
             winning_angles = [f"Focus on top format: {format_summaries[0].deliverable_type}" if format_summaries else "Maintain baseline formats"]
             underperforming = ["Avoid uncaptioned or low-interaction formats"]
             format_mix = {s.deliverable_type: 2 for s in format_summaries}
+
+        # Deterministic Python post-filter for sparse mode (enforces testable hypotheses & strips generic splits)
+        if data_sufficiency == DataSufficiency.sparse:
+            creative_hypotheses = _get_industry_creative_hypotheses(brief, brand_context)
+            sparse_hypotheses = [
+                f"[SPARSE_DATA_HYPOTHESIS] {h}"
+                for h in creative_hypotheses[:3]
+                if not any(h[:25].lower() in a.lower() for a in winning_angles)
+            ]
+            cleaned_winning = [
+                a for a in winning_angles
+                if not any(b in a.lower() for b in ("50% reels", "30% carousels", "20% statics"))
+            ]
+            winning_angles = [
+                f"[SPARSE_DATA_OBSERVATION] Limited historical sample ({total_posts} post(s) analyzed). "
+                f"Format {format_summaries[0].deliverable_type} showed {format_summaries[0].avg_engagement_rate}% engagement rate.",
+                *cleaned_winning,
+                *sparse_hypotheses,
+            ]
+            sparse_guard = (
+                f"Sparse sample size ({total_posts} post(s)): avoid over-indexing on single-post performance or "
+                f"assuming permanent audience format preferences without at least 5-10 published benchmark tests."
+            )
+            cleaned_underperforming = [
+                u for u in underperforming
+                if not any(b in u.lower() for b in ("50% reels", "30% carousels", "20% statics"))
+            ]
+            underperforming = [sparse_guard, *cleaned_underperforming]
+
+            # In sparse mode, ensure format mix is concrete integer counts, not percentages
+            if not format_mix:
+                format_mix = {s.deliverable_type: 2 for s in format_summaries}
 
         return PerformancePlaybook(
             data_sufficiency=data_sufficiency,

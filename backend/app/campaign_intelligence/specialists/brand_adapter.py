@@ -129,7 +129,8 @@ CRITICAL RULES:
 1. Never hallucinate or invent fake customer personas, fabricated pain points, or fake review quotes.
 2. Directly answer the user's specific query.
 3. If information is missing, explicitly list clarifying questions instead of guessing.
-4. Keep the conversational summary concise and executive in tone.
+4. If recommending case-study, customer story, or metric-driven pillars when verified records lack case studies or testimonials, explicitly flag '[CLIENT_INPUT_NEEDED]: <explanation of what proof is needed>'.
+5. Keep the conversational summary concise and executive in tone.
 """
 
         try:
@@ -153,6 +154,28 @@ CRITICAL RULES:
                 f"knowledge gaps identified for your review."
             )
             followups = ["Clarify missing brand information", "Review prohibited claims"]
+
+        # Deterministic check: surface [CLIENT_INPUT_NEEDED] if suggesting case-study / metric pillars without confirmed proof
+        has_verified_proof = any(
+            any(k in f.lower() for k in ("case study", "case-study", "testimonial", "customer success", "client story", "client results", "roi", "metric"))
+            for f in brand_context.confirmed_facts
+        )
+        needs_proof_keywords = (
+            "case stud", "customer success", "customer stor", "client stor",
+            "measurable outcome", "benchmark", "metrics-driven", "data-backed"
+        )
+        reply_lower = reply_text.lower()
+        if any(kw in reply_lower for kw in needs_proof_keywords) and not has_verified_proof:
+            if "[CLIENT_INPUT_NEEDED]" not in reply_text:
+                missing_detail = "Verified case studies and measurable customer success metrics are currently missing from brand records."
+                for g in brand_context.knowledge_gaps:
+                    if any(k in g.lower() for k in ("case study", "testimonial", "metric", "proof", "pricing", "result")):
+                        missing_detail = g
+                        break
+                reply_text += (
+                    f"\n\n⚠️ **[CLIENT_INPUT_NEEDED]**: {missing_detail} "
+                    f"Client input is required before publishing proof-oriented deliverables."
+                )
 
         return SpecialistResult(
             specialist_id=self.specialist_id,

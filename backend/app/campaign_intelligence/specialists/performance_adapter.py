@@ -118,7 +118,18 @@ class PerformanceSpecialistAdapter(SpecialistAdapter):
         ]
 
         if data_sufficiency_str == "cold_start":
-            recommended_mix = {"reel": 4, "carousel": 3, "static": 1}
+            if context.campaign_brief and context.campaign_brief.deliverable_preferences:
+                recommended_mix = {p.lower(): 2 for p in context.campaign_brief.deliverable_preferences}
+            elif context.brand_context and context.brand_context.contract_quotas:
+                recommended_mix = {q.deliverable_type.lower(): q.monthly_quantity for q in context.brand_context.contract_quotas}
+            else:
+                recommended_mix = {"reel": 2, "carousel": 2}
+        elif data_sufficiency_str == "sparse":
+            # For sparse mode, recommend a balanced testable sprint allocation
+            recommended_mix = {"reel": 2, "carousel": 2}
+            if format_summaries:
+                top_format = max(format_summaries, key=lambda s: s.avg_engagement_rate).deliverable_type
+                recommended_mix[top_format] = recommended_mix.get(top_format, 2) + 1
         else:
             # Rebalance format ratio favoring highest engagement format
             recommended_mix = {"reel": 3, "carousel": 3, "static": 2}
@@ -134,6 +145,16 @@ class PerformanceSpecialistAdapter(SpecialistAdapter):
             recommended_format_ratio=recommended_mix,
         )
 
+        detailed_metrics_lines = []
+        for m in format_metrics:
+            if m.avg_engagement_rate is not None:
+                detailed_metrics_lines.append(
+                    f"- {m.deliverable_format.upper()} ({m.platform.value}): post_count={m.sample_size}, "
+                    f"engagement_rate_pct={m.avg_engagement_rate}% (observed interactions/views on this format; NOT portfolio share), "
+                    f"avg_views={m.avg_views or 'N/A'}"
+                )
+        metrics_block = "\n".join(detailed_metrics_lines) if detailed_metrics_lines else "None recorded"
+
         # 6. Synthesize Conversational Answer
         prompt = f"""You are the Performance Intelligence Specialist for AgencyOS.
 User Query: "{query}"
@@ -141,15 +162,17 @@ User Query: "{query}"
 Client Track Record:
 - Total Historical Posts Analyzed: {total_posts}
 - Data Sufficiency: {data_sufficiency_str.upper()}
-- Format Performance Metrics: {[f.deliverable_format + ': ' + str(f.avg_engagement_rate) + '%' for f in format_metrics if f.avg_engagement_rate is not None]}
+- Format Performance Metrics (Deterministic SQL/Python):
+{metrics_block}
 - Creative Fatigue Warnings: {fatigue_warnings}
-- Recommended Format Mix: {recommended_mix}
+- Recommended Format Mix (Deliverable Counts): {recommended_mix}
 
 RULES:
 1. If data_sufficiency is 'cold_start', be direct: state clearly that this client has no published deliverables yet in AgencyOS.
-2. Recommend standard industry format ratios (e.g. 50% Reels for reach, 30% Carousels for saves, 20% Statics for authority) without inventing fake historical metrics.
-3. If data is available, point out specific winning angles and fatigue warnings.
-4. Keep the conversational summary concise and executive.
+2. If data_sufficiency is 'sparse' (< 5 posts), state clearly that the historical sample is sparse ({total_posts} post(s)). Never confuse engagement_rate_pct (e.g. 66.7% on 1 post) with portfolio volume share or permanent audience preference.
+3. NEVER fabricate generic percentage splits (e.g. NEVER output "50% Reels, 30% Carousels, 20% Statics"). Instead, output testable sprint hypotheses and concrete integer deliverable counts for initial empirical benchmarking.
+4. If sufficient data is available, point out specific winning angles and fatigue warnings.
+5. Keep the conversational summary concise and executive.
 """
 
         try:
@@ -159,9 +182,16 @@ RULES:
                 temperature=0.2,
                 model=settings.FALLBACK_MODEL,
             )
+            # Post-filter to strip any generic percentage splits from the reply
+            cleaned_format_rec = llm_reply.format_recommendation
+            for banned in ("50% reels", "30% carousels", "20% statics"):
+                if banned in cleaned_format_rec.lower():
+                    cleaned_format_rec = f"Allocate {', '.join([f'{k.upper()}: {v}' for k, v in recommended_mix.items()])} for empirical sprint testing."
+                    break
+
             reply_text = (
                 f"{llm_reply.conversational_summary}\n\n"
-                f"**Format Recommendation**: {llm_reply.format_recommendation}\n"
+                f"**Format Recommendation**: {cleaned_format_rec}\n"
                 f"**Signals**: {llm_reply.fatigue_warning_or_opportunity}"
             )
             followups = llm_reply.suggested_followups or [
@@ -174,8 +204,14 @@ RULES:
             if total_posts == 0:
                 reply_text = (
                     f"**Cold Start Client**: **{context.client_name}** currently has no published deliverables "
-                    f"recorded in AgencyOS. I recommend establishing an empirical baseline with a balanced format mix: "
-                    f"**50% Reels** for discovery, **30% Carousels** for saves, and **20% Statics** for direct offers."
+                    f"recorded in AgencyOS. I recommend establishing an empirical baseline with testable sprint hypotheses "
+                    f"across contracted formats: {', '.join([f'{k.upper()}: {v}' for k, v in recommended_mix.items()])}."
+                )
+            elif total_posts < 5:
+                reply_text = (
+                    f"**Sparse Historical Sample**: I analyzed {total_posts} published deliverable(s) for **{context.client_name}**. "
+                    f"Because data is sparse (sample size < 5), avoid over-indexing on single-post performance. "
+                    f"Recommended testing mix: {', '.join([f'{k.upper()}: {v}' for k, v in recommended_mix.items()])}."
                 )
             else:
                 reply_text = (

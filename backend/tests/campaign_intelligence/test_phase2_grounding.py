@@ -589,3 +589,252 @@ async def test_performance_cold_start_multi_industry_zero_fake_stats():
             underperf_joined = " ".join(playbook.underperforming_patterns)
             assert "No historical baseline yet" in underperf_joined
             assert "Sprint 1" in underperf_joined
+
+
+# ============================================================================
+# 9. Test Performance Analyst Sparse Mode (total_posts == 1) & No Generic Splits
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_performance_sparse_mode_single_post_experiment_hypotheses():
+    """Verify total_posts == 1 triggers sparse mode with testable hypotheses, unambiguous metric labeling, and zero generic percentage splits."""
+    from app.campaign_intelligence.agents.historical_performance import PerformanceInterpretationOutput
+    from app.campaign_intelligence.specialists.performance_adapter import PerformanceSpecialistAdapter
+    from app.campaign_intelligence.schemas.studio_context import CampaignStudioContext
+
+    mock_db = AsyncMock(spec=AsyncSession)
+    mock_db.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(first=lambda: None, all=lambda: [])))
+
+    mock_deliv = MagicMock()
+    mock_deliv.id = uuid.uuid4()
+    mock_deliv.deliverable_type = "static"
+    mock_deliv.platform = "instagram"
+    mock_deliv.title = "Architecture Deep Dive"
+    mock_deliv.views_count = 150
+    mock_deliv.likes_count = 80
+    mock_deliv.comments_count = 15
+    mock_deliv.shares_count = 5
+    mock_deliv.published_at = datetime.datetime.now(datetime.timezone.utc)
+
+    brief = CampaignBrief(
+        client_id=uuid.uuid4(),
+        agency_id=uuid.uuid4(),
+        period_month=12,
+        period_year=2026,
+        objective="Drive qualified enterprise signups",
+        deliverable_preferences=["carousel", "reel"],
+    )
+    brand_context = BrandContext(
+        client_id=brief.client_id,
+        agency_id=brief.agency_id,
+        business_name="CloudScale Systems",
+        industry="b2b enterprise software",
+    )
+
+    agent = HistoricalPerformanceAgent()
+
+    with patch("app.campaign_intelligence.agents.historical_performance.get_client_published_deliverables", new_callable=AsyncMock) as mock_get_deliv, \
+         patch("app.campaign_intelligence.agents.historical_performance.invoke_structured_llm", new_callable=AsyncMock) as mock_llm:
+        mock_get_deliv.return_value = [mock_deliv]
+        mock_llm.return_value = PerformanceInterpretationOutput(
+            winning_hooks_and_angles=["Technical architecture breakdown resonated with engineering leads"],
+            underperforming_patterns=["Generic promotional graphics without technical code snippets"],
+            recommended_format_mix={"carousel": 2, "reel": 2},
+        )
+
+        playbook: PerformancePlaybook = await agent.run(brief=brief, db=mock_db, brand_context=brand_context)
+
+        # 1. Assert Sparse Sufficiency
+        assert playbook.data_sufficiency == DataSufficiency.sparse
+        assert playbook.historical_posts_analyzed == 1
+        assert len(playbook.format_summaries) == 1
+
+        # 2. Assert Sparse Hypotheses in winning_hooks_and_angles
+        assert any("[SPARSE_DATA_OBSERVATION]" in a for a in playbook.winning_hooks_and_angles)
+        assert any("[SPARSE_DATA_HYPOTHESIS]" in a for a in playbook.winning_hooks_and_angles)
+
+        # 3. Assert Sparse Guardrail in underperforming_patterns
+        assert any("Sparse sample size (1 post(s))" in u for u in playbook.underperforming_patterns)
+
+        # 4. Assert NO generic 50/30/20 splits
+        combined_text = " ".join(playbook.winning_hooks_and_angles + playbook.underperforming_patterns).lower()
+        assert "50% reels" not in combined_text
+        assert "30% carousels" not in combined_text
+        assert "20% statics" not in combined_text
+
+        # 5. Check LLM prompt received unambiguous metric labels
+        prompt_called = mock_llm.call_args[1]["prompt"]
+        assert "post_count: 1 post(s) observed" in prompt_called
+        assert "engagement_rate_pct:" in prompt_called
+        assert "format_share_of_engagement_pct:" in prompt_called
+        assert "DO NOT confuse engagement_rate_pct" in prompt_called
+
+    # 6. Test Studio Chat PerformanceSpecialistAdapter in sparse mode
+    studio_context = CampaignStudioContext(
+        campaign_id=uuid.uuid4(),
+        client_id=brief.client_id,
+        agency_id=brief.agency_id,
+        client_name="CloudScale Systems",
+        client_industry="b2b enterprise software",
+        campaign_brief=brief,
+        brand_context=brand_context,
+    )
+    perf_adapter = PerformanceSpecialistAdapter()
+
+    with patch("app.campaign_intelligence.specialists.performance_adapter.get_client_published_deliverables", new_callable=AsyncMock) as mock_get_deliv_adapter, \
+         patch("app.campaign_intelligence.specialists.performance_adapter.invoke_structured_llm", new_callable=AsyncMock) as mock_llm_adapter:
+        mock_get_deliv_adapter.return_value = [mock_deliv]
+        from app.campaign_intelligence.specialists.performance_adapter import PerformanceConversationalReply
+        mock_llm_adapter.return_value = PerformanceConversationalReply(
+            conversational_summary="Historical performance shows 1 published deliverable with 66.7% engagement rate. Because sample size is sparse, test creative angles across balanced formats.",
+            format_recommendation="Allocate 2 Carousels and 2 Reels for empirical sprint testing.",
+            fatigue_warning_or_opportunity="No fatigue detected given limited historical sample.",
+            suggested_followups=["Set up Sprint 1 angle split tests"],
+        )
+
+        res = await perf_adapter.execute(query="Analyze past performance", context=studio_context, db=mock_db)
+        assert "50% Reels" not in res.reply
+        assert "30% Carousels" not in res.reply
+        assert res.artifact_payload["data_sufficiency"] == "sparse"
+        assert res.artifact_payload["sample_size_total"] == 1
+
+
+# ============================================================================
+# 10. Test Deep Research Tavily Extract Status Acceptance & Trafilatura Fallback
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_deep_research_extracted_tavily_status_accepted():
+    """Verify _process_extracted_webpage accepts extracted_tavily and extracted_direct_http with substantive content."""
+    from app.campaign_intelligence.tools.market_research_tools import (
+        _process_extracted_webpage,
+        extract_webpages_handler,
+        ExtractWebpagesInput,
+    )
+    from app.campaign_intelligence.runtime.schemas import ToolExecutionContext
+
+    # 1. Test extracted_tavily with substantive paragraphs & metrics
+    sample_text = (
+        "Acme Enterprise Cloud provides scalable microservice infrastructure starting at $499 per month. "
+        "Our high-throughput gateway delivers 99.99% uptime with 150+ global edge locations. "
+        "Companies migrate from legacy systems in under 14 days without downtime."
+    )
+    res_tavily = _process_extracted_webpage(
+        raw_content=sample_text,
+        url="https://acmecloud.io/pricing",
+        title="Acme Cloud Pricing & Plans",
+        status="extracted_tavily",
+    )
+    assert res_tavily["status"] == "extracted_tavily"
+    assert res_tavily["supports_claim"] is True
+    assert len(res_tavily["content"]) > 50
+    assert any("$499" in m for m in res_tavily["extracted_metrics"])
+
+    # 2. Test extract_webpages_handler with mocked extract_tavily
+    ctx = ToolExecutionContext(
+        agency_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        campaign_id=uuid.uuid4(),
+        specialist_id="market_research",
+    )
+    with patch("app.campaign_intelligence.tools.market_research_tools.extract_tavily", new_callable=AsyncMock) as mock_extract:
+        mock_extract.return_value = [
+            {
+                "url": "https://acmecloud.io/pricing",
+                "title": "Acme Cloud Pricing",
+                "raw_content": sample_text,
+                "status": "extracted_tavily",
+            }
+        ]
+        handler_res = await extract_webpages_handler(ExtractWebpagesInput(urls=["https://acmecloud.io/pricing"]), ctx)
+        assert handler_res["extracted_count"] == 1
+        page = handler_res["pages"][0]
+        assert page["status"] == "extracted_tavily"
+        assert len(page["content"]) > 50
+        assert page["supports_claim"] is True
+
+
+# ============================================================================
+# 11. Test Competitor Platform Stamping Respects Source URL (No False Instagram)
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_competitor_platform_stamping_respects_source_url():
+    """Verify competitors discovered on web pricing/blog pages do NOT stamp (instagram)."""
+    from app.campaign_intelligence.research.deep_research_graph import _map_platform
+    from app.campaign_intelligence.collaboration.schemas import SocialPlatform
+
+    # Web pricing page -> SocialPlatform.official_site or web
+    assert _map_platform("web", "https://competitor.com/pricing") in (SocialPlatform.official_site, SocialPlatform.web)
+    assert _map_platform("", "https://saasrival.io/blog/architecture") == SocialPlatform.web
+    assert _map_platform("official_site", "https://rivalbrand.com/store") == SocialPlatform.official_site
+
+    # Actual Instagram URL -> SocialPlatform.instagram
+    assert _map_platform("instagram", "https://instagram.com/competitor") == SocialPlatform.instagram
+    assert _map_platform("", "https://www.instagram.com/p/C123456/") == SocialPlatform.instagram
+
+    # LinkedIn URL -> SocialPlatform.linkedin
+    assert _map_platform("", "https://www.linkedin.com/company/competitor") == SocialPlatform.linkedin
+
+
+# ============================================================================
+# 12. Test Brand Adapter Flags [CLIENT_INPUT_NEEDED] on Missing Proof
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_brand_adapter_flags_client_input_needed_on_missing_case_studies():
+    """Verify BrandSpecialistAdapter appends [CLIENT_INPUT_NEEDED] when recommending case-study/metric pillars without confirmed proof."""
+    from app.campaign_intelligence.specialists.brand_adapter import (
+        BrandSpecialistAdapter,
+        BrandConversationalReply,
+    )
+    from app.campaign_intelligence.schemas.studio_context import CampaignStudioContext
+
+    mock_db = AsyncMock(spec=AsyncSession)
+    brand_context = BrandContext(
+        client_id=uuid.uuid4(),
+        agency_id=uuid.uuid4(),
+        business_name="DataFlow AI",
+        industry="b2b enterprise software",
+        brand_voice=["Technical", "Authoritative", "Minimalist"],
+        confirmed_facts=["DataFlow AI provides automated SQL pipelines", "Founded in 2024"],
+        knowledge_gaps=["No verified client testimonials or case-study metrics"],
+    )
+    brief = CampaignBrief(
+        client_id=brand_context.client_id,
+        agency_id=brand_context.agency_id,
+        period_month=12,
+        period_year=2026,
+        objective="Enterprise lead generation",
+    )
+    studio_context = CampaignStudioContext(
+        campaign_id=uuid.uuid4(),
+        client_id=brand_context.client_id,
+        agency_id=brand_context.agency_id,
+        client_name="DataFlow AI",
+        client_industry="b2b enterprise software",
+        campaign_brief=brief,
+        brand_context=brand_context,
+    )
+
+    adapter = BrandSpecialistAdapter()
+
+    # LLM recommends case study / customer stories pillar without confirmed proof
+    with patch("app.campaign_intelligence.specialists.brand_adapter.invoke_structured_llm", new_callable=AsyncMock) as mock_llm:
+        mock_llm.return_value = BrandConversationalReply(
+            conversational_summary=(
+                "I recommend three high-authority content pillars: 1) System Architecture Teardowns, "
+                "2) Performance & Latency Benchmarks, 3) Scalable Customer Success Stories and Case Studies."
+            ),
+            suggested_followups=["Clarify case study metrics"],
+        )
+
+        res = await adapter.execute(
+            query="Audit our brand voice and suggest 3 high-authority content pillars",
+            context=studio_context,
+            db=mock_db,
+        )
+
+        # Must deterministically flag [CLIENT_INPUT_NEEDED]
+        assert "[CLIENT_INPUT_NEEDED]" in res.reply
+        assert "case study" in res.reply.lower() or "case-study" in res.reply.lower() or "testimonials" in res.reply.lower()

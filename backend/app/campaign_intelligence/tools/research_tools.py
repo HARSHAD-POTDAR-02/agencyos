@@ -414,8 +414,12 @@ async def extract_tavily(
             logger.warning("Tavily extract API error with key (...%s): %s", t_key[-6:], ex)
 
     # 2. Direct HTTP GET fallback for any safe URL not yet extracted (concurrent)
-    already_extracted = {r["url"] for r in extracted_results}
-    urls_to_fallback = [u for u in safe_urls if u not in already_extracted]
+    already_extracted_canons = {
+        _normalize_url(r["url"])
+        for r in extracted_results
+        if r.get("raw_content") and r.get("raw_content").strip()
+    }
+    urls_to_fallback = [u for u in safe_urls if _normalize_url(u) not in already_extracted_canons]
 
     if urls_to_fallback:
         headers = {
@@ -467,7 +471,7 @@ async def extract_tavily(
                                     "extract_tavily: redirect destination is unsafe: %r -> %r",
                                     current_url,
                                     next_url,
-                                )
+                                    )
                                 return {
                                     "url": u,
                                     "title": u,
@@ -479,11 +483,30 @@ async def extract_tavily(
                         else:
                             # Final response (not a redirect)
                             if resp.status_code == 200:
-                                cleaned = _clean_html(resp.text)
+                                text_content = ""
+                                try:
+                                    from trafilatura import extract as trafilatura_extract
+                                    from trafilatura.settings import use_config
+                                    cfg = use_config()
+                                    cfg.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
+                                    text_content = trafilatura_extract(
+                                        resp.text,
+                                        url=current_url,
+                                        include_comments=False,
+                                        include_tables=True,
+                                        favor_recall=True,
+                                        config=cfg,
+                                    ) or ""
+                                except Exception:
+                                    text_content = ""
+
+                                if not text_content or len(text_content.strip()) < 50:
+                                    text_content = _clean_html(resp.text)
+
                                 return {
                                     "url": u,
                                     "title": u,
-                                    "raw_content": cleaned[:8000],
+                                    "raw_content": text_content[:12000],
                                     "status": "extracted_direct_http",
                                 }
                             else:

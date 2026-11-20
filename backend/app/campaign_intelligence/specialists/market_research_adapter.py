@@ -210,7 +210,12 @@ class MarketResearchSpecialistAdapter(SpecialistAdapter):
         if not is_fast_mode:
             from app.campaign_intelligence.specialists.deep_research_adapter import DeepResearchSpecialistAdapter
             deep_adapter = DeepResearchSpecialistAdapter()
-            return await deep_adapter.execute(query=query, context=context, db=db, on_event=on_event)
+            deep_res = await deep_adapter.execute(query=query, context=context, db=db, on_event=on_event)
+            if hasattr(deep_res, "specialist_id"):
+                deep_res.specialist_id = self.specialist_id
+            if hasattr(deep_res, "specialist_name"):
+                deep_res.specialist_name = self.specialist_name
+            return deep_res
 
         activity_logs: list[str] = [
             f"Initiating dynamic research investigation for: '{query[:80]}'...",
@@ -892,7 +897,7 @@ STRICT RULES:
             validated.append(
                 CompetitorActivity(
                     competitor_name=comp.competitor_name,
-                    platform=self._map_platform(comp.platform),
+                    platform=self._map_platform(comp.platform, canonical),
                     observed_creative_angle=angle,
                     observed_format=comp.observed_format,
                     citation=citation,
@@ -1093,17 +1098,21 @@ STRICT RULES:
         return passage[:max_chars]
 
     @staticmethod
-    def _map_platform(platform_str: str) -> SocialPlatform:
-        p = platform_str.lower()
-        if "linkedin" in p:
-            return SocialPlatform.linkedin
-        if "tiktok" in p:
+    def _map_platform(platform_str: str, source_url: str = "") -> SocialPlatform:
+        combined = f"{platform_str or ''} {source_url or ''}".lower()
+        if "instagram.com" in combined or "instagram" in (platform_str or "").lower():
+            return SocialPlatform.instagram
+        if "tiktok.com" in combined or "tiktok" in (platform_str or "").lower():
             return SocialPlatform.tiktok
-        if "youtube" in p:
+        if "linkedin.com" in combined or "linkedin" in (platform_str or "").lower():
+            return SocialPlatform.linkedin
+        if "youtube.com" in combined or "youtube" in (platform_str or "").lower():
             return SocialPlatform.youtube
-        if "facebook" in p:
+        if "facebook.com" in combined or "facebook" in (platform_str or "").lower():
             return SocialPlatform.facebook
-        return SocialPlatform.instagram
+        if any(k in combined for k in ("official", "store", "shop", "homepage", "company", "pricing")):
+            return SocialPlatform.official_site
+        return SocialPlatform.web
 
     @staticmethod
     def _format_reply(
