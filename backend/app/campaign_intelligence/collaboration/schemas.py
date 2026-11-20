@@ -17,6 +17,8 @@ class SocialPlatform(str, Enum):
     linkedin = "linkedin"
     facebook = "facebook"
     youtube = "youtube"
+    twitter = "twitter"
+    x = "x"
     web = "web"
     official_site = "official_site"
 

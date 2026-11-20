@@ -1133,6 +1133,8 @@ STRICT RULES:
             return SocialPlatform.youtube
         if "facebook" in plat_lower:
             return SocialPlatform.facebook
+        if "twitter" in plat_lower or plat_lower == "x":
+            return SocialPlatform.twitter
         if any(k in plat_lower for k in ("official", "store", "shop", "homepage", "company", "pricing")):
             return SocialPlatform.official_site
         return SocialPlatform.web
