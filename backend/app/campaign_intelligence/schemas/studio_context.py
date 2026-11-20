@@ -34,7 +34,7 @@ class CampaignStudioContext(BaseModel):
     campaign_strategy: CampaignStrategy | None = None
 
     # Active Artifact Reference (Preserves continuity across specialist switches)
-    active_artifact_id: uuid.UUID | None = None
+    active_artifact_id: uuid.UUID | str | None = None
     active_artifact_type: str | None = None
     active_artifact_version: int | None = None
     active_artifact_payload: dict[str, Any] | None = None

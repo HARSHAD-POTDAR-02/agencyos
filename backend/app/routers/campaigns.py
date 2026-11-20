@@ -773,27 +773,37 @@ async def execute_chat_turn(
     active_artifact_type = None
     active_artifact_version = None
     active_artifact_payload = None
+    target_artifact_uuid: uuid.UUID | None = None
     if active_artifact_id:
-        art_res = await db.execute(
-            select(StudioArtifact).where(
-                StudioArtifact.id == active_artifact_id,
-                StudioArtifact.agency_id == agency_id,
-                StudioArtifact.campaign_id == target_campaign_id,
-            )
-        )
-        active_art = art_res.scalars().first()
-        if active_art:
-            active_artifact_type = active_art.artifact_type
-            active_artifact_version = active_art.current_version_number
-            ver_res = await db.execute(
-                select(StudioArtifactVersion).where(
-                    StudioArtifactVersion.artifact_id == active_art.id,
-                    StudioArtifactVersion.version_number == active_art.current_version_number,
+        if isinstance(active_artifact_id, uuid.UUID):
+            target_artifact_uuid = active_artifact_id
+        else:
+            try:
+                target_artifact_uuid = uuid.UUID(str(active_artifact_id))
+            except (ValueError, TypeError):
+                target_artifact_uuid = None
+
+        if target_artifact_uuid:
+            art_res = await db.execute(
+                select(StudioArtifact).where(
+                    StudioArtifact.id == target_artifact_uuid,
+                    StudioArtifact.agency_id == agency_id,
+                    StudioArtifact.campaign_id == target_campaign_id,
                 )
             )
-            active_ver = ver_res.scalars().first()
-            if active_ver:
-                active_artifact_payload = active_ver.payload
+            active_art = art_res.scalars().first()
+            if active_art:
+                active_artifact_type = active_art.artifact_type
+                active_artifact_version = active_art.current_version_number
+                ver_res = await db.execute(
+                    select(StudioArtifactVersion).where(
+                        StudioArtifactVersion.artifact_id == active_art.id,
+                        StudioArtifactVersion.version_number == active_art.current_version_number,
+                    )
+                )
+                active_ver = ver_res.scalars().first()
+                if active_ver:
+                    active_artifact_payload = active_ver.payload
 
     # 4. Fetch Brand Profile & build BrandContext
     bp_result = await db.execute(
@@ -974,7 +984,7 @@ async def execute_chat_turn(
                 actor_type="agent",
                 actor_id=target_agent_id,
                 db=db,
-                artifact_id=active_artifact_id if (active_artifact_type == art_type_str) else None,
+                artifact_id=target_artifact_uuid if (active_artifact_type == art_type_str) else None,
                 change_summary=f"Created/revised by {adapter.specialist_name}",
             )
             await db.commit()

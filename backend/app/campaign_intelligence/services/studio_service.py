@@ -107,7 +107,7 @@ async def save_or_revise_artifact(
     actor_type: str,
     actor_id: str,
     db: AsyncSession,
-    artifact_id: uuid.UUID | None = None,
+    artifact_id: uuid.UUID | str | None = None,
     parent_version_id: uuid.UUID | None = None,
     change_summary: str | None = None,
     supporting_evidence_refs: list[dict[str, Any]] | None = None,
@@ -117,12 +117,22 @@ async def save_or_revise_artifact(
     Uses SELECT ... FOR UPDATE on the parent artifact row to eliminate race conditions
     when concurrent workers or user revisions increment the version number.
     """
+    target_uuid: uuid.UUID | None = None
     if artifact_id:
+        if isinstance(artifact_id, uuid.UUID):
+            target_uuid = artifact_id
+        else:
+            try:
+                target_uuid = uuid.UUID(str(artifact_id))
+            except (ValueError, TypeError):
+                target_uuid = None
+
+    if target_uuid:
         # 1. Update existing artifact with pessimistic row lock
         stmt = (
             select(StudioArtifact)
             .where(
-                StudioArtifact.id == artifact_id,
+                StudioArtifact.id == target_uuid,
                 StudioArtifact.agency_id == agency_id,
                 StudioArtifact.campaign_id == campaign_id,
             )
