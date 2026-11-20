@@ -894,6 +894,10 @@ async def execute_chat_turn(
             prohibited_claims=prohibited_claims_objs,
             verified_offers=verified_offers_objs,
             confirmed_facts=[client.business_name, client.industry or "General Business"],
+            knowledge_gaps=[
+                "No verified case studies or client testimonials on file",
+                "No verified pricing tiers or promotional discounts on file",
+            ],
         )
 
     brief = CampaignBrief(
@@ -2166,7 +2170,7 @@ async def delete_campaign(
     from app.models.content_version import ContentVersion
     from app.models.approval import Approval
     from app.models.publication_job import PublicationJob
-    from app.models.studio_artifact import CampaignStudioSession, StudioArtifact, StudioExport
+    from app.models.studio_artifact import CampaignStudioSession, StudioArtifact, StudioArtifactVersion, StudioExport
 
     deliv_res = await db.execute(
         select(Deliverable.id).where(Deliverable.campaign_id == campaign_id)
@@ -2185,8 +2189,17 @@ async def delete_campaign(
         await db.execute(delete(Task).where(Task.deliverable_id.in_(deliv_ids)))
         await db.execute(delete(Deliverable).where(Deliverable.campaign_id == campaign_id))
 
+    art_res = await db.execute(select(StudioArtifact.id).where(StudioArtifact.campaign_id == campaign_id))
+    art_ids = list(art_res.scalars().all())
+    if art_ids:
+        ver_res = await db.execute(select(StudioArtifactVersion.id).where(StudioArtifactVersion.artifact_id.in_(art_ids)))
+        ver_ids = list(ver_res.scalars().all())
+        if ver_ids:
+            await db.execute(delete(StudioExport).where(StudioExport.artifact_version_id.in_(ver_ids)))
+            await db.execute(delete(StudioArtifactVersion).where(StudioArtifactVersion.id.in_(ver_ids)))
+        await db.execute(delete(StudioArtifact).where(StudioArtifact.id.in_(art_ids)))
+
     await db.execute(delete(StudioExport).where(StudioExport.campaign_id == campaign_id))
-    await db.execute(delete(StudioArtifact).where(StudioArtifact.campaign_id == campaign_id))
     await db.execute(delete(CampaignStudioSession).where(CampaignStudioSession.campaign_id == campaign_id))
 
     await db.delete(campaign)

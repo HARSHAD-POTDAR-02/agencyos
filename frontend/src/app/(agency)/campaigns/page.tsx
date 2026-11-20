@@ -472,10 +472,8 @@ function CampaignStudioContent() {
             if (prev && list.some((c: any) => c.id === prev)) {
               return prev;
             }
-            const withDraft = list.find(
-              (c: any) => c.ai_plan_draft && (c.ai_plan_draft.deliverables || []).length > 0
-            );
-            return withDraft ? withDraft.id : list[0].id;
+            // Always default to the newest campaign (list is sorted by created_at DESC)
+            return list[0].id;
           });
         }
       } catch (err) {
@@ -521,10 +519,15 @@ function CampaignStudioContent() {
       setDeletingCampaign(true);
       await campaignApi.delete(effectiveAgencyId, activeCampaignId, token);
       setShowDeleteCampaignModal(false);
+      const deletedCampId = activeCampaignId;
       setActiveCampaignId(null);
       setActiveArtifact(null);
       setActiveArtifactVersions([]);
       setPersistedArtifacts([]);
+      if (typeof window !== "undefined") {
+        const storageKey = getStorageKey(selectedClientId, deletedCampId);
+        localStorage.removeItem(storageKey);
+      }
       if (selectedClientId) {
         await loadClientCampaigns(selectedClientId);
       }
@@ -541,39 +544,57 @@ function CampaignStudioContent() {
       if (!effectiveAgencyId || !targetCampaignId || !token) return;
       setIsLoadingArtifacts(true);
       try {
-        // 1. Fetch campaign details to check for full sprint draft
+        const loadedArts: ActiveArtifactData[] = [];
+
+        // 1. Fetch persistent studio_artifacts from database for this campaign
+        const arts = await studioApi.listArtifacts(effectiveAgencyId, targetCampaignId, token).catch(() => []);
+        if (arts && Array.isArray(arts)) {
+          arts.forEach((art: any) => {
+            const targetVer = art.latest_version;
+            loadedArts.push({
+              id: art.id,
+              type: art.artifact_type,
+              title: art.title,
+              version: art.current_version_number || targetVer?.version_number || 1,
+              status: targetVer?.is_approved ? "approved" : (art.status || "draft"),
+              campaign_id: targetCampaignId,
+              payload: targetVer?.payload || {},
+              supporting_evidence_refs: targetVer?.supporting_evidence_refs || [],
+            });
+          });
+        }
+
+        // 2. Fetch campaign details to check for full sprint draft deliverables
         const camp: any = await campaignApi.get(effectiveAgencyId, targetCampaignId, token).catch(() => null);
         const planDeliverables = camp?.ai_plan_draft?.deliverables || [];
 
+        // Strategy blueprint
+        if (camp?.ai_plan_draft?.strategy) {
+          const strat = camp.ai_plan_draft.strategy;
+          loadedArts.push({
+            id: `strat-${targetCampaignId}`,
+            type: "campaign_blueprint",
+            title: strat.campaign_theme || camp.name || "Master Campaign Strategy",
+            version: 1,
+            status: "approved",
+            campaign_id: targetCampaignId,
+            payload: {
+              campaign_theme: strat.campaign_theme || camp.name,
+              master_slogan: strat.strategic_thesis || strat.primary_objective || strat.campaign_theme,
+              narrative_stages: Object.entries(strat.funnel_narrative || {}).map(([stage, msg], i) => ({
+                stage_name: stage.replace(/_/g, " ").toUpperCase(),
+                days_range: `Phase ${i + 1}`,
+                core_message: String(msg),
+                deliverable_focus: (strat.strategic_angles || []).map((a: any) => a.angle_name || String(a)),
+              })),
+              format_mix_ratios: strat.budget_allocation || { LinkedIn: 100 },
+              ...strat,
+            },
+          });
+        }
+
+        // All deliverables (Reels & Carousels)
         if (planDeliverables.length > 0) {
-          const loadedArts: ActiveArtifactData[] = [];
-
-          // Strategy blueprint
-          if (camp.ai_plan_draft?.strategy) {
-            const strat = camp.ai_plan_draft.strategy;
-            loadedArts.push({
-              id: `strat-${targetCampaignId}`,
-              type: "campaign_blueprint",
-              title: strat.campaign_theme || camp.name || "Master Campaign Strategy",
-              version: 1,
-              status: "approved",
-              campaign_id: targetCampaignId,
-              payload: {
-                campaign_theme: strat.campaign_theme || camp.name,
-                master_slogan: strat.strategic_thesis || strat.primary_objective || strat.campaign_theme,
-                narrative_stages: Object.entries(strat.funnel_narrative || {}).map(([stage, msg], i) => ({
-                  stage_name: stage.replace(/_/g, " ").toUpperCase(),
-                  days_range: `Phase ${i + 1}`,
-                  core_message: String(msg),
-                  deliverable_focus: (strat.strategic_angles || []).map((a: any) => a.angle_name || String(a)),
-                })),
-                format_mix_ratios: strat.budget_allocation || { LinkedIn: 100 },
-                ...strat,
-              },
-            });
-          }
-
-          // All deliverables (Reels & Carousels)
           planDeliverables.forEach((d: any, idx: number) => {
             const isCarousel = d.deliverable_type === "carousel" || (d.carousel_slides && d.carousel_slides.length > 0);
             const isInProd = d.status === "in_production" || d.is_exported;
@@ -612,70 +633,41 @@ function CampaignStudioContent() {
                   },
             });
           });
-
-          // Quality audit
-          if (camp.ai_plan_draft?.quality_evaluation) {
-            const q = camp.ai_plan_draft.quality_evaluation;
-            loadedArts.push({
-              id: `qa-${targetCampaignId}`,
-              type: "compliance_review",
-              title: "Pre-Flight Quality Audit",
-              version: 1,
-              status: "approved",
-              campaign_id: targetCampaignId,
-              payload: {
-                ...q,
-                checks: (q.findings || []).map((f: any) => ({
-                  rule_name: f.category ? f.category.replace(/_/g, " ").toUpperCase() : "Brand Guideline Rule",
-                  verdict: f.severity === "error" || f.severity === "blocking" ? "FAIL" : f.severity === "warning" ? "NEEDS_REVIEW" : "PASS",
-                  details: f.issue_description || f.remediation_instruction || "Verified against brand profile.",
-                  severity: f.severity,
-                })),
-                has_blocking_violations: q.revision_required || false,
-              },
-            });
-          }
-
-          setPersistedArtifacts(loadedArts);
-          if (loadedArts.length > 0) {
-            setActiveArtifact((prev) => {
-              if (!prev || !loadedArts.some((a) => a.id === prev.id)) {
-                return loadedArts[0];
-              }
-              return prev;
-            });
-          }
-          return;
         }
 
-        // 2. Fallback to standard studio_artifacts table
-        const arts = await studioApi.listArtifacts(effectiveAgencyId, targetCampaignId, token);
-        setPersistedArtifacts(arts || []);
-
-        if (arts && arts.length > 0) {
-          setActiveArtifact((current) => {
-            if (!current || !arts.some((a: any) => a.id === current.id)) {
-              const first = arts[0];
-              const targetVer = first.latest_version;
-              studioApi
-                .getArtifactDetail(effectiveAgencyId, targetCampaignId, first.id, token)
-                .then((detail) => {
-                  if (detail?.versions) setActiveArtifactVersions(detail.versions);
-                })
-                .catch((e) => console.error("Error loading initial artifact detail:", e));
-
-              return {
-                id: first.id,
-                type: first.artifact_type,
-                title: first.title,
-                version: first.current_version_number || targetVer?.version_number || 1,
-                status: targetVer?.is_approved ? "approved" : (first.status || "draft"),
-                payload: targetVer?.payload || {},
-                supporting_evidence_refs: targetVer?.supporting_evidence_refs || [],
-              };
-            }
-            return current;
+        // Quality audit
+        if (camp?.ai_plan_draft?.quality_evaluation) {
+          const q = camp.ai_plan_draft.quality_evaluation;
+          loadedArts.push({
+            id: `qa-${targetCampaignId}`,
+            type: "compliance_review",
+            title: "Pre-Flight Quality Audit",
+            version: 1,
+            status: "approved",
+            campaign_id: targetCampaignId,
+            payload: {
+              ...q,
+              checks: (q.findings || []).map((f: any) => ({
+                rule_name: f.category ? f.category.replace(/_/g, " ").toUpperCase() : "Brand Guideline Rule",
+                verdict: f.severity === "error" || f.severity === "blocking" ? "FAIL" : f.severity === "warning" ? "NEEDS_REVIEW" : "PASS",
+                details: f.issue_description || f.remediation_instruction || "Verified against brand profile.",
+                severity: f.severity,
+              })),
+              has_blocking_violations: q.revision_required || false,
+            },
           });
+        }
+
+        setPersistedArtifacts(loadedArts);
+        if (loadedArts.length > 0) {
+          setActiveArtifact((prev) => {
+            if (!prev || !loadedArts.some((a) => a.id === prev.id)) {
+              return loadedArts[0];
+            }
+            return prev;
+          });
+        } else {
+          setActiveArtifact(null);
         }
       } catch (err) {
         console.error("Failed to load campaign studio artifacts:", err);
@@ -861,26 +853,47 @@ function CampaignStudioContent() {
       .catch((err) => console.error("Failed to load team members", err));
   }, [token, effectiveAgencyId]);
 
-  // Persistent Chat Storage Key Helper
+  // Persistent Chat Storage Key Helper (strictly scoped by client and active campaign)
   const getStorageKey = useCallback(
-    (cId: string) => `agencyos_studio_chat_${effectiveAgencyId || "default"}_${cId}`,
+    (cId: string, campId?: string | null) =>
+      `agencyos_studio_chat_${effectiveAgencyId || "default"}_${cId}_${campId || "new"}`,
     [effectiveAgencyId]
   );
 
-  // Update selected client object and restore persistent chat history
+  // Update selected client object and restore persistent chat history for the active campaign
   useEffect(() => {
     if (!selectedClientId || clients.length === 0) return;
     const client = clients.find((c) => c.id === selectedClientId) || null;
     setSelectedClient(client);
 
-    const storageKey = getStorageKey(selectedClientId);
+    const storageKey = getStorageKey(selectedClientId, activeCampaignId);
     if (typeof window !== "undefined") {
+      // Purge any legacy un-scoped storage key so old artifacts cannot leak
+      const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${selectedClientId}`;
+      if (localStorage.getItem(legacyKey)) {
+        localStorage.removeItem(legacyKey);
+      }
+
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
-            setChatMessages(parsed.messages);
+            // Sanitize messages: never restore artifact_summary from another campaign
+            const sanitizedMessages = parsed.messages.map((m: any) => {
+              if (
+                m.artifact_summary &&
+                activeCampaignId &&
+                m.artifact_summary.campaign_id &&
+                m.artifact_summary.campaign_id !== activeCampaignId
+              ) {
+                const { artifact_summary: _drop, ...rest } = m;
+                return rest;
+              }
+              return m;
+            });
+
+            setChatMessages(sanitizedMessages);
             setSuggestedObjective(parsed.suggestedObjective || "");
             setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
             setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
@@ -891,7 +904,6 @@ function CampaignStudioContent() {
             if (parsed.periodYear) setPeriodYear(parsed.periodYear);
             if (parsed.studioMode) setStudioMode(parsed.studioMode);
             if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
-            if (parsed.activeCampaignId) setActiveCampaignId(parsed.activeCampaignId);
             if (Array.isArray(parsed.pinnedEntities)) setPinnedEntities(parsed.pinnedEntities);
             if (Array.isArray(parsed.discoveredEntities)) setDiscoveredEntities(parsed.discoveredEntities);
             return;
@@ -902,13 +914,13 @@ function CampaignStudioContent() {
       }
     }
 
-    // Fallback welcome message when no cached history exists
+    // Fallback welcome message when no cached history exists for this campaign
     const clientName = client ? client.business_name : "your client";
     const industryInfo = client?.industry ? ` in the ${client.industry} industry` : "";
 
     setChatMessages([
       {
-        id: `welcome-${selectedClientId}`,
+        id: `welcome-${selectedClientId}-${activeCampaignId || "new"}`,
         role: "assistant",
         content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -920,12 +932,12 @@ function CampaignStudioContent() {
     setSuggestedCustomBrief("");
     setDeliverablePreferences([]);
     setIsReadyToGenerate(false);
-  }, [selectedClientId, clients, getStorageKey]);
+  }, [selectedClientId, activeCampaignId, clients, getStorageKey, effectiveAgencyId]);
 
-  // Auto-persist chat messages and draft strategy to localStorage
+  // Auto-persist chat messages and draft strategy to localStorage (scoped to client + campaign)
   useEffect(() => {
     if (!selectedClientId || chatMessages.length === 0) return;
-    const storageKey = getStorageKey(selectedClientId);
+    const storageKey = getStorageKey(selectedClientId, activeCampaignId);
     try {
       localStorage.setItem(
         storageKey,
@@ -949,14 +961,16 @@ function CampaignStudioContent() {
     } catch (e) {
       console.error("Failed to save chat to storage", e);
     }
-  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, activeArtifact, activeCampaignId, pinnedEntities, discoveredEntities, selectedClientId, getStorageKey]);
+  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, activeCampaignId, pinnedEntities, discoveredEntities, selectedClientId, getStorageKey]);
 
   // Reset conversation handler
   const handleResetChat = () => {
     if (!selectedClientId) return;
-    const storageKey = getStorageKey(selectedClientId);
+    const storageKey = getStorageKey(selectedClientId, activeCampaignId);
     if (typeof window !== "undefined") {
       localStorage.removeItem(storageKey);
+      const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${selectedClientId}`;
+      localStorage.removeItem(legacyKey);
     }
     const clientName = selectedClient ? selectedClient.business_name : "your client";
     const industryInfo = selectedClient?.industry ? ` in the ${selectedClient.industry} industry` : "";
@@ -1100,14 +1114,21 @@ function CampaignStudioContent() {
               setActiveCampaignId(response.campaign_id);
             }
             if (response.artifact_id && response.artifact_payload) {
-              setActiveArtifact({
+              const targetCampId = response.campaign_id || activeCampaignId || undefined;
+              const newArt: ActiveArtifactData = {
                 id: response.artifact_id,
                 type: response.artifact_type || "storyboard",
                 title: response.artifact_title || `${currentAgent.name} Asset`,
                 version: response.artifact_version_number || 1,
                 status: response.artifact_status || "draft",
+                campaign_id: targetCampId,
                 payload: response.artifact_payload,
                 supporting_evidence_refs: response.supporting_evidence_refs || [],
+              };
+              setActiveArtifact(newArt);
+              setPersistedArtifacts((prev) => {
+                const filtered = prev.filter((a) => a.id !== response.artifact_id);
+                return [newArt, ...filtered];
               });
               setMobileTab("canvas");
             }
@@ -1213,14 +1234,21 @@ function CampaignStudioContent() {
           setPinnedEntities(response.pinned_entities);
         }
         if (response.artifact_id && response.artifact_payload) {
-          setActiveArtifact({
+          const targetCampId = response.campaign_id || activeCampaignId || undefined;
+          const newArt: ActiveArtifactData = {
             id: response.artifact_id,
             type: response.artifact_type || "storyboard",
             title: response.artifact_title || `${currentAgent.name} Asset`,
             version: response.artifact_version_number || 1,
             status: response.artifact_status || "draft",
+            campaign_id: targetCampId,
             payload: response.artifact_payload,
             supporting_evidence_refs: response.supporting_evidence_refs || [],
+          };
+          setActiveArtifact(newArt);
+          setPersistedArtifacts((prev) => {
+            const filtered = prev.filter((a) => a.id !== response.artifact_id);
+            return [newArt, ...filtered];
           });
           setMobileTab("canvas");
         }
@@ -1850,13 +1878,17 @@ function CampaignStudioContent() {
 
     // 1. First add all persisted artifacts from SQLite / Postgres / DAG
     persistedArtifacts.forEach((art: any) => {
+      // Strictly exclude any artifact that belongs to a different campaign
+      if (activeCampaignId && art.campaign_id && art.campaign_id !== activeCampaignId) {
+        return;
+      }
       const verNum = art.version || art.current_version_number || art.latest_version?.version_number || 1;
       const key = `${art.id}-v${verNum}`;
       const artPayload = art.payload || art.latest_version?.payload || {};
       const artType = art.type || art.artifact_type || "campaign_blueprint";
       map.set(key, {
         id: art.id,
-        campaign_id: art.campaign_id,
+        campaign_id: art.campaign_id || activeCampaignId,
         type: artType,
         title: art.title,
         version: verNum,
@@ -1871,9 +1903,16 @@ function CampaignStudioContent() {
     // 2. Add any chat message artifacts from active streaming session
     chatMessages.forEach((m) => {
       if (m.artifact_summary) {
+        // Strictly exclude if artifact_summary belongs to another campaign
+        if (activeCampaignId && m.artifact_summary.campaign_id && m.artifact_summary.campaign_id !== activeCampaignId) {
+          return;
+        }
         const key = `${m.artifact_summary.id}-v${m.artifact_summary.version}`;
         if (!map.has(key)) {
-          map.set(key, m.artifact_summary);
+          map.set(key, {
+            ...m.artifact_summary,
+            campaign_id: m.artifact_summary.campaign_id || activeCampaignId,
+          });
         }
       }
     });
@@ -1954,13 +1993,11 @@ function CampaignStudioContent() {
               <select
                 value={activeCampaignId || ""}
                 onChange={(e) => {
-                  if (e.target.value === "new") {
-                    setActiveCampaignId(null);
-                    setActiveArtifact(null);
-                    setActiveArtifactVersions([]);
-                  } else {
-                    setActiveCampaignId(e.target.value);
-                  }
+                  const newCampId = e.target.value === "new" ? null : e.target.value;
+                  setActiveCampaignId(newCampId);
+                  setActiveArtifact(null);
+                  setActiveArtifactVersions([]);
+                  setPersistedArtifacts([]);
                 }}
                 className="bg-transparent text-xs font-semibold text-[#F2F0F7] focus:outline-none cursor-pointer max-w-[180px] sm:max-w-[280px] truncate"
                 title="Select active campaign sprint"

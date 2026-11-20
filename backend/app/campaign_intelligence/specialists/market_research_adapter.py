@@ -82,7 +82,7 @@ class CompetitorFindingItem(BaseModel):
     competitor_name: str = Field(
         description="Exact name of an actual business, brand, company, product, or creator entity. Must NOT be an SEO aggregate title, search query, or hashtag topic."
     )
-    platform: str = Field(default="instagram", description="Platform observed on")
+    platform: str = Field(default="web", description="Platform observed on, e.g. 'web', 'official_site', 'linkedin', 'instagram', 'youtube'")
     observed_creative_angle: str = Field(description="Specific observed hook, positioning, or creative pattern")
     observed_format: str = Field(default="Social Post", description="e.g. 'Short-form Video', 'Carousel Deck', 'Feature Showcase', 'Product Demo'")
     supporting_source_url: str | None = Field(
@@ -1099,18 +1099,41 @@ STRICT RULES:
 
     @staticmethod
     def _map_platform(platform_str: str, source_url: str = "") -> SocialPlatform:
-        combined = f"{platform_str or ''} {source_url or ''}".lower()
-        if "instagram.com" in combined or "instagram" in (platform_str or "").lower():
+        src_lower = (source_url or "").lower()
+        plat_lower = (platform_str or "").lower()
+
+        # 1. First check actual source_url domain if available
+        if "instagram.com" in src_lower:
             return SocialPlatform.instagram
-        if "tiktok.com" in combined or "tiktok" in (platform_str or "").lower():
+        if "tiktok.com" in src_lower:
             return SocialPlatform.tiktok
-        if "linkedin.com" in combined or "linkedin" in (platform_str or "").lower():
+        if "linkedin.com" in src_lower:
             return SocialPlatform.linkedin
-        if "youtube.com" in combined or "youtube" in (platform_str or "").lower():
+        if "youtube.com" in src_lower:
             return SocialPlatform.youtube
-        if "facebook.com" in combined or "facebook" in (platform_str or "").lower():
+        if "facebook.com" in src_lower:
             return SocialPlatform.facebook
-        if any(k in combined for k in ("official", "store", "shop", "homepage", "company", "pricing")):
+        if "twitter.com" in src_lower or "x.com" in src_lower:
+            return SocialPlatform.twitter
+
+        # 2. If source_url is a web/blog/pricing URL (not a social network):
+        if src_lower and not any(s in src_lower for s in ("instagram", "tiktok", "linkedin", "youtube", "facebook", "twitter", "x.com")):
+            if any(k in src_lower for k in ("/official", "/store", "/shop", "pricing")) or any(k in plat_lower for k in ("official", "store", "shop")):
+                return SocialPlatform.official_site
+            return SocialPlatform.web
+
+        # 3. Fallback when source_url did not clarify: inspect platform_str
+        if "instagram" in plat_lower:
+            return SocialPlatform.instagram
+        if "tiktok" in plat_lower:
+            return SocialPlatform.tiktok
+        if "linkedin" in plat_lower:
+            return SocialPlatform.linkedin
+        if "youtube" in plat_lower:
+            return SocialPlatform.youtube
+        if "facebook" in plat_lower:
+            return SocialPlatform.facebook
+        if any(k in plat_lower for k in ("official", "store", "shop", "homepage", "company", "pricing")):
             return SocialPlatform.official_site
         return SocialPlatform.web
 
