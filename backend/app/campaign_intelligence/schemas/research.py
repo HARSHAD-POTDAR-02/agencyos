@@ -49,6 +49,10 @@ class MarketResearchReport(BaseModel):
     competitor_landscape: list[CompetitorInsight] = Field(default_factory=list)
     format_and_platform_trends: list[PlatformFormatTrend] = Field(default_factory=list)
     strategic_opportunities: list[str] = Field(default_factory=list)
+    buyer_language_snippets: list[str] = Field(
+        default_factory=list,
+        description="Verbatim colloquial customer quotes, pain phrases, and unfiltered voice-of-customer snippets",
+    )
     evidence_sources: list[ResearchEvidence] = Field(default_factory=list)
     confidence_score: float = Field(ge=0.0, le=1.0, default=0.8)
 

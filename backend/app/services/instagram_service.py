@@ -9,10 +9,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class InstagramService:
-    def __init__(self):
-        self.access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')
-        self.instagram_account_id = os.getenv('INSTAGRAM_PAGE_ID')
-        self.facebook_page_id = os.getenv('FACEBOOK_PAGE_ID')
+    def __init__(
+        self,
+        access_token: Optional[str] = None,
+        instagram_account_id: Optional[str] = None,
+        facebook_page_id: Optional[str] = None,
+    ):
+        self.access_token = access_token or os.getenv('INSTAGRAM_ACCESS_TOKEN')
+        self.instagram_account_id = instagram_account_id or os.getenv('INSTAGRAM_PAGE_ID')
+        self.facebook_page_id = facebook_page_id or os.getenv('FACEBOOK_PAGE_ID')
         self.base_url = "https://graph.facebook.com/v19.0"
         
         # Simple cache with 5-minute expiry

@@ -191,6 +191,27 @@ def _clean_html(raw_html: str) -> str:
     return re.sub(r"\s+", " ", clean).strip()
 
 
+BLOCKED_SEO_DOMAINS = [
+    "hubspot.com",
+    "hootsuite.com",
+    "sproutsocial.com",
+    "forbes.com",
+    "neilpatel.com",
+    "buffer.com",
+    "semrush.com",
+    "later.com",
+]
+
+
+def _is_blocked_seo_domain(url: str) -> bool:
+    """Return True if URL host matches any known low-signal SEO content farm."""
+    try:
+        host = (urlparse(url.strip()).hostname or "").lower()
+        return any(blocked in host for blocked in BLOCKED_SEO_DOMAINS)
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Primary search provider — Tavily
 # ---------------------------------------------------------------------------
@@ -202,6 +223,7 @@ async def search_tavily(
     search_depth: str = "basic",
     days: int | None = None,
     include_raw_content: bool = False,
+    exclude_domains: list[str] | None = None,
 ) -> list[ResearchEvidence]:
     """Search the live web using the Tavily AI Search API."""
     evidence: list[ResearchEvidence] = []
@@ -214,6 +236,12 @@ async def search_tavily(
             "include_raw_content": include_raw_content,
             "max_results": max_results,
         }
+        effective_exclude = list(exclude_domains or [])
+        for d in BLOCKED_SEO_DOMAINS:
+            if d not in effective_exclude:
+                effective_exclude.append(d)
+        payload["exclude_domains"] = effective_exclude
+
         if days is not None and days > 0:
             payload["days"] = days
 
@@ -226,8 +254,8 @@ async def search_tavily(
                     page_url = item.get("url", "")
                     if not title or not page_url:
                         continue
-                    if not _is_safe_url(page_url):
-                        logger.debug("search_tavily: skipping unsafe URL %r", page_url)
+                    if not _is_safe_url(page_url) or _is_blocked_seo_domain(page_url):
+                        logger.debug("search_tavily: skipping unsafe/blocked URL %r", page_url)
                         continue
 
                     content = _clean_html(item.get("content", ""))
@@ -235,7 +263,7 @@ async def search_tavily(
                     if not (content or raw_content):
                         continue
 
-                    excerpt_text = _clean_html(raw_content)[:500] if raw_content else content[:350]
+                    excerpt_text = _clean_html(raw_content)[:1200] if raw_content else content[:600]
                     # Only preserve publication_date when the API actually supplies it
                     pub_date: str | None = item.get("published_date") or None
 
@@ -666,6 +694,7 @@ async def execute_query_with_fallbacks(
     max_results: int = 4,
     search_depth: str = "basic",
     days: int | None = None,
+    exclude_domains: list[str] | None = None,
 ) -> list[ResearchEvidence]:
     """
     Execute search across the provider hierarchy:
@@ -673,7 +702,10 @@ async def execute_query_with_fallbacks(
     2. Brave Search API (Fallback Tier 1)
     3. Serper / Google API (Fallback Tier 2)
     4. Wikipedia & DuckDuckGo (Zero-config Fallback)
+    Filters out any low-signal blocked SEO domains.
     """
+    raw_results: list[ResearchEvidence] = []
+
     # 1. Tavily AI Search (Try all available Tavily keys in pool)
     for t_key in settings.tavily_api_keys:
         if not t_key or not t_key.strip():
@@ -684,27 +716,34 @@ async def execute_query_with_fallbacks(
             max_results=max_results,
             search_depth=search_depth,
             days=days,
+            exclude_domains=exclude_domains,
         )
         if results:
             logger.info("Tavily returned %d results for %r with key (...%s)", len(results), query, t_key[-6:])
-            return results
+            raw_results = results
+            break
         logger.warning("Tavily key (...%s) returned 0 results or failed for %r. Trying next key.", t_key[-6:], query)
 
-    if settings.BRAVE_SEARCH_API_KEY:
-        results = await search_brave(query, settings.BRAVE_SEARCH_API_KEY, max_results=max_results)
-        if results:
-            return results
+    if not raw_results and settings.BRAVE_SEARCH_API_KEY:
+        raw_results = await search_brave(query, settings.BRAVE_SEARCH_API_KEY, max_results=max_results)
 
-    if settings.SERPER_API_KEY:
-        results = await search_serper(query, settings.SERPER_API_KEY, max_results=max_results)
-        if results:
-            return results
+    if not raw_results and settings.SERPER_API_KEY:
+        raw_results = await search_serper(query, settings.SERPER_API_KEY, max_results=max_results)
 
-    wiki = await search_wikipedia(query, max_results=max_results)
-    if wiki:
-        return wiki
+    if not raw_results:
+        wiki = await search_wikipedia(query, max_results=max_results)
+        if wiki:
+            raw_results = wiki
+        else:
+            raw_results = await search_duckduckgo_topics(query)
 
-    return await search_duckduckgo_topics(query)
+    # Filter out any blocked SEO domains or unsafe URLs
+    filtered: list[ResearchEvidence] = []
+    for ev in raw_results:
+        if _is_safe_url(ev.source_url) and not _is_blocked_seo_domain(ev.source_url):
+            filtered.append(ev)
+
+    return filtered
 
 
 # ---------------------------------------------------------------------------
@@ -733,6 +772,25 @@ def get_platform_format_evidence(platforms: list[str]) -> list[ResearchEvidence]
 # (signature preserved for existing callers)
 # ---------------------------------------------------------------------------
 
+WALLED_GARDEN_SET = {
+    "instagram.com", "facebook.com", "fb.com", "tiktok.com",
+    "linkedin.com", "youtube.com", "youtu.be", "x.com", "twitter.com"
+}
+
+
+def _strip_utm_params(url: str) -> str:
+    """Normalize URL by stripping tracking and utm_* parameters."""
+    try:
+        parsed = urlparse(url.strip())
+        from urllib.parse import parse_qsl, urlencode
+        query_pairs = parse_qsl(parsed.query)
+        cleaned_pairs = [(k, v) for k, v in query_pairs if not k.lower().startswith("utm_") and k.lower() not in ("ref", "fbclid", "gclid")]
+        new_query = urlencode(cleaned_pairs)
+        return urlunparse(parsed._replace(query=new_query, fragment="")).rstrip("/")
+    except Exception:
+        return _normalize_url(url)
+
+
 async def gather_market_evidence(
     industry: str,
     target_audience: list[str],
@@ -741,47 +799,76 @@ async def gather_market_evidence(
     location: str | None = None,
 ) -> list[ResearchEvidence]:
     """
-    Orchestrate multi-source evidence gathering for the batch campaign pipeline.
-
-    This function is used by the legacy ``MarketResearchAgent`` batch workflow.
-    The Campaign Studio specialist uses ``BoundedToolRuntime`` with the
-    ``web_search`` and ``extract_webpages`` tools instead.
-
-    Deduplicates by source_url and skips unsafe URLs.
+    Orchestrate tri-vector evidence gathering for the batch campaign pipeline.
+    - Vector 1: Buyer Voice (VoC) customer friction, complaints, objections (Reddit/Quora/reviews).
+    - Vector 2: Competitor Reality (offerings, pricing, weaknesses).
+    - Vector 3: Platform & Format Trends (algorithm retention, hook dynamics for requested platform).
+    - Excludes generic SEO content farms (HubSpot, Hootsuite, etc.).
+    - Deep excerpt enrichment: Batches top 2-3 non-walled-garden URLs through extract_tavily (1 call).
     """
-    evidence_list: list[ResearchEvidence] = []
-    urls_seen: set[str] = set()
+    clean_industry = industry.strip() if industry and industry.strip() else "Commercial Enterprise"
+    loc = f" {location.strip()}" if location and location.strip() and location.strip().lower() not in ("not specified", "none", "") else ""
+    primary_platform = platforms[0].capitalize() if platforms else "Instagram"
 
-    # 1. Platform documentation references
-    for ev in get_platform_format_evidence(platforms):
-        canonical = _normalize_url(ev.source_url)
-        if canonical not in urls_seen and _is_safe_url(ev.source_url):
-            evidence_list.append(ev)
-            urls_seen.add(canonical)
+    evidence_by_url: dict[str, ResearchEvidence] = {}
 
-    # 2. Build search queries
-    queries: list[str] = []
+    # 1. Vector 1: Buyer Voice (VoC)
+    q_voc = f"{clean_industry}{loc} customer complaints frustrations problems (site:reddit.com OR site:quora.com)"
+    vec1_results = await execute_query_with_fallbacks(q_voc, max_results=4, exclude_domains=BLOCKED_SEO_DOMAINS)
+    # Mandatory Hyper-Local Fallback if site: query returns 0 usable results
+    if not vec1_results:
+        q_voc_fallback = f"{clean_industry}{loc} customer reviews complaints common problems"
+        vec1_results = await execute_query_with_fallbacks(q_voc_fallback, max_results=4, exclude_domains=BLOCKED_SEO_DOMAINS)
+
+    # 2. Vector 2: Competitor Reality
+    q_comp = f"{clean_industry}{loc} competitors pricing alternatives reviews comparison"
+    vec2_results = await execute_query_with_fallbacks(q_comp, max_results=4, exclude_domains=BLOCKED_SEO_DOMAINS)
+
+    # 3. Vector 3: Platform & Format Trends
+    q_trend = f"{primary_platform} {clean_industry} content hooks carousel reel format trends 2025 2026"
+    vec3_results = await execute_query_with_fallbacks(q_trend, max_results=4, exclude_domains=BLOCKED_SEO_DOMAINS)
+
+    # Optional custom brief query
+    brief_results: list[ResearchEvidence] = []
     if custom_brief and custom_brief.strip():
-        queries.append(custom_brief.strip()[:140])
-    if location and location.strip() and location.strip().lower() not in ("not specified", ""):
-        queries.append(f"{industry} businesses competitors in {location.strip()} marketing social media")
-    clean_industry = industry.strip() if industry and industry.strip() else "Business"
-    queries.append(f"{clean_industry} social media viral trends hooks 2026")
-    queries.append(f"{clean_industry} competitor positioning content whitespace")
-    if target_audience and len(target_audience) > 0 and isinstance(target_audience[0], str):
-        queries.append(f"{target_audience[0]} {clean_industry} customer expectations")
+        brief_results = await execute_query_with_fallbacks(custom_brief.strip()[:140], max_results=3, exclude_domains=BLOCKED_SEO_DOMAINS)
 
-    # 3. Execute queries concurrently (top 4)
-    tasks = [execute_query_with_fallbacks(q, max_results=3) for q in queries[:4]]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    # Collect and deduplicate
+    all_raw: list[ResearchEvidence] = vec1_results + vec2_results + vec3_results + brief_results
+    for ev in all_raw:
+        if not _is_safe_url(ev.source_url) or _is_blocked_seo_domain(ev.source_url):
+            continue
+        canon = _strip_utm_params(ev.source_url)
+        if canon not in evidence_by_url:
+            evidence_by_url[canon] = ev
+        else:
+            # Keep higher relevance
+            if ev.relevance_score > evidence_by_url[canon].relevance_score:
+                evidence_by_url[canon] = ev
 
-    for res in results:
-        if isinstance(res, list):
-            for ev in res:
-                if isinstance(ev, ResearchEvidence) and _is_safe_url(ev.source_url):
-                    canonical = _normalize_url(ev.source_url)
-                    if canonical not in urls_seen:
-                        evidence_list.append(ev)
-                        urls_seen.add(canonical)
+    deduped_evidence = list(evidence_by_url.values())
+    deduped_evidence.sort(key=lambda e: e.relevance_score, reverse=True)
 
-    return evidence_list
+    # 4. Real Deep Excerpt Enrichment via extract_tavily (Top 2-3 non-walled-garden URLs in 1 batch call)
+    non_walled_candidates = [
+        ev for ev in deduped_evidence
+        if not any(wg in ev.source_url.lower() for wg in WALLED_GARDEN_SET)
+    ][:3]
+
+    if non_walled_candidates:
+        urls_to_extract = [ev.source_url for ev in non_walled_candidates]
+        try:
+            extracted_docs = await extract_tavily(urls=urls_to_extract, timeout=8.0)
+            extract_map = {
+                _strip_utm_params(d.get("url", "")): d.get("raw_content", "")
+                for d in extracted_docs
+                if isinstance(d, dict) and d.get("raw_content")
+            }
+            for ev in non_walled_candidates:
+                canon = _strip_utm_params(ev.source_url)
+                if canon in extract_map and len(extract_map[canon].strip()) > len(ev.excerpt):
+                    ev.excerpt = extract_map[canon].strip()[:2500]
+        except Exception as ext_err:
+            logger.debug(f"Deep extraction batch error: {ext_err}")
+
+    return deduped_evidence

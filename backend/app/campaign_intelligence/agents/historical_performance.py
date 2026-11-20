@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable
 
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.campaign_intelligence.orchestration.state import CampaignState
@@ -20,6 +22,7 @@ from app.campaign_intelligence.schemas.performance import (
 from app.campaign_intelligence.schemas.trace import AgentTelemetry
 from app.campaign_intelligence.tools.performance_tools import (
     calculate_format_performance_metrics,
+    calculate_instagram_media_metrics,
     detect_audience_fatigue_signals,
     get_client_published_deliverables,
 )
@@ -107,8 +110,51 @@ class HistoricalPerformanceAgent:
         )
 
         total_posts = len(deliverables)
+        live_ig_used = False
+        format_summaries: list[FormatPerformanceSummary] = []
+        fatigue_signals: list[AudienceFatigueSignal] = []
 
-        # 2. Determine data sufficiency
+        # 2. If 0 internal deliverables, check connected Instagram account
+        if total_posts == 0:
+            try:
+                from app.models.client_social_account import ClientSocialAccount
+                from app.services.instagram_service import InstagramService
+
+                stmt = select(ClientSocialAccount).where(
+                    ClientSocialAccount.client_id == brief.client_id,
+                    ClientSocialAccount.platform == "instagram",
+                    ClientSocialAccount.is_active == True,
+                )
+                res = await db.execute(stmt)
+                social_account = res.scalars().first()
+
+                if social_account and social_account.access_token and social_account.instagram_business_id:
+                    ig_service = InstagramService(
+                        access_token=social_account.access_token,
+                        instagram_account_id=social_account.instagram_business_id,
+                        facebook_page_id=social_account.facebook_page_id,
+                    )
+                    media_resp = await asyncio.wait_for(
+                        asyncio.to_thread(ig_service.get_media_list, 25),
+                        timeout=8.0,
+                    )
+                    ig_items = []
+                    if isinstance(media_resp, dict) and media_resp.get("success"):
+                        data_block = media_resp.get("data")
+                        if isinstance(data_block, dict):
+                            ig_items = data_block.get("data") or []
+                        elif isinstance(data_block, list):
+                            ig_items = data_block
+
+                    if ig_items and len(ig_items) >= 1:
+                        total_posts = len(ig_items)
+                        format_summaries = calculate_instagram_media_metrics(ig_items)
+                        live_ig_used = True
+            except Exception as e:
+                logger.warning(f"Connected Instagram fallback sync failed: {e}")
+                # Cleanly falls through to cold_start
+
+        # 3. Determine data sufficiency
         if total_posts == 0:
             data_sufficiency = DataSufficiency.cold_start
         elif total_posts < 5:
@@ -116,11 +162,12 @@ class HistoricalPerformanceAgent:
         else:
             data_sufficiency = DataSufficiency.sufficient
 
-        # 3. Deterministic statistical aggregation
-        format_summaries = calculate_format_performance_metrics(deliverables)
-        fatigue_signals = detect_audience_fatigue_signals(deliverables)
+        # 4. If internal deliverables were found, calculate standard metrics and fatigue signals
+        if not live_ig_used and total_posts > 0:
+            format_summaries = calculate_format_performance_metrics(deliverables)
+            fatigue_signals = detect_audience_fatigue_signals(deliverables)
 
-        # 4. Handle Cold Start scenario (Zero Fabrication)
+        # 5. Handle Cold Start scenario (Zero Fabrication)
         if data_sufficiency == DataSufficiency.cold_start:
             default_mix: dict[str, int] = {}
             if brief.deliverable_preferences:
@@ -132,22 +179,73 @@ class HistoricalPerformanceAgent:
             else:
                 default_mix = {"carousel": 4, "reel": 2}
 
+            # Industry-adapted testable creative hypotheses (Zero fabricated CTR/hold-rate stats)
+            industry_raw = ""
+            if brand_context and brand_context.industry:
+                industry_raw = brand_context.industry.lower()
+            elif brief.custom_brief or brief.objective:
+                combined = f"{brief.objective} {brief.custom_brief or ''}".lower()
+                for ind in ["restaurant", "cafe", "food", "clinic", "dental", "medical", "healthcare", "d2c", "ecommerce", "retail", "fashion", "saas", "b2b", "software"]:
+                    if ind in combined:
+                        industry_raw = ind
+                        break
+
+            if any(k in industry_raw for k in ["food", "restaurant", "cafe", "dining", "bar", "hospitality", "bakery", "chef"]):
+                cold_start_hypotheses = [
+                    "Sensory & Plating Hook: Showcase signature dish finishing and texture details within the opening 2 seconds to maximize culinary interest.",
+                    "Social Proof Dining Walkthrough: Demonstrate authentic customer dining ambience, course arrival reactions, and hospitality highlights.",
+                    "Culinary Provenance & Kitchen Craft: Reveal behind-the-scenes prep methods, artisanal technique, and premium ingredient sourcing.",
+                    "Menu Milestone Angle: Feature seasonal menu additions or signature tasting flights with explicit tasting notes.",
+                ]
+            elif any(k in industry_raw for k in ["health", "clinic", "medical", "dental", "care", "wellness", "doctor", "therapy", "pharma"]):
+                cold_start_hypotheses = [
+                    "Clinical Misconception Breakdown: Dispel widespread symptom anxieties or myths within the first 3 seconds using clear medical authority.",
+                    "Step-by-Step Procedure Transparency: Demystify what happens during a consultation or treatment to reduce patient fear and uncertainty.",
+                    "Patient Care Standard & Hygiene: Highlight sanitized clinic environment, professional accreditation, and practitioner qualifications.",
+                    "Consultation Readiness FAQ: Address top barrier-to-booking questions, realistic recovery timelines, and preparation steps.",
+                ]
+            elif any(k in industry_raw for k in ["d2c", "ecommerce", "e-commerce", "retail", "fashion", "beauty", "apparel", "product", "goods"]):
+                cold_start_hypotheses = [
+                    "Immediate Problem-Solution Demonstration: Contrast common category frustration against direct product benefit in the first 3 seconds.",
+                    "Macro Tactile Inspection: Close-up focus on material craftsmanship, ingredient quality, finish, and unboxing presentation.",
+                    "Side-by-Side Mechanism Contrast: Clearly articulate key differentiators versus legacy mass-market alternatives without naming competitors.",
+                    "Day-in-the-Life Routine Integration: Show practical daily usage scenarios highlighting ergonomic utility and aesthetic appeal.",
+                ]
+            elif any(k in industry_raw for k in ["b2b", "saas", "tech", "software", "enterprise", "agency", "consulting", "fintech"]):
+                cold_start_hypotheses = [
+                    "Workflow Bottleneck Agitation: Address a specific time-consuming operational or spreadsheet breakdown familiar to team leads.",
+                    "System Architecture & Teardown: Provide an objective step-by-step walkthrough of how automated workflows replace manual error loops.",
+                    "Implementation Blueprint: Outline clear phase-by-phase rollout expectations and timeline to eliminate onboarding hesitation.",
+                    "Peer Framework Breakdown: Share actionable industry rubrics or decision checklists that establish strategic credibility.",
+                ]
+            else:
+                cold_start_hypotheses = [
+                    "Target Audience Pain Point Hook: Open with an incisive question isolating the primary challenge facing prospective clients.",
+                    "Operational Process Transparency: Walk through the proprietary methodology step-by-step to demonstrate structured expertise.",
+                    "Founder Conviction / Alternative Approach: Explain why traditional industry approaches fail and how this specific model solves the gap.",
+                    "Deliverable Clarity & Value Blueprint: Itemize exactly what the client receives with clear expectations and tangible milestones.",
+                ]
+
+            cold_start_underperforming = [
+                "No historical baseline yet — avoid committing all sprint slots to a single hook style; test at least 3 distinct angles in Sprint 1.",
+                "Avoid unverified engagement assumptions; do not rely on high-production aesthetics without clear narrative hooks.",
+                "Avoid generic category claims without concrete proof points or demonstrations.",
+            ]
+
             return PerformancePlaybook(
                 data_sufficiency=DataSufficiency.cold_start,
                 historical_posts_analyzed=0,
                 format_summaries=[],
                 winning_hooks_and_angles=[
-                    "Cold start client: No historical published deliverables exist in database.",
-                    "Strategy should establish baseline performance benchmarks across requested formats.",
+                    "Cold start client: Strategy should establish baseline performance benchmarks across requested formats without historical bias.",
+                    *cold_start_hypotheses,
                 ],
-                underperforming_patterns=[
-                    "Cold start client: No historical underperformance data available.",
-                ],
+                underperforming_patterns=cold_start_underperforming,
                 fatigue_signals=[],
                 recommended_format_mix=default_mix,
             )
 
-        # 5. LLM Interpretation of Calculated Metrics
+        # 6. LLM Interpretation of Calculated Metrics
         summary_text_lines = []
         for s in format_summaries:
             summary_text_lines.append(
@@ -167,6 +265,7 @@ Interpret the following calculated performance statistics for client '{brief.cli
 ### DETERMINISTIC STATISTICAL METRICS (Calculated by SQL/Python)
 - Total Historical Posts Analyzed: {total_posts}
 - Data Sufficiency Category: {data_sufficiency.value}
+- Data Source: {'Live Instagram Sync' if live_ig_used else 'Client Deliverables Database'}
 
 Format Performance Breakdowns:
 {summaries_str}
@@ -188,6 +287,8 @@ Interpret these statistical facts to produce an actionable playbook:
 RULES:
 - Do NOT invent or alter the calculated numbers.
 - Base your interpretations strictly on the observed statistics.
+- Never invent CTR, hold rates, conversion rates, or industry benchmarks not provided in the input.
+- Never output hallucinated percentage metrics.
 """
 
         try:

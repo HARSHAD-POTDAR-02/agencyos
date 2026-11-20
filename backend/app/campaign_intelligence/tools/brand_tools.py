@@ -6,9 +6,16 @@ import uuid
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+import asyncio
+from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
+
 import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from trafilatura import extract as trafilatura_extract
+from trafilatura.settings import use_config
 
 from app.campaign_intelligence.schemas.brand import (
     ContractQuota,
@@ -38,24 +45,123 @@ class ClientNotFoundError(Exception):
     pass
 
 
-# In-memory crawl cache with timestamp to prevent redundant network fetches
-_CRAWL_CACHE: dict[str, tuple[float, dict[str, str]]] = {}
-_CRAWL_CACHE_TTL_SECONDS = 7 * 86400  # 7-day TTL
+def _extract_html_sync(html: str, page_url: str) -> str:
+    """Synchronous trafilatura extraction with POSIX signals disabled for thread safety."""
+    cfg = use_config()
+    cfg.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
+    try:
+        return trafilatura_extract(
+            html,
+            url=page_url,
+            include_comments=False,
+            include_tables=True,  # critical for pricing/menu tables
+            favor_recall=True,
+            config=cfg,
+        ) or ""
+    except Exception as e:
+        logger.debug(f"trafilatura extraction error on {page_url}: {e}")
+        return ""
+
+
+class _SimpleLinkExtractor(HTMLParser):
+    """Extracts href attributes and anchor text from HTML for link discovery."""
+    def __init__(self, base_url: str):
+        super().__init__()
+        self.base_url = base_url
+        self.links: list[tuple[str, str]] = []  # (resolved_url, anchor_text)
+        self._current_href: str | None = None
+        self._current_text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
+        if tag.lower() == "a":
+            for k, v in attrs:
+                if k.lower() == "href" and v:
+                    self._current_href = v.strip()
+                    self._current_text = []
+                    break
+
+    def handle_data(self, data: str):
+        if self._current_href is not None:
+            self._current_text.append(data)
+
+    def handle_endtag(self, tag: str):
+        if tag.lower() == "a" and self._current_href is not None:
+            full_url = urljoin(self.base_url, self._current_href)
+            anchor = " ".join(self._current_text).strip()
+            self.links.append((full_url, anchor))
+            self._current_href = None
+            self._current_text = []
+
+
+DISCOVERY_KEYWORDS = [
+    "about", "story", "menu", "pricing", "plans", "service", "services",
+    "product", "products", "faq", "offer", "treatment", "classes"
+]
+
+
+async def _fetch_page_ssrf_safe(
+    client: httpx.AsyncClient,
+    target_url: str,
+    max_redirects: int = 3,
+    max_bytes: int = 1_500_000,
+) -> tuple[str, str | None]:
+    """
+    Fetch a single URL with manual redirect checking against SSRF rules.
+    Returns (html_text, final_safe_url) or ("", None) if failed/blocked.
+    """
+    current_url = target_url
+    for _ in range(max_redirects + 1):
+        if not _is_safe_url(current_url):
+            logger.warning(f"SSRF blocked URL: {current_url}")
+            return "", None
+
+        try:
+            resp = await client.get(current_url)
+            # Check redirect status
+            if resp.status_code in (301, 302, 303, 307, 308):
+                location = resp.headers.get("location")
+                if not location:
+                    return "", None
+                next_url = urljoin(current_url, location)
+                if not _is_safe_url(next_url):
+                    logger.warning(f"SSRF blocked redirect to: {next_url}")
+                    return "", None
+                current_url = next_url
+                continue
+
+            if resp.status_code == 200:
+                content_type = resp.headers.get("content-type", "").lower()
+                if "text/html" not in content_type and "text/plain" not in content_type:
+                    return "", None
+                # Check byte length cap
+                body_bytes = resp.content[:max_bytes]
+                return body_bytes.decode(resp.encoding or "utf-8", errors="replace"), current_url
+
+            return "", None
+        except Exception as e:
+            logger.debug(f"Error fetching {current_url}: {e}")
+            return "", None
+
+    return "", None
 
 
 async def crawl_client_website(
     client_website: str | None,
     max_pages: int = 4,
     db: AsyncSession | None = None,
-) -> dict[str, str]:
+    brand_profile: BrandProfile | None = None,
+) -> dict[str, Any]:
     """
     Zero-budget, SSRF-safe website crawler for client grounding.
-    Fetches homepage and up to 3 core discovery paths (about, services/products, pricing).
-    Extracts high-fidelity text using trafilatura (with fallback to _clean_html / extract_tavily).
-    Caches results with a 7-day TTL.
+    - PostgreSQL 7-day cache with zero in-memory cross-process leakage.
+    - Manual redirect protection (max 3) checking every hop against _is_safe_url.
+    - Real link discovery parsing up to 3 relevant subpages from homepage.
+    - Non-blocking trafilatura extraction with tables enabled.
+    - Single-shot extract_tavily fallback only when homepage yields < 150 chars.
+    - Combined text strictly capped at 12,000 characters.
     """
     if not client_website or not client_website.strip():
-        return {}
+        return {"url": "", "crawled_at": None, "pages": [], "combined_text": ""}
 
     raw_url = client_website.strip()
     if not raw_url.startswith(("http://", "https://")):
@@ -63,90 +169,155 @@ async def crawl_client_website(
 
     if not _is_safe_url(raw_url):
         logger.warning(f"crawl_client_website: Unsafe URL rejected: {raw_url}")
-        return {}
+        return {"url": raw_url, "crawled_at": None, "pages": [], "combined_text": ""}
 
     parsed = urlparse(raw_url)
-    base_origin = f"{parsed.scheme}://{parsed.netloc}"
+    normalized_website_url = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
 
-    # Check memory cache
-    now = time_now = time_perf = 0.0
-    try:
-        import time
-        now = time.time()
-        if base_origin in _CRAWL_CACHE:
-            cached_time, cached_data = _CRAWL_CACHE[base_origin]
-            if now - cached_time < _CRAWL_CACHE_TTL_SECONDS:
-                logger.info(f"crawl_client_website: Returning cached crawl for {base_origin} ({len(cached_data)} pages)")
-                return cached_data
-    except Exception:
-        pass
+    # 1. Check PostgreSQL 7-Day Cache
+    now_utc = datetime.now(timezone.utc)
+    if brand_profile and getattr(brand_profile, "website_crawl_cache", None):
+        cache = brand_profile.website_crawl_cache
+        if isinstance(cache, dict) and cache.get("url") == normalized_website_url:
+            crawled_at_str = cache.get("crawled_at")
+            if crawled_at_str and cache.get("combined_text"):
+                try:
+                    crawled_at = datetime.fromisoformat(crawled_at_str)
+                    if now_utc - crawled_at < timedelta(days=7):
+                        logger.info(f"crawl_client_website: Cache hit for {normalized_website_url} ({len(cache.get('pages', []))} pages)")
+                        return cache
+                except Exception:
+                    pass
 
-    target_paths = ["/", "/about", "/about-us", "/services", "/products", "/pricing", "/menu"]
-    urls_to_try = [urljoin(base_origin, path) for path in target_paths]
-
-    crawled_pages: dict[str, str] = {}
+    # 2. Fetch Homepage
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36 AgencyOS-BrandCrawler/1.0"
+            "Chrome/124.0.0.0 Safari/537.36 AgencyOS-Crawler/1.0"
         ),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
 
-    try:
-        import trafilatura
-    except ImportError:
-        trafilatura = None
+    crawled_pages: list[dict[str, str]] = []  # [{"url": url, "text": text}]
+    homepage_html = ""
+    resolved_homepage_url = raw_url
 
-    async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, headers=headers, verify=False) as client:
-        for url in urls_to_try:
+    async with httpx.AsyncClient(timeout=8.0, follow_redirects=False, headers=headers, verify=False) as client:
+        html, final_url = await _fetch_page_ssrf_safe(client, raw_url)
+        if html and final_url:
+            homepage_html = html
+            resolved_homepage_url = final_url
+            hp_text = await asyncio.to_thread(_extract_html_sync, html, final_url)
+            if not hp_text or len(hp_text.strip()) < 150:
+                hp_text = _clean_html(html)
+
+            # Single-shot extract_tavily fallback if direct HTML extraction yielded < 150 chars
+            if len(hp_text.strip()) < 150:
+                logger.info(f"crawl_client_website: Homepage extraction < 150 chars. Calling single-shot extract_tavily for {final_url}")
+                try:
+                    tavily_res = await extract_tavily([final_url], timeout=8.0)
+                    if tavily_res and tavily_res[0].get("raw_content"):
+                        hp_text = tavily_res[0]["raw_content"].strip()
+                except Exception as t_err:
+                    logger.debug(f"extract_tavily fallback failed: {t_err}")
+
+            if hp_text and len(hp_text.strip()) >= 50:
+                crawled_pages.append({"url": final_url, "text": hp_text.strip()})
+
+        # 3. Discover Subpages (up to 3 matching unique subpages)
+        subpage_urls_to_try: list[str] = []
+        if homepage_html:
+            try:
+                parser = _SimpleLinkExtractor(resolved_homepage_url)
+                parser.feed(homepage_html)
+                hp_netloc = urlparse(resolved_homepage_url).netloc.lower()
+
+                scored_links: list[tuple[int, str]] = []
+                seen_sub = {resolved_homepage_url.rstrip("/")}
+
+                for link_url, anchor in parser.links:
+                    p = urlparse(link_url)
+                    # Must be same host, http/https, no fragment-only
+                    if p.scheme not in ("http", "https") or p.netloc.lower() != hp_netloc:
+                        continue
+                    clean_sub = f"{p.scheme}://{p.netloc}{p.path}".rstrip("/")
+                    if clean_sub in seen_sub:
+                        continue
+
+                    # Score by keywords in path or anchor
+                    path_and_anchor = (p.path + " " + anchor).lower()
+                    score = 0
+                    for kw in DISCOVERY_KEYWORDS:
+                        if kw in path_and_anchor:
+                            score += 1
+
+                    if score > 0:
+                        scored_links.append((score, clean_sub))
+                        seen_sub.add(clean_sub)
+
+                scored_links.sort(key=lambda x: x[0], reverse=True)
+                subpage_urls_to_try = [url for _, url in scored_links[:3]]
+            except Exception as parse_err:
+                logger.debug(f"Link discovery parsing error: {parse_err}")
+
+        # If 0 matching links discovered from HTML, probe at most 2 fallback paths
+        if not subpage_urls_to_try:
+            for fallback_path in ("/about", "/pricing"):
+                probe_url = urljoin(resolved_homepage_url, fallback_path)
+                if probe_url.rstrip("/") != resolved_homepage_url.rstrip("/"):
+                    subpage_urls_to_try.append(probe_url)
+
+        # Fetch discovered subpages
+        for sub_url in subpage_urls_to_try:
             if len(crawled_pages) >= max_pages:
                 break
-            if not _is_safe_url(url):
+            if not _is_safe_url(sub_url):
                 continue
 
-            try:
-                resp = await client.get(url)
-                if resp.status_code == 200 and "text/html" in resp.headers.get("content-type", "").lower():
-                    html_content = resp.text
-                    extracted_text = ""
-                    if trafilatura:
-                        try:
-                            extracted_text = trafilatura.extract(html_content, include_comments=False, include_tables=True) or ""
-                        except Exception:
-                            pass
+            sub_html, final_sub_url = await _fetch_page_ssrf_safe(client, sub_url)
+            if sub_html and final_sub_url:
+                text = await asyncio.to_thread(_extract_html_sync, sub_html, final_sub_url)
+                if not text or len(text.strip()) < 150:
+                    text = _clean_html(sub_html)
+                if text and len(text.strip()) >= 50:
+                    crawled_pages.append({"url": final_sub_url, "text": text.strip()})
 
-                    if not extracted_text or len(extracted_text.strip()) < 150:
-                        extracted_text = _clean_html(html_content)
-
-                    clean_text = extracted_text.strip()
-                    if clean_text and len(clean_text) >= 100:
-                        # Keep up to 2,500 chars per page
-                        crawled_pages[url] = clean_text[:2500]
-            except Exception as req_err:
-                logger.debug(f"crawl_client_website: Failed fetching {url}: {req_err}")
-                continue
-
-    # Fallback to extract_tavily if direct HTTP got 0 pages
-    if not crawled_pages and raw_url:
-        try:
-            tavily_results = await extract_tavily([raw_url], timeout=8.0)
-            for res in tavily_results:
-                content = res.get("raw_content") or ""
-                if content and len(content.strip()) >= 100:
-                    crawled_pages[res.get("url") or raw_url] = content.strip()[:2500]
-        except Exception as tavily_err:
-            logger.debug(f"crawl_client_website: Tavily fallback error for {raw_url}: {tavily_err}")
-
+    # 4. Strict 12,000-Character Budget Allocation
+    formatted_parts: list[str] = []
     if crawled_pages:
-        try:
-            import time
-            _CRAWL_CACHE[base_origin] = (time.time(), crawled_pages)
-        except Exception:
-            pass
+        # Up to 4,500 chars for homepage
+        hp_page = crawled_pages[0]
+        hp_text = hp_page["text"][:4500]
+        formatted_parts.append(f"--- SOURCE: {hp_page['url']} ---\n{hp_text}")
 
-    return crawled_pages
+        # Remaining budget divided evenly across subpages
+        sub_pages = crawled_pages[1:]
+        if sub_pages:
+            remaining_budget = max(1000, (12000 - len(hp_text)) // len(sub_pages))
+            for sp in sub_pages:
+                sp_text = sp["text"][:remaining_budget]
+                formatted_parts.append(f"--- SOURCE: {sp['url']} ---\n{sp_text}")
+
+    combined_text = "\n\n".join(formatted_parts)[:12000]
+
+    result = {
+        "url": normalized_website_url,
+        "crawled_at": now_utc.isoformat(),
+        "pages": crawled_pages,
+        "combined_text": combined_text,
+    }
+
+    # 5. Save to PostgreSQL Cache
+    if brand_profile is not None:
+        try:
+            brand_profile.website_crawl_cache = result
+            if db:
+                await db.flush()
+        except Exception as save_err:
+            logger.debug(f"Failed to persist crawl cache to brand_profile: {save_err}")
+
+    return result
 
 
 async def get_client_and_brand_profile(

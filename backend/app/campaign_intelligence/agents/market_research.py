@@ -54,6 +54,10 @@ class MarketSynthesisOutput(BaseModel):
     competitor_landscape: list[CompetitorInsightItem] = Field(default_factory=list)
     format_and_platform_trends: list[PlatformTrendItem] = Field(default_factory=list)
     strategic_opportunities: list[str] = Field(default_factory=list)
+    buyer_language_snippets: list[str] = Field(
+        default_factory=list,
+        description="Verbatim colloquial customer quotes, pain phrases, and unfiltered voice-of-customer snippets"
+    )
     confidence_score: float = Field(ge=0.0, le=1.0, default=0.85)
 
 
@@ -99,15 +103,15 @@ class MarketResearchAgent:
             location=location,
         )
 
-        # 3. Format evidence for LLM prompt (Select top 8 highest relevance items to prevent context bloat)
-        sorted_evidence = sorted(evidence_list, key=lambda e: e.relevance_score, reverse=True)[:8]
+        # 3. Format evidence for LLM prompt (Select top 5-6 deduplicated items with deep excerpts)
+        sorted_evidence = sorted(evidence_list, key=lambda e: e.relevance_score, reverse=True)[:6]
         evidence_prompt_lines: list[str] = []
         for idx, ev in enumerate(sorted_evidence):
             evidence_prompt_lines.append(
                 f"[{idx}] {ev.source_title} ({ev.publisher})\n"
                 f"     URL: {ev.source_url}\n"
-                f"     Excerpt: {ev.excerpt[:300]}\n"
-                f"     Key Takeaway: {ev.key_takeaway[:150]}"
+                f"     Excerpt: {ev.excerpt[:1250]}\n"
+                f"     Key Takeaway: {ev.key_takeaway[:200]}"
             )
         evidence_text = "\n\n".join(evidence_prompt_lines) if evidence_prompt_lines else "No external evidence retrieved."
 
@@ -117,6 +121,7 @@ Analyze the external market landscape for a social media campaign based strictly
 
 ### CAMPAIGN PARAMETERS
 - Industry: {industry}
+- Location: {location or 'General'}
 - Target Audience: {', '.join(audience) if audience else 'Professional decision makers'}
 - Target Platforms: {', '.join(platforms)}
 - Objective: {brief.objective}
@@ -131,7 +136,8 @@ Synthesize a comprehensive market research report strictly adhering to the schem
 2. Competitor Landscape: Analyze prevailing competitor angles and identify differentiation opportunities in this industry. Cite relevant evidence indices.
 3. Platform & Format Trends: Provide tactical platform trends specifically for {', '.join(platforms)}. Focus on retention, carousel multi-slide dynamics, and hook pacing. Cite evidence indices.
 4. Strategic Opportunities: List 3-5 high-leverage differentiation opportunities for this campaign.
-5. Confidence Score: A score from 0.0 to 1.0 reflecting the depth and reliability of the evidence.
+5. Buyer Language Snippets: Extract 3-5 verbatim colloquial phrases, complaints, or friction statements customers in this space actually say (from Reddit, reviews, or forum evidence).
+6. Confidence Score: A score from 0.0 to 1.0 reflecting the depth and reliability of the evidence.
 
 RULES:
 - Do NOT hallucinate fake case-study statistics (e.g. 'Brand X boosted leads by 421%').
@@ -192,6 +198,8 @@ RULES:
                 )
             )
 
+        buyer_snippets = [str(s).strip() for s in llm_result.buyer_language_snippets if str(s).strip()]
+
         # 6. Assemble complete MarketResearchReport
         return MarketResearchReport(
             industry=industry,
@@ -199,7 +207,8 @@ RULES:
             competitor_landscape=competitor_insights,
             format_and_platform_trends=platform_trends,
             strategic_opportunities=llm_result.strategic_opportunities,
-            evidence_sources=evidence_list,
+            buyer_language_snippets=buyer_snippets,
+            evidence_sources=sorted_evidence,
             confidence_score=llm_result.confidence_score,
         )
 

@@ -79,17 +79,13 @@ def calculate_format_performance_metrics(
         avg_comments = sum(comments) / total if total > 0 else 0.0
         avg_shares = sum(shares) / total if total > 0 else 0.0
 
-        # Calculate individual engagement rates and average them
+        # Calculate individual engagement rates strictly when views > 0
         rates: list[float] = []
         for d in items:
             v = d.views_count or 0
             eng = (d.likes_count or 0) + (d.comments_count or 0) + (d.shares_count or 0)
             if v > 0:
                 rates.append((eng / v) * 100.0)
-            elif eng > 0:
-                rates.append(5.0)  # Default fallback if views not tracked but interactions exist
-            else:
-                rates.append(0.0)
 
         avg_eng_rate = sum(rates) / len(rates) if rates else 0.0
 
@@ -116,6 +112,83 @@ def calculate_format_performance_metrics(
         )
 
     # Sort summaries by total published descending
+    return sorted(summaries, key=lambda s: s.total_published, reverse=True)
+
+
+def calculate_instagram_media_metrics(
+    media_items: list[dict[str, Any]],
+) -> list[FormatPerformanceSummary]:
+    """
+    Calculate deterministic statistical aggregates from live Instagram Graph API media items.
+    Maps Instagram media_type to deliverable format and computes averages without fabricated metrics.
+    """
+    if not media_items:
+        return []
+
+    # Map Instagram media_type to canonical deliverable format
+    type_map = {
+        "IMAGE": "single_image",
+        "CAROUSEL_ALBUM": "carousel",
+        "VIDEO": "reel",
+    }
+
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for item in media_items:
+        raw_type = (item.get("media_type") or "IMAGE").upper()
+        fmt = type_map.get(raw_type, "single_image")
+        groups[fmt].append(item)
+
+    summaries: list[FormatPerformanceSummary] = []
+    for fmt, items in groups.items():
+        total = len(items)
+        likes = [int(item.get("like_count") or 0) for item in items]
+        comments = [int(item.get("comments_count") or 0) for item in items]
+        shares = [int(item.get("shares_count") or 0) for item in items]
+        # Views if tracked in insights or payload, otherwise 0
+        views = [int(item.get("views_count") or item.get("view_count") or 0) for item in items]
+
+        avg_likes = sum(likes) / total if total > 0 else 0.0
+        avg_comments = sum(comments) / total if total > 0 else 0.0
+        avg_shares = sum(shares) / total if total > 0 else 0.0
+        avg_views = sum(views) / total if total > 0 else 0.0
+
+        # Engagement rate calculated strictly when views > 0
+        rates: list[float] = []
+        for item in items:
+            v = int(item.get("views_count") or item.get("view_count") or 0)
+            eng = int(item.get("like_count") or 0) + int(item.get("comments_count") or 0) + int(item.get("shares_count") or 0)
+            if v > 0:
+                rates.append((eng / v) * 100.0)
+
+        avg_eng_rate = sum(rates) / len(rates) if rates else 0.0
+
+        # Top angles extracted from captions of highest interacting posts
+        sorted_items = sorted(
+            items,
+            key=lambda x: int(x.get("like_count") or 0) + int(x.get("comments_count") or 0),
+            reverse=True,
+        )
+        top_captions: list[str] = []
+        for it in sorted_items[:3]:
+            cap = (it.get("caption") or "").strip()
+            if cap:
+                snippet = cap[:80] + "..." if len(cap) > 80 else cap
+                top_captions.append(snippet)
+
+        summaries.append(
+            FormatPerformanceSummary(
+                deliverable_type=fmt,
+                platform="instagram",
+                total_published=total,
+                avg_views=round(avg_views, 1),
+                avg_likes=round(avg_likes, 1),
+                avg_comments=round(avg_comments, 1),
+                avg_shares=round(avg_shares, 1),
+                avg_engagement_rate=round(avg_eng_rate, 2),
+                top_performing_angles=top_captions,
+            )
+        )
+
     return sorted(summaries, key=lambda s: s.total_published, reverse=True)
 
 

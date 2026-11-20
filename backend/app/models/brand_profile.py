@@ -37,6 +37,7 @@ class BrandProfile(Base):
     target_audience: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     content_pillars: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     goals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    website_crawl_cache: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

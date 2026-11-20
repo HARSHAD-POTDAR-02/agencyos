@@ -23,6 +23,7 @@ from app.campaign_intelligence.schemas.campaign import CampaignBrief
 from app.campaign_intelligence.schemas.trace import AgentTelemetry
 from app.campaign_intelligence.tools.brand_tools import (
     ClientNotFoundError,
+    crawl_client_website,
     detect_exact_prohibited_term_conflicts,
     get_client_and_brand_profile,
     get_client_contract_quotas,
@@ -38,12 +39,16 @@ logger = logging.getLogger(__name__)
 
 
 class BrandSynthesisOutput(BaseModel):
-    """Structured LLM output for tone interpretation and semantic claim validation."""
+    """Structured LLM output for tone interpretation, positioning, and semantic claim validation."""
+    brand_positioning: str | None = Field(default=None, description="Concise brand positioning statement synthesized from facts and website")
     tone_do: list[str] = Field(default_factory=list, description="Prescribed tone practices based on voice and past feedback")
     tone_dont: list[str] = Field(default_factory=list, description="Proscribed tone practices based on voice and past feedback")
     semantic_conflicts: list[str] = Field(default_factory=list, description="Semantic contradictions between brief requests and brand rules")
     assumptions: list[str] = Field(default_factory=list, description="Explicit inferences made to fill context without fabricating facts")
     additional_knowledge_gaps: list[str] = Field(default_factory=list, description="Missing brand guidance that should be clarified")
+    prohibited_concepts: list[str] = Field(default_factory=list, description="Semantic equivalents or prohibited concepts derived from rules")
+    website_extracted_facts: list[str] = Field(default_factory=list, description="Facts extracted directly from crawled website text")
+    website_extracted_offers: list[dict[str, str]] = Field(default_factory=list, description="Products/services discovered with 'name', 'description', and 'source_url'")
 
 
 class BrandIntelligenceAgent:
@@ -91,12 +96,15 @@ class BrandIntelligenceAgent:
         if client.website:
             confirmed_facts.append(f"Client verified website: '{client.website}'")
 
+        db_confirmed_facts = list(confirmed_facts)
+
         knowledge_gaps: list[str] = []
         brand_voice: list[str] = []
         tone_examples: list[str] = []
         approved_phrases: list[str] = []
         prohibited_terms: list[ProhibitedTerm] = []
         prohibited_claims: list[ProhibitedClaim] = []
+        prohibited_concepts: list[str] = []
         target_audience: list[str] = []
         content_pillars: list[str] = []
         brand_positioning: str | None = None
@@ -113,7 +121,6 @@ class BrandIntelligenceAgent:
             # Parse voice
             if brand_profile.brand_voice:
                 if isinstance(brand_profile.brand_voice, str):
-                    # Could be comma-separated or sentence
                     brand_voice = [v.strip() for v in brand_profile.brand_voice.split(",") if v.strip()]
                 elif isinstance(brand_profile.brand_voice, list):
                     brand_voice = [str(v) for v in brand_profile.brand_voice]
@@ -161,29 +168,56 @@ class BrandIntelligenceAgent:
                 if isinstance(raw_claims, list):
                     for item in raw_claims:
                         if isinstance(item, dict):
+                            claim_text = item.get("claim", str(item))
                             prohibited_claims.append(
                                 ProhibitedClaim(
-                                    claim=item.get("claim", str(item)),
+                                    claim=claim_text,
                                     semantic_context=item.get("context"),
                                     reason=item.get("reason"),
                                 )
                             )
+                            prohibited_concepts.append(claim_text)
                         else:
                             prohibited_claims.append(ProhibitedClaim(claim=str(item)))
+                            prohibited_concepts.append(str(item))
                 elif isinstance(raw_claims, dict):
                     for k, v in raw_claims.items():
                         if k == "exact_terms" and isinstance(v, list):
                             for term in v:
                                 prohibited_terms.append(ProhibitedTerm(term=str(term), is_exact_match=True))
+                                prohibited_concepts.append(str(term))
                         else:
                             prohibited_claims.append(ProhibitedClaim(claim=f"{k}: {v}"))
-
-            # Brand positioning check (do not hallucinate!)
-            # If not in DB, keep None
-            knowledge_gaps.append("Brand positioning statement is not explicitly defined in the database.")
+                            prohibited_concepts.append(f"{k}: {v}")
 
         if verified_offers:
             confirmed_facts.append(f"Verified offers found in database: {', '.join([o.name for o in verified_offers])}")
+
+        # 2b. Trigger Website Crawler if client.website is set AND profile is missing key fields
+        crawled_website_data: dict[str, Any] = {}
+        should_crawl = bool(
+            client.website
+            and (
+                not brand_profile
+                or not brand_voice
+                or not target_audience
+                or not content_pillars
+                or len(db_confirmed_facts) < 2
+            )
+        )
+        if should_crawl:
+            try:
+                crawled_website_data = await crawl_client_website(
+                    client_website=client.website,
+                    max_pages=4,
+                    db=db,
+                    brand_profile=brand_profile,
+                )
+            except Exception as crawl_err:
+                logger.warning(f"crawl_client_website failed for {client.website}: {crawl_err}")
+
+        crawled_urls: set[str] = {p["url"] for p in crawled_website_data.get("pages", []) if isinstance(p, dict) and "url" in p}
+        crawled_combined_text = crawled_website_data.get("combined_text", "")
 
         # 3. Deterministic Pre-LLM Conflict Detection (Exact Term Matching)
         conflicts: list[str] = detect_exact_prohibited_term_conflicts(brief, prohibited_terms)
@@ -202,6 +236,7 @@ class BrandIntelligenceAgent:
                 prohibited_claims=prohibited_claims,
                 feedback_history=feedback_history,
                 brief=brief,
+                crawled_combined_text=crawled_combined_text,
             )
 
             llm_result: BrandSynthesisOutput = await invoke_structured_llm(
@@ -219,9 +254,58 @@ class BrandIntelligenceAgent:
             conflicts.extend(llm_result.semantic_conflicts)
             knowledge_gaps.extend(llm_result.additional_knowledge_gaps)
 
+            # 1. Positioning synthesis
+            if llm_result.brand_positioning:
+                brand_positioning = llm_result.brand_positioning
+                assumptions.append("[INFERRED_NEEDS_REVIEW] Positioning synthesized from website/context")
+
+            # 2. Prohibited concepts
+            for pc in llm_result.prohibited_concepts:
+                if pc and pc.strip() and pc.strip() not in prohibited_concepts:
+                    prohibited_concepts.append(pc.strip())
+
+            # 3. Deterministic Python Post-Filter on Website-Extracted Facts
+            for raw_fact in llm_result.website_extracted_facts:
+                fact_str = str(raw_fact).strip()
+                if not fact_str:
+                    continue
+                matched_url = next((u for u in crawled_urls if u in fact_str), None)
+                if matched_url:
+                    clean_fact = fact_str if fact_str.startswith("[Website Confirmed") else f"[Website Confirmed | {matched_url}] {fact_str}"
+                    if clean_fact not in confirmed_facts:
+                        confirmed_facts.append(clean_fact)
+                else:
+                    # No matching crawled URL in this run -> Demote to assumptions
+                    assumptions.append(f"[INFERRED_NEEDS_REVIEW] {fact_str}")
+
+            # 4. Website-Extracted Offers (Must match a crawled URL)
+            for raw_offer in llm_result.website_extracted_offers:
+                if isinstance(raw_offer, dict) and raw_offer.get("name"):
+                    offer_name = str(raw_offer["name"]).strip()
+                    offer_desc = str(raw_offer.get("description", "")).strip()
+                    source_url = str(raw_offer.get("source_url", "")).strip()
+                    if source_url and any(u in source_url for u in crawled_urls):
+                        if offer_name and not any(o.name.lower() == offer_name.lower() for o in verified_offers):
+                            verified_offers.append(
+                                VerifiedOffer(
+                                    name=offer_name,
+                                    description=offer_desc,
+                                    source="client_website",
+                                    is_verified=True,
+                                )
+                            )
+                    else:
+                        assumptions.append(f"[INFERRED_NEEDS_REVIEW] Offer without crawled source citation: {offer_name}")
+
         except Exception as e:
             logger.error(f"Error during LLM brand synthesis: {e}")
             assumptions.append("LLM tone synthesis encountered an error; using default deterministic boundaries.")
+
+        # Commercial fact gaps check
+        if not any("pricing" in f.lower() for f in confirmed_facts):
+            knowledge_gaps.append("No verified pricing tiers found")
+        if not any("testimonial" in f.lower() or "case study" in f.lower() for f in confirmed_facts):
+            knowledge_gaps.append("No verified client testimonials or case-study metrics")
 
         # 5. Build and return final validated BrandContext
         return BrandContext(
@@ -240,6 +324,7 @@ class BrandIntelligenceAgent:
             approved_phrases=approved_phrases,
             prohibited_terms=prohibited_terms,
             prohibited_claims=prohibited_claims,
+            prohibited_concepts=prohibited_concepts,
             verified_offers=verified_offers,
             contract_quotas=quotas,
             classified_feedback=feedback_history,
@@ -259,19 +344,25 @@ class BrandIntelligenceAgent:
         prohibited_claims: list[ProhibitedClaim],
         feedback_history: list[FeedbackItem],
         brief: CampaignBrief,
+        crawled_combined_text: str = "",
     ) -> str:
         """Construct the prompt for Groq LLM synthesis."""
+        website_section = (
+            f"\n### CRAWLED CLIENT WEBSITE TEXT (Empirical Context)\n{crawled_combined_text}\n"
+            if crawled_combined_text else ""
+        )
         return f"""You are the Brand Intelligence Agent for AgencyOS.
-Analyze the confirmed client brand data and historical feedback to extract actionable tone guardrails and detect semantic policy violations.
+Analyze the confirmed client brand data and historical feedback to extract actionable tone guardrails, positioning, and detect semantic policy violations.
 
 ### CONFIRMED CLIENT FACTS (Immutable)
 - Business Name: {client.business_name}
 - Industry: {client.industry or 'Unspecified'}
+- Location: {getattr(client, 'location', 'Unspecified') or 'Unspecified'}
 - Brand Voice: {', '.join(brand_voice) if brand_voice else 'None specified'}
 - Target Audience: {', '.join(target_audience) if target_audience else 'None specified'}
 - Content Pillars: {', '.join(content_pillars) if content_pillars else 'None specified'}
 - Approved Phrases: {', '.join(approved_phrases) if approved_phrases else 'None specified'}
-
+{website_section}
 ### PROHIBITED CLAIMS (Brand Boundaries)
 {chr(10).join([f"- {pc.claim} (Reason: {pc.reason or 'Unspecified'})" for pc in prohibited_claims]) if prohibited_claims else 'None configured'}
 
@@ -284,17 +375,19 @@ Analyze the confirmed client brand data and historical feedback to extract actio
 - Constraints: {', '.join(brief.additional_constraints) if brief.additional_constraints else 'None'}
 
 ### YOUR TASK
-1. Tone Guidelines:
+1. brand_positioning:
+   - Provide a concise 1-2 sentence brand positioning statement synthesized from confirmed facts and website.
+2. Tone Guidelines:
    - Formulate actionable 'tone_do' (prescribed tone practices tailored to this industry and brand voice).
    - Formulate actionable 'tone_dont' (proscribed tone practices, integrating reviewer feedback).
-2. Semantic Conflicts:
-   - Identify whether any statement in the campaign brief contradicts the spirit of the prohibited claims (e.g. guaranteeing 100% bug-free uptime, promising unverified savings, or violating explicit reviewer rules).
-3. Assumptions:
-   - List any necessary inferences you had to make about the brand due to unconfigured fields.
-4. Knowledge Gaps:
-   - List any critical missing brand assets or guidelines needed for production.
-
-IMPORTANT: Do NOT invent positioning statements, fake client awards, or ungrounded claims. Ground your analysis strictly in the provided brand data.
+3. Semantic Conflicts:
+   - Identify whether any statement in the campaign brief contradicts the spirit of the prohibited claims.
+4. prohibited_concepts:
+   - Identify semantic equivalents of prohibited claims to prevent creative bypasses.
+5. website_extracted_facts & website_extracted_offers:
+   - Extract up to 4 empirical facts and any concrete product/service offerings explicitly present in the crawled text.
+6. Assumptions & Knowledge Gaps:
+   - Transparently list inferences and missing information without fabricating data.
 """
 
 
