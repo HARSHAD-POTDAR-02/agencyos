@@ -213,7 +213,12 @@ class QualityEvaluatorAdapter(SpecialistAdapter):
                 # Check if this exact URL is explicitly in verified offers
                 exact_verified = False
                 if context.brand_context and getattr(context.brand_context, "verified_offers", None):
-                    exact_verified = any(link_clean in (off.url or "").lower() for off in context.brand_context.verified_offers)
+                    exact_verified = any(
+                        link_clean in str(getattr(off, "url", "") or "").lower()
+                        or link_clean in str(getattr(off, "description", "") or "").lower()
+                        or link_clean in str(getattr(off, "name", "") or "").lower()
+                        for off in context.brand_context.verified_offers
+                    )
                 if not exact_verified:
                     fabricated_links.append(link)
 

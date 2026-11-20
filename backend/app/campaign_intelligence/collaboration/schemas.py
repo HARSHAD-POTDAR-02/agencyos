@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 
 # =====================================================================
@@ -246,11 +246,33 @@ class StoryboardArtifactPayload(BaseModel):
 
 class CarouselSlideCard(BaseModel):
     """Single slide in a swipeable multi-card carousel deck."""
-    slide_number: int = Field(ge=1)
+    slide_number: int = Field(default=1, ge=1)
     headline: str
     body_copy: str = ""
     visual_layout: str = "Clean typography layout with brand aesthetic"
-    slide_type: Literal["cover", "content", "takeaway", "cta"] = "content"
+    slide_type: str = "content"
+
+    @field_validator("slide_number", mode="before")
+    @classmethod
+    def normalize_slide_number(cls, v: Any) -> int:
+        try:
+            return max(1, int(v))
+        except (ValueError, TypeError):
+            return 1
+
+    @field_validator("slide_type", mode="before")
+    @classmethod
+    def normalize_slide_type(cls, v: Any) -> str:
+        if not v or not isinstance(v, str):
+            return "content"
+        val = v.lower().strip()
+        if val in ("cover", "hook", "title", "intro", "problem"):
+            return "cover"
+        elif val in ("takeaway", "summary", "recap", "conclusion"):
+            return "takeaway"
+        elif val in ("cta", "call_to_action", "action", "closing", "outro"):
+            return "cta"
+        return "content"
 
 
 class CarouselDeckArtifactPayload(BaseModel):
@@ -353,14 +375,56 @@ class BrandPositioningPayload(BaseModel):
 class BlueprintStage(BaseModel):
     """Specific narrative phase within a campaign sprint."""
     stage_name: str
-    day_range: str
-    objective: str
-    key_formats: list[str]
+    day_range: str = "Day 1 - 2"
+    objective: str = ""
+    key_formats: list[str] = Field(default_factory=list)
+    days_range: str | None = None
+    core_message: str | None = None
+    deliverable_focus: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def sync_aliases(self) -> "BlueprintStage":
+        if not self.days_range:
+            self.days_range = self.day_range
+        elif not self.day_range:
+            self.day_range = self.days_range
+
+        if not self.core_message:
+            self.core_message = self.objective
+        elif not self.objective:
+            self.objective = self.core_message
+
+        if not self.deliverable_focus:
+            self.deliverable_focus = self.key_formats
+        elif not self.key_formats:
+            self.key_formats = self.deliverable_focus
+        return self
 
 
 class CampaignBlueprintPayload(BaseModel):
     """Macro narrative arc and deliverable distribution blueprint."""
     campaign_theme: str
-    slogan: str
+    slogan: str = ""
+    master_slogan: str | None = None
     stages: list[BlueprintStage] = Field(default_factory=list)
+    narrative_stages: list[BlueprintStage] = Field(default_factory=list)
     target_format_mix: dict[str, int] = Field(default_factory=dict)
+    format_mix_ratios: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def sync_payload(self) -> "CampaignBlueprintPayload":
+        if not self.master_slogan and self.slogan:
+            self.master_slogan = self.slogan
+        elif not self.slogan and self.master_slogan:
+            self.slogan = self.master_slogan
+
+        if not self.narrative_stages and self.stages:
+            self.narrative_stages = self.stages
+        elif not self.stages and self.narrative_stages:
+            self.stages = self.narrative_stages
+
+        if not self.format_mix_ratios and self.target_format_mix:
+            self.format_mix_ratios = self.target_format_mix
+        elif not self.target_format_mix and self.format_mix_ratios:
+            self.target_format_mix = self.format_mix_ratios
+        return self

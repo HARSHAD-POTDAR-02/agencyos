@@ -109,16 +109,22 @@ export interface ResearchEvidencePayload {
 
 export interface NarrativeStageData {
   stage_name: string;
-  days_range: string;
-  core_message: string;
-  deliverable_focus: string[];
+  days_range?: string;
+  day_range?: string;
+  core_message?: string;
+  objective?: string;
+  deliverable_focus?: string[];
+  key_formats?: string[];
 }
 
 export interface CampaignBlueprintPayload {
   campaign_theme: string;
-  master_slogan: string;
-  narrative_stages: NarrativeStageData[];
-  format_mix_ratios: Record<string, number>;
+  master_slogan?: string;
+  slogan?: string;
+  narrative_stages?: NarrativeStageData[];
+  stages?: NarrativeStageData[];
+  format_mix_ratios?: Record<string, number>;
+  target_format_mix?: Record<string, number>;
 }
 
 export interface TruthTierItemData {

@@ -15,8 +15,11 @@ interface BlueprintPanelProps {
 }
 
 export function BlueprintPanel({ payload }: BlueprintPanelProps) {
-  const stages = payload.narrative_stages || [];
-  const formatRatios = payload.format_mix_ratios || {};
+  const stages = (payload.narrative_stages && payload.narrative_stages.length > 0)
+    ? payload.narrative_stages
+    : (payload.stages || []);
+  const formatRatios = payload.format_mix_ratios || payload.target_format_mix || {};
+  const slogan = payload.master_slogan || payload.slogan || "";
 
   return (
     <div className="space-y-6">
@@ -30,9 +33,9 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
             <h3 className="font-bold text-base text-[#F2F0F7]">
               {payload.campaign_theme || "Strategic Campaign Blueprint"}
             </h3>
-            {payload.master_slogan && (
+            {slogan && (
               <p className="text-xs italic text-[#A78BFA] font-medium mt-0.5">
-                &ldquo;{payload.master_slogan}&rdquo;
+                &ldquo;{slogan}&rdquo;
               </p>
             )}
           </div>
@@ -50,46 +53,54 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
         </div>
 
         <div className="space-y-3">
-          {stages.map((stage, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-xl border border-[#30303D] bg-[#17171E] shadow-sm space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-[#A78BFA]/20 text-[#A78BFA] font-bold text-xs flex items-center justify-center border border-[#A78BFA]/30">
-                    {idx + 1}
-                  </span>
-                  <span className="font-bold text-sm text-[#F2F0F7]">
-                    {stage.stage_name}
-                  </span>
-                </div>
-                <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[#20202A] text-[#F2F0F7] border border-[#30303D]">
-                  {stage.days_range}
-                </span>
-              </div>
+          {stages.map((stage, idx) => {
+            const daysLabel = stage.days_range || stage.day_range || `Phase ${idx + 1}`;
+            const messageText = stage.core_message || stage.objective || "";
+            const deliverables = stage.deliverable_focus || stage.key_formats || [];
 
-              <p className="text-xs text-[#A3A0B0] leading-relaxed bg-[#20202A] p-2.5 rounded-lg border border-[#30303D]/60">
-                {stage.core_message}
-              </p>
-
-              {stage.deliverable_focus && stage.deliverable_focus.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] uppercase font-bold text-[#A3A0B0] mr-1">
-                    Deliverables:
-                  </span>
-                  {stage.deliverable_focus.map((focus, i) => (
-                    <span
-                      key={i}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 font-medium"
-                    >
-                      {focus}
+            return (
+              <div
+                key={idx}
+                className="p-4 rounded-xl border border-[#30303D] bg-[#17171E] shadow-sm space-y-2.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-[#A78BFA]/20 text-[#A78BFA] font-bold text-xs flex items-center justify-center border border-[#A78BFA]/30">
+                      {idx + 1}
                     </span>
-                  ))}
+                    <span className="font-bold text-sm text-[#F2F0F7]">
+                      {stage.stage_name}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[#20202A] text-[#F2F0F7] border border-[#30303D]">
+                    {daysLabel}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {messageText && (
+                  <p className="text-xs text-[#A3A0B0] leading-relaxed bg-[#20202A] p-2.5 rounded-lg border border-[#30303D]/60">
+                    {messageText}
+                  </p>
+                )}
+
+                {deliverables.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] uppercase font-bold text-[#A3A0B0] mr-1">
+                      Deliverables:
+                    </span>
+                    {deliverables.map((focus, i) => (
+                      <span
+                        key={i}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 font-medium"
+                      >
+                        {focus}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
