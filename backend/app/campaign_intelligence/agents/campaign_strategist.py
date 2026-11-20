@@ -169,9 +169,12 @@ def derive_slot_allocation_targets(
 
     # Assign sequential days
     if is_date_bounded and brief.duration_days:
+        n_targets = len(targets)
         for idx, t in enumerate(targets):
             t["slot_index"] = idx
-            t["planned_day"] = (idx % brief.duration_days) + 1
+            # Distribute chronological days sequentially across the calendar sprint
+            # (e.g. 20 deliverables over 10 days puts 2 posts per day on Days 1..10 in order)
+            t["planned_day"] = min(brief.duration_days, (idx * brief.duration_days // max(1, n_targets)) + 1)
     else:
         n = len(targets)
         step = max(1, duration_days // (n + 1))
@@ -369,6 +372,15 @@ def reconcile_and_pad_slots(
             slot.buyer_language_refs = [assigned_snippet]
 
         final_slots.append(slot)
+
+    # Bug 9: Enforce strategic angle rotation across multiple pillars to prevent single-topic saturation
+    if angles and len(angles) > 1:
+        slot_angles = [s.strategic_angle_ref for s in final_slots if s.strategic_angle_ref]
+        if slot_angles and len(set(slot_angles)) == 1:
+            for s_idx, s in enumerate(final_slots):
+                s.strategic_angle_ref = angles[s_idx % len(angles)].angle_name
+                if pillars and len(pillars) > 1:
+                    s.core_message = pillars[s_idx % len(pillars)].core_message
 
     # Apply deterministic post-validators
     final_slots = enforce_consecutive_hook_diversity(final_slots)

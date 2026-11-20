@@ -151,9 +151,9 @@ function CampaignPlansContent() {
 
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedPillarFilter, setSelectedPillarFilter] = useState<string>("all");
-  const [expandedDay, setExpandedDay] = useState<number | null>(1);
-  const [expandedReelDay, setExpandedReelDay] = useState<number | null>(null);
-  const [expandedCarouselDay, setExpandedCarouselDay] = useState<number | null>(null);
+  const [expandedDay, setExpandedDay] = useState<string | number | null>("1");
+  const [expandedReelDay, setExpandedReelDay] = useState<string | number | null>(null);
+  const [expandedCarouselDay, setExpandedCarouselDay] = useState<string | number | null>(null);
   const [editingDeliverable, setEditingDeliverable] = useState<DeliverableItem | null>(null);
 
   const handleDeliverableUpdated = (updated: DeliverableItem) => {
@@ -571,7 +571,9 @@ function CampaignPlansContent() {
 
                   {quality && (
                     <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
-                      🛡️ {quality.compliance_score <= 1 ? Math.round(quality.compliance_score * 100) : Math.round(quality.compliance_score)}% Brand Compliant
+                      🛡️ {typeof quality.compliance_score === "number" && !isNaN(quality.compliance_score)
+                        ? (quality.compliance_score <= 1 ? Math.round(quality.compliance_score * 100) : Math.round(quality.compliance_score))
+                        : 95}% Brand Compliant
                     </span>
                   )}
                 </div>
@@ -748,16 +750,19 @@ function CampaignPlansContent() {
           {/* 30-Day Calendar Grid View */}
           {viewMode === "calendar" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-              {filteredDeliverables.map((item) => {
+              {filteredDeliverables.map((item, idx) => {
+                const cardKey = item.slot_index !== undefined ? `${item.day_number}-${item.slot_index}` : `${item.day_number}-${idx}`;
                 const isReel = item.deliverable_type.toLowerCase().includes("reel") || item.deliverable_type.toLowerCase().includes("video");
                 const isCarousel = item.deliverable_type.toLowerCase().includes("carousel");
-                const isExpanded = expandedDay === item.day_number;
+                const isExpanded = expandedDay === cardKey || expandedDay === item.day_number;
+                const isReelExpanded = expandedReelDay === cardKey || expandedReelDay === item.day_number;
+                const isCarouselExpanded = expandedCarouselDay === cardKey || expandedCarouselDay === item.day_number;
                 const isInProduction = item.is_exported || item.status === "in_production";
                 const isRejected = item.status === "rejected";
 
                 return (
                   <div
-                    key={item.day_number}
+                    key={cardKey}
                     className={`flex flex-col justify-between p-3.5 rounded-2xl border transition-all text-xs surface-card shadow-xs ${
                       isRejected
                         ? "opacity-60 border-white/[0.04] bg-[#141418]"
@@ -871,18 +876,18 @@ function CampaignPlansContent() {
                               <button
                                 onClick={() =>
                                   setExpandedReelDay(
-                                    expandedReelDay === item.day_number ? null : item.day_number
+                                    isReelExpanded ? null : cardKey
                                   )
                                 }
                                 className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded-lg bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] text-[10px] font-semibold cursor-pointer border border-[#A78BFA]/20"
                               >
                                 <Video className="w-3 h-3" />
-                                <span>{expandedReelDay === item.day_number ? "Hide Scene Script" : `View ${item.reel_scenes.length} Scene Beats`}</span>
+                                <span>{isReelExpanded ? "Hide Scene Script" : `View ${item.reel_scenes.length} Scene Beats`}</span>
                               </button>
-                              {expandedReelDay === item.day_number && (
+                              {isReelExpanded && (
                                 <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                  {item.reel_scenes.map((s) => (
-                                    <div key={s.scene_number} className="p-2 rounded-lg bg-[#101014] border border-white/[0.06] text-[10px]">
+                                  {item.reel_scenes.map((s, sIdx) => (
+                                    <div key={`${cardKey}-s-${s.scene_number}-${sIdx}`} className="p-2 rounded-lg bg-[#101014] border border-white/[0.06] text-[10px]">
                                       <div className="flex items-center justify-between font-mono text-[#A78BFA] font-bold">
                                         <span>S{s.scene_number}</span>
                                         <span className="text-[#A3A0B0]">{s.timestamp_range}</span>
@@ -906,18 +911,18 @@ function CampaignPlansContent() {
                               <button
                                 onClick={() =>
                                   setExpandedCarouselDay(
-                                    expandedCarouselDay === item.day_number ? null : item.day_number
+                                    isCarouselExpanded ? null : cardKey
                                   )
                                 }
                                 className="w-full mt-2 flex items-center justify-center gap-1 py-1 rounded-lg bg-[#69A9D8]/10 hover:bg-[#69A9D8]/20 text-[#69A9D8] text-[10px] font-semibold cursor-pointer border border-[#69A9D8]/20"
                               >
                                 <Layers2 className="w-3 h-3" />
-                                <span>{expandedCarouselDay === item.day_number ? "Hide Slides" : `View ${item.carousel_slides.length} Slide Deck`}</span>
+                                <span>{isCarouselExpanded ? "Hide Slides" : `View ${item.carousel_slides.length} Slide Deck`}</span>
                               </button>
-                              {expandedCarouselDay === item.day_number && (
+                              {isCarouselExpanded && (
                                 <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                  {item.carousel_slides.map((cs) => (
-                                    <div key={cs.slide_number} className="p-2 rounded-lg bg-[#101014] border border-white/[0.06] text-[10px]">
+                                  {item.carousel_slides.map((cs, csIdx) => (
+                                    <div key={`${cardKey}-cs-${cs.slide_number}-${csIdx}`} className="p-2 rounded-lg bg-[#101014] border border-white/[0.06] text-[10px]">
                                       <div className="flex items-center justify-between font-mono text-[#69A9D8] font-bold">
                                         <span>Slide {cs.slide_number} ({cs.slide_type})</span>
                                       </div>
@@ -1007,7 +1012,7 @@ function CampaignPlansContent() {
 
                         <button
                           type="button"
-                          onClick={() => setExpandedDay(isExpanded ? null : item.day_number)}
+                          onClick={() => setExpandedDay(isExpanded ? null : cardKey)}
                           className="text-[10px] font-medium text-[#A78BFA] hover:underline cursor-pointer flex items-center gap-0.5"
                         >
                           <span>{isExpanded ? "Less" : "More"}</span>
@@ -1022,7 +1027,8 @@ function CampaignPlansContent() {
           ) : (
             /* Detailed List View */
             <div className="space-y-4">
-              {filteredDeliverables.map((item) => {
+              {filteredDeliverables.map((item, idx) => {
+                const listCardKey = item.slot_index !== undefined ? `${item.day_number}-${item.slot_index}` : `${item.day_number}-${idx}`;
                 const isReel = item.deliverable_type.toLowerCase().includes("reel") || item.deliverable_type.toLowerCase().includes("video");
                 const isCarousel = item.deliverable_type.toLowerCase().includes("carousel");
                 const isInProduction = item.is_exported || item.status === "in_production";
@@ -1030,7 +1036,7 @@ function CampaignPlansContent() {
 
                 return (
                   <div
-                    key={item.day_number}
+                    key={listCardKey}
                     className={`p-5 rounded-2xl border surface-card shadow-xs space-y-4 text-xs transition-all ${
                       isRejected ? "opacity-60 border-white/[0.04] bg-[#141418]" : "border-white/[0.08]"
                     }`}

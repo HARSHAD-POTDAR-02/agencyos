@@ -41,7 +41,7 @@ class StoryboardGenerationOutput(BaseModel):
         min_length=1,
         description="A sequential list of at least 3 to 15 distinct scene cards breaking down the entire video beat-by-beat into 3-6 second cuts. You MUST NOT output only 1 scene.",
     )
-    caption: str = Field(default="", description="Full publishable post caption with hashtags and emojis. MUST NOT be empty.")
+    caption: str = Field(default="", description="Full publishable post caption with hashtags. Tone and emoji usage MUST match brand voice guidelines (use zero emojis if brand voice is restrained or authoritative). MUST NOT be empty.")
     hashtags: list[str] = Field(default_factory=list, description="5 to 10 relevant hashtags.")
     call_to_action: str = Field(default="", description="Clear closing call to action.")
     suggested_followups: list[str] = Field(default_factory=list)
@@ -855,6 +855,13 @@ The client/user has PINNED the following hero entities/offerings:
 You MUST prominently feature these exact pinned hero entities in the scenes, visual action, voiceovers, and on-screen text! Do not replace them with generic or fabricated items.
 """
 
+        voice_str = " ".join(context.brand_context.brand_voice or []).lower() if context.brand_context and context.brand_context.brand_voice else ""
+        is_restrained_voice = any(
+            w in voice_str
+            for w in ("restrained", "minimalist", "enterprise", "serious", "academic", "sober", "technical", "clinical", "formal", "authoritative")
+        )
+        emoji_rule = "ZERO emojis (strict restraint). Do NOT use rocket, wrench, or hype icons." if is_restrained_voice else "Tasteful, engaging emojis matching brand tone."
+
         prompt = f"""You are the Master Scriptwriter & Content Storyboard Architect for AgencyOS.
 User Request: "{query}"
 
@@ -879,7 +886,9 @@ CRITICAL REQUIREMENTS:
    - on_screen_text (overlay text)
    - audio_sfx_cue (ASMR sizzle, trending beat, sound effect)
    - ai_visual_prompt (photorealistic Flux / Midjourney generation prompt)
-4. Full publishable caption (MUST NOT be empty; write rich post copy with emojis), 5-10 relevant hashtags, and clear CTA.
+4. Full publishable caption (MUST NOT be empty; emoji policy: {emoji_rule}), 5-10 relevant hashtags, and clear CTA.
+5. GREETING & TONE DIRECTIVE: Conversational intro MUST adopt the exact register of the client ({brand_voice}). If authoritative or technical, DO NOT use overly casual greetings like 'Hey there! Let's break down ... in a flash 🚀'. Introduce the deliverable directly and professionally.
+6. STRICT URL HYGIENE: NEVER invent external URLs or sub-paths (e.g. vertexcloud.com/latency-insights). Use only verified client domains or standard 'link in bio' CTA.
 """
         try:
             sb_res: StoryboardGenerationOutput = await invoke_structured_llm(
@@ -901,7 +910,7 @@ CRITICAL REQUIREMENTS:
 
             final_caption = (sb_res.caption or "").strip()
             if not final_caption:
-                final_caption = f"✨ Discover how {client_name} delivers unmatched value and excellence! Built to exceed expectations every single day. Explore more via link in bio! 🚀"
+                final_caption = f"Explore how {client_name} delivers verifiable excellence and operational results. Connect with us via the link in our bio."
             final_hashtags = sb_res.hashtags if sb_res.hashtags else [f"#{client_name.lower().replace(' ', '')}", f"#{industry.lower().replace(' ', '')}", "#innovation", "#growth"]
             final_cta = (sb_res.call_to_action or "").strip()
             if not final_cta:

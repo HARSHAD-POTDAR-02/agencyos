@@ -119,7 +119,7 @@ A user asked: "{query}"
 Client Reality:
 - Business: {brand_context.business_name}
 - Industry: {brand_context.industry or 'General'}
-- Confirmed Facts: {len(confirmed_facts)} verified items
+- Confirmed Facts: {[f.statement for f in confirmed_facts] if confirmed_facts else 'None on file'}
 - Brand Voice: {', '.join(brand_context.brand_voice) if brand_context.brand_voice else 'Authoritative, Professional'}
 - Content Pillars: {', '.join(brand_context.content_pillars) if brand_context.content_pillars else 'Core Value Props'}
 - Prohibited Claims: {[c.claim for c in brand_context.prohibited_claims]}
@@ -172,8 +172,11 @@ CRITICAL RULES:
                     if any(k in g.lower() for k in ("case study", "testimonial", "metric", "proof", "pricing", "result")):
                         missing_detail = g
                         break
+                missing_detail_clean = missing_detail.rstrip()
+                if not missing_detail_clean.endswith((".", "!", "?")):
+                    missing_detail_clean += "."
                 reply_text += (
-                    f"\n\n⚠️ **[CLIENT_INPUT_NEEDED]**: {missing_detail} "
+                    f"\n\n⚠️ **[CLIENT_INPUT_NEEDED]**: {missing_detail_clean} "
                     f"Client input is required before publishing proof-oriented deliverables."
                 )
 

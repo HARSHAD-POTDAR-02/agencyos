@@ -3,8 +3,9 @@ from __future__ import annotations
 import difflib
 import logging
 import re
+from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.campaign_intelligence.agents.quality_evaluator import QualityEvaluatorAgent
 from app.campaign_intelligence.collaboration.schemas import (
@@ -26,6 +27,23 @@ class SemanticAuditResult(BaseModel):
     flagged_issues: list[dict] = Field(default_factory=list)
     proposed_clean_copy: str
     suggested_followups: list[str] = Field(default_factory=list)
+
+    @field_validator("flagged_issues", mode="before")
+    @classmethod
+    def normalize_flagged_issues(cls, v: Any) -> list[dict]:
+        if not v:
+            return []
+        if isinstance(v, list):
+            res = []
+            for item in v:
+                if isinstance(item, dict):
+                    res.append(item)
+                elif isinstance(item, str):
+                    res.append({"issue": item, "severity": "warning"})
+                else:
+                    res.append({"issue": str(item), "severity": "warning"})
+            return res
+        return []
 
 
 class QualityEvaluatorAdapter(SpecialistAdapter):
@@ -56,8 +74,23 @@ class QualityEvaluatorAdapter(SpecialistAdapter):
         activity_logs.append("Extracting target content draft from active artifact or query...")
 
         # 1. Resolve content to audit
-        target_text = query
-        if context.active_artifact_payload:
+        target_text = query.strip()
+        quoted_match = re.search(r'["\']{1,3}([\s\S]+?)["\']{1,3}', query)
+        is_generic_audit_cmd = bool(
+            re.search(
+                r"^(?:audit|check|review|evaluate|run\s+qa|test|verify)\b.*?(?:artifact|canvas|draft|reel|carousel|deliverable|active|plan)?\s*$",
+                query.strip(),
+                re.IGNORECASE,
+            )
+        ) and len(query.strip().split()) <= 8
+
+        if quoted_match and len(quoted_match.group(1).strip()) > 15:
+            target_text = quoted_match.group(1).strip()
+            activity_logs.append("Auditing user-quoted copy extracted from chat prompt...")
+        elif not is_generic_audit_cmd and len(query.strip()) > 25:
+            target_text = query.strip()
+            activity_logs.append("Auditing user-provided text directly from chat query...")
+        elif context.active_artifact_payload:
             payload = context.active_artifact_payload
             # Extract scenes or slides or caption
             text_parts = []
@@ -104,6 +137,134 @@ class QualityEvaluatorAdapter(SpecialistAdapter):
                     verdict=ComplianceVerdict.PASS,
                     explanation="No exact prohibited words or forbidden competitor names detected.",
                     is_blocking=True,
+                )
+            )
+
+        # 2b. Deterministic Check: Extreme Guarantees & Unsubstantiated ROI Claims
+        activity_logs.append("Scanning for unsubstantiated ROI promises and absolute performance guarantees...")
+        guarantee_patterns = [
+            (r"\b\d+%\s*(?:roi|return|growth|increase|boost)\b", "Extreme quantitative ROI or percentage growth promise"),
+            (r"\b(?:guarantee[ds]?|guarantees)\s+.*?\b(?:roi|return|days?|money\s*back)\b", "Absolute outcome guarantee over fixed timeframe"),
+            (r"\bmoney[\s-]back(?:\s+guarantee)?\b", "Unverified money-back guarantee"),
+            (r"\bguarantee(?:s|ed)?\s+a\s+\d+%", "Direct percentage metric guarantee"),
+        ]
+        found_guarantees = []
+        for pat, desc in guarantee_patterns:
+            m = re.search(pat, target_text, re.IGNORECASE)
+            if m:
+                found_guarantees.append(f"{desc} ('{m.group(0)}')")
+
+        if found_guarantees:
+            checks.append(
+                ComplianceCheckItem(
+                    check_name="Prohibited Guarantees & Unsubstantiated ROI",
+                    check_type="deterministic",
+                    verdict=ComplianceVerdict.FAIL,
+                    flagged_snippet="; ".join(found_guarantees),
+                    explanation=f"Draft contains prohibited marketing guarantees or unverified ROI claims: {'; '.join(found_guarantees)}. Professional enterprise standards forbid speculative performance promises.",
+                    suggested_correction="Replace speculative ROI and absolute guarantees with measurable, verifiable proof points or customer case studies.",
+                    is_blocking=True,
+                )
+            )
+        else:
+            checks.append(
+                ComplianceCheckItem(
+                    check_name="Prohibited Guarantees & Unsubstantiated ROI",
+                    check_type="deterministic",
+                    verdict=ComplianceVerdict.PASS,
+                    explanation="No speculative ROI claims or forbidden money-back guarantees detected.",
+                    is_blocking=True,
+                )
+            )
+
+        # 2c. Deterministic Check: Fabricated URLs & Unverified Deep Links
+        activity_logs.append("Verifying external URLs and deep links against brand knowledge...")
+        url_finder = re.compile(r"https?://[^\s)\]\"'>]+|(?:www\.)?[a-zA-Z0-9-]+\.(?:com|org|net|io|co|ai)(?:/[^\s)\]\"'>]*)?", re.IGNORECASE)
+        detected_links = url_finder.findall(target_text)
+        
+        # Build verified domains from brand context
+        verified_domains = set()
+        if context.brand_context:
+            if getattr(context.brand_context, "website_url", None):
+                try:
+                    from urllib.parse import urlparse
+                    netloc = urlparse(context.brand_context.website_url).netloc.lower()
+                    if netloc:
+                        verified_domains.add(netloc.replace("www.", ""))
+                except Exception:
+                    pass
+            for off in getattr(context.brand_context, "verified_offers", []):
+                if getattr(off, "url", None):
+                    try:
+                        from urllib.parse import urlparse
+                        netloc = urlparse(off.url).netloc.lower()
+                        if netloc:
+                            verified_domains.add(netloc.replace("www.", ""))
+                    except Exception:
+                        pass
+
+        fabricated_links = []
+        for link in detected_links:
+            link_clean = link.lower()
+            # If link has specific deep path or is not in verified domains
+            has_deep_path = "/" in link_clean.split("://")[-1] and len(link_clean.split("://")[-1].split("/", 1)[1]) > 0
+            is_domain_verified = any(vd in link_clean for vd in verified_domains) if verified_domains else False
+            if not is_domain_verified or has_deep_path:
+                # Check if this exact URL is explicitly in verified offers
+                exact_verified = False
+                if context.brand_context and getattr(context.brand_context, "verified_offers", None):
+                    exact_verified = any(link_clean in (off.url or "").lower() for off in context.brand_context.verified_offers)
+                if not exact_verified:
+                    fabricated_links.append(link)
+
+        if fabricated_links:
+            checks.append(
+                ComplianceCheckItem(
+                    check_name="Verified URL & Link Hygiene",
+                    check_type="deterministic",
+                    verdict=ComplianceVerdict.FAIL,
+                    flagged_snippet=", ".join(fabricated_links),
+                    explanation=f"Draft contains unverified external link(s) or fabricated deep URLs: {', '.join(fabricated_links)}. Only verified brand domains or standard profile bio CTAs are allowed.",
+                    suggested_correction="Remove invented URLs and direct users to verified landing pages or 'link in bio'.",
+                    is_blocking=True,
+                )
+            )
+        else:
+            checks.append(
+                ComplianceCheckItem(
+                    check_name="Verified URL & Link Hygiene",
+                    check_type="deterministic",
+                    verdict=ComplianceVerdict.PASS,
+                    explanation="All links match verified brand properties, or no external URLs present.",
+                    is_blocking=True,
+                )
+            )
+
+        # 2d. Deterministic Check: AI Slop & Marketing Clichés
+        cliche_patterns = [
+            (r"\bin today's fast-paced world\b", "in today's fast-paced world"),
+            (r"\bgame-changer\b", "game-changer"),
+            (r"\bsupercharge\b", "supercharge"),
+            (r"\bdelve into\b", "delve into"),
+            (r"\bunleash\b", "unleash"),
+            (r"\bskyrocket\b", "skyrocket"),
+            (r"\btestament to\b", "testament to"),
+        ]
+        found_cliches = []
+        for pat, word in cliche_patterns:
+            if re.search(pat, target_text, re.IGNORECASE):
+                found_cliches.append(word)
+
+        if found_cliches:
+            checks.append(
+                ComplianceCheckItem(
+                    check_name="Marketing Clichés & AI Slop",
+                    check_type="deterministic",
+                    verdict=ComplianceVerdict.FAIL,
+                    flagged_snippet=", ".join(found_cliches),
+                    explanation=f"Draft uses generic AI marketing clichés: {', '.join(found_cliches)}.",
+                    suggested_correction="Replace hollow buzzwords with precise operational or domain-specific terminology.",
+                    is_blocking=False,
                 )
             )
 

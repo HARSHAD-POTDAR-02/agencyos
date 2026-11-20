@@ -1053,8 +1053,8 @@ class QualityEvaluatorAgent:
             if not cta_text or len(cta_text) < 3:
                 findings.append(
                     QualityFinding(
-                        category=FindingCategory.production_feasibility,
-                        severity=FindingSeverity.warning,
+                        category=FindingCategory.hook_length_cta,
+                        severity=FindingSeverity.critical,
                         deliverable_index=idx,
                         deliverable_title=deliv.title,
                         issue_description=f"Deliverable #{idx+1} '{deliv.title}' has an empty or weak Call To Action.",
@@ -1073,22 +1073,21 @@ class QualityEvaluatorAgent:
 
             for raw_url in detected_urls:
                 raw_url_clean = raw_url.lower()
-                is_verified = any(d in raw_url_clean for d in verified_domains)
+                is_verified = any(d in raw_url_clean for d in verified_domains) if verified_domains else False
 
-                if platform == "linkedin":
-                    if not is_verified:
-                        url_violation = True
-                        findings.append(
-                            QualityFinding(
-                                category=FindingCategory.hook_length_cta,
-                                severity=FindingSeverity.critical,
-                                deliverable_index=idx,
-                                deliverable_title=deliv.title,
-                                issue_description=f"Deliverable #{idx+1} contains unverified or fabricated URL '{raw_url}'. Only verified client links from brief are permitted.",
-                                issue=f"Unverified or fabricated URL: '{raw_url}'.",
-                                remediation_instruction="Remove invented external links and use only verified client domains or standard CTA copy.",
-                            )
+                if not is_verified:
+                    url_violation = True
+                    findings.append(
+                        QualityFinding(
+                            category=FindingCategory.hook_length_cta,
+                            severity=FindingSeverity.critical,
+                            deliverable_index=idx,
+                            deliverable_title=deliv.title,
+                            issue_description=f"Deliverable #{idx+1} contains unverified or fabricated URL '{raw_url}'. Only verified client links from brief are permitted.",
+                            issue=f"Unverified or fabricated URL: '{raw_url}'.",
+                            remediation_instruction="Remove invented external links and use only verified client domains or standard CTA copy.",
                         )
+                    )
                 elif platform in ("instagram", "tiktok"):
                     # Raw clickable URLs in captions don't work on IG / TikTok
                     findings.append(

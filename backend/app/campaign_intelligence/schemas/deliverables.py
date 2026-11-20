@@ -174,6 +174,35 @@ class DeliverablePlan(BaseModel):
             d["call_to_action"] = d.get("cta") or "Learn more in bio"
         if not d.get("caption"):
             d["caption"] = d.get("body") or d.get("copy") or d.get("description") or d["primary_hook"]
+
+        # Strict 1-based sequential normalization for storyboard scenes (eliminates duplicate Scene 1)
+        if d.get("reel_scenes") and isinstance(d["reel_scenes"], list):
+            norm_scenes = []
+            for sc_idx, sc in enumerate(d["reel_scenes"], start=1):
+                if isinstance(sc, dict):
+                    sc_dict = dict(sc)
+                    sc_dict["scene_number"] = sc_idx
+                    norm_scenes.append(sc_dict)
+                elif hasattr(sc, "model_copy"):
+                    norm_scenes.append(sc.model_copy(update={"scene_number": sc_idx}))
+                else:
+                    norm_scenes.append(sc)
+            d["reel_scenes"] = norm_scenes
+
+        # Strict 1-based sequential normalization for carousel slides (eliminates duplicate Slide 1)
+        if d.get("carousel_slides") and isinstance(d["carousel_slides"], list):
+            norm_slides = []
+            for sl_idx, sl in enumerate(d["carousel_slides"], start=1):
+                if isinstance(sl, dict):
+                    sl_dict = dict(sl)
+                    sl_dict["slide_number"] = sl_idx
+                    norm_slides.append(sl_dict)
+                elif hasattr(sl, "model_copy"):
+                    norm_slides.append(sl.model_copy(update={"slide_number": sl_idx}))
+                else:
+                    norm_slides.append(sl)
+            d["carousel_slides"] = norm_slides
+
         return d
 
 

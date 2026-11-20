@@ -69,9 +69,29 @@ logger = logging.getLogger(__name__)
 # Synthesis schemas
 # ---------------------------------------------------------------------------
 
+def has_schema_docstring_echo(obj: Any) -> bool:
+    """Check if synthesized research output echoes raw schema docstrings or dummy local domains."""
+    patterns = [
+        "agencyos.local",
+        "factual statement grounded in retrieved evidence",
+        "example missing_evidence",
+        "exact name of an actual business",
+    ]
+    try:
+        if hasattr(obj, "model_dump"):
+            text = json.dumps(obj.model_dump()).lower()
+        elif isinstance(obj, dict):
+            text = json.dumps(obj).lower()
+        else:
+            text = str(obj).lower()
+        return any(p in text for p in patterns)
+    except Exception:
+        return False
+
+
 class CitedKeyFinding(BaseModel):
     """A key finding with its supporting source URL and verification tag."""
-    finding: str = Field(description="Factual statement grounded in retrieved evidence")
+    finding: str = Field(description="Concrete verified market finding supported by cited evidence")
     source_url: str | None = Field(
         default=None,
         description="Exact URL from retrieved evidence supporting this finding; None if not directly citable",
@@ -80,7 +100,7 @@ class CitedKeyFinding(BaseModel):
 
 class CompetitorFindingItem(BaseModel):
     competitor_name: str = Field(
-        description="Exact name of an actual business, brand, company, product, or creator entity. Must NOT be an SEO aggregate title, search query, or hashtag topic."
+        description="Entity name of competitor. Must NOT be an SEO aggregate title or search query."
     )
     platform: str = Field(default="web", description="Platform observed on, e.g. 'web', 'official_site', 'linkedin', 'instagram', 'youtube'")
     observed_creative_angle: str = Field(description="Specific observed hook, positioning, or creative pattern")
@@ -574,6 +594,31 @@ STRICT RULES:
                     model=settings.MARKET_RESEARCH_MODEL,
                     max_tokens=8192,
                 )
+
+                # Bug 4 Guard: If synthesized output echoes raw schema docstrings, trigger 1 automatic retry
+                if synthesis and has_schema_docstring_echo(synthesis):
+                    logger.warning("Detected schema placeholder echo in market research adapter synthesis. Triggering 1 automatic retry...")
+                    retry_prompt = (
+                        synthesis_prompt
+                        + "\n\nCRITICAL RETRY INSTRUCTION: Your previous output echoed schema placeholder docstrings verbatim "
+                        "('agencyos.local', 'Factual statement grounded in retrieved evidence', 'Example missing_evidence'). "
+                        "You MUST synthesize real factual observations from the retrieved sources or leave the field empty if no evidence exists. "
+                        "NEVER output schema placeholders, descriptions, or dummy local domains!"
+                    )
+                    try:
+                        synthesis = await invoke_structured_llm(
+                            prompt=retry_prompt,
+                            schema_class=MarketResearchSynthesisOutput,
+                            temperature=0.1,
+                            model=settings.MARKET_RESEARCH_MODEL,
+                            max_tokens=8192,
+                        )
+                    except Exception as r_err:
+                        logger.warning("Retry synthesis failed: %s", r_err)
+
+                    if synthesis and has_schema_docstring_echo(synthesis):
+                        logger.warning("Retry synthesis still contained schema echo. Falling back to zero-evidence output (evidence_count: 0).")
+                        synthesis = None
             except Exception as syn_err:
                 logger.error("Structured synthesis error: %s", syn_err, exc_info=True)
 

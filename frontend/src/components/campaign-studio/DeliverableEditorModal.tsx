@@ -43,6 +43,7 @@ export interface CarouselSlideItem {
 
 export interface DeliverableItem {
   day_number: number;
+  slot_index?: number;
   scheduled_date?: string;
   date_label?: string;
   title?: string;

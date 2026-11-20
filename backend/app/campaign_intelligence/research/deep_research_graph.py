@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import operator
 import re
@@ -766,6 +767,26 @@ def route_topics(state: DeepResearchState) -> Literal["topic_worker", "compile_r
 # 6. Editorial Compiler Node: Multi-Topic Dossier Synthesis
 # ===========================================================================
 
+def has_schema_docstring_echo(obj: Any) -> bool:
+    """Check if synthesized research output echoes raw schema docstrings or dummy local domains."""
+    patterns = [
+        "agencyos.local",
+        "factual statement grounded in retrieved evidence",
+        "example missing_evidence",
+        "exact name of an actual business",
+    ]
+    try:
+        if hasattr(obj, "model_dump"):
+            text = json.dumps(obj.model_dump()).lower()
+        elif isinstance(obj, dict):
+            text = json.dumps(obj).lower()
+        else:
+            text = str(obj).lower()
+        return any(p in text for p in patterns)
+    except Exception:
+        return False
+
+
 async def compile_report_node(state: DeepResearchState) -> dict[str, Any]:
     """
     Synthesizes the multi-topic evidence dossiers into a publication-grade intelligence report.
@@ -940,6 +961,37 @@ STRICT EDITORIAL RULES:
             model=settings.MARKET_RESEARCH_MODEL,
             temperature=0.1,
         )
+
+        # Bug 4 Guard: If synthesized output echoes raw schema docstrings, trigger 1 automatic retry
+        if has_schema_docstring_echo(synthesis):
+            logger.warning("[compile_report_node] Detected schema placeholder echo. Triggering 1 automatic retry...")
+            retry_prompt = (
+                synthesis_prompt
+                + "\n\nCRITICAL RETRY INSTRUCTION: Your previous output echoed schema placeholder docstrings verbatim "
+                "('agencyos.local', 'Factual statement grounded in retrieved evidence', 'Example missing_evidence'). "
+                "You MUST synthesize real factual observations from the retrieved sources or leave the field empty if no evidence exists. "
+                "NEVER output schema placeholders, descriptions, or dummy local domains!"
+            )
+            try:
+                synthesis = await invoke_structured_llm(
+                    prompt=retry_prompt,
+                    schema_class=MarketResearchSynthesisOutput,
+                    model=settings.MARKET_RESEARCH_MODEL,
+                    temperature=0.1,
+                )
+            except Exception as r_err:
+                logger.warning(f"[compile_report_node] Retry synthesis call failed: {r_err}")
+
+            if has_schema_docstring_echo(synthesis):
+                logger.warning("[compile_report_node] Retry still contained schema echo. Falling back to zero-evidence output (evidence_count: 0).")
+                synthesis = MarketResearchSynthesisOutput(
+                    executive_summary=f"Market landscape investigation completed across {len(discovered)} discovered sources. Zero verifiable evidence could be confirmed without schema placeholder echo.",
+                    key_findings=[],
+                    observed_competitors=[],
+                    inferred_opportunities=[],
+                    research_dimensions=[],
+                    search_limitations="Synthesis retry failed due to schema echo; fell back to evidence_count: 0.",
+                )
     except Exception as exc:
         logger.error(f"[compile_report_node] Synthesis LLM failed: {exc}", exc_info=True)
         findings: list[CitedKeyFinding] = []
@@ -1246,10 +1298,15 @@ async def run_deep_research(
 
     # Map validated competitors into CompetitorActivity domain model
     competitor_activities: list[CompetitorActivity] = []
+    fallback_valid_url = next(iter(inspected.keys()), None) or next(iter(discovered.keys()), None)
     for c in synthesis.observed_competitors:
-        src_url = c.supporting_source_url or "https://agencyos.local"
-        if not (src_url.startswith("http://") or src_url.startswith("https://")):
-            src_url = "https://agencyos.local"
+        src_url = c.supporting_source_url or fallback_valid_url
+        if src_url and "agencyos.local" in src_url:
+            src_url = fallback_valid_url
+        if src_url and not (src_url.startswith("http://") or src_url.startswith("https://")):
+            src_url = fallback_valid_url
+        if not src_url:
+            continue
         netloc = urlparse(src_url).netloc or "Web Search"
         citation = EvidenceCitation(
             source_title=c.competitor_name or "Competitor Observation",

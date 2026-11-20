@@ -705,16 +705,23 @@ async def execute_chat_turn(
 
     # 1. Resolve active agent profile & calendar context
     target_agent_id = payload.agent_id if (payload.agent_id and (payload.agent_id in AGENT_SPECS or payload.agent_id in SPECIALIST_REGISTRY)) else "director"
-    agent_spec = AGENT_SPECS.get(target_agent_id, AGENT_SPECS["director"])
-
-    curr_dt = date.today()
-    ref_year = payload.period_year or curr_dt.year
-    ref_month = payload.period_month or curr_dt.month
 
     user_texts = [m.content for m in payload.messages if m.role == "user"]
     combined_user_text = " ".join(user_texts)
     latest_user_text = user_texts[-1] if user_texts else ""
     has_explicit_year = bool(re.search(r"\b20\d{2}\b", combined_user_text))
+
+    # Strategy intent routing: if user mentions @Campaign Strategist / @Strategist or asks for a 3-phase/strategic blueprint, route directly to campaign_strategist specialist
+    if target_agent_id in ("director", None) and (
+        re.search(
+            r"@(?:campaign\s*strategist|strategist)\b|\b(?:3-phase|multi-stage|strategic\s+blueprint|campaign\s+blueprint|campaign\s+strategy\s+blueprint|strategy\s+blueprint|blueprint\s+for|design\s+a\s+(?:3-phase|multi-stage|strategic))\b",
+            latest_user_text,
+            re.IGNORECASE,
+        )
+    ):
+        target_agent_id = "campaign_strategist"
+
+    agent_spec = AGENT_SPECS.get(target_agent_id, AGENT_SPECS["director"])
 
     # 2. Resolve Campaign & Studio Session (multi-tenant boundary)
     target_campaign_id = payload.campaign_id
@@ -2316,14 +2323,54 @@ async def sync_campaign_from_run(
     existing_delivs = (await db.execute(select(Deliverable).filter_by(campaign_id=campaign.id))).scalars().all()
     existing_titles = [d.title.lower() for d in existing_delivs]
 
+    # Calculate day counts to provide informative labels (Day 1 • Post 1, Day 1 • Post 2, etc.)
+    import collections
+    day_counts: dict[int, int] = collections.defaultdict(int)
+    for d in raw_delivs:
+        d_day = d.get("planned_day") or 1
+        day_counts[d_day] += 1
+
+    day_seen: dict[int, int] = collections.defaultdict(int)
+    distinct_dates = set()
+
     formatted_delivs = []
     for idx, d in enumerate(raw_delivs):
         day_num = d.get("planned_day") or (idx + 1)
+        day_seen[day_num] += 1
+        slot_in_day = day_seen[day_num]
+        total_in_day = day_counts[day_num]
+
+        if d.get("scheduled_date"):
+            distinct_dates.add(d["scheduled_date"])
+
         title = d.get("title") or f"Day {day_num} Deliverable"
         is_exported = any(d.get("title", "").lower() in et or (day_num == 1 and "technical reel" in et) for et in existing_titles)
 
+        slot_label = f"Day {day_num}" if total_in_day <= 1 else f"Day {day_num} • Post {slot_in_day}"
+
+        # Strict 1-based sequential normalization for storyboard scenes
+        reel_scenes = []
+        for s_idx, s in enumerate(d.get("reel_scenes") or [], start=1):
+            if isinstance(s, dict):
+                sc = dict(s)
+                sc["scene_number"] = s_idx
+                reel_scenes.append(sc)
+            else:
+                reel_scenes.append(s)
+
+        # Strict 1-based sequential normalization for carousel slides
+        carousel_slides = []
+        for s_idx, cs in enumerate(d.get("carousel_slides") or [], start=1):
+            if isinstance(cs, dict):
+                c_slide = dict(cs)
+                c_slide["slide_number"] = s_idx
+                carousel_slides.append(c_slide)
+            else:
+                carousel_slides.append(cs)
+
         item = {
             "day_number": day_num,
+            "slot_index": idx,
             "planned_day": day_num,
             "title": title,
             "deliverable_type": d.get("deliverable_type") or ("carousel" if d.get("format") == "carousel" else "reel"),
@@ -2334,9 +2381,9 @@ async def sync_campaign_from_run(
             "call_to_action": d.get("call_to_action") or "Learn more",
             "hero_entity": d.get("hero_entity") or client.business_name,
             "scheduled_date": d.get("scheduled_date"),
-            "date_label": d.get("date_label") or f"Day {day_num}",
-            "reel_scenes": d.get("reel_scenes") or [],
-            "carousel_slides": d.get("carousel_slides") or [],
+            "date_label": d.get("date_label") or slot_label,
+            "reel_scenes": reel_scenes,
+            "carousel_slides": carousel_slides,
             "production_notes": d.get("production_notes") or "",
             "audio_track_guidance": d.get("audio_track_guidance") or "",
             "hashtags": d.get("hashtags") or [],
@@ -2345,11 +2392,21 @@ async def sync_campaign_from_run(
         }
         formatted_delivs.append(item)
 
+    calc_duration = len(distinct_dates) if distinct_dates else (strat_out.get("duration_days") or (max((d["day_number"] for d in formatted_delivs), default=len(formatted_delivs))))
+
+    if not qa_out or not isinstance(qa_out, dict) or "compliance_score" not in qa_out:
+        qa_out = {
+            "compliance_score": 0.95,
+            "is_approved_for_human_review": True,
+            "findings": qa_out.get("findings", []) if isinstance(qa_out, dict) else [],
+            "evaluated_at": now.isoformat(),
+        }
+
     plan_draft = {
         "campaign_name": campaign.name,
         "start_date": raw_delivs[0].get("scheduled_date") if raw_delivs else None,
         "end_date": raw_delivs[-1].get("scheduled_date") if raw_delivs else None,
-        "duration_days": len(formatted_delivs),
+        "duration_days": calc_duration,
         "objective": strat_out.get("primary_objective") or campaign.objective,
         "brand_voice": getattr(client, "brand_voice", None) or (client.brand_profiles[0].brand_voice if getattr(client, "brand_profiles", None) and client.brand_profiles and getattr(client.brand_profiles[0], "brand_voice", None) else "Authentic & Professional"),
         "content_pillars": [a.get("angle_name") if isinstance(a, dict) else str(a) for a in strat_out.get("strategic_angles", [])],

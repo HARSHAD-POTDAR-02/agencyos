@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -28,6 +29,170 @@ from app.core.config import settings
 from app.core.llm import invoke_structured_llm
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Creative Content Scrubber (Bug 7: P1 Polish with Constraint 2)
+# ---------------------------------------------------------------------------
+
+def scrub_creative_content(text: str) -> str:
+    """
+    Sanitizes creative scripts, hooks, and voiceovers.
+    Preserves clean [CLIENT_INPUT_NEEDED: <specific missing fact>] tags for editors.
+    Scrubs:
+    - Internal spoken compliance disclaimers ('We will not present...', 'VERIFIED FIGURES: PENDING...')
+    - Platform meta-guidance sentences ('Reels are best for...', 'Carousels are ideal for...')
+    - Literal prompt angle brackets like '[CLIENT_INPUT_NEEDED: <exact missing proof or testimonial>]'
+    """
+    if not text:
+        return ""
+
+    cleaned = text
+
+    # 1. Scrub literal prompt angle-bracket placeholders
+    cleaned = re.sub(
+        r"\[CLIENT_INPUT_NEEDED:\s*<[^>]+>\]",
+        "[CLIENT_INPUT_NEEDED: Verified client metric or case study]",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"<\s*exact\s+missing\s+(?:proof|metric|fact|testimonial)[^>]*>",
+        "Verified client metric",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # 2. Scrub spoken compliance disclaimers
+    spoken_compliance_patterns = [
+        r"(?:Note:\s*)?(?:We|I)\s+(?:will|can)?\s*not\s+present\s+[^.]+until\s+they\s+are\s+approved\.?",
+        r"VERIFIED\s+FIGURES:\s*PENDING(?:\s+CLIENT\s+CONFIRMATION)?\.?",
+        r"\bPENDING\s+CLIENT\s+CONFIRMATION\b\.?",
+        r"(?:Note:\s*)?(?:We|I)\s+do\s+not\s+have\s+verified\s+figures\s+for\s+[^.]+\.?",
+        r"\bAll\s+figures\s+are\s+subject\s+to\s+client\s+verification\.?",
+        r"⚠️\s*\[CLIENT_INPUT_NEEDED\]",
+    ]
+    for pat in spoken_compliance_patterns:
+        cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
+
+    # 3. Scrub platform meta-guidance sentences
+    platform_meta_patterns = [
+        r"Reels\s+are\s+best\s+for\s+content\s+where\s+the\s+video\s+is\s+the\s+whole\s+experience\.?",
+        r"(?:Reels|Carousels|Videos|Posts)\s+are\s+(?:best|ideal|great)\s+for\s+[^.]+\.?",
+        r"This\s+(?:deliverable|reel|carousel|video|post)\s+is\s+designed\s+to\s+[^.]+\.?",
+        r"Target\s+audience:\s*[^.]+\.?",
+    ]
+    for pat in platform_meta_patterns:
+        cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
+
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned).strip()
+    return cleaned
+
+
+def apply_deliverable_scrubber(d: DeliverablePlan) -> DeliverablePlan:
+    """Applies clean scrubbing across all text fields of a deliverable plan."""
+    d.primary_hook = scrub_creative_content(d.primary_hook)
+    d.title = scrub_creative_content(d.title)
+    d.caption = scrub_creative_content(d.caption)
+    d.call_to_action = scrub_creative_content(d.call_to_action)
+
+    if d.reel_scenes:
+        for sc in d.reel_scenes:
+            sc.spoken_audio_or_voiceover = scrub_creative_content(sc.spoken_audio_or_voiceover)
+            sc.on_screen_text = scrub_creative_content(sc.on_screen_text)
+            sc.visual_action = scrub_creative_content(sc.visual_action)
+
+    if d.carousel_slides:
+        for sl in d.carousel_slides:
+            sl.headline = scrub_creative_content(sl.headline)
+            sl.body_copy = scrub_creative_content(sl.body_copy)
+            sl.visual_layout = scrub_creative_content(sl.visual_layout)
+
+    return d
+
+
+# ---------------------------------------------------------------------------
+# Dynamic Style & Industry Motif Derivation (Constraints 3 & 4)
+# ---------------------------------------------------------------------------
+
+def derive_dynamic_emoji_policy(brand_voice: list[str] | None) -> str:
+    """Derive dynamic tone and emoji policy from brand_context.brand_voice (Constraint 3)."""
+    voice_str = " ".join(brand_voice or []).lower() if brand_voice else ""
+    is_restrained_voice = any(
+        w in voice_str
+        for w in ("restrained", "minimalist", "enterprise", "serious", "academic", "sober", "technical", "clinical", "formal", "authoritative")
+    )
+    if is_restrained_voice:
+        return "ZERO emojis (strict restraint). Do NOT use playful, hyped, or consumer emojis like rocket, wrench, or hype icons."
+    return "Use 1-3 contextual, expressive emojis matching brand tone."
+
+get_dynamic_emoji_rule = derive_dynamic_emoji_policy
+
+
+def derive_industry_visual_motifs(industry: str | None) -> str:
+    """Derive dynamic multi-industry visual motifs (Constraint 3: Realistic low-budget shoots)."""
+    industry_lower = (industry or "").lower()
+    if any(k in industry_lower for k in ("tech", "cloud", "software", "saas", "ai", "cyber", "data")):
+        return (
+            "Technical lead talking-head POV at desk with dual-monitor screen recording, "
+            "whiteboard architecture/flow walkthrough, or tablet displaying telemetry dashboard. Everyday tech office props."
+        )
+    elif any(k in industry_lower for k in ("health", "clinic", "wellness", "medical", "dental", "pharma")):
+        return (
+            "Practitioner in authentic consultation room, patient journey walkthrough, "
+            "desk with medical reference or anatomical model, calm direct-to-camera explanation. Everyday clinic props."
+        )
+    elif any(k in industry_lower for k in ("retail", "e-comm", "fashion", "product", "beauty")):
+        return (
+            "Clean unboxing on neutral table, authentic hands-on product demonstration, "
+            "founder talking head holding product in daylight studio or showroom."
+        )
+    elif any(k in industry_lower for k in ("finance", "legal", "consult", "law", "account")):
+        return (
+            "Partner at conference table or clean office desk, document review, "
+            "whiteboard framework breakdown, authoritative direct-to-camera POV."
+        )
+    elif any(k in industry_lower for k in ("food", "restaurant", "hospitality", "hotel", "cafe")):
+        return (
+            "Kitchen prep counter, dining room ambience walkthrough, chef plating dish, "
+            "welcoming greeting at venue entrance. Everyday dining props."
+        )
+    else:
+        return (
+            "Authentic founder/specialist talking-head POV, real workspace walkthrough, "
+            "whiteboard breakdown, or everyday desktop/tablet prop."
+        )
+
+get_dynamic_visual_motifs = derive_industry_visual_motifs
+
+
+def derive_concrete_carousel_structure(industry: str | None) -> str:
+    """Enforce concrete, saveable slide architecture adapted to industry (Constraint 4)."""
+    ind_name = industry or "the client industry"
+    ind_lower = (industry or "").lower()
+    if any(k in ind_lower for k in ("tech", "cloud", "software", "saas", "ai", "cyber", "data")):
+        hook_label = "Slide 1 (The Provocative Hook): Bold, high-contrast headline identifying the core tension or counterintuitive reality."
+        root_cause = "Slide 2 (The Hidden Architecture Flaw): Unpacks the hidden underlying metric or network bottleneck."
+        checklist = "Slide 3 (The Triage / Audit Checklist): Concrete 3-4 step diagnostic or command/setting readers can audit."
+    elif any(k in ind_lower for k in ("food", "restaurant", "hospitality", "hotel", "cafe")):
+        hook_label = "Slide 1 (The Hook): Bold, high-contrast headline identifying the culinary or service tension."
+        root_cause = "Slide 2 (The Hidden Mistake): Reveals the common operational error compromising flavor or service."
+        checklist = "Slide 3 (The Actionable Framework): Concrete 3-step prep or ingredient standard readers can replicate."
+    else:
+        hook_label = "Slide 1 (The Hook): Bold, high-contrast headline identifying the core tension or counterintuitive reality."
+        root_cause = "Slide 2 (The Root Cause): Unpacks the hidden underlying mechanism or why conventional approaches fail."
+        checklist = "Slide 3 (The Actionable Checklist): Concrete 3-4 step practical diagnostic that readers can bookmark and execute."
+
+    return (
+        f"Enforce concrete, saveable slide architecture adapted to {ind_name}:\n"
+        f"* {hook_label}\n"
+        f"* {root_cause}\n"
+        f"* {checklist}\n"
+        f"* Slide 4 (The Before vs. After Standard): Tangible contrast between the standard pitfall vs the optimized state.\n"
+        f"* Slide 5 (The Action Step): Clear takeaway summary and actionable call-to-action tied to client's verified offer."
+    )
+
+get_concrete_carousel_structure = derive_concrete_carousel_structure
 
 
 class MicroBatchOutput(BaseModel):
@@ -84,6 +249,11 @@ class ContentArchitectAgent:
         offers_text = ", ".join([o.name for o in brand_context.verified_offers]) if brand_context and brand_context.verified_offers else "Standard Services"
         factual_boundaries = brand_context.get_factual_boundary_prompt() if brand_context else ""
 
+        # Derive dynamic tone, emoji policy, visual motifs, and carousel structure (Constraints 3 & 4)
+        emoji_policy = derive_dynamic_emoji_policy(brand_context.brand_voice if brand_context else [])
+        industry_visual_motifs = derive_industry_visual_motifs(brand_context.industry if brand_context else "")
+        carousel_structure = derive_concrete_carousel_structure(brand_context.industry if brand_context else "")
+
         # Format hero entities
         pinned = brief.pinned_entities or []
         hero_section = ""
@@ -125,7 +295,7 @@ class ContentArchitectAgent:
         slot_blocks = []
         for s in batch_slots:
             proof_guidance = (
-                f"MANDATORY: No verified case studies/metrics exist for this slot! You MUST emit '[CLIENT_INPUT_NEEDED: <exact missing proof or testimonial>]' instead of fabricating numbers, percentages, or quotes!"
+                f"MANDATORY: No verified case studies/metrics exist for this slot! You MUST emit '[CLIENT_INPUT_NEEDED: <specific missing fact>]' instead of fabricating numbers, percentages, or quotes!"
                 if s.allowed_proof_points == ["NONE_USE_PLACEHOLDER"]
                 else f"Allowed verified proof points: {', '.join(s.allowed_proof_points)}"
             )
@@ -166,6 +336,7 @@ Your task is to generate high-density, production-ready deliverable plans for EX
 - Prescribed Tone (DO): {tone_do}
 - Proscribed Tone (DONT): {tone_dont}
 - FORBIDDEN TERMS (NEVER USE): {prohibited_terms}
+- EMOJI & TONE POLICY: {emoji_policy}
 {hero_section}
 {memory_section}
 ### TARGET SLOTS FOR THIS BATCH (Generate EXACTLY {len(batch_slots)} DeliverablePlans):
@@ -174,33 +345,36 @@ Your task is to generate high-density, production-ready deliverable plans for EX
 ### PRODUCTION REQUIREMENTS PER FORMAT:
 
 1. REELS (15–60 Seconds Total Duration):
-   - Primary Hook (0-3s): High tension, physical pattern interrupt (prop, movement, angle) + spoken opening line.
+   - Primary Hook (0-3s): High tension, physical pattern interrupt + spoken opening line.
    - Pacing & Spoken Cadence: Voiceover MUST be calibrated to 2.2–2.8 spoken words per second.
      * 3-second hook: 6–8 words
      * 8-second breakdown: 18–22 words
      * 12-second demonstration: 26–33 words
    - Storyboards (`reel_scenes`): 4 to 6 timestamped scenes with STRICTLY sequential, non-overlapping timestamps:
      (e.g., 0:00-0:03 Hook, 0:03-0:10 Mechanism, 0:10-0:22 Demo, 0:22-0:35 Proof, 0:35-0:45 CTA).
-     * visual_action: Camera angle, talent movement, physical lighting/environment cues (physically filmable!).
-     * spoken_audio_or_voiceover: Authentic spoken dialogue matching word-per-second constraints.
-     * on_screen_text: Exact graphic overlay text.
-     * b_roll_notes: Specific cutaway footage.
+   - Visual Motifs & Feasibility (Constraint 3):
+     * Recommended Motifs: {industry_visual_motifs}
+     * Zero-budget feasibility: Every direction MUST be physically filmable with an everyday smartphone and available workspace/props.
+     * STRICT PROHIBITIONS: NO custom industrial props, NO CGI effects, and NO CLI terminals for non-tech clients!
    - audio_track_guidance: Specific genre, pacing, and sound effects (SFX) cues.
    - call_to_action: Linked directly to a verified client offer or consultation.
 
-2. CAROUSELS (5 to 8 Slides Target):
-   - Slide 1: High-retention cover with bold visual layout and thumb-stop headline.
-   - Slides 2 to N-1: Sequential value/framework/breakdown slides with scannable body copy and clear visual_layout specs.
-   - Final Slide: Concrete call-to-action slide.
-   - Complete social caption with verified CTA.
+2. CAROUSELS (5 to 7 Slides Target - Constraint 4):
+   - {carousel_structure}
+   - Every slide MUST specify a clear, physically producible `visual_layout` and crisp `headline`.
+   - Complete social caption with verified CTA (following emoji policy: {emoji_policy}).
 
-3. PROOF GROUNDING & PLACEHOLDERS:
-   - When a slot has no verified proof points or mentions NONE_USE_PLACEHOLDER, emit [CLIENT_INPUT_NEEDED: <exact missing fact>] instead of fabricating metrics!
+3. PROOF GROUNDING & PLACEHOLDERS (Constraint 2):
+   - When a slot has no verified proof points or mentions NONE_USE_PLACEHOLDER, emit '[CLIENT_INPUT_NEEDED: <specific missing fact>]' instead of fabricating metrics!
+   - NEVER recite compliance rules aloud in spoken scripts (e.g. NEVER speak 'We will not present numbers until approved').
 
 4. ANTI-CLICHÉ PROHIBITIONS (STRICT):
    - NEVER use marketing slop: "delve", "game-changer", "unleash", "revolutionize", "elevate", "in today's fast-paced world", "skyrocket", "supercharge", "dive into", "unlock your potential", "look no further", "secret sauce".
 
-5. STRICT ENGLISH REQUIREMENT:
+5. TOPIC ROTATION (Bug 9):
+   - Do NOT repeat the exact same sub-topic across deliverables! Rotate across distinct buyer considerations, operational realities, and value angles.
+
+6. STRICT ENGLISH REQUIREMENT:
    - All text, voiceover scripts, captions, and slide copy MUST be written exclusively in English.
 """
 
@@ -219,7 +393,7 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                 )
                 deliverables = list(batch_output.deliverables)
                 if deliverables:
-                    return deliverables
+                    return [apply_deliverable_scrubber(d) for d in deliverables]
             except Exception as e:
                 last_err = e
                 logger.warning(
@@ -281,9 +455,37 @@ Your task is to generate high-density, production-ready deliverable plans for EX
             )
 
             # Reconcile each deliverable with its source DeliverableSlot
+            # If batch returned fewer deliverables than slots, generate missing slots individually
+            if len(batch_delivs) < len(batch_slots):
+                for missing_slot_idx in range(len(batch_delivs), len(batch_slots)):
+                    missing_slot = batch_slots[missing_slot_idx]
+                    logger.info(f"Generating single deliverable for missing slot {missing_slot.slot_index}")
+                    try:
+                        single_delivs = await self._generate_micro_batch(
+                            batch_slots=[missing_slot],
+                            strategy=strategy,
+                            brief=brief,
+                            brand_context=brand_context,
+                            previously_generated_summary=previously_generated_summary,
+                            revision_instructions=revision_instructions,
+                        )
+                        if single_delivs:
+                            batch_delivs.append(single_delivs[0])
+                    except Exception as e:
+                        logger.warning(f"Fallback generation for slot {missing_slot.slot_index} failed: {e}")
+
             for i, slot in enumerate(batch_slots):
-                raw_d = batch_delivs[i] if i < len(batch_delivs) else batch_delivs[-1]
-                d = raw_d.model_copy(deep=True)
+                if i < len(batch_delivs):
+                    raw_d = batch_delivs[i]
+                elif batch_delivs:
+                    # Deep copy and mutate with slot-specific fields to prevent identical clones
+                    raw_d = batch_delivs[-1].model_copy(deep=True)
+                    raw_d.primary_hook = f"{slot.strategic_angle_ref}: {raw_d.primary_hook}"
+                    raw_d.title = f"{slot.strategic_angle_ref} Sprint Day {slot.planned_day}"
+                else:
+                    continue
+
+                d = apply_deliverable_scrubber(raw_d.model_copy(deep=True))
                 if not d.deliverable_id:
                     d.deliverable_id = uuid.uuid4()
 
@@ -340,6 +542,25 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                 })
 
                 all_deliverables.append(d)
+
+        # Post-generation anti-cloning and hook deduplication pass
+        seen_hooks: dict[str, int] = {}
+        for d in all_deliverables:
+            h_key = d.primary_hook.strip().lower()
+            if h_key in seen_hooks:
+                # Try picking an alternate hook from hook_options that hasn't been used yet
+                alt_chosen = None
+                for opt in (d.hook_options or []):
+                    if opt.strip().lower() not in seen_hooks and len(opt.strip()) >= 5:
+                        alt_chosen = opt.strip()
+                        break
+                if alt_chosen:
+                    d.primary_hook = alt_chosen
+                else:
+                    d.primary_hook = f"{d.strategic_angle}: {d.primary_hook}"
+                seen_hooks[d.primary_hook.strip().lower()] = d.slot_index
+            else:
+                seen_hooks[h_key] = d.slot_index
 
         all_deliverables.sort(key=lambda x: x.slot_index)
         return all_deliverables
@@ -418,9 +639,40 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                 revision_instructions=rev_instructions,
             )
 
+            if len(batch_delivs) < len(chunk):
+                for missing_idx in range(len(batch_delivs), len(chunk)):
+                    missing_slot = chunk[missing_idx]
+                    try:
+                        single_res = await self._generate_micro_batch(
+                            batch_slots=[missing_slot],
+                            strategy=strategy,
+                            brief=brief or CampaignBrief(
+                                client_id=uuid.uuid4(),
+                                agency_id=uuid.uuid4(),
+                                period_month=11,
+                                period_year=2026,
+                                objective=strategy.primary_objective,
+                            ),
+                            brand_context=brand_context,
+                            previously_generated_summary=passing_summary,
+                            revision_instructions=rev_instructions,
+                        )
+                        if single_res:
+                            batch_delivs.append(single_res[0])
+                    except Exception as e:
+                        logger.warning(f"Repair fallback for slot {missing_slot.slot_index} failed: {e}")
+
             for i, slot in enumerate(chunk):
-                raw_d = batch_delivs[i] if i < len(batch_delivs) else batch_delivs[-1]
-                d = raw_d.model_copy(deep=True)
+                if i < len(batch_delivs):
+                    raw_d = batch_delivs[i]
+                elif batch_delivs:
+                    raw_d = batch_delivs[-1].model_copy(deep=True)
+                    raw_d.primary_hook = f"{slot.strategic_angle_ref}: {raw_d.primary_hook}"
+                    raw_d.title = f"{slot.strategic_angle_ref} Sprint Day {slot.planned_day}"
+                else:
+                    continue
+
+                d = apply_deliverable_scrubber(raw_d.model_copy(deep=True))
                 d.slot_index = slot.slot_index
                 d.planned_day = slot.planned_day
                 d.deliverable_type = slot.deliverable_type
