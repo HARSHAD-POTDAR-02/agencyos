@@ -717,16 +717,20 @@ function CampaignStudioContent() {
         }
 
         if (loadedArts.length > 0) {
-          setPersistedArtifacts(loadedArts);
+          const taggedArts = loadedArts.map((a) => ({
+            ...a,
+            chat_id: a.chat_id || activeChatId || undefined,
+          }));
+          setPersistedArtifacts(taggedArts);
           setActiveArtifact((prev) => {
-            if (!prev || !loadedArts.some((a) => a.id === prev.id)) {
-              return loadedArts[0];
+            if (!prev || !taggedArts.some((a) => a.id === prev.id)) {
+              return taggedArts[0];
             }
             return prev;
           });
         } else if (!isPipelineRunningRef.current && !isProgrammaticCampaignChangeRef.current) {
-          setPersistedArtifacts([]);
-          setActiveArtifact(null);
+          // Do not wipe in-memory artifacts if the active chat session already has them
+          setPersistedArtifacts((prev) => (prev.length > 0 ? prev : []));
         }
       } catch (err) {
         console.error("Failed to load campaign studio artifacts:", err);
@@ -734,7 +738,7 @@ function CampaignStudioContent() {
         setIsLoadingArtifacts(false);
       }
     },
-    [effectiveAgencyId, token]
+    [effectiveAgencyId, token, activeChatId]
   );
 
   // Load operational DAG run deliverables for the active client
@@ -2359,19 +2363,26 @@ function CampaignStudioContent() {
 
       setPersistedArtifacts(newArtifacts);
 
+      let syncedCampId = activeCampaignId;
       // Auto-sync entire generated sprint into the campaign's ai_plan_draft
       if (selectedClientId && runId) {
-        campaignApi
-          .syncRunToCampaign(effectiveAgencyId, selectedClientId, runId, token)
-          .then((syncedCamp: any) => {
-            if (syncedCamp?.id) {
-              isProgrammaticCampaignChangeRef.current = true;
-              setActiveCampaignId(syncedCamp.id);
-              loadClientCampaigns(selectedClientId);
-              loadCampaignArtifacts(syncedCamp.id);
-            }
-          })
-          .catch((e: any) => console.error("Auto-sync to campaign plan error:", e));
+        try {
+          const syncedCamp: any = await campaignApi.syncRunToCampaign(
+            effectiveAgencyId,
+            selectedClientId,
+            runId,
+            token
+          );
+          if (syncedCamp?.id) {
+            syncedCampId = syncedCamp.id;
+            isProgrammaticCampaignChangeRef.current = true;
+            setActiveCampaignId(syncedCamp.id);
+            await loadClientCampaigns(selectedClientId);
+            await loadCampaignArtifacts(syncedCamp.id);
+          }
+        } catch (e: any) {
+          console.error("Auto-sync to campaign plan error:", e);
+        }
       }
 
       if (clientTask && clientTask.status === "waiting_for_human") {
@@ -2382,12 +2393,14 @@ function CampaignStudioContent() {
         });
       }
 
+      const plannerUrl = `/campaign-plans?clientId=${selectedClientId}&campaignId=${syncedCampId || activeCampaignId || ""}`;
+
       setChatMessages((prev) => [
         ...prev,
         {
           id: `deliv-ready-${Date.now()}`,
           role: "assistant",
-          content: `✨ **Creative Deliverables Generated & Synced to Campaign Planner!**\n* **Quality Audit:** ${complianceScore}% brand compliance score.\n* **Factual Claims:** Verified against brand profile.\n\n👉 **Next Steps:** Review deliverables on canvas, or **[Open in Campaign Planner →](/campaign-plans)** to reject/accept ideas and push to production tasks in batch or individually.`,
+          content: `✨ **Creative Deliverables Generated & Synced to Campaign Planner!**\n* **Quality Audit:** ${complianceScore}% brand compliance score.\n* **Factual Claims:** Verified against brand profile.\n\n👉 **Next Steps:** Review deliverables on canvas, or **[Open in Campaign Planner →](${plannerUrl})** to reject/accept ideas and push to production tasks in batch or individually.`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           agent_id: "director",
           agent_name: "Campaign Director",

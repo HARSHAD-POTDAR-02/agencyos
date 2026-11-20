@@ -602,6 +602,7 @@ async def guarded_handle_selective_repair(
         db=db,
         task_id=target_task.id,
         repair_instructions=instructions,
+        actor_id=worker_id,
         author_id=worker_id,
     )
     await db.commit()

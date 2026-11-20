@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import asyncio
 import json
@@ -2254,21 +2254,33 @@ async def sync_campaign_from_run(
 
     raw_delivs = []
     if "content_architecture" in tasks:
-        c_res = await db.execute(select(TaskOutputVersion).filter_by(task_id=tasks["content_architecture"].id))
+        c_res = await db.execute(
+            select(TaskOutputVersion)
+            .filter_by(task_id=tasks["content_architecture"].id)
+            .order_by(TaskOutputVersion.version_number.desc())
+        )
         c_ver = c_res.scalars().first()
         if c_ver and isinstance(c_ver.output_payload, dict):
             raw_delivs = c_ver.output_payload.get("deliverables", [])
 
     strat_out = {}
     if "campaign_strategy" in tasks:
-        s_res = await db.execute(select(TaskOutputVersion).filter_by(task_id=tasks["campaign_strategy"].id))
+        s_res = await db.execute(
+            select(TaskOutputVersion)
+            .filter_by(task_id=tasks["campaign_strategy"].id)
+            .order_by(TaskOutputVersion.version_number.desc())
+        )
         s_ver = s_res.scalars().first()
         if s_ver and isinstance(s_ver.output_payload, dict):
             strat_out = s_ver.output_payload
 
     qa_out = {}
     if "final_quality_audit" in tasks:
-        qa_res = await db.execute(select(TaskOutputVersion).filter_by(task_id=tasks["final_quality_audit"].id))
+        qa_res = await db.execute(
+            select(TaskOutputVersion)
+            .filter_by(task_id=tasks["final_quality_audit"].id)
+            .order_by(TaskOutputVersion.version_number.desc())
+        )
         qa_ver = qa_res.scalars().first()
         if qa_ver and isinstance(qa_ver.output_payload, dict):
             qa_out = qa_ver.output_payload
@@ -2339,7 +2351,7 @@ async def sync_campaign_from_run(
         "end_date": raw_delivs[-1].get("scheduled_date") if raw_delivs else None,
         "duration_days": len(formatted_delivs),
         "objective": strat_out.get("primary_objective") or campaign.objective,
-        "brand_voice": client.brand_voice or "Authentic & Professional",
+        "brand_voice": getattr(client, "brand_voice", None) or (client.brand_profiles[0].brand_voice if getattr(client, "brand_profiles", None) and client.brand_profiles and getattr(client.brand_profiles[0], "brand_voice", None) else "Authentic & Professional"),
         "content_pillars": [a.get("angle_name") if isinstance(a, dict) else str(a) for a in strat_out.get("strategic_angles", [])],
         "total_deliverables_planned": len(formatted_delivs),
         "generator": "AgencyOS Multi-Agent DAG Engine",

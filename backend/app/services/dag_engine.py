@@ -381,6 +381,7 @@ class DAGEngine:
         task_id: uuid.UUID,
         repair_instructions: str,
         actor_id: str = "quality_evaluator",
+        author_id: str | None = None,
     ) -> bool:
         """
         Initiates a selective repair attempt for a task that produced flawed output.
@@ -389,6 +390,7 @@ class DAGEngine:
         Increments current_version and execution_generation, creating a new queue entry.
         Returns True if repair queued, False if escalated to human.
         """
+        effective_actor = author_id or actor_id
         task = await db.get(WorkflowTask, task_id, with_for_update=True)
         if not task:
             return False
