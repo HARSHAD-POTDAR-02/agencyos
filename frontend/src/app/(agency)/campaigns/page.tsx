@@ -405,6 +405,13 @@ function CampaignStudioContent() {
 
   // Pipeline Execution State
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
+  const isPipelineRunningRef = useRef(false);
+  const isProgrammaticCampaignChangeRef = useRef(false);
+
+  // Keep isPipelineRunningRef in sync
+  useEffect(() => {
+    isPipelineRunningRef.current = isPipelineRunning;
+  }, [isPipelineRunning]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -658,15 +665,16 @@ function CampaignStudioContent() {
           });
         }
 
-        setPersistedArtifacts(loadedArts);
         if (loadedArts.length > 0) {
+          setPersistedArtifacts(loadedArts);
           setActiveArtifact((prev) => {
             if (!prev || !loadedArts.some((a) => a.id === prev.id)) {
               return loadedArts[0];
             }
             return prev;
           });
-        } else {
+        } else if (!isPipelineRunningRef.current && !isProgrammaticCampaignChangeRef.current) {
+          setPersistedArtifacts([]);
           setActiveArtifact(null);
         }
       } catch (err) {
@@ -824,6 +832,7 @@ function CampaignStudioContent() {
 
   // Sync persistent artifacts whenever active campaign sprint changes or client changes
   useEffect(() => {
+    if (isPipelineRunning || isPipelineRunningRef.current || isProgrammaticCampaignChangeRef.current) return;
     if (activeCampaignId && effectiveAgencyId && token) {
       loadCampaignArtifacts(activeCampaignId);
     } else if (selectedClientId && effectiveAgencyId && token) {
@@ -831,7 +840,7 @@ function CampaignStudioContent() {
     } else if (!activeWorkflowRunId) {
       setPersistedArtifacts([]);
     }
-  }, [activeCampaignId, selectedClientId, effectiveAgencyId, token, loadCampaignArtifacts, loadOperationalRunArtifacts, activeWorkflowRunId]);
+  }, [activeCampaignId, selectedClientId, effectiveAgencyId, token, loadCampaignArtifacts, loadOperationalRunArtifacts, activeWorkflowRunId, isPipelineRunning]);
 
   // Load agency team members for production assignment
   useEffect(() => {
@@ -865,6 +874,12 @@ function CampaignStudioContent() {
     if (!selectedClientId || clients.length === 0) return;
     const client = clients.find((c) => c.id === selectedClientId) || null;
     setSelectedClient(client);
+
+    // If a pipeline is currently executing or campaign was updated programmatically by an active session, DO NOT wipe chat
+    if (isPipelineRunning || isPipelineRunningRef.current || isProgrammaticCampaignChangeRef.current) {
+      isProgrammaticCampaignChangeRef.current = false;
+      return;
+    }
 
     const storageKey = getStorageKey(selectedClientId, activeCampaignId);
     if (typeof window !== "undefined") {
@@ -914,6 +929,38 @@ function CampaignStudioContent() {
       }
     }
 
+    // If no saved chat found for this specific campaign key, check if user has active unsaved chat in memory
+    const hasUserContent = chatMessages.some((m) => m.role === "user");
+    if (hasUserContent) {
+      // Save current conversation to this new campaign storage key so it is attached and preserved!
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              messages: chatMessages,
+              suggestedObjective,
+              suggestedCustomBrief,
+              isReadyToGenerate,
+              startDate,
+              endDate,
+              durationDays,
+              periodMonth,
+              periodYear,
+              studioMode,
+              activeSpecialistId,
+              activeCampaignId,
+              pinnedEntities,
+              discoveredEntities,
+            })
+          );
+        } catch (e) {
+          console.error("Failed to save ongoing chat to new campaign key", e);
+        }
+      }
+      return;
+    }
+
     // Fallback welcome message when no cached history exists for this campaign
     const clientName = client ? client.business_name : "your client";
     const industryInfo = client?.industry ? ` in the ${client.industry} industry` : "";
@@ -932,7 +979,7 @@ function CampaignStudioContent() {
     setSuggestedCustomBrief("");
     setDeliverablePreferences([]);
     setIsReadyToGenerate(false);
-  }, [selectedClientId, activeCampaignId, clients, getStorageKey, effectiveAgencyId]);
+  }, [selectedClientId, activeCampaignId, clients, getStorageKey, effectiveAgencyId, isPipelineRunning]);
 
   // Auto-persist chat messages and draft strategy to localStorage (scoped to client + campaign)
   useEffect(() => {
@@ -1512,6 +1559,8 @@ function CampaignStudioContent() {
     }
 
     setIsPipelineRunning(true);
+    isPipelineRunningRef.current = true;
+    setStudioMode("workflow");
     setPendingApproval(null);
     const pipelineMsgId = `pipeline-${Date.now()}`;
 
@@ -1524,7 +1573,7 @@ function CampaignStudioContent() {
       agent_name: "Autonomous DAG Engine",
       agentPipeline: {
         status: "in_progress",
-        activeStep: 1,
+        activeStep: 0,
         stepDetails: {
           agent1: "Executing Phase 1 & 2: Parallel intelligence gathering across brand rules, market trends, and performance data...",
         },
@@ -1532,6 +1581,8 @@ function CampaignStudioContent() {
     };
 
     setChatMessages((prev) => [...prev, pipelineMsg]);
+
+    let pollingInterval: any = null;
 
     try {
       const clientObj = clients.find((c) => c.id === targetClientId);
@@ -1558,12 +1609,90 @@ function CampaignStudioContent() {
 
       setActiveWorkflowRunId(dagRun.id);
       if (dagRun.campaign_id) {
+        isProgrammaticCampaignChangeRef.current = true;
+
+        // Pre-save the current chat history into localStorage under the new campaign key so it is never lost
+        const newStorageKey = getStorageKey(targetClientId, dagRun.campaign_id);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(
+              newStorageKey,
+              JSON.stringify({
+                messages: [...chatMessages, pipelineMsg],
+                suggestedObjective,
+                suggestedCustomBrief,
+                isReadyToGenerate: false,
+                startDate,
+                endDate,
+                durationDays,
+                periodMonth,
+                periodYear,
+                studioMode: "workflow",
+                activeSpecialistId,
+                activeCampaignId: dagRun.campaign_id,
+                pinnedEntities,
+                discoveredEntities,
+              })
+            );
+          } catch (e) {
+            console.error("Failed to pre-save chat to new campaign key", e);
+          }
+        }
+
+        // Re-tag existing in-memory artifacts so their campaign_id matches
+        setPersistedArtifacts((prev) =>
+          prev.map((a) => ({
+            ...a,
+            campaign_id: dagRun.campaign_id || a.campaign_id,
+          }))
+        );
+        setActiveArtifact((prev) =>
+          prev ? { ...prev, campaign_id: dagRun.campaign_id || prev.campaign_id } : null
+        );
+
         setActiveCampaignId(dagRun.campaign_id);
         loadClientCampaigns(targetClientId);
       }
 
-      // 2. Execute automated Phase 1 & 2 tasks (up to Human Strategy Checkpoint)
+      // 2. Poll progress live while executing automated Phase 1 & 2 tasks (up to Human Strategy Checkpoint)
+      pollingInterval = setInterval(async () => {
+        try {
+          const runCheck = await operationalWorkflowApi.getRun(effectiveAgencyId, dagRun.id, token);
+          const completedKeys = new Set(
+            (runCheck.tasks || []).filter((t: any) => t.status === "completed").map((t: any) => t.task_key)
+          );
+
+          let stepIdx = 0;
+          if (completedKeys.has("brand_intelligence")) stepIdx = 1;
+          if (completedKeys.has("market_research")) stepIdx = 2;
+          if (completedKeys.has("historical_performance")) stepIdx = 3;
+          if (completedKeys.has("campaign_strategy")) stepIdx = 4;
+
+          setChatMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === pipelineMsgId && m.agentPipeline) {
+                return {
+                  ...m,
+                  agentPipeline: {
+                    ...m.agentPipeline,
+                    activeStep: Math.max(m.agentPipeline.activeStep, stepIdx),
+                  },
+                };
+              }
+              return m;
+            })
+          );
+        } catch (e) {
+          // ignore transient polling errors
+        }
+      }, 1500);
+
       await operationalWorkflowApi.stepRun(effectiveAgencyId, dagRun.id, token, 10);
+
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
 
       // 3. Fetch latest run state
       const runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, dagRun.id, token);
@@ -1577,9 +1706,10 @@ function CampaignStudioContent() {
         const blueprintArtifact: ActiveArtifactData = {
           id: `strat-${dagRun.id}`,
           type: "campaign_blueprint",
-          title: stratPayload.campaign_theme || "Master Campaign Strategy",
+          title: stratPayload.campaign_theme || briefTheme || "Master Campaign Strategy",
           version: 1,
           status: "draft",
+          campaign_id: dagRun.campaign_id || activeCampaignId || undefined,
           payload: {
             campaign_theme: stratPayload.campaign_theme || briefTheme,
             master_slogan: stratPayload.strategic_thesis || stratPayload.core_tension || stratPayload.campaign_theme,
@@ -1595,7 +1725,7 @@ function CampaignStudioContent() {
         };
 
         setActiveArtifact(blueprintArtifact);
-        setPersistedArtifacts([blueprintArtifact]);
+        setPersistedArtifacts((prev) => [blueprintArtifact, ...prev.filter((a) => a.id !== blueprintArtifact.id)]);
 
         if (humanStratTask && humanStratTask.status === "waiting_for_human") {
           setPendingApproval({
@@ -1603,49 +1733,67 @@ function CampaignStudioContent() {
             taskId: humanStratTask.id,
             runId: dagRun.id,
           });
-
-          setChatMessages((prev) =>
-            prev.map((m) => {
-              if (m.id === pipelineMsgId) {
-                return {
-                  ...m,
-                  content: `🎯 **Strategy Blueprint Synthesized by Agents**\n* **Theme:** ${stratPayload.campaign_theme || briefTheme}\n* **Thesis:** ${stratPayload.strategic_thesis || "Grounding in verified benchmarks."}\n\n👉 **Creative Director Checkpoint:** Review the Strategy Blueprint on your canvas. Click **"Approve Strategy"** below to begin parallel deliverable production.`,
-                  agentPipeline: {
-                    status: "in_progress",
-                    activeStep: 4,
-                    stepDetails: {
-                      agent1: "Brand guidelines, verified offers & forbidden claims validated.",
-                      agent2: "Live web research completed with competitor angles.",
-                      agent3: "Historical retention analysis & format weights applied.",
-                      agent4: `Strategy finalized: ${stratPayload.campaign_theme || "Master Strategy"}. Awaiting your sign-off.`,
-                    },
-                  },
-                };
-              }
-              return m;
-            })
-          );
         }
+
+        const completedMsg: ChatMsg = {
+          id: pipelineMsgId,
+          role: "assistant",
+          content: `🎯 **Strategy Blueprint Synthesized by Agents**\n* **Theme:** ${stratPayload.campaign_theme || briefTheme}\n* **Thesis:** ${stratPayload.strategic_thesis || "Grounding in verified benchmarks."}\n\n👉 **Creative Director Checkpoint:** Review the Strategy Blueprint on your canvas. Click **"Approve Strategy"** below to begin parallel deliverable production.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          agent_id: "director",
+          agent_name: "Autonomous DAG Engine",
+          agentPipeline: {
+            status: "in_progress",
+            activeStep: 4,
+            stepDetails: {
+              agent1: "Brand guidelines, verified offers & forbidden claims validated.",
+              agent2: "Live web research completed with competitor angles.",
+              agent3: "Historical retention analysis & format weights applied.",
+              agent4: `Strategy finalized: ${stratPayload.campaign_theme || "Master Strategy"}. Awaiting your sign-off.`,
+            },
+          },
+        };
+
+        setChatMessages((prev) => {
+          const exists = prev.some((m) => m.id === pipelineMsgId);
+          if (exists) {
+            return prev.map((m) => (m.id === pipelineMsgId ? completedMsg : m));
+          }
+          return [...prev, completedMsg];
+        });
       }
     } catch (err: any) {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
       console.error("DAG Pipeline launch error:", err);
-      setChatMessages((prev) =>
-        prev.map((m) => {
-          if (m.id === pipelineMsgId) {
-            return {
-              ...m,
-              agentPipeline: {
-                status: "error",
-                activeStep: 0,
-                errorMessage: err.message || "Failed to execute DAG operational engine.",
-              },
-            };
-          }
-          return m;
-        })
-      );
+      const errMsg: ChatMsg = {
+        id: `err-${Date.now()}`,
+        role: "assistant",
+        content: `❌ **Pipeline Error:** ${err.message || "Failed to execute DAG operational engine."}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        agent_id: "director",
+        agent_name: "Autonomous DAG Engine",
+        agentPipeline: {
+          status: "error",
+          activeStep: 0,
+          errorMessage: err.message || "Failed to execute DAG operational engine.",
+        },
+      };
+      setChatMessages((prev) => {
+        const exists = prev.some((m) => m.id === pipelineMsgId);
+        if (exists) {
+          return prev.map((m) => (m.id === pipelineMsgId ? errMsg : m));
+        }
+        return [...prev, errMsg];
+      });
     } finally {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
       setIsPipelineRunning(false);
+      isPipelineRunningRef.current = false;
     }
   };
 
@@ -1655,8 +1803,11 @@ function CampaignStudioContent() {
 
     setIsReviewingApproval(true);
     setIsPipelineRunning(true);
+    isPipelineRunningRef.current = true;
     const runId = pendingApproval.runId;
     const approvalTaskId = pendingApproval.taskId;
+
+    let pollingApproval: any = null;
 
     try {
       await operationalWorkflowApi.reviewTask(
@@ -1671,20 +1822,62 @@ function CampaignStudioContent() {
 
       setPendingApproval(null);
 
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `strat-appr-${Date.now()}`,
-          role: "assistant",
-          content: "⚡ **Strategy Approved!** Unblocking parallel workers for Content Architecture, Visual Planning, and Pre-Flight Quality Audit...",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          agent_id: "director",
-          agent_name: "Campaign Director",
+      const approvalMsgId = `strat-appr-${Date.now()}`;
+      const approvalMsg: ChatMsg = {
+        id: approvalMsgId,
+        role: "assistant",
+        content: "⚡ **Strategy Approved!** Unblocking parallel workers for Content Architecture, Visual Planning, and Pre-Flight Quality Audit...",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        agent_id: "director",
+        agent_name: "Campaign Director",
+        agentPipeline: {
+          status: "in_progress",
+          activeStep: 4,
+          stepDetails: {
+            agent5: "Generating multi-channel reels, storyboards, and carousels...",
+          },
         },
-      ]);
+      };
 
-      // Step DAG execution through Phase 3 & 4
+      setChatMessages((prev) => [...prev, approvalMsg]);
+
+      // Step DAG execution through Phase 3 & 4 with live polling
+      pollingApproval = setInterval(async () => {
+        try {
+          const runCheck = await operationalWorkflowApi.getRun(effectiveAgencyId, runId, token);
+          const completedKeys = new Set(
+            (runCheck.tasks || []).filter((t: any) => t.status === "completed").map((t: any) => t.task_key)
+          );
+          let stepIdx = 4;
+          if (completedKeys.has("content_architecture")) stepIdx = 5;
+          if (completedKeys.has("final_quality_audit")) stepIdx = 6;
+
+          setChatMessages((prev) =>
+            prev.map((m) => {
+              if (m.id === approvalMsgId && m.agentPipeline) {
+                return {
+                  ...m,
+                  agentPipeline: {
+                    ...m.agentPipeline,
+                    activeStep: Math.max(m.agentPipeline.activeStep, stepIdx),
+                    status: stepIdx >= 6 ? "completed" : "in_progress",
+                  },
+                };
+              }
+              return m;
+            })
+          );
+        } catch (e) {
+          // ignore transient polling errors
+        }
+      }, 1500);
+
       await operationalWorkflowApi.stepRun(effectiveAgencyId, runId, token, 10);
+
+      if (pollingApproval) {
+        clearInterval(pollingApproval);
+        pollingApproval = null;
+      }
 
       const runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, runId, token);
       const contentTask = runUpdated.tasks.find((t) => t.task_key === "content_architecture");
@@ -1704,6 +1897,7 @@ function CampaignStudioContent() {
           title: "Pre-Flight Quality Audit",
           version: 1,
           status: "approved",
+          campaign_id: activeCampaignId || undefined,
           payload: {
             ...qaData,
             checks: (qaData.findings || []).map((f: any) => ({
@@ -1730,6 +1924,7 @@ function CampaignStudioContent() {
               title: d.hook_or_title || `Carousel Slide Deck ${idx + 1}`,
               version: 1,
               status: "draft",
+              campaign_id: activeCampaignId || undefined,
               payload: {
                 deliverable_title: d.hook_or_title || "Technical Carousel",
                 slides: (d.carousel_slides || []).map((s: any) => ({
@@ -1749,6 +1944,7 @@ function CampaignStudioContent() {
               title: d.hook_or_title || `Video / Reel Script ${idx + 1}`,
               version: 1,
               status: "draft",
+              campaign_id: activeCampaignId || undefined,
               payload: {
                 deliverable_title: d.hook_or_title || "Technical Reel",
                 scenes: (d.reel_scenes || []).map((s: any) => ({
@@ -1779,6 +1975,7 @@ function CampaignStudioContent() {
           .syncRunToCampaign(effectiveAgencyId, selectedClientId, runId, token)
           .then((syncedCamp: any) => {
             if (syncedCamp?.id) {
+              isProgrammaticCampaignChangeRef.current = true;
               setActiveCampaignId(syncedCamp.id);
               loadClientCampaigns(selectedClientId);
               loadCampaignArtifacts(syncedCamp.id);
@@ -1793,25 +1990,32 @@ function CampaignStudioContent() {
           taskId: clientTask.id,
           runId,
         });
-
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            id: `deliv-ready-${Date.now()}`,
-            role: "assistant",
-            content: `✨ **Creative Deliverables Generated & Synced to Campaign Planner!**\n* **Quality Audit:** ${complianceScore}% brand compliance score.\n* **Factual Claims:** Verified against brand profile.\n\n👉 **Next Steps:** Review deliverables on canvas, or **[Open in Campaign Planner →](/campaign-plans)** to reject/accept ideas and push to production tasks in batch or individually.`,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            agent_id: "director",
-            agent_name: "Campaign Director",
-          },
-        ]);
       }
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `deliv-ready-${Date.now()}`,
+          role: "assistant",
+          content: `✨ **Creative Deliverables Generated & Synced to Campaign Planner!**\n* **Quality Audit:** ${complianceScore}% brand compliance score.\n* **Factual Claims:** Verified against brand profile.\n\n👉 **Next Steps:** Review deliverables on canvas, or **[Open in Campaign Planner →](/campaign-plans)** to reject/accept ideas and push to production tasks in batch or individually.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          agent_id: "director",
+          agent_name: "Campaign Director",
+        },
+      ]);
     } catch (err: any) {
+      if (pollingApproval) {
+        clearInterval(pollingApproval);
+      }
       console.error("Strategy approval error:", err);
       alert(err.message || "Failed to process strategy approval.");
     } finally {
+      if (pollingApproval) {
+        clearInterval(pollingApproval);
+      }
       setIsReviewingApproval(false);
       setIsPipelineRunning(false);
+      isPipelineRunningRef.current = false;
     }
   };
 
