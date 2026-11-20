@@ -238,7 +238,7 @@ async def generate_plan_endpoint(
     # Fallback to date range extractor if dates were typed in custom_brief or objective
     if not start_dt:
         text_to_scan = f"{payload.custom_brief or ''} {payload.objective or ''}"
-        extracted = extract_date_range_from_text(text_to_scan, default_year=default_year)
+        extracted = extract_date_range_from_text(text_to_scan, default_year=default_year, reference_start_date=payload.start_date)
         if extracted:
             start_dt = extracted.start_date
             end_dt = extracted.end_date
@@ -990,7 +990,7 @@ async def execute_chat_turn(
             await db.commit()
 
         # Date extraction fallback for specialist turns so campaign state is kept fresh
-        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year, reference_start_date=payload.start_date)
         extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
 
         candidate_entities = extract_candidate_entities(
@@ -1173,7 +1173,7 @@ CRITICAL SYSTEM RULES:
             model=settings.GROQ_MODEL,
         )
 
-        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year, reference_start_date=payload.start_date)
         extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
 
         # Deterministic extraction takes precedence when user provided an explicit date range
@@ -1243,7 +1243,7 @@ CRITICAL SYSTEM RULES:
         )
     except Exception as ex:
         logger.error(f"Structured LLM failed in chat_brief_endpoint ({ex}). Initiating contextual recovery...")
-        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year)
+        extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year, reference_start_date=payload.start_date)
         extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
         if extracted:
             start_date_str = extracted.start_date.isoformat()

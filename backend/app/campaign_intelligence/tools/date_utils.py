@@ -22,6 +22,28 @@ MONTH_MAP = {
     "dec": 12, "december": 12, "dcember": 12,
 }
 
+WORD_TO_NUM: dict[str, int] = {
+    "a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "twelve": 12,
+    "fourteen": 14, "twenty": 20, "thirty": 30,
+}
+
+QUARTER_MAP: dict[str, int] = {
+    "q1": 1,
+    "q2": 4,
+    "q3": 7,
+    "q4": 10,
+}
+
+
+def _parse_numeric_or_word(val: str | None) -> int | None:
+    if not val:
+        return None
+    s = val.strip().lower()
+    if s.isdigit():
+        return int(s)
+    return WORD_TO_NUM.get(s)
+
 
 class ParsedDateRange(NamedTuple):
     start_date: date
@@ -31,16 +53,35 @@ class ParsedDateRange(NamedTuple):
     period_year: int
 
 
-def extract_date_range_from_text(text: str, default_year: int | None = None) -> ParsedDateRange | None:
+def extract_date_range_from_text(
+    text: str,
+    default_year: int | None = None,
+    reference_start_date: date | str | None = None,
+) -> ParsedDateRange | None:
     """
     Attempt to extract a date range (start_date, end_date, duration_days) from free text.
-    Handles various standard English date range expressions.
+    Handles various standard English date range expressions including:
+    - Specific day spans ("8th nov to 11th nov", "nov 8 to 11")
+    - Week and day durations with start date ("2-week sprint starting nov 10", "4 days starting nov 8")
+    - Quarter-based durations ("2-week Q1 campaign", "Q1 2 weeks")
+    - Relative week durations ("make 2 weeks campaign", "2-week campaign", "for 2 weeks", "next 2 weeks")
+    - Relative day durations ("for 3 days", "fourteen days", "14 days")
     """
     if not text:
         return None
 
     year = default_year or date.today().year
     t = text.lower()
+
+    ref_dt: date | None = None
+    if reference_start_date:
+        if isinstance(reference_start_date, date):
+            ref_dt = reference_start_date
+        elif isinstance(reference_start_date, str) and len(reference_start_date.strip()) >= 10:
+            try:
+                ref_dt = date.fromisoformat(reference_start_date.strip()[:10])
+            except ValueError:
+                ref_dt = None
 
     # Pattern 1: "8th nov to 11th nov" or "8 nov - 11 nov 2026"
     p1 = re.search(
@@ -115,54 +156,127 @@ def extract_date_range_from_text(text: str, default_year: int | None = None) -> 
             except ValueError:
                 pass
 
-    # Pattern 4: "4 days campaign starting 8 nov" or "3-day sprint starting nov 10"
+    # Pattern 4: Week or Day duration with explicit start date: "2-week sprint starting nov 10" or "4 days starting 8 nov"
     p4 = re.search(
-        r"(\d+)\s*[- ]?day\s+(?:campaign|sprint)?\s*(?:starting|from)?\s+(?:([a-z]+)\s+)?(\d{1,2})(?:st|nd|rd|th)?(?:\s+([a-z]+))?(?:\s+(\d{4}))?",
+        r"(\d+|[a-z]+)\s*[- ]?(week|day)s?\s+(?:campaign|sprint)?\s*(?:starting|from)?\s+(?:([a-z]+)\s+)?(\d{1,2})(?:st|nd|rd|th)?(?:\s+([a-z]+))?(?:\s+(\d{4}))?",
         t,
     )
     if p4:
-        days_str, m_pre, d_str, m_post, y_str = p4.groups()
+        cnt_str, unit_str, m_pre, d_str, m_post, y_str = p4.groups()
         m_str = m_pre or m_post
         if m_str and m_str in MONTH_MAP:
             target_year = int(y_str) if y_str else year
-            num_days = int(days_str)
-            try:
-                start_dt = date(target_year, MONTH_MAP[m_str], int(d_str))
-                end_dt = start_dt + timedelta(days=max(num_days - 1, 0))
-                return ParsedDateRange(
-                    start_date=start_dt,
-                    end_date=end_dt,
-                    duration_days=num_days,
-                    period_month=start_dt.month,
-                    period_year=start_dt.year,
-                )
-            except ValueError:
-                pass
+            num_units = _parse_numeric_or_word(cnt_str)
+            if num_units:
+                num_days = (num_units * 7) if "week" in unit_str else num_units
+                try:
+                    start_dt = date(target_year, MONTH_MAP[m_str], int(d_str))
+                    end_dt = start_dt + timedelta(days=max(num_days - 1, 0))
+                    return ParsedDateRange(
+                        start_date=start_dt,
+                        end_date=end_dt,
+                        duration_days=num_days,
+                        period_month=start_dt.month,
+                        period_year=start_dt.year,
+                    )
+                except ValueError:
+                    pass
 
-    # Pattern 5: Relative duration without specific month: "campaign for like 3 days", "for 3 days", "next 3 days", "3-day campaign"
+    # Pattern 5: Quarter-based week duration: "2-week Q1 campaign" or "Q1 2 weeks"
+    q_match = re.search(
+        r"\b(?:(\d+|[a-z]+)\s*[- ]?weeks?)\s*(?:in\s+)?(q[1-4])\b|\b(q[1-4])\s*(?:[a-z\s]+)?\s*(\d+|[a-z]+)\s*[- ]?weeks?\b",
+        t,
+    )
+    if q_match:
+        w_str = q_match.group(1) or q_match.group(4)
+        q_str = q_match.group(2) or q_match.group(3)
+        num_w = _parse_numeric_or_word(w_str)
+        if num_w and 1 <= num_w <= 12 and q_str in QUARTER_MAP:
+            num_days = num_w * 7
+            q_month = QUARTER_MAP[q_str]
+            start_dt = date(year, q_month, 1)
+            end_dt = start_dt + timedelta(days=num_days - 1)
+            return ParsedDateRange(
+                start_date=start_dt,
+                end_date=end_dt,
+                duration_days=num_days,
+                period_month=start_dt.month,
+                period_year=start_dt.year,
+            )
+
+    # Pattern 6: Relative week duration: "make 2 weeks campaign", "2-week campaign", "for 2 weeks", "next 2 weeks"
+    w_match = re.search(
+        r"\b(?:for\s+(?:about\s+|like\s+)?)?(\d+|one|two|three|four|five|six|seven|eight|ten|twelve)\s*[- ]?weeks?\b|\b(?:next|upcoming)\s+(\d+|one|two|three|four|five|six|seven|eight|ten|twelve)\s*[- ]?weeks?\b",
+        t,
+    )
+    if w_match:
+        w_str = w_match.group(1) or w_match.group(2)
+        num_w = _parse_numeric_or_word(w_str)
+        if num_w and 1 <= num_w <= 12:
+            num_days = num_w * 7
+            start_dt = ref_dt or date.today()
+            if default_year and default_year != start_dt.year:
+                try:
+                    start_dt = start_dt.replace(year=default_year)
+                except ValueError:
+                    pass
+            end_dt = start_dt + timedelta(days=num_days - 1)
+            return ParsedDateRange(
+                start_date=start_dt,
+                end_date=end_dt,
+                duration_days=num_days,
+                period_month=start_dt.month,
+                period_year=start_dt.year,
+            )
+
+    # Pattern 7: Relative month duration: "1 month campaign", "for 2 months"
+    m_match = re.search(
+        r"\b(?:for\s+(?:about\s+|like\s+)?)?(\d+|one|two|three|four|six)\s*[- ]?months?\b|\b(?:next|upcoming)\s+(\d+|one|two|three|four|six)\s*[- ]?months?\b",
+        t,
+    )
+    if m_match:
+        m_str_val = m_match.group(1) or m_match.group(2)
+        num_m = _parse_numeric_or_word(m_str_val)
+        if num_m and 1 <= num_m <= 6:
+            num_days = num_m * 30
+            start_dt = ref_dt or date.today()
+            if default_year and default_year != start_dt.year:
+                try:
+                    start_dt = start_dt.replace(year=default_year)
+                except ValueError:
+                    pass
+            end_dt = start_dt + timedelta(days=num_days - 1)
+            return ParsedDateRange(
+                start_date=start_dt,
+                end_date=end_dt,
+                duration_days=num_days,
+                period_month=start_dt.month,
+                period_year=start_dt.year,
+            )
+
+    # Pattern 8: Relative days: "campaign for like 3 days", "for 3 days", "next 14 days", "fourteen days"
     p5 = re.search(
-        r"(?:for\s+(?:about\s+|like\s+)?)?(\d+)\s*[- ]?days?\s*(?:campaign|sprint)?|(?:next|upcoming)\s+(\d+)\s*[- ]?days?",
+        r"(?:for\s+(?:about\s+|like\s+)?)?(\d+|one|two|three|four|five|six|seven|eight|ten|fourteen|twenty|thirty)\s*[- ]?days?\s*(?:campaign|sprint)?|(?:next|upcoming)\s+(\d+|one|two|three|four|five|six|seven|eight|ten|fourteen|twenty|thirty)\s*[- ]?days?",
         t,
     )
     if p5:
         match_group = p5.group(1) or p5.group(2)
-        if match_group:
-            num_days = int(match_group)
-            if 1 <= num_days <= 60:
-                start_dt = date.today()
-                if default_year and default_year != start_dt.year:
-                    try:
-                        start_dt = start_dt.replace(year=default_year)
-                    except ValueError:
-                        pass
-                end_dt = start_dt + timedelta(days=max(num_days - 1, 0))
-                return ParsedDateRange(
-                    start_date=start_dt,
-                    end_date=end_dt,
-                    duration_days=num_days,
-                    period_month=start_dt.month,
-                    period_year=start_dt.year,
-                )
+        num_days = _parse_numeric_or_word(match_group)
+        if num_days and 1 <= num_days <= 90:
+            start_dt = ref_dt or date.today()
+            if default_year and default_year != start_dt.year:
+                try:
+                    start_dt = start_dt.replace(year=default_year)
+                except ValueError:
+                    pass
+            end_dt = start_dt + timedelta(days=max(num_days - 1, 0))
+            return ParsedDateRange(
+                start_date=start_dt,
+                end_date=end_dt,
+                duration_days=num_days,
+                period_month=start_dt.month,
+                period_year=start_dt.year,
+            )
 
     return None
 
@@ -201,9 +315,9 @@ def extract_format_and_count_from_text(text: str) -> tuple[list[str] | None, int
 
     t = text.lower()
 
-    # 1. Check for explicit count + format (e.g. "3 reel ideas", "3 reels", "3 reel s", "5 carousels")
+    # 1. Check for explicit count + format (e.g. "3 reel ideas", "3 reels", "3 reel s", "5 carousels", "5 deliverables")
     count_match = re.search(
-        r"\b(?:give me|generate|create|plan|need|want|show me|for)?\s*(\d{1,2})\s+(reel|carousel|static|video|post)s?\s*(?:ideas|concepts|posts|deliverables)?\b",
+        r"\b(?:give me|generate|create|plan|need|want|show me|for)?\s*(\d{1,2})\s+(?:[a-z]+\s+)?(reel|carousel|static|video|post|deliverable)s?\b",
         t,
         re.IGNORECASE,
     )

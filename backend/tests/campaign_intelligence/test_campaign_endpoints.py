@@ -472,6 +472,35 @@ def test_extract_date_range_from_text_utility() -> None:
     assert r4.end_date.isoformat() == "2026-11-11"
     assert r4.duration_days == 4
 
+    # User phrasing 5: "make 2 weeks campaign" with reference start date
+    r5 = extract_date_range_from_text("make 2 weeks campaign", 2026, reference_start_date="2026-11-20")
+    assert r5 is not None
+    assert r5.start_date.isoformat() == "2026-11-20"
+    assert r5.end_date.isoformat() == "2026-12-03"
+    assert r5.duration_days == 14
+
+    # User phrasing 6: "Plan a 2-week Q1 high-performance campaign"
+    r6 = extract_date_range_from_text("Plan a 2-week Q1 high-performance campaign", 2026)
+    assert r6 is not None
+    assert r6.start_date.isoformat() == "2026-01-01"
+    assert r6.end_date.isoformat() == "2026-01-14"
+    assert r6.duration_days == 14
+
+    # User phrasing 7: "2-week sprint starting nov 10"
+    r7 = extract_date_range_from_text("2-week sprint starting nov 10", 2026)
+    assert r7 is not None
+    assert r7.start_date.isoformat() == "2026-11-10"
+    assert r7.end_date.isoformat() == "2026-11-23"
+    assert r7.duration_days == 14
+
+    # Deliverables count and formats extraction
+    from app.campaign_intelligence.tools.date_utils import extract_format_and_count_from_text
+    fmts, cnt = extract_format_and_count_from_text(
+        "We need 5 deliverables: 2 technical LinkedIn carousels and 3 short-form Reels"
+    )
+    assert cnt == 5
+    assert fmts is not None and "carousel" in fmts and "reel" in fmts
+
 
 @pytest.mark.asyncio
 async def test_chat_brief_date_range_recognition(
