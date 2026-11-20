@@ -493,6 +493,28 @@ def test_extract_date_range_from_text_utility() -> None:
     assert r7.end_date.isoformat() == "2026-11-23"
     assert r7.duration_days == 14
 
+    # User phrasing 8: arbitrary day durations ("8 days", "10 days", "3 weeks", "12 days")
+    r8 = extract_date_range_from_text("make 8 days campaign", 2026, reference_start_date="2026-11-20")
+    assert r8 is not None
+    assert r8.duration_days == 8
+    assert r8.start_date.isoformat() == "2026-11-20"
+    assert r8.end_date.isoformat() == "2026-11-27"
+
+    r9 = extract_date_range_from_text("plan 10 days campaign", 2026, reference_start_date="2026-11-20")
+    assert r9 is not None
+    assert r9.duration_days == 10
+    assert r9.end_date.isoformat() == "2026-11-29"
+
+    r10 = extract_date_range_from_text("3 weeks sprint", 2026, reference_start_date="2026-11-20")
+    assert r10 is not None
+    assert r10.duration_days == 21
+    assert r10.end_date.isoformat() == "2026-12-10"
+
+    r11 = extract_date_range_from_text("12 days", 2026, reference_start_date="2026-11-20")
+    assert r11 is not None
+    assert r11.duration_days == 12
+    assert r11.end_date.isoformat() == "2026-12-01"
+
     # Deliverables count and formats extraction
     from app.campaign_intelligence.tools.date_utils import extract_format_and_count_from_text
     fmts, cnt = extract_format_and_count_from_text(

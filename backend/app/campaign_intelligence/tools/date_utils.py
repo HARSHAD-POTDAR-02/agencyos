@@ -24,8 +24,9 @@ MONTH_MAP = {
 
 WORD_TO_NUM: dict[str, int] = {
     "a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "twelve": 12,
-    "fourteen": 14, "twenty": 20, "thirty": 30,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+    "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "twenty": 20, "twenty-one": 21, "thirty": 30,
 }
 
 QUARTER_MAP: dict[str, int] = {
@@ -206,7 +207,7 @@ def extract_date_range_from_text(
 
     # Pattern 6: Relative week duration: "make 2 weeks campaign", "2-week campaign", "for 2 weeks", "next 2 weeks"
     w_match = re.search(
-        r"\b(?:for\s+(?:about\s+|like\s+)?)?(\d+|one|two|three|four|five|six|seven|eight|ten|twelve)\s*[- ]?weeks?\b|\b(?:next|upcoming)\s+(\d+|one|two|three|four|five|six|seven|eight|ten|twelve)\s*[- ]?weeks?\b",
+        r"\b(?:for\s+(?:about\s+|like\s+)?)?(\d+|[a-z]+)\s*[- ]?weeks?\b|\b(?:next|upcoming)\s+(\d+|[a-z]+)\s*[- ]?weeks?\b",
         t,
     )
     if w_match:
@@ -231,7 +232,7 @@ def extract_date_range_from_text(
 
     # Pattern 7: Relative month duration: "1 month campaign", "for 2 months"
     m_match = re.search(
-        r"\b(?:for\s+(?:about\s+|like\s+)?)?(\d+|one|two|three|four|six)\s*[- ]?months?\b|\b(?:next|upcoming)\s+(\d+|one|two|three|four|six)\s*[- ]?months?\b",
+        r"\b(?:for\s+(?:about\s+|like\s+)?)?(\d+|[a-z]+)\s*[- ]?months?\b|\b(?:next|upcoming)\s+(\d+|[a-z]+)\s*[- ]?months?\b",
         t,
     )
     if m_match:
@@ -254,9 +255,9 @@ def extract_date_range_from_text(
                 period_year=start_dt.year,
             )
 
-    # Pattern 8: Relative days: "campaign for like 3 days", "for 3 days", "next 14 days", "fourteen days"
+    # Pattern 8: Relative days: "campaign for like 3 days", "for 8 days", "next 10 days", "10-day sprint", "make 8 days campaign"
     p5 = re.search(
-        r"(?:for\s+(?:about\s+|like\s+)?)?(\d+|one|two|three|four|five|six|seven|eight|ten|fourteen|twenty|thirty)\s*[- ]?days?\s*(?:campaign|sprint)?|(?:next|upcoming)\s+(\d+|one|two|three|four|five|six|seven|eight|ten|fourteen|twenty|thirty)\s*[- ]?days?",
+        r"(?:for\s+(?:about\s+|like\s+)?)?(\d+|[a-z]+)\s*[- ]?days?\s*(?:campaign|sprint)?|(?:next|upcoming)\s+(\d+|[a-z]+)\s*[- ]?days?",
         t,
     )
     if p5:
