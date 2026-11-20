@@ -253,6 +253,8 @@ export const campaignApi = {
       active_artifact_version?: number;
       pinned_entities?: string[];
       discovered_entities?: string[];
+      chat_id?: string;
+      session_id?: string;
     },
     token: string
   ) =>
@@ -271,6 +273,7 @@ export const campaignApi = {
       is_ready_to_generate: boolean;
       campaign_id?: string;
       session_id?: string;
+      chat_id?: string;
       artifact_id?: string;
       artifact_type?: string;
       artifact_title?: string;
@@ -302,6 +305,8 @@ export const campaignApi = {
       active_artifact_version?: number;
       pinned_entities?: string[];
       discovered_entities?: string[];
+      chat_id?: string;
+      session_id?: string;
     },
     token: string,
     onEvent: (event: {

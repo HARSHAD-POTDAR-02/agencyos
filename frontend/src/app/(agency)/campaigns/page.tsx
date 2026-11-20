@@ -32,6 +32,7 @@ import {
   Check,
   RotateCcw,
   MessagesSquare,
+  MessageSquare,
   Compass,
   FileText,
   SlidersHorizontal,
@@ -40,12 +41,52 @@ import {
   Ban,
   Presentation,
   GitFork,
+  Plus,
+  History,
 } from "lucide-react";
 
 interface Client {
   id: string;
   business_name: string;
   industry: string | null;
+}
+
+interface StudioChatSessionMeta {
+  id: string;
+  title: string;
+  clientId: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+  artifactCount: number;
+  campaignId?: string | null;
+}
+
+interface StudioChatSessionData {
+  id: string;
+  title: string;
+  clientId: string;
+  agencyId: string;
+  createdAt: string;
+  updatedAt: string;
+  campaignId?: string | null;
+  workflowRunId?: string | null;
+  messages: ChatMsg[];
+  artifacts: ActiveArtifactData[];
+  activeArtifactId?: string | null;
+  suggestedObjective: string;
+  suggestedCustomBrief: string;
+  deliverablePreferences: string[];
+  isReadyToGenerate: boolean;
+  startDate: string;
+  endDate: string;
+  durationDays: number | null;
+  periodMonth: number;
+  periodYear: number;
+  pinnedEntities: string[];
+  discoveredEntities: string[];
+  activeSpecialistId?: string;
+  studioMode?: "workflow" | "specialists";
 }
 
 interface AgentStepItem {
@@ -269,6 +310,7 @@ interface ChatMsg {
     version: number;
     status: string;
     campaign_id?: string;
+    chat_id?: string;
     payload?: Record<string, any>;
     supporting_evidence_refs?: Array<Record<string, any>>;
   };
@@ -385,6 +427,15 @@ function CampaignStudioContent() {
       handleDateChange(`${y}-${paddedMonth}-01`, `${y}-${paddedMonth}-${lastDay}`);
     }
   }, [searchParams]);
+
+  // Studio Chat Sessions & History State
+  const [activeChatId, setActiveChatId] = useState<string>("");
+  const [chatSessions, setChatSessions] = useState<StudioChatSessionMeta[]>([]);
+  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
+  const activeChatIdRef = useRef<string>("");
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
 
   // Copilot Chat State
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
@@ -532,8 +583,8 @@ function CampaignStudioContent() {
       setActiveArtifactVersions([]);
       setPersistedArtifacts([]);
       if (typeof window !== "undefined") {
-        const storageKey = getStorageKey(selectedClientId, deletedCampId);
-        localStorage.removeItem(storageKey);
+        const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${selectedClientId}_${deletedCampId || "new"}`;
+        localStorage.removeItem(legacyKey);
       }
       if (selectedClientId) {
         await loadClientCampaigns(selectedClientId);
@@ -830,17 +881,15 @@ function CampaignStudioContent() {
     [effectiveAgencyId, token]
   );
 
-  // Sync persistent artifacts whenever active campaign sprint changes or client changes
+  // Sync persistent artifacts whenever active campaign sprint changes
   useEffect(() => {
     if (isPipelineRunning || isPipelineRunningRef.current || isProgrammaticCampaignChangeRef.current) return;
     if (activeCampaignId && effectiveAgencyId && token) {
       loadCampaignArtifacts(activeCampaignId);
-    } else if (selectedClientId && effectiveAgencyId && token) {
+    } else if (activeWorkflowRunId && effectiveAgencyId && token) {
       loadOperationalRunArtifacts(selectedClientId);
-    } else if (!activeWorkflowRunId) {
-      setPersistedArtifacts([]);
     }
-  }, [activeCampaignId, selectedClientId, effectiveAgencyId, token, loadCampaignArtifacts, loadOperationalRunArtifacts, activeWorkflowRunId, isPipelineRunning]);
+  }, [activeCampaignId, activeWorkflowRunId, selectedClientId, effectiveAgencyId, token, loadCampaignArtifacts, loadOperationalRunArtifacts, isPipelineRunning]);
 
   // Load agency team members for production assignment
   useEffect(() => {
@@ -862,188 +911,511 @@ function CampaignStudioContent() {
       .catch((err) => console.error("Failed to load team members", err));
   }, [token, effectiveAgencyId]);
 
-  // Persistent Chat Storage Key Helper (strictly scoped by client and active campaign)
-  const getStorageKey = useCallback(
-    (cId: string, campId?: string | null) =>
-      `agencyos_studio_chat_${effectiveAgencyId || "default"}_${cId}_${campId || "new"}`,
+  // =========================================================================
+  // Studio Chat Sessions & History Management
+  // =========================================================================
+
+  const getSessionsIndexKey = useCallback(
+    (cId: string) => `agencyos_studio_sessions_index_${effectiveAgencyId || "default"}_${cId}`,
     [effectiveAgencyId]
   );
 
-  // Update selected client object and restore persistent chat history for the active campaign
+  const getSessionDataKey = useCallback(
+    (sessionId: string) => `agencyos_studio_session_data_${sessionId}`,
+    []
+  );
+
+  const getActiveChatPointerKey = useCallback(
+    (cId: string) => `agencyos_studio_active_chat_${effectiveAgencyId || "default"}_${cId}`,
+    [effectiveAgencyId]
+  );
+
+  const createDefaultWelcomeMessage = useCallback(
+    (client: Client | null): ChatMsg => {
+      const clientName = client ? client.business_name : "your client";
+      const industryInfo = client?.industry ? ` in the ${client.industry} industry` : "";
+      return {
+        id: `welcome-${client?.id || "default"}-${Date.now()}`,
+        role: "assistant",
+        content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        agent_id: "director",
+        agent_name: "Campaign Director",
+      };
+    },
+    []
+  );
+
+  // Create a brand new isolated chat session
+  const createNewChatSession = useCallback(
+    (targetClientId?: string) => {
+      const cId = targetClientId || selectedClientId;
+      if (!cId) return "";
+
+      const client = clients.find((c) => c.id === cId) || selectedClient;
+      const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const welcomeMsg = createDefaultWelcomeMessage(client);
+
+      const newSessionData: StudioChatSessionData = {
+        id: newChatId,
+        title: "New Conversation",
+        clientId: cId,
+        agencyId: effectiveAgencyId || "default",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        campaignId: null,
+        workflowRunId: null,
+        messages: [welcomeMsg],
+        artifacts: [],
+        activeArtifactId: null,
+        suggestedObjective: "",
+        suggestedCustomBrief: "",
+        deliverablePreferences: [],
+        isReadyToGenerate: false,
+        startDate: "",
+        endDate: "",
+        durationDays: null,
+        periodMonth: new Date().getMonth() + 1,
+        periodYear: new Date().getFullYear(),
+        pinnedEntities: [],
+        discoveredEntities: [],
+        activeSpecialistId: "market_research",
+        studioMode: "workflow",
+      };
+
+      const newSessionMeta: StudioChatSessionMeta = {
+        id: newChatId,
+        title: "New Conversation",
+        clientId: cId,
+        createdAt: newSessionData.createdAt,
+        updatedAt: newSessionData.updatedAt,
+        messageCount: 1,
+        artifactCount: 0,
+        campaignId: null,
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(getSessionDataKey(newChatId), JSON.stringify(newSessionData));
+          const idxKey = getSessionsIndexKey(cId);
+          const rawIdx = localStorage.getItem(idxKey);
+          let currentList: StudioChatSessionMeta[] = [];
+          if (rawIdx) {
+            try {
+              currentList = JSON.parse(rawIdx);
+            } catch (e) {}
+          }
+          const updatedList = [newSessionMeta, ...currentList.filter((s) => s.id !== newChatId)];
+          localStorage.setItem(idxKey, JSON.stringify(updatedList));
+          localStorage.setItem(getActiveChatPointerKey(cId), newChatId);
+          setChatSessions(updatedList);
+        } catch (e) {
+          console.error("Failed to save new chat session", e);
+        }
+      }
+
+      isProgrammaticCampaignChangeRef.current = true;
+      setActiveChatId(newChatId);
+      setChatMessages([welcomeMsg]);
+      setPersistedArtifacts([]);
+      setActiveArtifact(null);
+      setActiveArtifactVersions([]);
+      setSuggestedObjective("");
+      setSuggestedCustomBrief("");
+      setDeliverablePreferences([]);
+      setIsReadyToGenerate(false);
+      setStartDate("");
+      setEndDate("");
+      setDurationDays(null);
+      setActiveCampaignId(null);
+      setActiveWorkflowRunId(null);
+      setPinnedEntities([]);
+      setDiscoveredEntities([]);
+      setStudioMode("workflow");
+      setActiveSpecialistId("market_research");
+      setIsChatHistoryOpen(false);
+
+      setTimeout(() => {
+        chatInputRef.current?.focus();
+      }, 50);
+
+      return newChatId;
+    },
+    [
+      selectedClientId,
+      clients,
+      selectedClient,
+      createDefaultWelcomeMessage,
+      effectiveAgencyId,
+      getSessionDataKey,
+      getSessionsIndexKey,
+      getActiveChatPointerKey,
+    ]
+  );
+
+  // Switch to an existing chat session with full context and artifact isolation
+  const switchChatSession = useCallback(
+    (targetChatId: string) => {
+      if (!targetChatId) return;
+      if (targetChatId === activeChatId) {
+        setIsChatHistoryOpen(false);
+        return;
+      }
+
+      if (typeof window === "undefined") return;
+
+      const targetDataRaw = localStorage.getItem(getSessionDataKey(targetChatId));
+      if (!targetDataRaw) return;
+
+      try {
+        const parsed: StudioChatSessionData = JSON.parse(targetDataRaw);
+        isProgrammaticCampaignChangeRef.current = true;
+
+        setActiveChatId(targetChatId);
+        localStorage.setItem(getActiveChatPointerKey(parsed.clientId || selectedClientId), targetChatId);
+
+        // Sanitize messages
+        const msgs =
+          Array.isArray(parsed.messages) && parsed.messages.length > 0
+            ? parsed.messages
+            : [createDefaultWelcomeMessage(selectedClient)];
+        setChatMessages(msgs);
+
+        // Restore artifacts belonging strictly to this chat session!
+        const sessionArts = Array.isArray(parsed.artifacts) ? parsed.artifacts : [];
+        setPersistedArtifacts(sessionArts);
+
+        if (parsed.activeArtifactId && sessionArts.some((a) => a.id === parsed.activeArtifactId)) {
+          setActiveArtifact(sessionArts.find((a) => a.id === parsed.activeArtifactId) || null);
+        } else if (sessionArts.length > 0) {
+          setActiveArtifact(sessionArts[0]);
+        } else {
+          setActiveArtifact(null);
+        }
+
+        setActiveCampaignId(parsed.campaignId || null);
+        setActiveWorkflowRunId(parsed.workflowRunId || null);
+        setSuggestedObjective(parsed.suggestedObjective || "");
+        setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
+        setDeliverablePreferences(parsed.deliverablePreferences || []);
+        setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
+        setStartDate(parsed.startDate || "");
+        setEndDate(parsed.endDate || "");
+        setDurationDays(parsed.durationDays ?? null);
+        if (parsed.periodMonth) setPeriodMonth(parsed.periodMonth);
+        if (parsed.periodYear) setPeriodYear(parsed.periodYear);
+        if (Array.isArray(parsed.pinnedEntities)) setPinnedEntities(parsed.pinnedEntities);
+        if (Array.isArray(parsed.discoveredEntities)) setDiscoveredEntities(parsed.discoveredEntities);
+        if (parsed.studioMode) setStudioMode(parsed.studioMode);
+        if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
+
+        setIsChatHistoryOpen(false);
+
+        setTimeout(() => {
+          chatInputRef.current?.focus();
+        }, 50);
+      } catch (err) {
+        console.error("Failed to switch chat session", err);
+      }
+    },
+    [
+      activeChatId,
+      getSessionDataKey,
+      getActiveChatPointerKey,
+      selectedClientId,
+      createDefaultWelcomeMessage,
+      selectedClient,
+    ]
+  );
+
+  // Delete a chat session
+  const deleteChatSession = useCallback(
+    (chatIdToDelete: string) => {
+      if (!selectedClientId || typeof window === "undefined") return;
+
+      try {
+        localStorage.removeItem(getSessionDataKey(chatIdToDelete));
+        const idxKey = getSessionsIndexKey(selectedClientId);
+        const rawIdx = localStorage.getItem(idxKey);
+        let list: StudioChatSessionMeta[] = [];
+        if (rawIdx) {
+          try {
+            list = JSON.parse(rawIdx);
+          } catch (e) {}
+        }
+        const updatedList = list.filter((s) => s.id !== chatIdToDelete);
+        localStorage.setItem(idxKey, JSON.stringify(updatedList));
+        setChatSessions(updatedList);
+
+        if (chatIdToDelete === activeChatId) {
+          if (updatedList.length > 0) {
+            switchChatSession(updatedList[0].id);
+          } else {
+            createNewChatSession(selectedClientId);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to delete chat session", e);
+      }
+    },
+    [
+      selectedClientId,
+      getSessionDataKey,
+      getSessionsIndexKey,
+      activeChatId,
+      switchChatSession,
+      createNewChatSession,
+    ]
+  );
+
+  // Auto-persist active chat session and update metadata in index
+  useEffect(() => {
+    if (!selectedClientId || !activeChatId || chatMessages.length === 0) return;
+    if (typeof window === "undefined") return;
+
+    try {
+      // Generate clean, informative chat title from objective or user prompt
+      let title = "New Conversation";
+      const firstUserMsg = chatMessages.find((m) => m.role === "user");
+      if (suggestedObjective && suggestedObjective.trim().length > 0) {
+        title = suggestedObjective.length > 45 ? `${suggestedObjective.substring(0, 42)}...` : suggestedObjective;
+      } else if (firstUserMsg && firstUserMsg.content) {
+        const cleanContent = firstUserMsg.content.replace(/^[\s\W]+/, "").trim();
+        title = cleanContent.length > 42 ? `${cleanContent.substring(0, 39)}...` : cleanContent;
+      }
+
+      const sessionData: StudioChatSessionData = {
+        id: activeChatId,
+        title,
+        clientId: selectedClientId,
+        agencyId: effectiveAgencyId || "default",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        campaignId: activeCampaignId,
+        workflowRunId: activeWorkflowRunId,
+        messages: chatMessages,
+        artifacts: persistedArtifacts.map((a) => ({ ...a, chat_id: activeChatId })),
+        activeArtifactId: activeArtifact?.id || null,
+        suggestedObjective,
+        suggestedCustomBrief,
+        deliverablePreferences,
+        isReadyToGenerate,
+        startDate,
+        endDate,
+        durationDays,
+        periodMonth,
+        periodYear,
+        pinnedEntities,
+        discoveredEntities,
+        activeSpecialistId,
+        studioMode,
+      };
+
+      const existingRaw = localStorage.getItem(getSessionDataKey(activeChatId));
+      if (existingRaw) {
+        try {
+          const parsedExisting = JSON.parse(existingRaw);
+          if (parsedExisting.createdAt) sessionData.createdAt = parsedExisting.createdAt;
+        } catch (e) {}
+      }
+
+      localStorage.setItem(getSessionDataKey(activeChatId), JSON.stringify(sessionData));
+
+      // Update index
+      const idxKey = getSessionsIndexKey(selectedClientId);
+      const rawIdx = localStorage.getItem(idxKey);
+      let list: StudioChatSessionMeta[] = [];
+      if (rawIdx) {
+        try {
+          list = JSON.parse(rawIdx);
+        } catch (e) {}
+      }
+
+      const metaItem: StudioChatSessionMeta = {
+        id: activeChatId,
+        title,
+        clientId: selectedClientId,
+        createdAt: sessionData.createdAt,
+        updatedAt: sessionData.updatedAt,
+        messageCount: chatMessages.length,
+        artifactCount: persistedArtifacts.length,
+        campaignId: activeCampaignId,
+      };
+
+      const updatedList = [metaItem, ...list.filter((s) => s.id !== activeChatId)];
+      localStorage.setItem(idxKey, JSON.stringify(updatedList));
+      setChatSessions(updatedList);
+    } catch (e) {
+      console.error("Failed to auto-persist active chat session", e);
+    }
+  }, [
+    activeChatId,
+    selectedClientId,
+    chatMessages,
+    persistedArtifacts,
+    activeArtifact,
+    suggestedObjective,
+    suggestedCustomBrief,
+    deliverablePreferences,
+    isReadyToGenerate,
+    startDate,
+    endDate,
+    durationDays,
+    periodMonth,
+    periodYear,
+    studioMode,
+    activeSpecialistId,
+    activeCampaignId,
+    activeWorkflowRunId,
+    pinnedEntities,
+    discoveredEntities,
+    effectiveAgencyId,
+    getSessionDataKey,
+    getSessionsIndexKey,
+  ]);
+
+  // Load client object and initialize/restore chat session when selectedClientId changes
   useEffect(() => {
     if (!selectedClientId || clients.length === 0) return;
     const client = clients.find((c) => c.id === selectedClientId) || null;
     setSelectedClient(client);
 
-    // If a pipeline is currently executing or campaign was updated programmatically by an active session, DO NOT wipe chat
     if (isPipelineRunning || isPipelineRunningRef.current || isProgrammaticCampaignChangeRef.current) {
       isProgrammaticCampaignChangeRef.current = false;
       return;
     }
 
-    const storageKey = getStorageKey(selectedClientId, activeCampaignId);
-    if (typeof window !== "undefined") {
-      // Purge any legacy un-scoped storage key so old artifacts cannot leak
-      const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${selectedClientId}`;
-      if (localStorage.getItem(legacyKey)) {
-        localStorage.removeItem(legacyKey);
-      }
+    if (typeof window === "undefined") return;
 
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
-            // Sanitize messages: never restore artifact_summary from another campaign
-            const sanitizedMessages = parsed.messages.map((m: any) => {
-              if (
-                m.artifact_summary &&
-                activeCampaignId &&
-                m.artifact_summary.campaign_id &&
-                m.artifact_summary.campaign_id !== activeCampaignId
-              ) {
-                const { artifact_summary: _drop, ...rest } = m;
-                return rest;
-              }
-              return m;
-            });
-
-            setChatMessages(sanitizedMessages);
-            setSuggestedObjective(parsed.suggestedObjective || "");
-            setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
-            setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
-            if (parsed.startDate) setStartDate(parsed.startDate);
-            if (parsed.endDate) setEndDate(parsed.endDate);
-            if (parsed.durationDays) setDurationDays(parsed.durationDays);
-            if (parsed.periodMonth) setPeriodMonth(parsed.periodMonth);
-            if (parsed.periodYear) setPeriodYear(parsed.periodYear);
-            if (parsed.studioMode) setStudioMode(parsed.studioMode);
-            if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
-            if (Array.isArray(parsed.pinnedEntities)) setPinnedEntities(parsed.pinnedEntities);
-            if (Array.isArray(parsed.discoveredEntities)) setDiscoveredEntities(parsed.discoveredEntities);
-            return;
-          }
-        } catch (e) {
-          console.error("Failed to parse cached chat history", e);
-        }
-      }
+    const idxKey = getSessionsIndexKey(selectedClientId);
+    const rawIdx = localStorage.getItem(idxKey);
+    let list: StudioChatSessionMeta[] = [];
+    if (rawIdx) {
+      try {
+        list = JSON.parse(rawIdx);
+      } catch (e) {}
     }
 
-    // If no saved chat found for this specific campaign key, check if user has active unsaved chat in memory
-    const hasUserContent = chatMessages.some((m) => m.role === "user");
-    if (hasUserContent) {
-      // Save current conversation to this new campaign storage key so it is attached and preserved!
-      if (typeof window !== "undefined") {
+    const activePtrKey = getActiveChatPointerKey(selectedClientId);
+    const lastActiveId = localStorage.getItem(activePtrKey);
+
+    let targetChatId = lastActiveId && list.some((s) => s.id === lastActiveId) ? lastActiveId : null;
+    if (!targetChatId && list.length > 0) {
+      targetChatId = list[0].id;
+    }
+
+    if (targetChatId) {
+      setChatSessions(list);
+      const dataRaw = localStorage.getItem(getSessionDataKey(targetChatId));
+      if (dataRaw) {
         try {
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({
-              messages: chatMessages,
-              suggestedObjective,
-              suggestedCustomBrief,
-              isReadyToGenerate,
-              startDate,
-              endDate,
-              durationDays,
-              periodMonth,
-              periodYear,
-              studioMode,
-              activeSpecialistId,
-              activeCampaignId,
-              pinnedEntities,
-              discoveredEntities,
-            })
+          const parsed: StudioChatSessionData = JSON.parse(dataRaw);
+          setActiveChatId(targetChatId);
+          setChatMessages(
+            parsed.messages && parsed.messages.length > 0
+              ? parsed.messages
+              : [createDefaultWelcomeMessage(client)]
           );
+          setPersistedArtifacts(parsed.artifacts || []);
+          if (parsed.activeArtifactId && parsed.artifacts?.some((a) => a.id === parsed.activeArtifactId)) {
+            setActiveArtifact(parsed.artifacts.find((a) => a.id === parsed.activeArtifactId) || null);
+          } else if (parsed.artifacts && parsed.artifacts.length > 0) {
+            setActiveArtifact(parsed.artifacts[0]);
+          } else {
+            setActiveArtifact(null);
+          }
+          setActiveCampaignId(parsed.campaignId || null);
+          setActiveWorkflowRunId(parsed.workflowRunId || null);
+          setSuggestedObjective(parsed.suggestedObjective || "");
+          setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
+          setDeliverablePreferences(parsed.deliverablePreferences || []);
+          setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
+          setStartDate(parsed.startDate || "");
+          setEndDate(parsed.endDate || "");
+          setDurationDays(parsed.durationDays ?? null);
+          if (parsed.periodMonth) setPeriodMonth(parsed.periodMonth);
+          if (parsed.periodYear) setPeriodYear(parsed.periodYear);
+          if (Array.isArray(parsed.pinnedEntities)) setPinnedEntities(parsed.pinnedEntities);
+          if (Array.isArray(parsed.discoveredEntities)) setDiscoveredEntities(parsed.discoveredEntities);
+          if (parsed.studioMode) setStudioMode(parsed.studioMode);
+          if (parsed.activeSpecialistId) setActiveSpecialistId(parsed.activeSpecialistId);
+          return;
         } catch (e) {
-          console.error("Failed to save ongoing chat to new campaign key", e);
+          console.error("Failed to restore target chat session", e);
         }
       }
-      return;
     }
 
-    // Fallback welcome message when no cached history exists for this campaign
-    const clientName = client ? client.business_name : "your client";
-    const industryInfo = client?.industry ? ` in the ${client.industry} industry` : "";
-
-    setChatMessages([
-      {
-        id: `welcome-${selectedClientId}-${activeCampaignId || "new"}`,
-        role: "assistant",
-        content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        agent_id: "director",
-        agent_name: "Campaign Director",
-      },
-    ]);
-    setSuggestedObjective("");
-    setSuggestedCustomBrief("");
-    setDeliverablePreferences([]);
-    setIsReadyToGenerate(false);
-  }, [selectedClientId, activeCampaignId, clients, getStorageKey, effectiveAgencyId, isPipelineRunning]);
-
-  // Auto-persist chat messages and draft strategy to localStorage (scoped to client + campaign)
-  useEffect(() => {
-    if (!selectedClientId || chatMessages.length === 0) return;
-    const storageKey = getStorageKey(selectedClientId, activeCampaignId);
-    try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          messages: chatMessages,
-          suggestedObjective,
-          suggestedCustomBrief,
-          isReadyToGenerate,
-          startDate,
-          endDate,
-          durationDays,
-          periodMonth,
-          periodYear,
-          studioMode,
-          activeSpecialistId,
-          activeCampaignId,
-          pinnedEntities,
-          discoveredEntities,
-        })
-      );
-    } catch (e) {
-      console.error("Failed to save chat to storage", e);
+    // Check if there was a legacy un-migrated chat
+    const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${selectedClientId}_new`;
+    const legacySaved = localStorage.getItem(legacyKey);
+    if (legacySaved) {
+      try {
+        const parsed = JSON.parse(legacySaved);
+        if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+          const migratedId = `chat_${Date.now()}_migrated`;
+          const migratedSession: StudioChatSessionData = {
+            id: migratedId,
+            title: parsed.suggestedObjective || "Previous Campaign Sprint",
+            clientId: selectedClientId,
+            agencyId: effectiveAgencyId || "default",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            campaignId: parsed.activeCampaignId || null,
+            workflowRunId: null,
+            messages: parsed.messages,
+            artifacts: [],
+            activeArtifactId: null,
+            suggestedObjective: parsed.suggestedObjective || "",
+            suggestedCustomBrief: parsed.suggestedCustomBrief || "",
+            deliverablePreferences: [],
+            isReadyToGenerate: Boolean(parsed.isReadyToGenerate),
+            startDate: parsed.startDate || "",
+            endDate: parsed.endDate || "",
+            durationDays: parsed.durationDays || null,
+            periodMonth: parsed.periodMonth || new Date().getMonth() + 1,
+            periodYear: parsed.periodYear || new Date().getFullYear(),
+            pinnedEntities: parsed.pinnedEntities || [],
+            discoveredEntities: parsed.discoveredEntities || [],
+            activeSpecialistId: parsed.activeSpecialistId || "market_research",
+            studioMode: parsed.studioMode || "workflow",
+          };
+          localStorage.setItem(getSessionDataKey(migratedId), JSON.stringify(migratedSession));
+          const meta: StudioChatSessionMeta = {
+            id: migratedId,
+            title: migratedSession.title,
+            clientId: selectedClientId,
+            createdAt: migratedSession.createdAt,
+            updatedAt: migratedSession.updatedAt,
+            messageCount: parsed.messages.length,
+            artifactCount: 0,
+            campaignId: migratedSession.campaignId,
+          };
+          const updated = [meta, ...list];
+          localStorage.setItem(idxKey, JSON.stringify(updated));
+          localStorage.setItem(activePtrKey, migratedId);
+          setChatSessions(updated);
+          setActiveChatId(migratedId);
+          setChatMessages(parsed.messages);
+          setSuggestedObjective(parsed.suggestedObjective || "");
+          setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
+          return;
+        }
+      } catch (e) {}
     }
-  }, [chatMessages, suggestedObjective, suggestedCustomBrief, isReadyToGenerate, startDate, endDate, durationDays, periodMonth, periodYear, studioMode, activeSpecialistId, activeCampaignId, pinnedEntities, discoveredEntities, selectedClientId, getStorageKey]);
 
-  // Reset conversation handler
-  const handleResetChat = () => {
-    if (!selectedClientId) return;
-    const storageKey = getStorageKey(selectedClientId, activeCampaignId);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(storageKey);
-      const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${selectedClientId}`;
-      localStorage.removeItem(legacyKey);
-    }
-    const clientName = selectedClient ? selectedClient.business_name : "your client";
-    const industryInfo = selectedClient?.industry ? ` in the ${selectedClient.industry} industry` : "";
-
-    setChatMessages([
-      {
-        id: `welcome-${selectedClientId}-${Date.now()}`,
-        role: "assistant",
-        content: `👋 Hello! I am your AI Campaign Director Copilot. Let's design a high-converting social media campaign for **${clientName}**${industryInfo}.\n\nTell me about your vision for this upcoming sprint—are you planning a special product launch, seasonal promotion, brand awareness push, or lead generation challenge? What angles or offers would you like to explore?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        agent_id: "director",
-        agent_name: "Campaign Director",
-      },
-    ]);
-    setSuggestedObjective("");
-    setSuggestedCustomBrief("");
-    setDeliverablePreferences([]);
-    setIsReadyToGenerate(false);
-    setStartDate("");
-    setEndDate("");
-    setDurationDays(null);
-    setActiveCampaignId(null);
-    setActiveArtifact(null);
-    setPinnedEntities([]);
-    setDiscoveredEntities([]);
-  };
+    // Initialize fresh session
+    createNewChatSession(selectedClientId);
+  }, [
+    selectedClientId,
+    clients,
+    effectiveAgencyId,
+    getSessionsIndexKey,
+    getSessionDataKey,
+    getActiveChatPointerKey,
+    createDefaultWelcomeMessage,
+    createNewChatSession,
+  ]);
 
   // Current active agent specification
   const currentAgentId = studioMode === "workflow" ? "director" : activeSpecialistId;
@@ -1112,6 +1484,7 @@ function CampaignStudioContent() {
           active_artifact_version: activeArtifact?.version || undefined,
           pinned_entities: pinnedEntities,
           discovered_entities: discoveredEntities,
+          chat_id: activeChatId || undefined,
         },
         token,
         (evt) => {
@@ -1169,6 +1542,7 @@ function CampaignStudioContent() {
                 version: response.artifact_version_number || 1,
                 status: response.artifact_status || "draft",
                 campaign_id: targetCampId,
+                chat_id: activeChatId,
                 payload: response.artifact_payload,
                 supporting_evidence_refs: response.supporting_evidence_refs || [],
               };
@@ -1216,6 +1590,7 @@ function CampaignStudioContent() {
                             version: response.artifact_version_number || 1,
                             status: response.artifact_status || "draft",
                             campaign_id: response.campaign_id || activeCampaignId || undefined,
+                            chat_id: activeChatId,
                             payload: response.artifact_payload,
                             supporting_evidence_refs: response.supporting_evidence_refs || [],
                           }
@@ -1267,6 +1642,7 @@ function CampaignStudioContent() {
             active_artifact_version: activeArtifact?.version || undefined,
             pinned_entities: pinnedEntities,
             discovered_entities: discoveredEntities,
+            chat_id: activeChatId || undefined,
           },
           token
         );
@@ -1289,6 +1665,7 @@ function CampaignStudioContent() {
             version: response.artifact_version_number || 1,
             status: response.artifact_status || "draft",
             campaign_id: targetCampId,
+            chat_id: activeChatId,
             payload: response.artifact_payload,
             supporting_evidence_refs: response.supporting_evidence_refs || [],
           };
@@ -1328,6 +1705,7 @@ function CampaignStudioContent() {
                         version: response.artifact_version_number || 1,
                         status: response.artifact_status || "draft",
                         campaign_id: response.campaign_id || activeCampaignId || undefined,
+                        chat_id: activeChatId,
                         payload: response.artifact_payload,
                         supporting_evidence_refs: response.supporting_evidence_refs || [],
                       }
@@ -1611,12 +1989,20 @@ function CampaignStudioContent() {
       if (dagRun.campaign_id) {
         isProgrammaticCampaignChangeRef.current = true;
 
-        // Pre-save the current chat history into localStorage under the new campaign key so it is never lost
-        const newStorageKey = getStorageKey(targetClientId, dagRun.campaign_id);
+        // Update the active chat session's campaignId and pre-save legacy key
+        const legacyKey = `agencyos_studio_chat_${effectiveAgencyId || "default"}_${targetClientId}_${dagRun.campaign_id}`;
         if (typeof window !== "undefined") {
           try {
+            if (activeChatId) {
+              const rawSession = localStorage.getItem(getSessionDataKey(activeChatId));
+              if (rawSession) {
+                const parsedSession = JSON.parse(rawSession);
+                parsedSession.campaignId = dagRun.campaign_id;
+                localStorage.setItem(getSessionDataKey(activeChatId), JSON.stringify(parsedSession));
+              }
+            }
             localStorage.setItem(
-              newStorageKey,
+              legacyKey,
               JSON.stringify({
                 messages: [...chatMessages, pipelineMsg],
                 suggestedObjective,
@@ -1635,7 +2021,7 @@ function CampaignStudioContent() {
               })
             );
           } catch (e) {
-            console.error("Failed to pre-save chat to new campaign key", e);
+            console.error("Failed to pre-save chat to campaign key", e);
           }
         }
 
@@ -1710,6 +2096,7 @@ function CampaignStudioContent() {
           version: 1,
           status: "draft",
           campaign_id: dagRun.campaign_id || activeCampaignId || undefined,
+          chat_id: activeChatId,
           payload: {
             campaign_theme: stratPayload.campaign_theme || briefTheme,
             master_slogan: stratPayload.strategic_thesis || stratPayload.core_tension || stratPayload.campaign_theme,
@@ -1898,6 +2285,7 @@ function CampaignStudioContent() {
           version: 1,
           status: "approved",
           campaign_id: activeCampaignId || undefined,
+          chat_id: activeChatId,
           payload: {
             ...qaData,
             checks: (qaData.findings || []).map((f: any) => ({
@@ -1925,6 +2313,7 @@ function CampaignStudioContent() {
               version: 1,
               status: "draft",
               campaign_id: activeCampaignId || undefined,
+              chat_id: activeChatId,
               payload: {
                 deliverable_title: d.hook_or_title || "Technical Carousel",
                 slides: (d.carousel_slides || []).map((s: any) => ({
@@ -1945,6 +2334,7 @@ function CampaignStudioContent() {
               version: 1,
               status: "draft",
               campaign_id: activeCampaignId || undefined,
+              chat_id: activeChatId,
               payload: {
                 deliverable_title: d.hook_or_title || "Technical Reel",
                 scenes: (d.reel_scenes || []).map((s: any) => ({
@@ -2086,6 +2476,10 @@ function CampaignStudioContent() {
       if (activeCampaignId && art.campaign_id && art.campaign_id !== activeCampaignId) {
         return;
       }
+      // Strictly exclude any artifact that belongs to a different chat session
+      if (activeChatId && art.chat_id && art.chat_id !== activeChatId) {
+        return;
+      }
       const verNum = art.version || art.current_version_number || art.latest_version?.version_number || 1;
       const key = `${art.id}-v${verNum}`;
       const artPayload = art.payload || art.latest_version?.payload || {};
@@ -2093,6 +2487,7 @@ function CampaignStudioContent() {
       map.set(key, {
         id: art.id,
         campaign_id: art.campaign_id || activeCampaignId,
+        chat_id: art.chat_id || activeChatId,
         type: artType,
         title: art.title,
         version: verNum,
@@ -2107,8 +2502,11 @@ function CampaignStudioContent() {
     // 2. Add any chat message artifacts from active streaming session
     chatMessages.forEach((m) => {
       if (m.artifact_summary) {
-        // Strictly exclude if artifact_summary belongs to another campaign
+        // Strictly exclude if artifact_summary belongs to another campaign or another chat
         if (activeCampaignId && m.artifact_summary.campaign_id && m.artifact_summary.campaign_id !== activeCampaignId) {
+          return;
+        }
+        if (activeChatId && m.artifact_summary.chat_id && m.artifact_summary.chat_id !== activeChatId) {
           return;
         }
         const key = `${m.artifact_summary.id}-v${m.artifact_summary.version}`;
@@ -2116,20 +2514,23 @@ function CampaignStudioContent() {
           map.set(key, {
             ...m.artifact_summary,
             campaign_id: m.artifact_summary.campaign_id || activeCampaignId,
+            chat_id: m.artifact_summary.chat_id || activeChatId,
           });
         }
       }
     });
 
-    // 3. Ensure active artifact is present (only if it matches the current campaign)
+    // 3. Ensure active artifact is present (only if it matches the current campaign and chat)
     if (activeArtifact) {
       const isMismatch = activeArtifact.campaign_id && activeCampaignId && activeArtifact.campaign_id !== activeCampaignId;
-      if (!isMismatch) {
+      const isChatMismatch = activeArtifact.chat_id && activeChatId && activeArtifact.chat_id !== activeChatId;
+      if (!isMismatch && !isChatMismatch) {
         const key = `${activeArtifact.id}-v${activeArtifact.version}`;
         if (!map.has(key)) {
           map.set(key, {
             id: activeArtifact.id,
             campaign_id: activeCampaignId,
+            chat_id: activeChatId,
             type: activeArtifact.type,
             title: activeArtifact.title,
             version: activeArtifact.version,
@@ -2142,7 +2543,7 @@ function CampaignStudioContent() {
     }
 
     return Array.from(map.values());
-  }, [persistedArtifacts, chatMessages, activeArtifact, activeCampaignId]);
+  }, [persistedArtifacts, chatMessages, activeArtifact, activeCampaignId, activeChatId]);
 
   // Messages to display according to the selected view filter
   const displayedMessages = chatMessages.filter((msg) => {
@@ -2274,14 +2675,26 @@ function CampaignStudioContent() {
             </span>
           </button>
 
-          {/* Reset Conversation */}
+          {/* New Chat Button */}
           <button
-            onClick={handleResetChat}
-            title="Start fresh conversation"
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg hover:bg-white/[0.04] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
+            type="button"
+            onClick={() => createNewChatSession()}
+            title="Start a new isolated chat session"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-500 text-white shadow-xs transition-all cursor-pointer active:scale-95"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px]">Reset</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Chat</span>
+          </button>
+
+          {/* Chat History Button */}
+          <button
+            type="button"
+            onClick={() => setIsChatHistoryOpen(true)}
+            title="View chat history and switch conversations"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg surface-card text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
+          >
+            <History className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <span className="hidden sm:inline text-[11px]">History ({chatSessions.length})</span>
           </button>
 
           {/* Pitch Deck Button (Active when campaign exists) */}
@@ -2569,16 +2982,40 @@ function CampaignStudioContent() {
             <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2">
               {/* Campaign Director Copilot Banner */}
               <div className="flex items-center justify-between p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center font-bold">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center font-bold shrink-0">
                     <Sparkles className="w-3.5 h-3.5" />
                   </div>
-                  <div>
-                    <div className="font-semibold text-[#F2F0F7] text-[11px] font-heading">Campaign Director</div>
-                    <div className="text-[9.5px] font-mono text-[#A3A0B0]">Sprint Orchestrator &amp; Copilot</div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-[#F2F0F7] text-[11px] font-heading">Campaign Director</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsChatHistoryOpen(true)}
+                        className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 border border-violet-500/20 transition cursor-pointer"
+                        title="View and switch conversations"
+                      >
+                        Chats ({chatSessions.length})
+                      </button>
+                    </div>
+                    <div
+                      onClick={() => setIsChatHistoryOpen(true)}
+                      className="text-[9.5px] font-mono text-[#A3A0B0] truncate cursor-pointer hover:text-violet-300 transition-colors"
+                      title={chatSessions.find((s) => s.id === activeChatId)?.title || "Active Chat"}
+                    >
+                      💬 {chatSessions.find((s) => s.id === activeChatId)?.title || "Active Chat"}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => createNewChatSession()}
+                    className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.06] transition cursor-pointer"
+                    title="Start new conversation"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
                   {isPipelineRunning ? (
                     <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium flex items-center gap-1">
                       <Loader2 className="w-2.5 h-2.5 animate-spin" /> Engine Active
@@ -3044,6 +3481,123 @@ function CampaignStudioContent() {
                 {deletingCampaign ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 <span>Confirm Delete</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Slide-Over Chat History Drawer ── */}
+      {isChatHistoryOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity cursor-pointer"
+            onClick={() => setIsChatHistoryOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative w-full max-w-sm sm:max-w-md h-full bg-[#14141B] border-l border-white/[0.08] shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-[#101014]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-violet-600/20 text-violet-400 flex items-center justify-center">
+                  <History className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#F2F0F7] font-heading">Chat History</h3>
+                  <p className="text-[11px] text-[#A3A0B0] truncate max-w-[220px]">
+                    {selectedClient?.business_name || "Client Conversations"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChatHistoryOpen(false)}
+                className="p-1.5 rounded-lg text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04] transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* New Chat Primary Button */}
+            <div className="p-3 border-b border-white/[0.06] bg-[#14141B]">
+              <button
+                type="button"
+                onClick={() => createNewChatSession()}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs shadow-md shadow-violet-600/20 transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Start New Chat</span>
+              </button>
+            </div>
+
+            {/* Session List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {chatSessions.length === 0 ? (
+                <div className="p-8 text-center text-[#A3A0B0] space-y-2">
+                  <MessagesSquare className="w-8 h-8 mx-auto opacity-30 text-violet-400" />
+                  <p className="text-xs">No conversations yet.</p>
+                  <p className="text-[11px] text-white/40">Start a new chat to formulate campaign strategies.</p>
+                </div>
+              ) : (
+                chatSessions.map((session) => {
+                  const isActive = session.id === activeChatId;
+                  return (
+                    <div
+                      key={session.id}
+                      onClick={() => switchChatSession(session.id)}
+                      className={`group p-3 rounded-xl border transition-all cursor-pointer relative ${
+                        isActive
+                          ? "bg-violet-600/15 border-violet-500/40 text-[#F2F0F7] shadow-sm shadow-violet-500/10"
+                          : "bg-[#101014]/60 hover:bg-[#101014] border-white/[0.06] hover:border-white/[0.12] text-[#A3A0B0]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            {isActive && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0 shadow-[0_0_6px_rgba(167,139,250,0.8)]" />
+                            )}
+                            <h4 className={`text-xs font-semibold truncate ${isActive ? "text-[#F2F0F7]" : "text-[#D1CFDC] group-hover:text-[#F2F0F7]"}`}>
+                              {session.title || "New Conversation"}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-[#A3A0B0]/70 font-mono">
+                            <span>{new Date(session.updatedAt || session.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })}</span>
+                            <span>•</span>
+                            <span>{session.messageCount} msgs</span>
+                            <span>•</span>
+                            <span className={session.artifactCount > 0 ? "text-violet-400 font-semibold" : ""}>
+                              {session.artifactCount} artifacts
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Delete this conversation and its associated artifacts?")) {
+                              deleteChatSession(session.id);
+                            }
+                          }}
+                          title="Delete conversation"
+                          className="p-1 rounded text-[#A3A0B0]/40 hover:text-rose-400 hover:bg-rose-500/10 transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-3 border-t border-white/[0.06] bg-[#101014]/80 text-[10.5px] font-mono text-[#A3A0B0] flex items-center justify-between">
+              <span>{chatSessions.length} conversation{chatSessions.length === 1 ? "" : "s"}</span>
+              <span className="text-[10px] text-[#A3A0B0]/60">Isolated context &amp; artifacts per chat</span>
             </div>
           </div>
         </div>

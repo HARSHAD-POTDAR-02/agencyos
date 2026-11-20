@@ -124,6 +124,8 @@ class ChatBriefRequest(BaseModel):
     active_artifact_version: int | None = None
     pinned_entities: list[str] = Field(default_factory=list)
     discovered_entities: list[str] = Field(default_factory=list)
+    chat_id: str | None = None
+    session_id: uuid.UUID | str | None = None
 
 
 class ChatBriefResponse(BaseModel):
@@ -143,6 +145,7 @@ class ChatBriefResponse(BaseModel):
     # Collaborative Studio & Draft Artifact additions
     campaign_id: uuid.UUID | None = None
     session_id: uuid.UUID | None = None
+    chat_id: str | None = None
     artifact_id: uuid.UUID | str | None = None
     artifact_type: str | None = None
     artifact_title: str | None = None

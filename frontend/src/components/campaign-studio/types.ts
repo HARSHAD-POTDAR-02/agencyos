@@ -137,6 +137,7 @@ export interface BrandPositioningPayload {
 export interface ActiveArtifactData {
   id: string;
   campaign_id?: string;
+  chat_id?: string;
   type: string;
   title: string;
   version: number;
