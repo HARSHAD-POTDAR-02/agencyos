@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     CAMPAIGN_STRATEGY_MODEL: str = "minimaxai/minimax-m3.1-flash"
     CAMPAIGN_CONTENT_MODEL: str = "minimaxai/minimax-m3.1-flash"
     CAMPAIGN_EVALUATION_MODEL: str = "openai/gpt-oss-120b"
+    CAMPAIGN_QUALITY_MODEL: str = "openai/gpt-oss-120b"
     LLM_TEMPERATURE: float = 0.2
     LLM_MAX_TOKENS: int = 2500
     LLM_TIMEOUT_SECONDS: int = 120

@@ -20,7 +20,7 @@ from app.campaign_intelligence.schemas.brand import BrandContext
 from app.campaign_intelligence.schemas.campaign import CampaignBrief
 from app.campaign_intelligence.schemas.deliverables import DeliverablePlan
 from app.campaign_intelligence.schemas.performance import PerformancePlaybook
-from app.campaign_intelligence.schemas.quality import QualityEvaluation
+from app.campaign_intelligence.schemas.quality import QualityEvaluation, QualityFinding
 from app.campaign_intelligence.schemas.research import MarketResearchReport
 from app.campaign_intelligence.schemas.strategy import CampaignStrategy
 from app.models.operational_workflow import (
@@ -366,13 +366,16 @@ async def execute_content_architecture(
     run: WorkflowRun,
     db: AsyncSession,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Worker executor for Content Architect agent."""
+    """Worker executor for Content Architect agent with Selective Repair Support."""
     brief_data = task.input_payload.get("brief", {}) if task.input_payload else {}
     brief = CampaignBrief.model_validate(brief_data)
 
-    # Read repair instructions if this task was triggered by selective repair
-    repair_raw = (task.input_payload or {}).get("repair_instruction")
+    payload = task.input_payload or {}
+    repair_raw = payload.get("repair_instruction") or payload.get("repair_instructions")
     repair_instructions = [str(repair_raw)] if isinstance(repair_raw, str) else (repair_raw if isinstance(repair_raw, list) else None)
+    failing_indices = payload.get("failing_indices") or payload.get("failing_deliverable_indices")
+    findings_data = payload.get("findings") or []
+    findings = [QualityFinding.model_validate(f) for f in findings_data] if findings_data else []
 
     # Find strategy and brand context from upstream outputs
     all_ancestor_outputs = await _get_all_ancestor_outputs(db, task.id)
@@ -381,15 +384,43 @@ async def execute_content_architecture(
     brand_context_data = all_ancestor_outputs.get("brand_intelligence")
     brand_context = BrandContext.model_validate(brand_context_data) if brand_context_data else None
 
+    # Load prior TaskOutputVersion from PostgreSQL for selective repair
+    prior_output_stmt = (
+        select(TaskOutputVersion)
+        .join(WorkflowTask, WorkflowTask.id == TaskOutputVersion.task_id)
+        .where(
+            WorkflowTask.workflow_run_id == run.id,
+            WorkflowTask.task_key == "content_architecture",
+            TaskOutputVersion.is_active == True,  # noqa: E712
+        )
+        .order_by(TaskOutputVersion.version_number.desc())
+    )
+    prior_output_res = await db.execute(prior_output_stmt)
+    prior_version = prior_output_res.scalars().first()
+
+    existing_deliverables: list[DeliverablePlan] = []
+    if prior_version and prior_version.output_payload:
+        prior_delivs = prior_version.output_payload.get("deliverables") or []
+        existing_deliverables = [DeliverablePlan.model_validate(d) for d in prior_delivs]
+
     start_time = time.monotonic()
     agent = ContentArchitectAgent()
     if strategy:
-        deliverables = await agent.run(
-            strategy=strategy,
-            brief=brief,
-            brand_context=brand_context,
-            revision_instructions=repair_instructions,
-        )
+        if existing_deliverables and failing_indices:
+            deliverables = await agent.repair_deliverables(
+                existing_deliverables=existing_deliverables,
+                failing_indices=[int(i) for i in failing_indices],
+                findings=findings,
+                strategy=strategy,
+                brand_context=brand_context,
+            )
+        else:
+            deliverables = await agent.run(
+                strategy=strategy,
+                brief=brief,
+                brand_context=brand_context,
+                revision_instructions=repair_instructions,
+            )
     else:
         deliverables = []
     latency_ms = int((time.monotonic() - start_time) * 1000)
@@ -433,12 +464,14 @@ async def execute_quality_evaluation(
     output = eval_result.model_dump(mode="json")
     if eval_result.revision_required:
         output["selective_repair_requested"] = True
+        output["failing_deliverable_indices"] = eval_result.failing_deliverable_indices
         instructions = (
             eval_result.revision_instruction.instructions
             if eval_result.revision_instruction
             else ["Correct identified compliance and quality defects."]
         )
         output["repair_instructions"] = "; ".join(instructions)
+        output["findings"] = [f.model_dump(mode="json") for f in eval_result.findings]
 
     invocations = _build_invocation_telemetry(agent.model_name, latency_ms)
     return output, invocations

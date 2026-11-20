@@ -4,10 +4,132 @@ import ast
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
+
+
+HookCategory = Literal[
+    "sensory_showcase",
+    "behind_the_scenes",
+    "pain_mirror",
+    "counter_intuitive_myth",
+    "live_proof_demo",
+    "social_proof",
+    "founder_or_expert_pov",
+    "direct_offer",
+]
+
+DeliverableType = Literal[
+    "reel",
+    "carousel",
+    "static",
+    "text_thread",
+    "static_graphic",
+    "text_post",
+]
+
+
+class DeliverableSlot(BaseModel):
+    """
+    Individual content unit slot planned by Campaign Strategist.
+    Grounds format, angle, hook category, buyer language, and factual constraints
+    before micro-batch generation in Agent 5.
+    """
+    slot_index: int = Field(default=0, ge=0, description="0-indexed sequence position")
+    planned_day: int = Field(default=1, ge=1, description="Sprint day e.g. Day 1, Day 3")
+    deliverable_type: str = Field(description="reel, carousel, static, text_thread")
+    target_platform: str = Field(description="instagram, linkedin, tiktok, facebook, youtube")
+    funnel_stage: Literal[
+        "top_of_funnel_awareness",
+        "middle_of_funnel_consideration",
+        "bottom_of_funnel_conversion",
+    ] = "top_of_funnel_awareness"
+    target_persona: str = Field(default="Target Audience")
+    hook_category: HookCategory = Field(default="pain_mirror")
+    strategic_angle_ref: str = Field(default="Core Strategic Angle")
+    core_message: str = Field(default="")
+    allowed_proof_points: list[str] = Field(default_factory=list)
+    buyer_language_refs: list[str] = Field(default_factory=list)
+    factual_boundary_constraints: list[str] = Field(default_factory=list)
+
+    @field_validator("deliverable_type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: Any) -> str:
+        s = str(v).lower().strip()
+        if "reel" in s or "video" in s or "short" in s:
+            return "reel"
+        if "carousel" in s or "slide" in s or "deck" in s:
+            return "carousel"
+        if "static" in s or "image" in s or "graphic" in s:
+            return "static"
+        if "text" in s or "thread" in s or "post" in s:
+            return "text_thread"
+        return s or "reel"
+
+    @field_validator("target_platform", mode="before")
+    @classmethod
+    def normalize_platform(cls, v: Any) -> str:
+        s = str(v).lower().strip()
+        if "insta" in s:
+            return "instagram"
+        if "link" in s:
+            return "linkedin"
+        if "tik" in s:
+            return "tiktok"
+        if "face" in s or "fb" in s:
+            return "facebook"
+        if "tube" in s or "yt" in s:
+            return "youtube"
+        return s or "instagram"
+
+    @field_validator("funnel_stage", mode="before")
+    @classmethod
+    def normalize_funnel_stage(cls, v: Any) -> str:
+        s = str(v).lower().strip()
+        if "top" in s or "aware" in s:
+            return "top_of_funnel_awareness"
+        if "mid" in s or "consid" in s or "eval" in s:
+            return "middle_of_funnel_consideration"
+        if "bot" in s or "conv" in s or "clos" in s or "action" in s:
+            return "bottom_of_funnel_conversion"
+        return "top_of_funnel_awareness"
+
+    @field_validator("hook_category", mode="before")
+    @classmethod
+    def normalize_hook_category(cls, v: Any) -> str:
+        s = str(v).lower().strip().replace("-", "_").replace(" ", "_")
+        allowed = [
+            "sensory_showcase",
+            "behind_the_scenes",
+            "pain_mirror",
+            "counter_intuitive_myth",
+            "live_proof_demo",
+            "social_proof",
+            "founder_or_expert_pov",
+            "direct_offer",
+        ]
+        if s in allowed:
+            return s
+        for a in allowed:
+            if a in s or s in a:
+                return a
+        if "myth" in s or "counter" in s:
+            return "counter_intuitive_myth"
+        if "demo" in s or "proof" in s:
+            return "live_proof_demo"
+        if "social" in s or "testim" in s or "case" in s:
+            return "social_proof"
+        if "pain" in s or "mirror" in s:
+            return "pain_mirror"
+        if "behind" in s or "bts" in s:
+            return "behind_the_scenes"
+        if "offer" in s or "cta" in s:
+            return "direct_offer"
+        if "founder" in s or "pov" in s or "expert" in s:
+            return "founder_or_expert_pov"
+        return "sensory_showcase"
 
 
 class StrategicAngle(BaseModel):
@@ -82,6 +204,10 @@ class CampaignStrategy(BaseModel):
     budget_allocation: dict[str, float] = Field(default_factory=dict)
     success_benchmarks: dict[str, str] = Field(default_factory=dict)
     assumptions_and_risks: list[str] = Field(default_factory=list)
+    deliverable_slots: list[DeliverableSlot] = Field(
+        default_factory=list,
+        description="Deterministic deliverable slot plan specifying format, platform, persona, hook category, and factual boundaries for every planned content piece",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -224,5 +350,24 @@ class CampaignStrategy(BaseModel):
                     res.append(str(item))
             return res
         return v
+
+    @field_validator("deliverable_slots", mode="before")
+    @classmethod
+    def normalize_slots(cls, v: Any) -> list[Any]:
+        if not isinstance(v, list):
+            return []
+        slots = []
+        for idx, item in enumerate(v):
+            if isinstance(item, dict):
+                d = dict(item)
+                if "slot_index" not in d or d.get("slot_index") is None:
+                    d["slot_index"] = idx
+                if "planned_day" not in d or not d.get("planned_day"):
+                    d["planned_day"] = idx * 2 + 1
+                slots.append(d)
+            else:
+                slots.append(item)
+        return slots
+
 
 

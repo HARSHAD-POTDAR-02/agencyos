@@ -58,6 +58,29 @@ class CampaignStrategistAdapter(SpecialistAdapter):
         industry = context.client_industry or "General Business"
         brief = context.campaign_brief
 
+        market_res = context.market_research
+        perf_playbook = context.performance_playbook
+
+        market_context_str = "None available."
+        if market_res:
+            points = []
+            if getattr(market_res, "pain_points", None):
+                points.append(f"Pain Points: {', '.join(market_res.pain_points[:3])}")
+            if getattr(market_res, "buyer_language_snippets", None):
+                points.append(f"Buyer Language: {', '.join(market_res.buyer_language_snippets[:3])}")
+            if points:
+                market_context_str = " | ".join(points)
+
+        perf_context_str = "None available."
+        if perf_playbook:
+            perf_pts = []
+            if getattr(perf_playbook, "winning_hooks_and_angles", None):
+                perf_pts.append(f"Winning Angles: {', '.join(perf_playbook.winning_hooks_and_angles[:2])}")
+            if getattr(perf_playbook, "recommended_format_mix", None):
+                perf_pts.append(f"Recommended Mix: {perf_playbook.recommended_format_mix}")
+            if perf_pts:
+                perf_context_str = " | ".join(perf_pts)
+
         prompt = f"""You are the Master Campaign Strategist & Co-Director for AgencyOS.
 User Request: "{query}"
 
@@ -66,6 +89,8 @@ Objective: {brief.objective}
 Custom Brief: {brief.custom_brief or 'None specified'}
 Target Platforms: {', '.join(brief.platforms or ['instagram', 'linkedin'])}
 Sprint Duration: {brief.duration_days or 7} days (Dates: {brief.start_date} to {brief.end_date})
+Market Research Insights: {market_context_str}
+Historical Performance Insights: {perf_context_str}
 
 YOUR TASK:
 Architect a multi-stage campaign sprint blueprint matching BlueprintOutput schema:
@@ -79,7 +104,7 @@ Architect a multi-stage campaign sprint blueprint matching BlueprintOutput schem
                 prompt=prompt,
                 schema_class=BlueprintOutput,
                 temperature=0.3,
-                model=settings.FALLBACK_MODEL,
+                model=getattr(settings, "CAMPAIGN_STRATEGY_MODEL", settings.FALLBACK_MODEL),
             )
             payload = CampaignBlueprintPayload(
                 campaign_theme=bp_res.campaign_theme,

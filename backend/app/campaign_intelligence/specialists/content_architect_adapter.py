@@ -147,17 +147,8 @@ def normalize_storyboard_scenes_timing(
     if len(scenes) == 1 and tot_sec >= 15:
         s0 = scenes[0]
         beat_count = max(3, min(10, tot_sec // 6))
-        shot_types = [
-            "Macro Close-Up • Opening Hook",
-            "POV Whip Pan • Preparation",
-            "Medium Dynamic Action Shot",
-            "Overhead Plating & Masala Pour",
-            "Sensory ASMR Sizzle Detail",
-            "Tasting & Texture Reaction",
-            "Hero Signature Presentation Spread",
-            "Call-to-Action Outro & Signoff",
-        ]
         beat_dur_ms = (tot_sec * 1000) // beat_count
+        vo_parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s0.voiceover_script or "") if p.strip()]
         subdivided: list[SceneCard] = []
         for i in range(beat_count):
             st_ms = i * beat_dur_ms
@@ -165,31 +156,17 @@ def normalize_storyboard_scenes_timing(
             st_sec = st_ms // 1000
             en_sec = en_ms // 1000
             ts_str = f"{st_sec // 60}:{st_sec % 60:02d} - {en_sec // 60}:{en_sec % 60:02d}"
-            if i == 0:
-                vo = s0.voiceover_script or "Stop scrolling and take a look at this!"
-                act = s0.visual_action
-                ost = s0.on_screen_text or "Signature Highlight"
-                sfx = s0.audio_sfx_cue or "Whoosh hit + modern rhythm"
-            elif i == beat_count - 1:
-                vo = "Experience the difference today – visit our link in bio to get started!"
-                act = "Hero closing reveal of the brand solution with prominent call-to-action."
-                ost = "Get Started • Link in Bio"
-                sfx = "Clear musical swell + branded chime"
-            else:
-                vo = "Engineered with precision and crafted to deliver measurable impact for our clients."
-                act = "Dynamic multi-angle camera captures the core features with rich visual details."
-                ost = "Premium Quality & Performance"
-                sfx = "Ambient soundscape + steady tempo beat"
+            vo = vo_parts[i] if i < len(vo_parts) else (s0.voiceover_script if i == 0 else "")
             subdivided.append(SceneCard(
                 scene_number=i + 1,
                 start_ms=st_ms,
                 end_ms=en_ms,
                 timestamp_range=ts_str,
-                shot_type=shot_types[i % len(shot_types)],
-                visual_action=act,
+                shot_type=s0.shot_type if i == 0 else f"Scene Beat #{i+1}",
+                visual_action=s0.visual_action if i == 0 else f"Continuation of {s0.visual_action[:80]}",
                 voiceover_script=vo,
-                on_screen_text=ost,
-                audio_sfx_cue=sfx,
+                on_screen_text=s0.on_screen_text if i == 0 else "",
+                audio_sfx_cue=s0.audio_sfx_cue,
                 ai_visual_prompt=s0.ai_visual_prompt,
             ))
         scenes = subdivided
@@ -785,7 +762,7 @@ Return strictly matching the HookAnalysisOutput schema.
                     prompt=prompt,
                     schema_class=HookAnalysisOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
                 payload = HookComparisonPayload(
                     topic=hook_res.topic,
@@ -830,7 +807,7 @@ Return strictly matching CarouselGenerationOutput schema.
                     prompt=prompt,
                     schema_class=CarouselGenerationOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
                 payload = CarouselDeckArtifactPayload(
                     deliverable_title=car_res.deliverable_title,
@@ -1088,7 +1065,7 @@ Directly apply the user's modifications to Scene {target_num}. Do not rewrite an
                     prompt=prompt,
                     schema_class=TargetedSceneRevisionOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
 
                 # CODE-LEVEL ENFORCEMENT: Preserve untouched scenes 100% identically!
@@ -1152,7 +1129,7 @@ Keep it punchy, high-converting, and aligned with the user's request.
                     prompt=prompt,
                     schema_class=TargetedCopyRevisionOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
                 new_payload = dict(active)
                 new_payload["call_to_action"] = rev.revised_text
@@ -1192,7 +1169,7 @@ Output the revised {field_name} matching TargetedCopyRevisionOutput schema.
                     prompt=prompt,
                     schema_class=TargetedCopyRevisionOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
                 new_payload = dict(active)
                 new_payload[field_name] = rev.revised_text
@@ -1291,7 +1268,7 @@ Ensure the visual action and voiceover connect smoothly with preceding and succe
                     prompt=prompt,
                     schema_class=TargetedSceneRevisionOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
 
                 new_card = SceneCard(
@@ -1386,7 +1363,7 @@ Rewrite/update the voiceover script and on-screen text across ALL {len(current_s
                 prompt=prompt,
                 schema_class=ReviseAllScenesOutput,
                 temperature=0.3,
-                model=settings.FALLBACK_MODEL,
+                model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
             )
 
             update_by_num = {u.scene_number: u for u in rev.scenes}
@@ -1479,7 +1456,7 @@ Output ONLY the revised Slide {target_num} matching TargetedSlideRevisionOutput 
                     prompt=prompt,
                     schema_class=TargetedSlideRevisionOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
 
                 # CODE-LEVEL ENFORCEMENT: Preserve untouched slides 100% identically!
@@ -1536,7 +1513,7 @@ Output revised text matching TargetedCopyRevisionOutput schema.
                     prompt=prompt,
                     schema_class=TargetedCopyRevisionOutput,
                     temperature=0.3,
-                    model=settings.FALLBACK_MODEL,
+                    model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
                 )
                 new_payload = dict(active)
                 new_payload[field_name] = rev.revised_text
@@ -1676,7 +1653,7 @@ Return strictly matching ReviseAllSlidesOutput schema.
                 prompt=prompt,
                 schema_class=ReviseAllSlidesOutput,
                 temperature=0.3,
-                model=settings.FALLBACK_MODEL,
+                model=getattr(settings, "CAMPAIGN_CONTENT_MODEL", settings.FALLBACK_MODEL),
             )
 
             update_by_num = {u.slide_number: u for u in rev.scenes if hasattr(u, "slide_number")} if hasattr(rev, "scenes") else {u.slide_number: u for u in rev.slides}

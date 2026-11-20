@@ -79,6 +79,7 @@ class DeliverablePlan(BaseModel):
     Adapts based on deliverable_type (reel, carousel, static_graphic, text_post).
     """
     deliverable_id: uuid.UUID | None = None
+    slot_index: int = Field(default=0, ge=0, description="0-indexed sequence position matching DeliverableSlot")
     title: str = Field(min_length=3)
     deliverable_type: str = Field(description="reel, carousel, static_graphic, text_post")
     platform: str = Field(description="instagram, linkedin, twitter, facebook, youtube")
@@ -87,11 +88,14 @@ class DeliverablePlan(BaseModel):
     scheduled_date: str | None = Field(default=None, description="Exact calendar date (YYYY-MM-DD)")
     date_label: str | None = Field(default=None, description="Human readable date label, e.g. 'Nov 08, 2026'")
     strategic_angle: str = Field(default="Core Brand Theme")
+    hook_category: str | None = Field(default=None, description="Hook category from DeliverableSlot")
     hook_options: list[str] = Field(default_factory=list, description="Alternative tested hook concepts")
     primary_hook: str = Field(default="", description="Recommended opening hook")
     caption: str = Field(default="", description="Complete, copywritten social caption")
     hashtags: list[str] = Field(default_factory=list)
     call_to_action: str = Field(default="Follow for more")
+    allowed_proof_points: list[str] = Field(default_factory=list, description="Grounding proof points inherited from slot")
+    factual_boundary_constraints: list[str] = Field(default_factory=list, description="Boundary constraints inherited from slot")
     hero_entity: str | None = Field(default=None, description="Featured hero offering, product, or core brand entity")
     hero_focus: list[str] = Field(default_factory=list, description="All matching hero entities for this deliverable")
     scope_item_id: uuid.UUID | None = None
@@ -144,6 +148,13 @@ class DeliverablePlan(BaseModel):
             d["planned_week"] = week_val
         except Exception:
             d["planned_week"] = 1
+
+        # Sanitize slot_index (ensure >= 0)
+        try:
+            slot_raw = d.get("slot_index") if d.get("slot_index") is not None else d.get("slot", 0)
+            d["slot_index"] = max(0, int(slot_raw or 0))
+        except Exception:
+            d["slot_index"] = 0
 
         # Sanitize planned_day (ensure >= 1)
         try:

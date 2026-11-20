@@ -39,24 +39,26 @@ def route_quality_gate(
         logger.warning("Quality evaluation missing at quality gate; routing to END.")
         return END
 
-    if evaluation.is_approved_for_human_review:
+    if evaluation.is_approved_for_human_review or not evaluation.revision_required:
         logger.info("Quality gate passed. Routing to END (awaiting human approval).")
         return END
 
-    instruction = evaluation.revision_instruction
-    if not instruction:
-        logger.info("Revision not requested or instruction empty; routing to END.")
+    revision_count = state.get("revision_count", 0)
+    max_revisions = state.get("max_revisions", 2)
+    if revision_count >= max_revisions:
+        logger.warning(f"Quality gate reached maximum revisions ({revision_count}/{max_revisions}). Routing to END.")
         return END
 
-    if instruction.target_agent == "human":
+    instruction = evaluation.revision_instruction
+    if instruction and instruction.target_agent == "human":
         logger.warning(f"Quality gate escalated to human: {instruction.reason}. Routing to END.")
         return END
 
-    if instruction.target_agent == "campaign_strategist":
+    if instruction and instruction.target_agent == "campaign_strategist":
         logger.info(f"Quality gate requested strategic revision: {instruction.reason}. Routing to campaign_strategist.")
         return "campaign_strategist"
 
-    logger.info(f"Quality gate requested content revision: {instruction.reason}. Routing to content_architect.")
+    logger.info("Quality gate requested content revision. Routing to content_architect for selective repair.")
     return "content_architect"
 
 

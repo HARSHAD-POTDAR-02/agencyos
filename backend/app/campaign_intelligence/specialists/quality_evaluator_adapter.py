@@ -140,7 +140,7 @@ Evaluate the following creative copy for brand safety, prohibited claims, and to
 
 DRAFT TO AUDIT:
 \"\"\"
-{target_text[:1500]}
+{target_text}
 \"\"\"
 
 BRAND CONTEXT:
@@ -162,7 +162,7 @@ YOUR TASK:
                 prompt=prompt,
                 schema_class=SemanticAuditResult,
                 temperature=0.1,
-                model=settings.FALLBACK_MODEL,
+                model=getattr(settings, "CAMPAIGN_QUALITY_MODEL", getattr(settings, "CAMPAIGN_EVALUATION_MODEL", settings.FALLBACK_MODEL)),
             )
             proposed_clean_copy = sem_result.proposed_clean_copy
             conversational_reply = sem_result.conversational_critique
