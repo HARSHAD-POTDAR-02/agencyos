@@ -358,7 +358,7 @@ async def review_workflow_task(
     return {
         "task_id": task.id,
         "decision": payload.decision.value,
-        "unblocked_tasks": [str(t.id) for t in unblocked_tasks],
+        "unblocked_tasks": [str(t.id) if hasattr(t, "id") else str(t) for t in unblocked_tasks],
         "message": f"Human review recorded with decision '{payload.decision.value}'. {len(unblocked_tasks)} tasks unblocked.",
     }
 

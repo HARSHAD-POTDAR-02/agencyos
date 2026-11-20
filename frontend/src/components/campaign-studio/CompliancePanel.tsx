@@ -114,7 +114,7 @@ export function CompliancePanel({ payload }: CompliancePanelProps) {
                       <AlertCircle className="w-4 h-4 text-[#E5AA58]" />
                     )}
                     <span className="font-bold text-sm text-[#F2F0F7]">
-                      {chk.check_name}
+                      {chk.check_name || (chk as any).rule_name || "Guideline Check"}
                     </span>
                   </div>
 
@@ -132,7 +132,7 @@ export function CompliancePanel({ payload }: CompliancePanelProps) {
                 </div>
 
                 <p className="text-xs text-[#A3A0B0] leading-relaxed">
-                  {chk.explanation}
+                  {chk.explanation || (chk as any).details || (chk as any).issue_description || "Verified against brand rules."}
                 </p>
 
                 {chk.suggested_correction && (
