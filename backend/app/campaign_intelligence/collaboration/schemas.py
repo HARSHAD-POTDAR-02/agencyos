@@ -382,6 +382,16 @@ class BlueprintStage(BaseModel):
     core_message: str | None = None
     deliverable_focus: list[str] = Field(default_factory=list)
 
+    @field_validator("key_formats", "deliverable_focus", mode="before")
+    @classmethod
+    def normalize_stage_formats(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if item]
+        elif isinstance(v, str):
+            import re
+            return [part.strip() for part in re.split(r"[,/|]+", v) if part.strip()]
+        return ["Reel", "Carousel"]
+
     @model_validator(mode="after")
     def sync_aliases(self) -> "BlueprintStage":
         if not self.days_range:
@@ -410,6 +420,27 @@ class CampaignBlueprintPayload(BaseModel):
     narrative_stages: list[BlueprintStage] = Field(default_factory=list)
     target_format_mix: dict[str, int] = Field(default_factory=dict)
     format_mix_ratios: dict[str, int] = Field(default_factory=dict)
+
+    @field_validator("target_format_mix", "format_mix_ratios", mode="before")
+    @classmethod
+    def normalize_blueprint_format_mix(cls, v: Any) -> dict[str, int]:
+        if isinstance(v, dict):
+            res = {}
+            for k, val in v.items():
+                try:
+                    res[str(k).lower().strip()] = int(val)
+                except (ValueError, TypeError):
+                    res[str(k).lower().strip()] = 1
+            return res or {"reel": 3, "carousel": 2, "static": 1}
+        elif isinstance(v, str):
+            import re
+            res = {}
+            for fmt in ["reel", "carousel", "static", "graphic", "video", "post"]:
+                m = re.search(rf"\b{fmt}s?\b.*?(\d+)", v, re.IGNORECASE)
+                if m:
+                    res[fmt] = int(m.group(1))
+            return res or {"reel": 3, "carousel": 2, "static": 1}
+        return {"reel": 3, "carousel": 2, "static": 1}
 
     @model_validator(mode="after")
     def sync_payload(self) -> "CampaignBlueprintPayload":

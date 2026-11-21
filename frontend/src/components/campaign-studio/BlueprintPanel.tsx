@@ -105,30 +105,62 @@ export function BlueprintPanel({ payload }: BlueprintPanelProps) {
       </div>
 
       {/* ── Recommended Format Mix ── */}
-      {Object.keys(formatRatios).length > 0 && (
-        <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-3">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
-            <PieChart className="w-3.5 h-3.5 text-[#A78BFA]" />
-            <span>Recommended Deliverable Distribution</span>
-          </h4>
+      {Object.keys(formatRatios).length > 0 && (() => {
+        const totalDeliverables = Object.values(formatRatios).reduce(
+          (acc, v) => acc + (typeof v === "number" ? v : parseInt(String(v), 10) || 0),
+          0
+        );
+        const isCountBased = totalDeliverables > 0 && totalDeliverables <= 50;
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            {Object.entries(formatRatios).map(([fmt, pct]) => (
-              <div
-                key={fmt}
-                className="p-2.5 rounded-lg bg-[#20202A] border border-[#30303D] text-center"
-              >
-                <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block">
-                  {fmt}
+        return (
+          <div className="p-4 rounded-xl bg-[#17171E] border border-[#30303D] shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs uppercase font-bold tracking-wider text-[#A3A0B0] flex items-center gap-1.5">
+                <PieChart className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <span>Recommended Deliverable Distribution</span>
+              </h4>
+              {isCountBased && (
+                <span className="text-[11px] font-mono text-[#A78BFA] bg-[#A78BFA]/10 px-2 py-0.5 rounded border border-[#A78BFA]/20 font-medium">
+                  {totalDeliverables} Total Deliverables
                 </span>
-                <span className="text-lg font-bold text-[#F2F0F7] font-mono">
-                  {pct}%
-                </span>
-              </div>
-            ))}
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+              {Object.entries(formatRatios).map(([fmt, val]) => {
+                const count = typeof val === "number" ? val : parseInt(String(val), 10) || 0;
+                const percentage = totalDeliverables > 0 ? Math.round((count / totalDeliverables) * 100) : 0;
+
+                return (
+                  <div
+                    key={fmt}
+                    className="p-3 rounded-lg bg-[#20202A] border border-[#30303D] text-center space-y-1"
+                  >
+                    <span className="text-[10px] uppercase font-bold text-[#A3A0B0] block tracking-wider">
+                      {fmt}
+                    </span>
+                    <div className="flex items-baseline justify-center gap-1.5">
+                      <span className="text-lg font-bold text-[#F2F0F7] font-mono">
+                        {isCountBased ? count : `${count}%`}
+                      </span>
+                      {isCountBased && (
+                        <span className="text-xs text-[#A78BFA] font-medium font-mono">
+                          ({percentage}%)
+                        </span>
+                      )}
+                    </div>
+                    {isCountBased && (
+                      <span className="text-[10px] text-[#A3A0B0] block">
+                        {count === 1 ? "deliverable" : "deliverables"}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
