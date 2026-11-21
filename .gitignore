@@ -36,6 +36,7 @@ frontend/.env.local
 
 # Scratch
 scratch/
+agencyos_*.txt
 .active_tunnel_url
 .DS_Store
 Thumbs.db

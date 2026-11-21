@@ -504,6 +504,7 @@ class ChatBriefLLMOutput(BaseModel):
     suggested_start_date: str | None = None
     suggested_end_date: str | None = None
     suggested_duration_days: int | None = None
+    suggested_deliverable_count: int | None = None
     is_ready_to_generate: bool = False
 
 
@@ -869,6 +870,8 @@ async def execute_chat_turn(
             )
 
     brand_context = None
+    quotas_summary_str = "No contracted deliverable quotas on file (Standard retainer)."
+    total_quota_remaining = 0
     if brand_profile:
         brand_voice_list = (
             brand_profile.brand_voice
@@ -901,6 +904,9 @@ async def execute_chat_turn(
             else []
         )
 
+        from app.campaign_intelligence.tools.brand_tools import get_client_contract_quotas
+        contract_quotas = await get_client_contract_quotas(client_id, agency_id, db)
+
         brand_context = BrandContext(
             client_id=client_id,
             agency_id=agency_id,
@@ -914,12 +920,22 @@ async def execute_chat_turn(
             prohibited_terms=prohibited_terms_objs,
             prohibited_claims=prohibited_claims_objs,
             verified_offers=verified_offers_objs,
+            contract_quotas=contract_quotas,
             confirmed_facts=[client.business_name, client.industry or "General Business"],
             knowledge_gaps=[
                 "No verified case studies or client testimonials on file",
                 "No verified pricing tiers or promotional discounts on file",
             ],
         )
+
+        quotas_summary_lines = []
+        total_quota_remaining = 0
+        if contract_quotas:
+            for q in contract_quotas:
+                rem = q.remaining if q.remaining is not None and q.remaining > 0 else (q.contracted or q.monthly_quantity or 1)
+                total_quota_remaining += rem
+                quotas_summary_lines.append(f"- {q.deliverable_type.capitalize()} on {q.platform or 'multi-platform'}: {rem} remaining this month")
+        quotas_summary_str = "\n".join(quotas_summary_lines) if quotas_summary_lines else "No contracted deliverable quotas on file (Standard retainer)."
 
     brief = CampaignBrief(
         client_id=client_id,
@@ -979,11 +995,17 @@ async def execute_chat_turn(
                 if hasattr(specialist_res.artifact_type, "value")
                 else str(specialist_res.artifact_type or "draft")
             )
-            art_title = (
+            raw_title = (
                 specialist_res.artifact_payload.get("deliverable_title")
                 or specialist_res.artifact_payload.get("query_topic")
                 or f"{adapter.specialist_name} Asset"
             )
+            raw_title_str = str(raw_title or "").strip()
+            if len(raw_title_str) > 80:
+                first_part = re.split(r"[.?!\n]", raw_title_str)[0].strip()
+                art_title = (first_part[:75] + "...") if len(first_part) > 15 else (raw_title_str[:75] + "...")
+            else:
+                art_title = raw_title_str or f"{adapter.specialist_name} Asset"
             saved_artifact, saved_version = await save_or_revise_artifact(
                 session_id=session.id,
                 agency_id=agency_id,
@@ -1145,6 +1167,10 @@ Client Context (Dynamic from Brand Profile & Client Record):
 - Prohibited Claims / Guardrails: {prohibited if prohibited else 'No specific prohibitions'}
 - Strategic Goals: {brand_goals if brand_goals else 'Not specified'}
 
+Client Monthly Contract Retainer & Deliverable Quotas:
+{quotas_summary_str}
+Total Monthly Quota Bank Remaining: {total_quota_remaining} deliverables.
+
 {perf_context_str}
 {market_context_str}
 
@@ -1175,6 +1201,17 @@ CRITICAL SYSTEM RULES:
      * Pivot immediately to dissecting high-performing category hooks, algorithmic format strategies, and content whitespace relevant to their industry.
    - NEVER provide 'hypothetical examples based on naming conventions' presented as real businesses.
    - NEVER use robotic AI disclaimers or apologies ('I do not have access to real-time directories, the names I provided were hypothetical...'). Communicate with executive strategic authority and focus on high-impact marketing strategy.
+6. SPRINT SIZING & DELIVERABLE QUOTA INTELLIGENCE:
+   - SPRINT SCALE vs MONTHLY QUOTA: The contract quotas ({total_quota_remaining} remaining) represent the client's TOTAL MONTHLY RETAINER ceiling, NOT the size of a single sprint!
+   - A sprint draws ONLY the specific deliverables needed for its timeframe:
+     * 1-day burst sprint: Recommend 1-2 deliverables max (e.g. 1 Reel or 1 Reel + 1 Carousel). NEVER allocate 20 deliverables into 1 day! Point out that the remaining {max(0, total_quota_remaining - 2)} deliverables remain safely banked for future sprints.
+     * 14-day sprint: Recommend at most 14 deliverables (e.g. 1 per day, or 3-4 posts per week = 6-8 deliverables).
+   - INTERACTIVE INTAKE: Proactively clarify or ask the user:
+     1. How many deliverables they want to produce (or if they prefer daily posting vs 3x/week).
+     2. Which platforms they want to prioritize (Instagram, LinkedIn, Facebook, Twitter/X).
+     3. Which formats they prefer (Reels, Carousels, Static).
+   - QUOTA REMINDERS: If the user asks for more deliverables than the remaining monthly quota bank ({total_quota_remaining}), politely warn them and remind them of the remaining quota limit.
+   - STRUCTURED OUTPUT: Populate `suggested_duration_days` and `suggested_deliverable_count` accurately based on the agreed sprint size!
 """
 
     try:
@@ -1250,6 +1287,7 @@ CRITICAL SYSTEM RULES:
             suggested_start_date=final_start_date,
             suggested_end_date=final_end_date,
             suggested_duration_days=final_duration_days,
+            suggested_deliverable_count=output.suggested_deliverable_count or (1 if final_duration_days == 1 else (min(final_duration_days, 10) if final_duration_days else None)),
             is_ready_to_generate=output.is_ready_to_generate,
             pinned_entities=payload.pinned_entities,
             discovered_entities=candidate_entities,
@@ -1322,6 +1360,7 @@ CRITICAL SYSTEM RULES:
             suggested_start_date=start_date_str,
             suggested_end_date=end_date_str,
             suggested_duration_days=dur_days,
+            suggested_deliverable_count=1 if dur_days == 1 else (min(dur_days, 10) if dur_days else None),
             suggested_deliverable_preferences=extracted_fmts,
             is_ready_to_generate=False,
             pinned_entities=payload.pinned_entities,

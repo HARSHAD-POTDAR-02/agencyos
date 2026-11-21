@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class BrandConversationalReply(BaseModel):
-    conversational_summary: str
+    conversational_summary: str = Field(
+        description="Comprehensive, deeply structured markdown response with clear section headers (###), bold bullet points, and fully enumerated lists. Never cut off mid-list."
+    )
     clarifying_questions_for_user: list[str] = Field(default_factory=list)
     suggested_followups: list[str] = Field(default_factory=list)
 
@@ -113,24 +115,42 @@ class BrandSpecialistAdapter(SpecialistAdapter):
         )
 
         # 4. Synthesize Conversational Answer using Groq LLM
+        brief_objective = getattr(context.campaign_brief, "objective", None) or ""
+        brief_custom = getattr(context.campaign_brief, "custom_brief", None) or ""
+
         prompt = f"""You are the Brand Identity Specialist for AgencyOS.
 A user asked: "{query}"
 
-Client Reality:
+Client Reality & Positioning:
 - Business: {brand_context.business_name}
 - Industry: {brand_context.industry or 'General'}
+- Sprint Objective: {brief_objective if brief_objective else 'Targeted B2B performance sprint'}
+- Sprint Context: {brief_custom if brief_custom else 'Deliver high-impact authority content'}
 - Confirmed Facts: {[f.statement for f in confirmed_facts] if confirmed_facts else 'None on file'}
-- Brand Voice: {', '.join(brand_context.brand_voice) if brand_context.brand_voice else 'Authoritative, Professional'}
+- Brand Voice: {', '.join(brand_context.brand_voice) if brand_context.brand_voice else 'Authoritative, Technical, Minimalist'}
+- Brand Positioning: {brand_context.brand_positioning or 'Enterprise Cloud Optimization'}
 - Content Pillars: {', '.join(brand_context.content_pillars) if brand_context.content_pillars else 'Core Value Props'}
 - Prohibited Claims: {[c.claim for c in brand_context.prohibited_claims]}
+- Prohibited Terms: {[t.term for t in brand_context.prohibited_terms]}
 - Knowledge Gaps: {[g.statement for g in missing_information_questions]}
 
-CRITICAL RULES:
-1. Never hallucinate or invent fake customer personas, fabricated pain points, or fake review quotes.
-2. Directly answer the user's specific query.
-3. If information is missing, explicitly list clarifying questions instead of guessing.
-4. If recommending case-study, customer story, or metric-driven pillars when verified records lack case studies or testimonials, explicitly flag '[CLIENT_INPUT_NEEDED]: <explanation of what proof is needed>'.
-5. Keep the conversational summary concise and executive in tone.
+CRITICAL EXECUTION GUIDELINES:
+1. STRUCTURE & DEPTH (NO SINGLE-PARAGRAPH COMPRESSION):
+   - When the user asks for multi-part breakdowns (such as tone audits, ICP pain-point breakdowns, or boundary claims lists), DO NOT compress everything into a single cramped paragraph!
+   - Organize your response using clear markdown headings (e.g. `### Tone & Voice Alignment`, `### Ideal Customer Profile (ICP) Breakdown`, `### Strict Boundary Claims to Avoid`), bullet points, and numbered lists.
+   - Fully enumerate all items requested by the user. If the user asks for 3 boundary claims, list all 3 completely (1, 2, and 3) with full context and the specific reason to avoid each claim. NEVER cut off mid-enumeration!
+
+2. TECHNICAL GROUNDING & SPECIFICITY (NO GENERIC FLUFF):
+   - When profiling ICPs (such as VP of Engineering, CTO, DevOps Lead, or FinOps Director), ground their pain points directly in the client's concrete technical domain and sprint themes (e.g. tail-latency spikes under load, SLA/SLO breach risks, pulling engineers off roadmaps for triage, unpredictable cross-region data egress line items, untagged cloud transfer spend, delayed billing visibility, quarterly cloud forecast variance).
+   - Avoid generic textbook platitudes like "they care about scalability, reliability, and cost". Detail the real operational tensions and workflow friction they face daily.
+
+3. BOUNDARY CLAIMS & ANTI-HYPE HYGIENE:
+   - Identify concrete, realistic boundary claims that an enterprise buyer would perceive as cheap AI hype or unrealistic marketing fluff (e.g. "Eliminates 100% of downtime with autonomous AI", "Guarantees 10x speedup overnight", "Unqualified zero-latency promises").
+   - Explain why each claim damages enterprise trust and propose the compliant, authoritative alternative.
+
+4. ACCURACY & EVIDENCE:
+   - If recommending metric-driven or customer story pillars without confirmed case studies in brand records, explicitly flag '[CLIENT_INPUT_NEEDED]: <explanation of what proof is needed>'.
+   - Maintain an authoritative, minimalist, and expert executive tone.
 """
 
         try:
@@ -139,6 +159,7 @@ CRITICAL RULES:
                 schema_class=BrandConversationalReply,
                 temperature=0.2,
                 model=settings.FALLBACK_MODEL,
+                max_tokens=1500,
             )
             reply_text = llm_reply.conversational_summary
             followups = llm_reply.suggested_followups or [

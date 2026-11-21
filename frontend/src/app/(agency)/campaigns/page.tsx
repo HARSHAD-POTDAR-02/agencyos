@@ -395,6 +395,7 @@ function CampaignStudioContent() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [durationDays, setDurationDays] = useState<number | null>(null);
+  const [deliverableCount, setDeliverableCount] = useState<number | null>(null);
   const [periodMonth, setPeriodMonth] = useState<number>(new Date().getMonth() + 1);
   const [periodYear, setPeriodYear] = useState<number>(new Date().getFullYear());
 
@@ -1565,6 +1566,7 @@ function CampaignStudioContent() {
             if (response.suggested_start_date) setStartDate(response.suggested_start_date);
             if (response.suggested_end_date) setEndDate(response.suggested_end_date);
             if (response.suggested_duration_days) setDurationDays(response.suggested_duration_days);
+            if (response.suggested_deliverable_count) setDeliverableCount(response.suggested_deliverable_count);
             if (response.suggested_period_month) setPeriodMonth(response.suggested_period_month);
             if (response.suggested_period_year) setPeriodYear(response.suggested_period_year);
             if (response.is_ready_to_generate) setIsReadyToGenerate(true);
@@ -1981,10 +1983,10 @@ function CampaignStudioContent() {
           primary_goal: suggestedObjective || "Drive conversions, pipeline and brand authority",
           target_audience: ["Enterprise Decision Makers & Technical Leads"],
           platforms: deliverablePreferences.length > 0 ? deliverablePreferences : ["linkedin"],
-          deliverable_count: durationDays || 2,
+          deliverable_count: deliverableCount || (durationDays === 1 ? 1 : (durationDays ? Math.min(durationDays, 14) : 2)),
           period_month: periodMonth || (new Date().getMonth() + 1),
           period_year: periodYear || new Date().getFullYear(),
-          duration_days: durationDays || 4,
+          duration_days: durationDays || 1,
         },
         token
       );
@@ -2077,17 +2079,42 @@ function CampaignStudioContent() {
         }
       }, 1500);
 
-      await operationalWorkflowApi.stepRun(effectiveAgencyId, dagRun.id, token, 10);
+      let stepTries = 0;
+      let runUpdated: any = null;
+      let stratTask: any = null;
+      let humanStratTask: any = null;
+
+      while (stepTries < 15) {
+        stepTries++;
+        const stepRes = await operationalWorkflowApi.stepRun(effectiveAgencyId, dagRun.id, token, 10);
+        runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, dagRun.id, token);
+        stratTask = (runUpdated.tasks || []).find((t: any) => t.task_key === "campaign_strategy");
+        humanStratTask = (runUpdated.tasks || []).find((t: any) => t.task_key === "human_strategy_approval");
+
+        if (
+          (stratTask && stratTask.status === "completed") ||
+          (humanStratTask && humanStratTask.status === "waiting_for_human") ||
+          runUpdated.status === "completed" ||
+          runUpdated.status === "failed"
+        ) {
+          break;
+        }
+
+        if (stepRes.completed_tasks_count === 0) {
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
 
       if (pollingInterval) {
         clearInterval(pollingInterval);
         pollingInterval = null;
       }
 
-      // 3. Fetch latest run state
-      const runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, dagRun.id, token);
-      const stratTask = runUpdated.tasks.find((t) => t.task_key === "campaign_strategy");
-      const humanStratTask = runUpdated.tasks.find((t) => t.task_key === "human_strategy_approval");
+      if (!runUpdated) {
+        runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, dagRun.id, token);
+        stratTask = runUpdated.tasks.find((t: any) => t.task_key === "campaign_strategy");
+        humanStratTask = runUpdated.tasks.find((t: any) => t.task_key === "human_strategy_approval");
+      }
 
       if (stratTask && stratTask.status === "completed") {
         const stratOutputRes = await operationalWorkflowApi.getTaskOutput(effectiveAgencyId, stratTask.id, token);
@@ -2263,17 +2290,45 @@ function CampaignStudioContent() {
         }
       }, 1500);
 
-      await operationalWorkflowApi.stepRun(effectiveAgencyId, runId, token, 10);
+      let stepApprTries = 0;
+      let runUpdated: any = null;
+      let contentTask: any = null;
+      let qaTask: any = null;
+      let clientTask: any = null;
+
+      while (stepApprTries < 25) {
+        stepApprTries++;
+        const stepRes = await operationalWorkflowApi.stepRun(effectiveAgencyId, runId, token, 10);
+        runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, runId, token);
+        contentTask = (runUpdated.tasks || []).find((t: any) => t.task_key === "content_architecture");
+        qaTask = (runUpdated.tasks || []).find((t: any) => t.task_key === "final_quality_audit");
+        clientTask = (runUpdated.tasks || []).find((t: any) => t.task_key === "client_approval");
+
+        if (
+          (contentTask && contentTask.status === "completed" && qaTask && qaTask.status === "completed") ||
+          (clientTask && clientTask.status === "waiting_for_human") ||
+          runUpdated.status === "completed" ||
+          runUpdated.status === "failed"
+        ) {
+          break;
+        }
+
+        if (stepRes.completed_tasks_count === 0) {
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
 
       if (pollingApproval) {
         clearInterval(pollingApproval);
         pollingApproval = null;
       }
 
-      const runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, runId, token);
-      const contentTask = runUpdated.tasks.find((t) => t.task_key === "content_architecture");
-      const qaTask = runUpdated.tasks.find((t) => t.task_key === "final_quality_audit");
-      const clientTask = runUpdated.tasks.find((t) => t.task_key === "client_approval");
+      if (!runUpdated) {
+        runUpdated = await operationalWorkflowApi.getRun(effectiveAgencyId, runId, token);
+        contentTask = runUpdated.tasks.find((t: any) => t.task_key === "content_architecture");
+        qaTask = runUpdated.tasks.find((t: any) => t.task_key === "final_quality_audit");
+        clientTask = runUpdated.tasks.find((t: any) => t.task_key === "client_approval");
+      }
 
       const newArtifacts: ActiveArtifactData[] = [...persistedArtifacts];
 

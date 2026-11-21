@@ -117,6 +117,10 @@ async def save_or_revise_artifact(
     Uses SELECT ... FOR UPDATE on the parent artifact row to eliminate race conditions
     when concurrent workers or user revisions increment the version number.
     """
+    clean_title = (title or "Untitled Asset").strip()
+    if len(clean_title) > 250:
+        clean_title = clean_title[:247].strip() + "..."
+
     target_uuid: uuid.UUID | None = None
     if artifact_id:
         if isinstance(artifact_id, uuid.UUID):
@@ -148,7 +152,7 @@ async def save_or_revise_artifact(
 
         new_version_number = artifact.current_version_number + 1
         artifact.current_version_number = new_version_number
-        artifact.title = title or artifact.title
+        artifact.title = clean_title or artifact.title
         # Critical security rule: Any new revision automatically resets status to draft
         artifact.status = StudioArtifactStatus.draft.value
         artifact.updated_at = datetime.now(timezone.utc)
@@ -161,7 +165,7 @@ async def save_or_revise_artifact(
             client_id=client_id,
             campaign_id=campaign_id,
             artifact_type=artifact_type,
-            title=title,
+            title=clean_title,
             status=StudioArtifactStatus.draft.value,
             current_version_number=1,
         )

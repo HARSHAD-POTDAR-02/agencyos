@@ -404,7 +404,9 @@ async def execute_content_architecture(
         existing_deliverables = [DeliverablePlan.model_validate(d) for d in prior_delivs]
 
     start_time = time.monotonic()
-    agent = ContentArchitectAgent()
+    slots_count = len(strategy.deliverable_slots or []) if strategy else 0
+    batch_size = 3 if slots_count >= 6 else 2
+    agent = ContentArchitectAgent(batch_size=batch_size, max_concurrency=2)
     if strategy:
         if existing_deliverables and failing_indices:
             deliverables = await agent.repair_deliverables(

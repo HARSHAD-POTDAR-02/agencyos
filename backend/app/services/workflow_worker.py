@@ -28,7 +28,7 @@ from app.services.dag_engine import DAGEngine
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LEASE_DURATION_SECONDS = 60
+DEFAULT_LEASE_DURATION_SECONDS = 300
 DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 15
 DEFAULT_MAX_ATTEMPTS = 3
 
@@ -124,6 +124,7 @@ async def claim_workflow_jobs(
     batch_size: int = 1,
     lease_duration_seconds: int = DEFAULT_LEASE_DURATION_SECONDS,
     agency_id: uuid.UUID | None = None,
+    workflow_run_id: uuid.UUID | None = None,
 ) -> list[dict[str, Any]]:
     """
     Atomically claims up to `batch_size` claimable jobs from `WorkflowJobQueue`.
@@ -158,20 +159,25 @@ async def claim_workflow_jobs(
     bind = db.bind
     is_postgres = bind is not None and "postgresql" in bind.dialect.name
 
+    # Allow a small 10-second grace window into the near future for newly enqueued jobs
+    # to eliminate sub-second clock-skew between Python client and PostgreSQL server
+    claim_threshold = now + timedelta(seconds=10)
     base_criteria = or_(
         and_(
             WorkflowJobQueue.status.in_([WorkflowJobStatus.queued, WorkflowJobStatus.retrying]),
-            WorkflowJobQueue.execute_at <= now,
+            WorkflowJobQueue.execute_at <= claim_threshold,
         ),
         and_(
             WorkflowJobQueue.status == WorkflowJobStatus.running,
             WorkflowJobQueue.lease_expires_at < now,
         ),
     )
+    criteria_list = [base_criteria]
     if agency_id:
-        filter_criteria = and_(base_criteria, WorkflowJobQueue.agency_id == agency_id)
-    else:
-        filter_criteria = base_criteria
+        criteria_list.append(WorkflowJobQueue.agency_id == agency_id)
+    if workflow_run_id:
+        criteria_list.append(WorkflowJobQueue.workflow_run_id == workflow_run_id)
+    filter_criteria = and_(*criteria_list)
 
     if is_postgres:
         stmt = (
@@ -233,7 +239,7 @@ async def claim_workflow_jobs(
                 or_(
                     and_(
                         WorkflowJobQueue.status.in_([WorkflowJobStatus.queued, WorkflowJobStatus.retrying]),
-                        WorkflowJobQueue.execute_at <= now,
+                        WorkflowJobQueue.execute_at <= claim_threshold,
                     ),
                     and_(
                         WorkflowJobQueue.status == WorkflowJobStatus.running,

@@ -18,6 +18,8 @@ class CampaignBrief(BaseModel):
     start_date: date | None = Field(default=None, description="Campaign sprint start date")
     end_date: date | None = Field(default=None, description="Campaign sprint end date")
     duration_days: int | None = Field(default=None, ge=1, le=365, description="Length of campaign sprint in days")
+    target_deliverables_count: int | None = Field(default=None, ge=1, le=100, description="Explicit requested count of deliverables for this sprint")
+    posting_cadence: str | None = Field(default=None, description="Requested cadence e.g. daily, 3_per_week, weekly")
     objective: str = Field(min_length=3, description="Core business or marketing objective")
     custom_brief: str | None = Field(default=None, description="Detailed brief or instructions")
     target_audience: list[str] = Field(default_factory=list, description="Target demographics/personas")

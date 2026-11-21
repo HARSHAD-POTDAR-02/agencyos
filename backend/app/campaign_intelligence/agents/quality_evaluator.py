@@ -867,7 +867,7 @@ class QualityEvaluatorAgent:
                         else:
                             checks_passed += 1
 
-                    # Total Reel Duration Check (15s to 60s hard QA bound)
+                    # Total Reel Duration Check (15s to 60s target QA bound)
                     total_checks += 1
                     if total_reel_duration < 15.0:
                         findings.append(
@@ -876,9 +876,9 @@ class QualityEvaluatorAgent:
                                 severity=FindingSeverity.critical,
                                 deliverable_index=idx,
                                 deliverable_title=deliv.title,
-                                issue_description=f"Reel #{idx+1} duration ({total_reel_duration:.1f}s) is below minimum duration requirement of 15 seconds.",
+                                issue_description=f"Reel #{idx+1} duration ({total_reel_duration:.1f}s) is critically below minimum duration requirement of 15 seconds.",
                                 issue=f"Reel duration ({total_reel_duration:.1f}s) < 15 seconds.",
-                                remediation_instruction="Extend storyboard scenes to total between 15 and 60 seconds.",
+                                remediation_instruction="Extend storyboard scenes to total between 15 and 60 seconds (target 20-45s).",
                             )
                         )
                     elif total_reel_duration > 60.0:

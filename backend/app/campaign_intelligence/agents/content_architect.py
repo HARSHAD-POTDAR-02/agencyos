@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -226,9 +227,17 @@ class ContentArchitectAgent:
     8. Support targeted partial repair (repair_deliverables).
     """
 
-    def __init__(self, model_name: str | None = None, temperature: float = 0.70):
+    def __init__(
+        self,
+        model_name: str | None = None,
+        temperature: float = 0.70,
+        batch_size: int = 2,
+        max_concurrency: int = 1,
+    ):
         self.model_name = model_name or settings.CAMPAIGN_CONTENT_MODEL
         self.temperature = temperature
+        self.batch_size = batch_size
+        self.max_concurrency = max_concurrency
 
     async def _generate_micro_batch(
         self,
@@ -351,7 +360,7 @@ Your task is to generate high-density, production-ready deliverable plans for EX
      * 8-second breakdown: 18–22 words
      * 12-second demonstration: 26–33 words
    - Storyboards (`reel_scenes`): 4 to 6 timestamped scenes with STRICTLY sequential, non-overlapping timestamps:
-     (e.g., 0:00-0:03 Hook, 0:03-0:10 Mechanism, 0:10-0:22 Demo, 0:22-0:35 Proof, 0:35-0:45 CTA).
+     (e.g., 0:00-0:03 Hook, 0:03-0:10 Mechanism, 0:10-0:22 Demo, 0:22-0:35 Proof, 0:35-0:45 CTA). Total reel duration MUST be between 20 and 45 seconds (never under 15 seconds)!
    - Visual Motifs & Feasibility (Constraint 3):
      * Recommended Motifs: {industry_visual_motifs}
      * Zero-budget feasibility: Every direction MUST be physically filmable with an everyday smartphone and available workspace/props.
@@ -407,6 +416,63 @@ Your task is to generate high-density, production-ready deliverable plans for EX
             f"after {attempts} attempts: {last_err}"
         )
 
+    def _enrich_deliverable_batch(
+        self,
+        batch_delivs: list[DeliverablePlan],
+        batch_slots: list[DeliverableSlot],
+        brief: CampaignBrief,
+        quotas: list[ContractQuota],
+        pinned: list[str],
+    ) -> list[DeliverablePlan]:
+        enriched: list[DeliverablePlan] = []
+        for i, slot in enumerate(batch_slots):
+            if i < len(batch_delivs):
+                raw_d = batch_delivs[i]
+            elif batch_delivs:
+                raw_d = batch_delivs[-1].model_copy(deep=True)
+                raw_d.primary_hook = f"{slot.strategic_angle_ref}: {raw_d.primary_hook}"
+                raw_d.title = f"{slot.strategic_angle_ref} Sprint Day {slot.planned_day}"
+            else:
+                continue
+
+            d = apply_deliverable_scrubber(raw_d.model_copy(deep=True))
+            if not d.deliverable_id:
+                d.deliverable_id = uuid.uuid4()
+
+            d.slot_index = slot.slot_index
+            d.planned_day = slot.planned_day
+            d.deliverable_type = slot.deliverable_type
+            d.platform = slot.target_platform
+            d.strategic_angle = slot.strategic_angle_ref
+            d.hook_category = slot.hook_category
+            d.allowed_proof_points = slot.allowed_proof_points
+            d.factual_boundary_constraints = slot.factual_boundary_constraints
+            d.planned_week = min(5, max(1, (slot.planned_day - 1) // 7 + 1))
+
+            if brief.start_date:
+                calc_date = brief.start_date + timedelta(days=max(0, slot.planned_day - 1))
+                d.scheduled_date = calc_date.isoformat()
+                d.date_label = calc_date.strftime("%a, %b %d, %Y")
+
+            if quotas:
+                for q in quotas:
+                    if q.deliverable_type.lower() == d.deliverable_type.lower() and q.platform.lower() == d.platform.lower():
+                        d.scope_item_id = q.scope_item_id
+                        break
+
+            if pinned:
+                if not d.hero_entity:
+                    combined_text = f"{d.title} {d.caption} {d.primary_hook}".lower()
+                    matched = [p for p in pinned if p.lower() in combined_text]
+                    d.hero_entity = matched[0] if matched else pinned[slot.slot_index % len(pinned)]
+                if not d.hero_focus:
+                    d.hero_focus = [d.hero_entity]
+                if d.hero_entity and d.hero_entity.lower() not in d.title.lower():
+                    d.title = f"{d.hero_entity}: {d.title}"
+
+            enriched.append(d)
+        return enriched
+
     async def run(
         self,
         strategy: CampaignStrategy,
@@ -415,7 +481,7 @@ Your task is to generate high-density, production-ready deliverable plans for EX
         revision_instructions: list[str] | None = None,
     ) -> list[DeliverablePlan]:
         """
-        Generate production-ready deliverable plans using 2-deliverable micro-batching.
+        Generate production-ready deliverable plans using adaptive micro-batching.
         """
         # Ensure strategy has deliverable_slots populated
         slots = list(strategy.deliverable_slots or [])
@@ -432,30 +498,27 @@ Your task is to generate high-density, production-ready deliverable plans for EX
         quotas: list[ContractQuota] = brand_context.contract_quotas if brand_context and brand_context.contract_quotas else []
         pinned = brief.pinned_entities or []
 
-        # Chunk slots into micro-batches of at most 2 slots
-        batch_size = 2
+        batch_size = max(1, self.batch_size)
         slot_chunks = [slots[i:i + batch_size] for i in range(0, len(slots), batch_size)]
 
         all_deliverables: list[DeliverablePlan] = []
         previously_generated_summary: list[dict[str, Any]] = []
 
-        for chunk_idx, batch_slots in enumerate(slot_chunks):
+        concurrency = max(1, self.max_concurrency)
+
+        async def _execute_single_chunk(chunk_idx: int, batch_slots: list[DeliverableSlot], memory_snapshot: list[dict[str, Any]]) -> list[DeliverablePlan]:
             logger.info(
                 f"Executing Content Architect micro-batch {chunk_idx + 1}/{len(slot_chunks)} "
                 f"(slots {[s.slot_index for s in batch_slots]})"
             )
-
             batch_delivs = await self._generate_micro_batch(
                 batch_slots=batch_slots,
                 strategy=strategy,
                 brief=brief,
                 brand_context=brand_context,
-                previously_generated_summary=previously_generated_summary,
+                previously_generated_summary=memory_snapshot,
                 revision_instructions=revision_instructions,
             )
-
-            # Reconcile each deliverable with its source DeliverableSlot
-            # If batch returned fewer deliverables than slots, generate missing slots individually
             if len(batch_delivs) < len(batch_slots):
                 for missing_slot_idx in range(len(batch_delivs), len(batch_slots)):
                     missing_slot = batch_slots[missing_slot_idx]
@@ -466,82 +529,63 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                             strategy=strategy,
                             brief=brief,
                             brand_context=brand_context,
-                            previously_generated_summary=previously_generated_summary,
+                            previously_generated_summary=memory_snapshot,
                             revision_instructions=revision_instructions,
                         )
                         if single_delivs:
                             batch_delivs.append(single_delivs[0])
                     except Exception as e:
                         logger.warning(f"Fallback generation for slot {missing_slot.slot_index} failed: {e}")
+            return self._enrich_deliverable_batch(batch_delivs, batch_slots, brief, quotas, pinned)
 
-            for i, slot in enumerate(batch_slots):
-                if i < len(batch_delivs):
-                    raw_d = batch_delivs[i]
-                elif batch_delivs:
-                    # Deep copy and mutate with slot-specific fields to prevent identical clones
-                    raw_d = batch_delivs[-1].model_copy(deep=True)
-                    raw_d.primary_hook = f"{slot.strategic_angle_ref}: {raw_d.primary_hook}"
-                    raw_d.title = f"{slot.strategic_angle_ref} Sprint Day {slot.planned_day}"
-                else:
-                    continue
+        if concurrency <= 1 or len(slot_chunks) <= 1:
+            for chunk_idx, batch_slots in enumerate(slot_chunks):
+                enriched = await _execute_single_chunk(chunk_idx, batch_slots, previously_generated_summary)
+                for d in enriched:
+                    all_deliverables.append(d)
+                    opening_visual = ""
+                    if d.deliverable_type == "reel" and d.reel_scenes:
+                        opening_visual = d.reel_scenes[0].visual_action
+                    elif d.deliverable_type == "carousel" and d.carousel_slides:
+                        opening_visual = d.carousel_slides[0].visual_layout
+                    elif d.visual_asset_prompt or d.graphic_copy:
+                        opening_visual = d.visual_asset_prompt or d.graphic_copy or ""
 
-                d = apply_deliverable_scrubber(raw_d.model_copy(deep=True))
-                if not d.deliverable_id:
-                    d.deliverable_id = uuid.uuid4()
+                    previously_generated_summary.append({
+                        "slot_index": d.slot_index,
+                        "planned_day": d.planned_day,
+                        "primary_hook": d.primary_hook,
+                        "hook_category": d.hook_category,
+                        "opening_visual": opening_visual[:160],
+                        "call_to_action": d.call_to_action,
+                    })
+        else:
+            for wave_start in range(0, len(slot_chunks), concurrency):
+                wave_slots = slot_chunks[wave_start:wave_start + concurrency]
+                snapshot = list(previously_generated_summary)
+                wave_results = await asyncio.gather(*[
+                    _execute_single_chunk(wave_start + i, c, snapshot)
+                    for i, c in enumerate(wave_slots)
+                ])
+                for enriched in wave_results:
+                    for d in enriched:
+                        all_deliverables.append(d)
+                        opening_visual = ""
+                        if d.deliverable_type == "reel" and d.reel_scenes:
+                            opening_visual = d.reel_scenes[0].visual_action
+                        elif d.deliverable_type == "carousel" and d.carousel_slides:
+                            opening_visual = d.carousel_slides[0].visual_layout
+                        elif d.visual_asset_prompt or d.graphic_copy:
+                            opening_visual = d.visual_asset_prompt or d.graphic_copy or ""
 
-                d.slot_index = slot.slot_index
-                d.planned_day = slot.planned_day
-                d.deliverable_type = slot.deliverable_type
-                d.platform = slot.target_platform
-                d.strategic_angle = slot.strategic_angle_ref
-                d.hook_category = slot.hook_category
-                d.allowed_proof_points = slot.allowed_proof_points
-                d.factual_boundary_constraints = slot.factual_boundary_constraints
-                d.planned_week = min(5, max(1, (slot.planned_day - 1) // 7 + 1))
-
-                # Scheduled date calculation if brief has start_date
-                if brief.start_date:
-                    calc_date = brief.start_date + timedelta(days=max(0, slot.planned_day - 1))
-                    d.scheduled_date = calc_date.isoformat()
-                    d.date_label = calc_date.strftime("%a, %b %d, %Y")
-
-                # Match contract scope item id
-                if quotas:
-                    for q in quotas:
-                        if q.deliverable_type.lower() == d.deliverable_type.lower() and q.platform.lower() == d.platform.lower():
-                            d.scope_item_id = q.scope_item_id
-                            break
-
-                # Hero entity mapping
-                if pinned:
-                    if not d.hero_entity:
-                        combined_text = f"{d.title} {d.caption} {d.primary_hook}".lower()
-                        matched = [p for p in pinned if p.lower() in combined_text]
-                        d.hero_entity = matched[0] if matched else pinned[slot.slot_index % len(pinned)]
-                    if not d.hero_focus:
-                        d.hero_focus = [d.hero_entity]
-                    if d.hero_entity and d.hero_entity.lower() not in d.title.lower():
-                        d.title = f"{d.hero_entity}: {d.title}"
-
-                # Record in cross-batch memory
-                opening_visual = ""
-                if d.deliverable_type == "reel" and d.reel_scenes:
-                    opening_visual = d.reel_scenes[0].visual_action
-                elif d.deliverable_type == "carousel" and d.carousel_slides:
-                    opening_visual = d.carousel_slides[0].visual_layout
-                elif d.visual_asset_prompt or d.graphic_copy:
-                    opening_visual = d.visual_asset_prompt or d.graphic_copy or ""
-
-                previously_generated_summary.append({
-                    "slot_index": d.slot_index,
-                    "planned_day": d.planned_day,
-                    "primary_hook": d.primary_hook,
-                    "hook_category": slot.hook_category,
-                    "opening_visual": opening_visual[:160],
-                    "call_to_action": d.call_to_action,
-                })
-
-                all_deliverables.append(d)
+                        previously_generated_summary.append({
+                            "slot_index": d.slot_index,
+                            "planned_day": d.planned_day,
+                            "primary_hook": d.primary_hook,
+                            "hook_category": d.hook_category,
+                            "opening_visual": opening_visual[:160],
+                            "call_to_action": d.call_to_action,
+                        })
 
         # Post-generation anti-cloning and hook deduplication pass
         seen_hooks: dict[str, int] = {}

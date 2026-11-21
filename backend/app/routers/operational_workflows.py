@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -12,7 +13,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.campaign_intelligence.schemas.campaign import CampaignBrief
-from app.core.database import get_db
+from app.core.database import AsyncSessionLocal, get_db
 from app.dependencies import get_current_user, require_agency_member
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.operational_workflow import (
@@ -179,8 +180,9 @@ async def launch_operational_campaign(
         period_month=target_month,
         period_year=target_year,
         start_date=now.date(),
-        end_date=now.date(),
-        duration_days=payload.duration_days or payload.deliverable_count or 4,
+        end_date=now.date() + timedelta(days=max(0, (payload.duration_days or 1) - 1)),
+        duration_days=payload.duration_days or 1,
+        target_deliverables_count=payload.deliverable_count,
         objective=objective_str,
         custom_brief=custom_brief_str,
         target_audience=audience_list,
@@ -267,13 +269,42 @@ async def step_workflow_run(
             worker_id=worker.worker_id,
             batch_size=5,
             agency_id=agency_id,
+            workflow_run_id=run.id,
         )
         if not claims:
-            break
-        for claim in claims:
-            success = await worker.execute_job(db, claim)
+            tasks_check_stmt = select(WorkflowTask).where(WorkflowTask.workflow_run_id == run.id)
+            tasks_check = (await db.execute(tasks_check_stmt)).scalars().all()
+            has_waiting_human = any(t.status == WorkflowTaskStatus.waiting_for_human for t in tasks_check)
+            all_done = all(t.status in (WorkflowTaskStatus.completed, WorkflowTaskStatus.failed, WorkflowTaskStatus.cancelled) for t in tasks_check)
+            if has_waiting_human or all_done:
+                break
+
+            await asyncio.sleep(0.25)
+            claims = await claim_workflow_jobs(
+                db,
+                worker_id=worker.worker_id,
+                batch_size=5,
+                agency_id=agency_id,
+                workflow_run_id=run.id,
+            )
+            if not claims:
+                break
+
+        if len(claims) == 1:
+            success = await worker.execute_job(db, claims[0])
             if success:
                 total_completed += 1
+        else:
+            async def _run_single_claim(claim_data: dict[str, Any]) -> bool:
+                async with AsyncSessionLocal() as sub_db:
+                    return await worker.execute_job(sub_db, claim_data)
+
+            results = await asyncio.gather(*[_run_single_claim(c) for c in claims], return_exceptions=True)
+            for res in results:
+                if res is True:
+                    total_completed += 1
+                elif isinstance(res, Exception):
+                    logger.error(f"Error executing parallel job in workflow run {run.id}: {res}", exc_info=True)
 
     await db.refresh(run)
 

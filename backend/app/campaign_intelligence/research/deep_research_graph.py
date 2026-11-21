@@ -1385,8 +1385,13 @@ async def run_deep_research(
                     )
                 )
 
+    clean_topic = (query or "Deep Market Landscape & Competitive Intelligence").strip()
+    if len(clean_topic) > 120:
+        first_sent = re.split(r"[.?!\n]", clean_topic)[0].strip()
+        clean_topic = (first_sent[:115] + "...") if len(first_sent) > 15 else (clean_topic[:115] + "...")
+
     artifact_payload = MarketResearchArtifactPayload(
-        query_topic=query or "Deep Market Landscape & Competitive Intelligence",
+        query_topic=clean_topic,
         observed_competitors=competitor_activities,
         inferred_opportunities=inferred_opportunities,
         verified_sources=supporting_citations,

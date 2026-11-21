@@ -19,6 +19,7 @@ from app.campaign_intelligence.schemas.strategy import (
     StrategicAngle,
 )
 from app.campaign_intelligence.schemas.trace import AgentTelemetry
+from app.campaign_intelligence.tools.date_utils import extract_format_and_count_from_text
 from app.core.config import settings
 from app.core.llm import invoke_structured_llm
 
@@ -96,91 +97,135 @@ def derive_slot_allocation_targets(
 ) -> list[dict[str, Any]]:
     """
     Derives deterministic slot count, format mix, platforms, and sprint days.
-    Prioritizes:
-    1. Contract quotas on brand_context
-    2. Explicit deliverable_preferences from brief
-    3. PerformancePlaybook recommended_format_mix (integer format counts)
-    4. Balanced 5-slot cold-start default (e.g. 2 reels, 2 carousels, 1 static)
+    Guarantees:
+    1. SPRINT-PROPORTIONAL SIZING: Never dumps an entire monthly quota (e.g. 20 items) into short sprints!
+       - 1-day sprint: 1-2 deliverables max (never 20!).
+       - 14-day sprint: at most 14 deliverables (e.g. 1 per day or requested count).
+    2. QUOTA CEILING & TRACKING: Contract quotas represent available monthly bank, not mandatory sprint dumps.
+       - Formats and platforms draw proportionally from available quotas.
+       - Warns and caps if requested count exceeds remaining monthly quota.
+    3. EXPLICIT COUNT PRESERVATION: Honors user's explicit requested deliverable count if provided.
     """
-    targets: list[dict[str, Any]] = []
     platforms = brief.platforms or ["linkedin", "instagram"]
-    duration_days = brief.duration_days or 30
+    has_explicit_duration = brief.duration_days is not None and brief.duration_days > 0
+    duration_days = brief.duration_days if has_explicit_duration else 30
 
-    # 1. Contract quotas
+    # 1. Determine Target Deliverable Count for THIS Sprint
+    explicit_count = getattr(brief, "target_deliverables_count", None)
+    if not explicit_count and (brief.custom_brief or brief.objective):
+        combined = f"{brief.objective} {brief.custom_brief or ''}"
+        _, extracted_cnt = extract_format_and_count_from_text(combined)
+        if extracted_cnt and extracted_cnt > 0:
+            explicit_count = extracted_cnt
+
+    if explicit_count and explicit_count > 0:
+        target_count = explicit_count
+    elif not has_explicit_duration:
+        # Full monthly plan (duration not restricted to a sprint): allocate total monthly quota
+        if brand_context and brand_context.contract_quotas:
+            total_rem = sum(
+                (q.remaining if q.remaining is not None and q.remaining > 0 else (q.contracted or q.monthly_quantity or 1))
+                for q in brand_context.contract_quotas
+            )
+            target_count = max(1, min(total_rem, 30)) if total_rem > 0 else 8
+        else:
+            target_count = 8
+    else:
+        # Paced according to explicit sprint duration (never dumps 20 deliverables into 1 day!)
+        if duration_days == 1:
+            has_multi_format = len(brief.deliverable_preferences or []) > 1 or len(platforms) > 1
+            target_count = 2 if has_multi_format else 1
+        elif duration_days <= 3:
+            target_count = duration_days
+        elif duration_days <= 7:
+            target_count = min(duration_days, 5)
+        elif duration_days <= 14:
+            target_count = min(duration_days, 10)
+        elif duration_days <= 30:
+            target_count = min(duration_days, 15)
+        else:
+            target_count = min(duration_days, 20)
+
+    # 2. Check Contract Quotas as Ceiling & Format Pool
+    quota_pool: list[dict[str, str]] = []
     if brand_context and brand_context.contract_quotas:
+        total_remaining = sum(
+            (q.remaining if q.remaining is not None and q.remaining > 0 else (q.contracted or q.monthly_quantity or 1))
+            for q in brand_context.contract_quotas
+        )
+        if total_remaining > 0 and target_count > total_remaining:
+            logger.warning(
+                f"Sprint deliverable count ({target_count}) exceeds remaining contract quota ({total_remaining}). "
+                f"Capping sprint to remaining quota."
+            )
+            target_count = total_remaining
+
+        # Build candidate pool from quotas
         for q in brand_context.contract_quotas:
             qty = q.remaining if q.remaining is not None and q.remaining > 0 else (q.contracted or q.monthly_quantity or 1)
+            p = q.platform or (platforms[0] if platforms else "instagram")
             for _ in range(qty):
-                targets.append({
+                quota_pool.append({
                     "deliverable_type": q.deliverable_type,
-                    "target_platform": q.platform or (platforms[0] if platforms else "instagram"),
+                    "target_platform": p,
                 })
 
-    # 2. PerformancePlaybook recommended_format_mix if no quotas
-    if not targets and performance_playbook and performance_playbook.recommended_format_mix:
+    # 3. Filter / Prioritize Formats & Platforms
+    targets: list[dict[str, Any]] = []
+    pref_formats = [p.lower().strip() for p in (brief.deliverable_preferences or []) if p.strip()]
+
+    if quota_pool:
+        # Match preferred formats from quota pool first
+        remaining_pool = list(quota_pool)
+        if pref_formats:
+            matched_pool = [item for item in remaining_pool if any(pref in item["deliverable_type"].lower() for pref in pref_formats)]
+            other_pool = [item for item in remaining_pool if item not in matched_pool]
+            remaining_pool = matched_pool + other_pool
+
+        # Select target_count items evenly or sequentially from quota pool
+        step = max(1, len(remaining_pool) // max(1, target_count))
+        for i in range(target_count):
+            idx = (i * step) % len(remaining_pool) if remaining_pool else 0
+            chosen = remaining_pool[idx] if idx < len(remaining_pool) else remaining_pool[0]
+            targets.append(dict(chosen))
+    elif performance_playbook and performance_playbook.recommended_format_mix:
         mix = performance_playbook.recommended_format_mix
+        mix_pool: list[dict[str, str]] = []
         for fmt, cnt in mix.items():
             if isinstance(cnt, int) and cnt > 0:
                 plat = "linkedin" if fmt == "carousel" else "instagram"
                 if plat not in platforms and platforms:
                     plat = platforms[0]
                 for _ in range(cnt):
-                    targets.append({
-                        "deliverable_type": fmt,
-                        "target_platform": plat,
-                    })
-
-    # 3. Deliverable preferences from brief
-    if not targets and brief.deliverable_preferences:
-        for pref in brief.deliverable_preferences:
-            pref_lower = pref.lower().strip()
-            plat = "instagram" if "reel" in pref_lower else "linkedin"
+                    mix_pool.append({"deliverable_type": fmt, "target_platform": plat})
+        if mix_pool:
+            for i in range(target_count):
+                targets.append(dict(mix_pool[i % len(mix_pool)]))
+    elif pref_formats:
+        for i in range(target_count):
+            fmt = pref_formats[i % len(pref_formats)]
+            plat = "instagram" if "reel" in fmt else "linkedin"
             if plat not in platforms and platforms:
                 plat = platforms[0]
-            targets.append({
-                "deliverable_type": pref_lower,
-                "target_platform": plat,
-            })
-        if len(targets) == 1:
-            targets = [dict(targets[0]) for _ in range(4)]
-        elif len(targets) == 2:
-            targets = [dict(targets[0]), dict(targets[1]), dict(targets[0]), dict(targets[1])]
+            targets.append({"deliverable_type": fmt, "target_platform": plat})
+    else:
+        # Balanced default fallback
+        default_fmts = ["reel", "carousel"]
+        for i in range(target_count):
+            fmt = default_fmts[i % len(default_fmts)]
+            plat = platforms[i % len(platforms)] if platforms else ("instagram" if fmt == "reel" else "linkedin")
+            targets.append({"deliverable_type": fmt, "target_platform": plat})
 
-    # 4. Default fallback: balanced 5-slot sprint
-    if not targets:
-        p1 = platforms[0] if platforms else "instagram"
-        p2 = platforms[1] if len(platforms) > 1 else p1
-        targets = [
-            {"deliverable_type": "reel", "target_platform": p1},
-            {"deliverable_type": "carousel", "target_platform": p2},
-            {"deliverable_type": "reel", "target_platform": p1},
-            {"deliverable_type": "carousel", "target_platform": p2},
-            {"deliverable_type": "static", "target_platform": p1},
-        ]
-
-    is_date_bounded = bool(brief.start_date and brief.end_date and brief.duration_days)
-
-    # If explicit date-bounded sprint and fewer targets than sprint days, pad to sprint_days
-    if is_date_bounded and brief.duration_days and len(targets) < brief.duration_days:
-        missing = brief.duration_days - len(targets)
-        for i in range(missing):
-            base_t = dict(targets[i % len(targets)])
-            targets.append(base_t)
-
-    # Assign sequential days
-    if is_date_bounded and brief.duration_days:
+    # 4. Chronological Day Distribution
+    if duration_days == 1:
+        for idx, t in enumerate(targets):
+            t["slot_index"] = idx
+            t["planned_day"] = 1
+    else:
         n_targets = len(targets)
         for idx, t in enumerate(targets):
             t["slot_index"] = idx
-            # Distribute chronological days sequentially across the calendar sprint
-            # (e.g. 20 deliverables over 10 days puts 2 posts per day on Days 1..10 in order)
-            t["planned_day"] = min(brief.duration_days, (idx * brief.duration_days // max(1, n_targets)) + 1)
-    else:
-        n = len(targets)
-        step = max(1, duration_days // (n + 1))
-        for idx, t in enumerate(targets):
-            t["slot_index"] = idx
-            t["planned_day"] = min(duration_days, max(1, (idx + 1) * step))
+            t["planned_day"] = min(duration_days, (idx * duration_days // max(1, n_targets)) + 1)
 
     return targets
 

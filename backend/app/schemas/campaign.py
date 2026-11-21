@@ -140,6 +140,7 @@ class ChatBriefResponse(BaseModel):
     suggested_start_date: str | None = None
     suggested_end_date: str | None = None
     suggested_duration_days: int | None = None
+    suggested_deliverable_count: int | None = None
     is_ready_to_generate: bool = False
 
     # Collaborative Studio & Draft Artifact additions
