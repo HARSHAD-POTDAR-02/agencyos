@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { taskApi, clientApi, agencyApi } from "@/lib/api";
+import { taskApi, clientApi, agencyApi, deliverableApi } from "@/lib/api";
 import {
   Kanban,
   List,
@@ -26,6 +26,11 @@ import {
   ChevronDown,
   Building2,
   Check,
+  Lock,
+  Plus,
+  Trash2,
+  Palette,
+  GripVertical,
 } from "lucide-react";
 
 interface AgencyMember {
@@ -57,6 +62,8 @@ interface Task {
   due_date: string | null;
   blocked_reason: string | null;
   notes: string | null;
+  is_locked?: boolean;
+  locked_reason?: string | null;
   created_at: string;
   updated_at?: string;
   client_id?: string;
@@ -70,6 +77,14 @@ interface Task {
 interface Client {
   id: string;
   business_name: string;
+}
+
+interface DeliverableOption {
+  id: string;
+  title: string;
+  deliverable_type?: string;
+  platform?: string;
+  campaign_id?: string;
 }
 
 const KANBAN_COLUMNS = [
@@ -184,6 +199,28 @@ function TasksContent() {
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Deliverables & Manual Task Creation State
+  const [deliverables, setDeliverables] = useState<DeliverableOption[]>([]);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDeliverableId, setNewDeliverableId] = useState("");
+  const [newTaskType, setNewTaskType] = useState("scripting");
+  const [newAssigneeId, setNewAssigneeId] = useState("");
+  const [newPriority, setNewPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
+  const [newStatus, setNewStatus] = useState<"todo" | "backlog" | "in_progress">("todo");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [newNotes, setNewNotes] = useState("");
+
+  // Delete Task Confirmation State
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [deletingTaskTitle, setDeletingTaskTitle] = useState<string>("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Drag and Drop State
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<string | null>(null);
+
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Set default assignee filter to current user for specialists
@@ -242,7 +279,15 @@ function TasksContent() {
         console.error("Failed to load agency members", e);
       }
 
-      // 3. Fetch all agency tasks (up to 200)
+      // 3. Fetch deliverables for modal selection
+      try {
+        const delivList = (await deliverableApi.list(effectiveAgencyId, token)) as DeliverableOption[];
+        setDeliverables(delivList || []);
+      } catch (e) {
+        // ignore
+      }
+
+      // 4. Fetch all agency tasks (up to 200)
       const params: Record<string, string> = { limit: "200" };
       if (selectedClientId !== "all") {
         params.client_id = selectedClientId;
@@ -260,6 +305,74 @@ function TasksContent() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Create manual task
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !effectiveAgencyId) return;
+    if (!newTitle.trim()) {
+      setNotification({ type: "error", text: "Task title is required." });
+      return;
+    }
+    if (!newDeliverableId) {
+      setNotification({ type: "error", text: "Please select a deliverable for this task." });
+      return;
+    }
+
+    setCreatingTask(true);
+    try {
+      await taskApi.create(
+        effectiveAgencyId,
+        {
+          title: newTitle.trim(),
+          deliverable_id: newDeliverableId,
+          task_type: newTaskType || null,
+          assignee_id: newAssigneeId || null,
+          status: newStatus,
+          priority: newPriority,
+          due_date: newDueDate || null,
+          notes: newNotes.trim() || null,
+        },
+        token
+      );
+
+      setNotification({ type: "success", text: `Task "${newTitle}" created successfully!` });
+      setShowNewModal(false);
+      setNewTitle("");
+      setNewDeliverableId("");
+      setNewTaskType("scripting");
+      setNewAssigneeId("");
+      setNewPriority("medium");
+      setNewStatus("todo");
+      setNewDueDate("");
+      setNewNotes("");
+
+      await loadData();
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to create task." });
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  // Delete task
+  const handleDeleteTask = async () => {
+    if (!token || !effectiveAgencyId || !deletingTaskId) return;
+    setIsDeleting(true);
+    try {
+      await taskApi.delete(effectiveAgencyId, deletingTaskId, token);
+      setTasks((prev) => prev.filter((t) => t.id !== deletingTaskId));
+      setNotification({ type: "success", text: `Task "${deletingTaskTitle}" deleted successfully.` });
+      setDeletingTaskId(null);
+      setDeletingTaskTitle("");
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to delete task." });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Update task status
   const handleUpdateStatus = async (taskId: string, newStatus: Task["status"]) => {
@@ -321,6 +434,88 @@ function TasksContent() {
     }
   };
 
+  // Kanban Drag and Drop Handler
+  const handleCardDrop = async (targetColId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverColId(null);
+    const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
+    setDraggedTaskId(null);
+    if (!taskId || !effectiveAgencyId || !token) return;
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // Map column ID to default TaskStatus
+    const statusMap: Record<string, Task["status"]> = {
+      backlog: "backlog",
+      todo: "todo",
+      in_progress: "in_progress",
+      review: "internal_review",
+      done: "done",
+    };
+    const targetStatus = statusMap[targetColId];
+    if (!targetStatus) return;
+
+    // If task is already in this column, do nothing
+    const currentTargetCol = KANBAN_COLUMNS.find((c) => c.statuses.includes(task.status));
+    if (currentTargetCol?.id === targetColId) return;
+
+    // Lock enforcement: locked tasks cannot be moved to in_progress, review, or done
+    if (task.is_locked && !["backlog", "todo"].includes(targetColId)) {
+      setNotification({
+        type: "error",
+        text: `Cannot move locked task "${task.title}": ${task.locked_reason || "upstream prerequisite tasks are pending"}.`,
+      });
+      return;
+    }
+
+    // Role enforcement: specialists cannot approve or close tasks into done
+    if (isSpecialist && ["done"].includes(targetColId)) {
+      setNotification({
+        type: "error",
+        text: "Specialists cannot approve tasks directly. A manager review is required.",
+      });
+      return;
+    }
+
+    // Role enforcement: specialists can only drag tasks assigned to them
+    if (isSpecialist && task.assignee_id && task.assignee_id !== user?.id) {
+      setNotification({
+        type: "error",
+        text: "You can only update tasks assigned to you.",
+      });
+      return;
+    }
+
+    // Optimistic UI update
+    const previousStatus = task.status;
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: targetStatus } : t))
+    );
+    setUpdatingTaskId(taskId);
+
+    try {
+      await taskApi.update(effectiveAgencyId, taskId, { status: targetStatus }, token);
+      setNotification({
+        type: "success",
+        text: `Task "${task.title}" moved to ${targetColId.replace("_", " ")}.`,
+      });
+      window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+    } catch (err: any) {
+      console.error("Failed to update task status via drop:", err);
+      // Revert on failure
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: previousStatus } : t))
+      );
+      setNotification({
+        type: "error",
+        text: err?.message || "Failed to update task status.",
+      });
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   // Filter tasks
   const filteredTasks = tasks.filter((t) => {
     // Stage filter
@@ -364,6 +559,14 @@ function TasksContent() {
             <span>Scripting</span>
           </span>
         );
+      case "copywriting":
+      case "copy":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#F472B6]/10 text-[#F472B6] border border-[#F472B6]/20">
+            <PenTool className="w-2.5 h-2.5 text-[#F472B6]" />
+            <span>Copywriting</span>
+          </span>
+        );
       case "filming":
       case "shooting":
         return (
@@ -372,11 +575,28 @@ function TasksContent() {
             <span>Shooting</span>
           </span>
         );
+      case "design":
+      case "graphic":
+      case "graphics":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#22D3EE]/10 text-[#22D3EE] border border-[#22D3EE]/20">
+            <Palette className="w-2.5 h-2.5 text-[#22D3EE]" />
+            <span>Design</span>
+          </span>
+        );
       case "editing":
         return (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/20">
             <Scissors className="w-2.5 h-2.5 text-[#E5AA58]" />
             <span>Editing</span>
+          </span>
+        );
+      case "qa":
+      case "quality":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#C084FC]/10 text-[#C084FC] border border-[#C084FC]/20">
+            <ShieldCheck className="w-2.5 h-2.5 text-[#C084FC]" />
+            <span>QA</span>
           </span>
         );
       case "approval":
@@ -463,13 +683,23 @@ function TasksContent() {
             <span>My Workbench</span>
           </Link>
           {!isSpecialist && (
-            <Link
-              href="/campaigns"
-              className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#101014]" />
-              <span>Generate Sprint</span>
-            </Link>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowNewModal(true)}
+                className="inline-flex items-center gap-1.5 bg-[#20202A] hover:bg-[#2a2a38] text-[#F2F0F7] text-xs font-semibold px-3.5 py-2 rounded-xl border border-white/[0.08] transition-all shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <span>New Task</span>
+              </button>
+              <Link
+                href="/campaigns"
+                className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#101014]" />
+                <span>Generate Sprint</span>
+              </Link>
+            </>
           )}
         </div>
       </div>
@@ -620,18 +850,27 @@ function TasksContent() {
           </div>
 
           {/* Stage Filter Pills */}
-          <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs font-medium">
-            {["all", "scripting", "filming", "editing", "approval"].map((st) => (
+          <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs font-medium overflow-x-auto">
+            {[
+              { id: "all", label: "All" },
+              { id: "scripting", label: "Scripting" },
+              { id: "copywriting", label: "Copywriting" },
+              { id: "filming", label: "Shooting" },
+              { id: "design", label: "Design" },
+              { id: "editing", label: "Editing" },
+              { id: "qa", label: "QA" },
+              { id: "approval", label: "Review" },
+            ].map((st) => (
               <button
-                key={st}
-                onClick={() => setSelectedStage(st)}
-                className={`px-2 py-1 rounded-md text-[11px] capitalize transition-all cursor-pointer ${
-                  selectedStage === st
+                key={st.id}
+                onClick={() => setSelectedStage(st.id)}
+                className={`px-2 py-1 rounded-md text-[11px] whitespace-nowrap transition-all cursor-pointer ${
+                  selectedStage === st.id
                     ? "bg-white/[0.08] text-[#F2F0F7] font-semibold shadow-xs"
                     : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                 }`}
               >
-                {st === "filming" ? "Shooting" : st === "approval" ? "Review" : st}
+                {st.label}
               </button>
             ))}
           </div>
@@ -778,7 +1017,21 @@ function TasksContent() {
             return (
               <div
                 key={col.id}
-                className="bg-[#121217] rounded-xl p-3 border border-white/[0.06] min-h-[520px] flex flex-col shadow-xs"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (dragOverColId !== col.id) setDragOverColId(col.id);
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  if (dragOverColId === col.id) setDragOverColId(null);
+                }}
+                onDrop={(e) => handleCardDrop(col.id, e)}
+                className={`bg-[#121217] rounded-xl p-3 border min-h-[520px] flex flex-col shadow-xs transition-all ${
+                  dragOverColId === col.id
+                    ? "border-[#A78BFA] bg-[#161622] ring-1 ring-[#A78BFA]/30"
+                    : "border-white/[0.06]"
+                }`}
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.06]">
@@ -806,12 +1059,38 @@ function TasksContent() {
                       return (
                         <div
                           key={t.id}
-                          className="surface-card rounded-xl border border-white/[0.08] hover:border-white/[0.18] p-3 transition-all space-y-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] group relative"
+                          draggable={!t.is_locked}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", t.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            setDraggedTaskId(t.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedTaskId(null);
+                            setDragOverColId(null);
+                          }}
+                          className={`surface-card rounded-xl border p-3 transition-all space-y-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] group relative select-none ${
+                            draggedTaskId === t.id
+                              ? "opacity-30 border-dashed border-[#A78BFA]"
+                              : "border-white/[0.08] hover:border-white/[0.18]"
+                          } ${t.is_locked ? "cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         >
                           {/* Top Badges Row */}
                           <div className="flex items-center justify-between gap-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
+                              {!t.is_locked && (
+                                <GripVertical className="w-3 h-3 text-[#71717A] opacity-0 group-hover:opacity-60 transition-opacity shrink-0 pointer-events-none" />
+                              )}
                               {getStageBadge(t.task_type)}
+                              {t.is_locked && (
+                                <span
+                                  title={t.locked_reason || "Upstream tasks pending"}
+                                  className="text-[9px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-1.5 py-0.2 rounded uppercase flex items-center gap-1 shrink-0"
+                                >
+                                  <Lock className="w-2.5 h-2.5 text-[#E5AA58]" />
+                                  <span>Locked</span>
+                                </span>
+                              )}
                               {isChangesReq && (
                                 <span className="text-[9px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-1.5 py-0.2 rounded uppercase">
                                   Revision Needed
@@ -879,6 +1158,21 @@ function TasksContent() {
                                 <span>Workbench</span>
                                 <ExternalLink className="w-2.5 h-2.5" />
                               </Link>
+                              {!isSpecialist && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDeletingTaskId(t.id);
+                                    setDeletingTaskTitle(t.title);
+                                  }}
+                                  title="Delete task"
+                                  className="text-[#71717A] hover:text-[#E16F7B] p-0.5 rounded transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -912,9 +1206,11 @@ function TasksContent() {
                               <span className="text-[10px] text-[#71717A]">Move:</span>
                               <select
                                 value={t.status}
-                                disabled={updatingTaskId === t.id}
+                                disabled={updatingTaskId === t.id || t.is_locked}
                                 onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
-                                className="text-[10px] font-medium bg-[#101014] text-[#F2F0F7] px-1.5 py-0.5 rounded border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[125px] cursor-pointer transition-colors"
+                                className={`text-[10px] font-medium bg-[#101014] text-[#F2F0F7] px-1.5 py-0.5 rounded border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 max-w-[125px] transition-colors ${
+                                  t.is_locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                                }`}
                               >
                                 <option value="backlog">Backlog</option>
                                 <option value="todo">To Do</option>
@@ -960,6 +1256,15 @@ function TasksContent() {
                         {t.client_name && (
                           <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#1a1a22] px-1.5 py-0.5 rounded border border-white/[0.06] shrink-0">
                             {t.client_name}
+                          </span>
+                        )}
+                        {t.is_locked && (
+                          <span
+                            title={t.locked_reason || "Upstream tasks pending"}
+                            className="text-[9px] font-mono font-bold text-[#E5AA58] bg-[#E5AA58]/10 border border-[#E5AA58]/30 px-1.5 py-0.2 rounded uppercase inline-flex items-center gap-1 shrink-0"
+                          >
+                            <Lock className="w-2.5 h-2.5 text-[#E5AA58]" />
+                            <span>Locked</span>
                           </span>
                         )}
                         <Link
@@ -1047,26 +1352,281 @@ function TasksContent() {
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-right">
-                      <select
-                        value={t.status}
-                        disabled={updatingTaskId === t.id}
-                        onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
-                        className="text-[11px] font-medium bg-[#101014] text-[#F2F0F7] px-2 py-1 rounded-lg border border-white/[0.08] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50 transition-colors"
-                      >
-                        <option value="backlog">Backlog</option>
-                        <option value="todo">To Do</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="internal_review">Internal Review</option>
-                        <option value="client_review">Client Review</option>
-                        <option value="approved">Approved</option>
-                        <option value="done">Done</option>
-                      </select>
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        <select
+                          value={t.status}
+                          disabled={updatingTaskId === t.id || t.is_locked}
+                          onChange={(e) => handleUpdateStatus(t.id, e.target.value as Task["status"])}
+                          className={`text-[11px] font-medium bg-[#101014] text-[#F2F0F7] px-2 py-1 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-colors ${
+                            t.is_locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                          }`}
+                        >
+                          <option value="backlog">Backlog</option>
+                          <option value="todo">To Do</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="internal_review">Internal Review</option>
+                          <option value="client_review">Client Review</option>
+                          <option value="approved">Approved</option>
+                          <option value="done">Done</option>
+                        </select>
+                        {!isSpecialist && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeletingTaskId(t.id);
+                              setDeletingTaskTitle(t.title);
+                            }}
+                            title="Delete task"
+                            className="p-1 rounded hover:bg-white/[0.06] text-[#71717A] hover:text-[#E16F7B] transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      {/* ── Create New Task Modal ── */}
+      {showNewModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="surface-card bg-[#14141A] border border-white/[0.12] rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center text-[#A78BFA]">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">Create New Task</h3>
+                  <p className="text-[11px] text-[#A3A0B0]">Manually dispatch an ad-hoc or operational task</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewModal(false)}
+                className="text-[#A3A0B0] hover:text-[#F2F0F7] p-1 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTask} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                  Task Title <span className="text-[#E16F7B]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Dynamic Sound Sync & Beat Cutting"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                  Deliverable Output <span className="text-[#E16F7B]">*</span>
+                </label>
+                <select
+                  required
+                  value={newDeliverableId}
+                  onChange={(e) => setNewDeliverableId(e.target.value)}
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
+                >
+                  <option value="">Select Target Deliverable...</option>
+                  {deliverables.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.title} ({d.deliverable_type || "asset"} &bull; {d.platform || "general"})
+                    </option>
+                  ))}
+                </select>
+                {deliverables.length === 0 && (
+                  <p className="text-[10px] text-[#E5AA58] mt-1 font-mono">
+                    No deliverables found. Create a campaign plan first to associate tasks.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                    Stage / Task Type
+                  </label>
+                  <select
+                    value={newTaskType}
+                    onChange={(e) => setNewTaskType(e.target.value)}
+                    className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
+                  >
+                    <option value="scripting">Scripting / Concept</option>
+                    <option value="copywriting">Copywriting</option>
+                    <option value="filming">Video Filming / Footage</option>
+                    <option value="design">Graphic Design</option>
+                    <option value="editing">Video Editing / Sound</option>
+                    <option value="qa">QA / Format Check</option>
+                    <option value="approval">Review & Sign-Off</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                    Priority Tier
+                  </label>
+                  <select
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value as any)}
+                    className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                    <option value="urgent">🚨 Urgent Priority</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                    Assigned Specialist
+                  </label>
+                  <select
+                    value={newAssigneeId}
+                    onChange={(e) => setNewAssigneeId(e.target.value)}
+                    className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
+                  >
+                    <option value="">Unassigned</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.user_full_name || m.user_email?.split("@")[0]} ({m.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                    Initial Status
+                  </label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value as any)}
+                    className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
+                  >
+                    <option value="todo">To Do (Ready to start)</option>
+                    <option value="backlog">Backlog (Queued)</option>
+                    <option value="in_progress">In Production</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                  Delivery Deadline
+                </label>
+                <input
+                  type="date"
+                  value={newDueDate}
+                  onChange={(e) => setNewDueDate(e.target.value)}
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-mono transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                  Creative Brief / Production Notes
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Guidelines, references, audio sync directions..."
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setShowNewModal(false)}
+                  className="px-4 py-2 rounded-xl bg-[#20202A] hover:bg-[#2a2a38] text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTask}
+                  className="px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-xs font-bold text-[#101014] flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                >
+                  {creatingTask ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Creating Task...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create Task</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deletingTaskId && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="surface-card bg-[#14141A] border border-white/[0.12] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3 text-[#E16F7B]">
+              <div className="w-10 h-10 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-[#E16F7B]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">Delete Task</h3>
+                <p className="text-xs text-[#A3A0B0]">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-xs text-[#F2F0F7] leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-[#F2F0F7]">"{deletingTaskTitle}"</strong>? Any associated submissions and review comments will also be removed.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => {
+                  setDeletingTaskId(null);
+                  setDeletingTaskTitle("");
+                }}
+                className="px-4 py-2 rounded-xl bg-[#20202A] hover:bg-[#2a2a38] text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteTask}
+                className="px-4 py-2 rounded-xl bg-[#E16F7B] hover:bg-[#F27885] text-xs font-bold text-[#101014] flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

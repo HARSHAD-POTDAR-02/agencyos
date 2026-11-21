@@ -31,6 +31,11 @@ import {
   ExternalLink,
   Copy,
   ChevronRight,
+  Lock,
+  Trash2,
+  Bot,
+  Wand2,
+  CornerDownLeft,
 } from "lucide-react";
 
 interface SubmissionVersion {
@@ -95,6 +100,8 @@ interface TaskDetail {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  is_locked?: boolean;
+  locked_reason?: string | null;
   client_id?: string;
   client_name?: string;
   campaign_id?: string;
@@ -188,6 +195,8 @@ function TaskWorkspaceContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Submission Form State
   const [submissionMode, setSubmissionMode] = useState<"script" | "media">("script");
@@ -214,6 +223,18 @@ function TaskWorkspaceContent() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [copiedBrief, setCopiedBrief] = useState(false);
   const [copiedStoryboard, setCopiedStoryboard] = useState(false);
+
+  // AI Specialist Drawer State
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<{
+    agent_name: string;
+    critique: string;
+    recommended_hook: string;
+    recommended_script: string;
+    hook_variations: string[];
+  } | null>(null);
 
   const loadTask = useCallback(async () => {
     if (!token || !effectiveAgencyId || !taskId) return;
@@ -378,6 +399,69 @@ function TaskWorkspaceContent() {
     }
   };
 
+  // AI Specialist Assistant Runner
+  const handleRunAIAssist = async (overridePrompt?: string) => {
+    if (!token || !effectiveAgencyId || !taskId) return;
+    const promptToUse = (overridePrompt || aiInstruction).trim();
+    if (!promptToUse) {
+      setNotification({
+        type: "error",
+        text: "Please enter an instruction or click a prompt chip.",
+      });
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const res = await taskApi.aiAssist(
+        effectiveAgencyId,
+        taskId,
+        {
+          instruction: promptToUse,
+          current_hook: hook || undefined,
+          current_script: scriptBody || undefined,
+          task_type: task?.task_type || undefined,
+        },
+        token
+      );
+      setAiResult(res);
+      setAiDrawerOpen(true);
+      setNotification({
+        type: "success",
+        text: `AI Specialist (${res.agent_name}) generated creative recommendations!`,
+      });
+    } catch (err: any) {
+      console.error("AI Specialist assist failed:", err);
+      setNotification({
+        type: "error",
+        text: err?.message || "Failed to generate AI specialist suggestions.",
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleApplyHook = (selectedHook: string) => {
+    setHook(selectedHook);
+    if (submissionMode !== "script") {
+      setSubmissionMode("script");
+    }
+    setNotification({
+      type: "success",
+      text: "Inserted recommended hook into submission draft!",
+    });
+  };
+
+  const handleApplyScript = (selectedScript: string) => {
+    setScriptBody(selectedScript);
+    if (submissionMode !== "script") {
+      setSubmissionMode("script");
+    }
+    setNotification({
+      type: "success",
+      text: "Inserted recommended script dialogue into submission draft!",
+    });
+  };
+
   // Handle Work Submission
   const handleWorkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -452,6 +536,19 @@ function TaskWorkspaceContent() {
       setError(err?.message || "Failed to submit review decision");
     } finally {
       setReviewing(false);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!token || !effectiveAgencyId || !task) return;
+    setDeleting(true);
+    try {
+      await taskApi.delete(effectiveAgencyId, task.id, token);
+      window.location.href = "/tasks";
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete task.");
+      setShowDeleteModal(false);
+      setDeleting(false);
     }
   };
 
@@ -970,37 +1067,235 @@ function TaskWorkspaceContent() {
 
             {/* Submission Action Workspace (For Employee / Specialist) */}
             <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3 flex-wrap gap-2">
                 <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider flex items-center gap-2">
                   <UploadCloud className="w-3.5 h-3.5 text-[#A78BFA]" /> Submit Deliverable Work
                 </span>
 
-                {/* Mode Toggle */}
-                <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs font-medium">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setSubmissionMode("script")}
-                    className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                      submissionMode === "script"
-                        ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs"
-                        : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                    onClick={() => setAiDrawerOpen((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      aiDrawerOpen
+                        ? "bg-[#A78BFA]/20 text-[#A78BFA] border-[#A78BFA]/50 shadow-xs"
+                        : "bg-[#20202A] text-[#F2F0F7] border-white/[0.08] hover:border-[#A78BFA]/30"
                     }`}
                   >
-                    Text Script
+                    <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <span>{aiDrawerOpen ? "Close AI Copilot" : "AI Specialist Copilot"}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSubmissionMode("media")}
-                    className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                      submissionMode === "media"
-                        ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs"
-                        : "text-[#A3A0B0] hover:text-[#F2F0F7]"
-                    }`}
-                  >
-                    Media File
-                  </button>
+
+                  {/* Mode Toggle */}
+                  <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionMode("script")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+                        submissionMode === "script"
+                          ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs"
+                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      }`}
+                    >
+                      Text Script
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionMode("media")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
+                        submissionMode === "media"
+                          ? "bg-white/[0.08] text-[#A78BFA] font-semibold shadow-xs"
+                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      }`}
+                    >
+                      Media File
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              {/* AI Specialist Assistant Drawer */}
+              {aiDrawerOpen && (
+                <div className="surface-card border border-[#A78BFA]/40 bg-[#121218] rounded-2xl p-4.5 space-y-4 shadow-sm animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-[#A78BFA]/20 text-[#A78BFA] flex items-center justify-center border border-[#A78BFA]/30">
+                        <Bot className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-[#F2F0F7] flex items-center gap-1.5">
+                          <span>In-Task AI Specialist</span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20 uppercase">
+                            {aiResult?.agent_name || (task?.task_type?.toLowerCase().includes("video") || task?.task_type?.toLowerCase().includes("film") ? "Creative Director & Storyboard Lead" : "Lead Content Architect")}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAiDrawerOpen(false)}
+                      className="p-1 rounded-lg hover:bg-white/[0.06] text-[#A3A0B0] hover:text-[#F2F0F7] transition-colors cursor-pointer"
+                      title="Close drawer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Quick Action Chips */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-mono text-[#A3A0B0] uppercase block">
+                      Quick Action Prompts
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: "Audit Hook for Retention", icon: "🎯", prompt: "Audit the current hook against high-retention social benchmarks and critique drop-off risks." },
+                        { label: "Generate 3 Punchy Hook Variations", icon: "⚡", prompt: "Generate 3 punchy, scroll-stopping hook variations for this deliverable format." },
+                        { label: "Check Brand Voice Compliance", icon: "🛡️", prompt: "Analyze tone and ensure strict compliance with client brand voice and audience personas." },
+                        { label: "Expand 3-Scene Storyboard Dialogue", icon: "🎬", prompt: "Expand full scene-by-scene script dialogue and visual directions based on storyboard specs." },
+                      ].map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          disabled={aiLoading}
+                          onClick={() => {
+                            setAiInstruction(chip.prompt);
+                            handleRunAIAssist(chip.prompt);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#1a1a24] hover:bg-[#252533] border border-white/[0.08] hover:border-[#A78BFA]/40 text-[11px] text-[#F2F0F7] font-medium transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <span>{chip.icon}</span>
+                          <span>{chip.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Instruction Box */}
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Or type custom prompt (e.g. 'Make the hook more confrontational', 'Add a 3s visual gag')..."
+                        value={aiInstruction}
+                        onChange={(e) => setAiInstruction(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleRunAIAssist();
+                          }
+                        }}
+                        disabled={aiLoading}
+                        className="flex-1 bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-sans"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRunAIAssist()}
+                        disabled={aiLoading}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#b69bff] text-[#101014] text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        {aiLoading ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Thinking...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Run AI</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* AI Results Section */}
+                  {aiResult && (
+                    <div className="space-y-3 pt-2 border-t border-white/[0.06]">
+                      {/* Critique */}
+                      <div className="bg-[#171720] p-3 rounded-xl border border-white/[0.08] space-y-1">
+                        <span className="text-[10px] font-mono font-bold text-[#A78BFA] uppercase tracking-wider block">
+                          Specialist Critique & Creative Direction
+                        </span>
+                        <p className="text-xs text-[#F2F0F7] leading-relaxed">
+                          {aiResult.critique}
+                        </p>
+                      </div>
+
+                      {/* Primary Recommended Hook */}
+                      {aiResult.recommended_hook && (
+                        <div className="bg-[#101014] p-3 rounded-xl border border-white/[0.08] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono font-bold text-[#45B88A] uppercase">
+                              Recommended Primary Hook (0-3s)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleApplyHook(aiResult.recommended_hook)}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#45B88A]/10 hover:bg-[#45B88A]/20 text-[#45B88A] border border-[#45B88A]/30 text-[11px] font-semibold transition-all cursor-pointer"
+                            >
+                              <CornerDownLeft className="w-3 h-3" />
+                              <span>Insert Hook</span>
+                            </button>
+                          </div>
+                          <p className="text-xs text-[#F2F0F7] font-medium italic">
+                            "{aiResult.recommended_hook}"
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Hook Variations */}
+                      {aiResult.hook_variations && aiResult.hook_variations.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-mono text-[#A3A0B0] uppercase block">
+                            Alternative Hook Variations
+                          </span>
+                          <div className="space-y-1.5">
+                            {aiResult.hook_variations.map((hVar, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between gap-2 bg-[#101014] px-3 py-2 rounded-xl border border-white/[0.06] text-xs text-[#F2F0F7]"
+                              >
+                                <span className="truncate flex-1 font-sans text-[11px]">
+                                  {idx + 1}. "{hVar}"
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyHook(hVar)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#20202A] hover:bg-[#2c2c3b] text-[#A78BFA] border border-white/[0.08] text-[10px] font-semibold transition-all cursor-pointer shrink-0"
+                                >
+                                  <span>Use</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recommended Script */}
+                      {aiResult.recommended_script && (
+                        <div className="bg-[#101014] p-3 rounded-xl border border-white/[0.08] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono font-bold text-[#69A9D8] uppercase">
+                              Recommended Dialogue & Scene Breakdown
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleApplyScript(aiResult.recommended_script)}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#69A9D8]/10 hover:bg-[#69A9D8]/20 text-[#69A9D8] border border-[#69A9D8]/30 text-[11px] font-semibold transition-all cursor-pointer"
+                            >
+                              <CornerDownLeft className="w-3 h-3" />
+                              <span>Insert Script</span>
+                            </button>
+                          </div>
+                          <pre className="text-xs text-[#F2F0F7] font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto bg-[#0d0d12] p-2.5 rounded-lg border border-white/[0.04]">
+                            {aiResult.recommended_script}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {submitSuccess && (
                 <div className="p-3 rounded-xl bg-[#45B88A]/10 border border-[#45B88A]/30 text-[#45B88A] text-xs font-medium flex items-center gap-2">
@@ -1016,6 +1311,19 @@ function TaskWorkspaceContent() {
                 </div>
               )}
 
+              {task.is_locked && (
+                <div className="surface-card border border-[#E5AA58]/40 bg-[#17171E] rounded-2xl p-4 space-y-2 text-[#E5AA58] shadow-sm mb-4">
+                  <div className="flex items-center gap-2 font-heading font-bold text-xs">
+                    <Lock className="w-4 h-4 text-[#E5AA58] shrink-0" />
+                    <span>Task Is Locked — Upstream Prerequisite Pending</span>
+                  </div>
+                  <p className="text-[11px] text-[#A3A0B0] leading-relaxed">
+                    {task.locked_reason ||
+                      "Upstream tasks for this deliverable must be completed and approved before work can be submitted for this stage."}
+                  </p>
+                </div>
+              )}
+
               <form onSubmit={handleWorkSubmit} className="space-y-3.5">
                 {submissionMode === "script" ? (
                   /* Writer Script Submission Form */
@@ -1028,35 +1336,64 @@ function TaskWorkspaceContent() {
                         type="text"
                         placeholder="e.g. Q4 Growth Sprint Hook & Scene Script"
                         value={scriptTitle}
+                        disabled={task.is_locked}
                         onChange={(e) => setScriptTitle(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-medium"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-[#A3A0B0] mb-1">
-                        Hook / Opening Line (First 3 Seconds)
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-medium text-[#A3A0B0]">
+                          Hook / Opening Line (First 3 Seconds)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAiDrawerOpen(true);
+                            handleRunAIAssist("Generate 3 punchy, scroll-stopping hook variations for this deliverable format.");
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA] hover:text-[#b69bff] transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>AI Hook Generator</span>
+                        </button>
+                      </div>
                       <input
                         type="text"
                         placeholder="e.g. Stop scrolling if you want to scale your results this month!"
                         value={hook}
+                        disabled={task.is_locked}
                         onChange={(e) => setHook(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-medium"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-[#A3A0B0] mb-1">
-                        Scene Breakdown, Dialogue & Visual Directions
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-medium text-[#A3A0B0]">
+                          Scene Breakdown, Dialogue & Visual Directions
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAiDrawerOpen(true);
+                            handleRunAIAssist("Expand full scene-by-scene script dialogue and visual directions based on storyboard specs.");
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA] hover:text-[#b69bff] transition-colors cursor-pointer"
+                        >
+                          <Wand2 className="w-3 h-3" />
+                          <span>Expand Dialogue with AI</span>
+                        </button>
+                      </div>
                       <textarea
                         rows={6}
                         placeholder={`Scene 1 (0-3s): Dynamic hook visual introducing core challenge...\nScene 2 (3-8s): Product / service feature demonstration...\nScene 3 (8-15s): Customer proof & key call to action...`}
                         value={scriptBody}
+                        disabled={task.is_locked}
                         onChange={(e) => setScriptBody(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-mono transition-all leading-relaxed"
-                        required
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-mono transition-all leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
+                        required={!task.is_locked}
                       />
                     </div>
 
@@ -1068,8 +1405,9 @@ function TaskWorkspaceContent() {
                         rows={2}
                         placeholder="Caption copy to accompany the post..."
                         value={caption}
+                        disabled={task.is_locked}
                         onChange={(e) => setCaption(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -1080,23 +1418,41 @@ function TaskWorkspaceContent() {
                       <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
                         Upload Media Asset (.mp4, .mov, .png, .jpg)
                       </label>
-                      <div className="border border-dashed border-white/[0.12] hover:border-[#A78BFA] rounded-2xl p-6 text-center transition-colors bg-[#101014] group cursor-pointer">
+                      <div
+                        className={`border border-dashed border-white/[0.12] rounded-2xl p-6 text-center transition-colors bg-[#101014] group ${
+                          task.is_locked
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:border-[#A78BFA] cursor-pointer"
+                        }`}
+                      >
                         <input
                           type="file"
                           id="task-file-upload"
+                          disabled={task.is_locked}
                           onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                           className="hidden"
                           accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg"
                         />
-                        <label htmlFor="task-file-upload" className="cursor-pointer space-y-2 block">
-                          <UploadCloud className="w-8 h-8 text-[#A78BFA] mx-auto group-hover:scale-105 transition-transform" />
+                        <label
+                          htmlFor={task.is_locked ? undefined : "task-file-upload"}
+                          className={`space-y-2 block ${task.is_locked ? "cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <UploadCloud
+                            className={`w-8 h-8 mx-auto transition-transform ${
+                              task.is_locked ? "text-[#71717A]" : "text-[#A78BFA] group-hover:scale-105"
+                            }`}
+                          />
                           <span className="text-xs font-semibold text-[#F2F0F7] block">
-                            {selectedFile
+                            {task.is_locked
+                              ? "Upload Disabled — Task is Locked"
+                              : selectedFile
                               ? selectedFile.name
                               : "Click to select or drag and drop render file"}
                           </span>
                           <span className="text-[10px] text-[#71717A] block font-mono">
-                            {selectedFile
+                            {task.is_locked
+                              ? "Complete upstream deliverables to unlock this stage"
+                              : selectedFile
                               ? `${Math.round(selectedFile.size / (1024 * 1024))} MB`
                               : "Supports MP4, MOV, WebM, PNG up to 100MB"}
                           </span>
@@ -1112,8 +1468,9 @@ function TaskWorkspaceContent() {
                         type="text"
                         placeholder="e.g. Exported 1080x1920 60fps render with color-graded footage"
                         value={notes}
+                        disabled={task.is_locked}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
+                        className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -1121,13 +1478,22 @@ function TaskWorkspaceContent() {
 
                 <button
                   type="submit"
-                  disabled={submitting || (submissionMode === "media" && !selectedFile)}
-                  className="w-full py-2.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] disabled:opacity-40 text-[#101014] text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                  disabled={submitting || task.is_locked || (submissionMode === "media" && !selectedFile)}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all ${
+                    task.is_locked
+                      ? "bg-white/[0.05] text-[#71717A] border border-white/[0.08] cursor-not-allowed opacity-60"
+                      : "bg-[#A78BFA] hover:bg-[#B69BFF] disabled:opacity-40 text-[#101014] cursor-pointer"
+                  }`}
                 >
                   {submitting ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       <span>Uploading & Submitting...</span>
+                    </>
+                  ) : task.is_locked ? (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-[#E5AA58]" />
+                      <span className="text-[#E5AA58]">Task Locked — Upstream Incomplete</span>
                     </>
                   ) : (
                     <>
@@ -1162,9 +1528,11 @@ function TaskWorkspaceContent() {
                   </label>
                   <select
                     value={task.status}
-                    disabled={updatingMetadata}
+                    disabled={updatingMetadata || task.is_locked}
                     onChange={(e) => handleUpdateStatus(e.target.value as TaskDetail["status"])}
-                    className="w-full bg-[#101014] text-xs font-medium text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+                    className={`w-full bg-[#101014] text-xs font-medium text-[#F2F0F7] px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-colors ${
+                      task.is_locked ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                    }`}
                   >
                     <option value="backlog">Backlog / Queued</option>
                     <option value="todo">To Do / Scripting</option>
@@ -1175,6 +1543,12 @@ function TaskWorkspaceContent() {
                     <option value="approved">Approved</option>
                     <option value="done">Done / Published</option>
                   </select>
+                  {task.is_locked && (
+                    <p className="text-[10px] text-[#E5AA58] mt-1.5 flex items-center gap-1 font-mono">
+                      <Lock className="w-3 h-3 shrink-0" />
+                      <span>Locked until upstream tasks are approved</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* Priority Switcher */}
@@ -1251,6 +1625,19 @@ function TaskWorkspaceContent() {
                     )}
                   </div>
                 </div>
+
+                {isManagerOrOwner && (
+                  <div className="pt-3 border-t border-white/[0.06]">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteModal(true)}
+                      className="w-full py-2 rounded-xl border border-[#E16F7B]/30 hover:border-[#E16F7B] bg-[#E16F7B]/10 hover:bg-[#E16F7B]/20 text-[#E16F7B] text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Task</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1403,6 +1790,53 @@ function TaskWorkspaceContent() {
                     : reviewDecision === "approved"
                     ? "Confirm Approval"
                     : "Send Revision Request"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="surface-card bg-[#14141A] border border-white/[0.12] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-3 text-[#E16F7B]">
+                <div className="w-10 h-10 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-5 h-5 text-[#E16F7B]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">Delete Task</h3>
+                  <p className="text-xs text-[#A3A0B0]">This action cannot be undone.</p>
+                </div>
+              </div>
+              <p className="text-xs text-[#F2F0F7] leading-relaxed">
+                Are you sure you want to permanently delete <strong className="text-[#F2F0F7]">"{task?.title}"</strong>? Any associated submissions and review comments will also be removed.
+              </p>
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 rounded-xl bg-[#20202A] hover:bg-[#2a2a38] text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={handleDeleteTask}
+                  className="px-4 py-2 rounded-xl bg-[#E16F7B] hover:bg-[#F27885] text-xs font-bold text-[#101014] flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Permanently</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

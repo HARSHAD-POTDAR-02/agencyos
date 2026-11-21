@@ -519,14 +519,47 @@ export const taskApi = {
     apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}`, { token }),
   update: (agencyId: string, taskId: string, data: Record<string, unknown>, token: string) =>
     apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}`, { method: "PATCH", body: data, token }),
+  create: (agencyId: string, data: Record<string, unknown>, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/tasks`, { method: "POST", body: data, token }),
+  delete: (agencyId: string, taskId: string, token: string) =>
+    apiFetch<void>(`/agencies/${agencyId}/tasks/${taskId}`, { method: "DELETE", token }),
   submit: (agencyId: string, taskId: string, formData: FormData, token: string) =>
     apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}/submissions`, { method: "POST", body: formData, token }),
   review: (agencyId: string, taskId: string, data: { decision: "approved" | "changes_requested"; feedback_notes?: string }, token: string) =>
     apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}/review`, { method: "POST", body: data, token }),
+  aiAssist: (
+    agencyId: string,
+    taskId: string,
+    data: {
+      instruction: string;
+      current_hook?: string;
+      current_script?: string;
+      task_type?: string;
+    },
+    token: string
+  ) =>
+    apiFetch<{
+      agent_name: string;
+      critique: string;
+      recommended_hook: string;
+      recommended_script: string;
+      hook_variations: string[];
+    }>(`/agencies/${agencyId}/tasks/${taskId}/ai-assist`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
 };
 
 /* ── Deliverable & Content Version endpoints ── */
 export const deliverableApi = {
+  list: (agencyId: string, token: string, clientId?: string, campaignId?: string) => {
+    const params = new URLSearchParams();
+    if (clientId) params.set("client_id", clientId);
+    if (campaignId) params.set("campaign_id", campaignId);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiFetch<any[]>(`/agencies/${agencyId}/deliverables${qs}`, { token });
+  },
   get: (agencyId: string, deliverableId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}`, { token }),
 

@@ -4,8 +4,9 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import func, or_, select
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from pydantic import BaseModel
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -20,8 +21,11 @@ from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.studio_artifact import StudioArtifactVersion, StudioExport
 from app.models.task import Task, TaskPriority, TaskStatus
 from app.models.user import Membership, RoleEnum, User
+from app.core.llm import invoke_structured_llm
 from app.schemas.comment import CommentOut
 from app.schemas.task import (
+    TaskAIAssistRequest,
+    TaskAIAssistResponse,
     TaskContentVersionOut,
     TaskCreate,
     TaskDetailOut,
@@ -33,6 +37,102 @@ from app.services.storage_service import save_file, save_text_content
 from app.services.tenant_service import assert_deliverable_belongs_to_agency
 
 router = APIRouter(tags=["tasks"])
+
+
+async def _sync_deliverable_status(deliverable_id: uuid.UUID, db: AsyncSession) -> Deliverable | None:
+    """
+    Synchronizes the parent deliverable status based on the aggregate status
+    of all sibling tasks, preventing single tasks from prematurely clobbering state.
+    """
+    deliv_res = await db.execute(
+        select(Deliverable).where(Deliverable.id == deliverable_id)
+    )
+    deliverable = deliv_res.scalar_one_or_none()
+    if not deliverable:
+        return None
+
+    # Protect terminal / publishing statuses from being overwritten by task edits
+    protected_statuses = {
+        DeliverableStatus.scheduled,
+        DeliverableStatus.publishing,
+        DeliverableStatus.partially_published,
+        DeliverableStatus.published,
+        DeliverableStatus.failed,
+        DeliverableStatus.cancelled,
+    }
+    if deliverable.status in protected_statuses:
+        return deliverable
+
+    sib_res = await db.execute(
+        select(Task).where(Task.deliverable_id == deliverable_id)
+    )
+    siblings = sib_res.scalars().all()
+    if not siblings:
+        return deliverable
+
+    statuses = [s.status for s in siblings]
+
+    if any(s == TaskStatus.changes_requested for s in statuses):
+        deliverable.status = DeliverableStatus.changes_requested
+    elif any(s == TaskStatus.internal_review for s in statuses):
+        deliverable.status = DeliverableStatus.internal_review
+    elif any(s == TaskStatus.client_review for s in statuses):
+        deliverable.status = DeliverableStatus.client_review
+    elif all(s in (TaskStatus.approved, TaskStatus.done) for s in statuses):
+        deliverable.status = DeliverableStatus.approved
+    elif any(s == TaskStatus.in_progress for s in statuses):
+        deliverable.status = DeliverableStatus.in_production
+    elif any(s in (TaskStatus.approved, TaskStatus.done) for s in statuses):
+        deliverable.status = DeliverableStatus.in_production
+    elif any(s == TaskStatus.todo for s in statuses):
+        deliverable.status = DeliverableStatus.not_started
+    elif all(s == TaskStatus.backlog for s in statuses):
+        deliverable.status = DeliverableStatus.not_started
+    else:
+        deliverable.status = DeliverableStatus.in_production
+
+    return deliverable
+
+
+def get_stage_rank(task_type: str | None) -> int:
+    t = (task_type or "").lower()
+    if any(k in t for k in ("script", "copy", "writing")):
+        return 1
+    if any(k in t for k in ("film", "shoot")):
+        return 2
+    if any(k in t for k in ("design", "graphic")):
+        return 3
+    if any(k in t for k in ("edit", "cut")):
+        return 4
+    if any(k in t for k in ("qa", "quality")):
+        return 5
+    if any(k in t for k in ("approval", "review")):
+        return 6
+    return 3
+
+
+def _check_task_lock_status(task: Task, siblings: list[Task]) -> tuple[bool, str | None]:
+    """
+    Determines if a task is locked based on its status and the status of
+    upstream prerequisite sibling tasks under the same deliverable.
+    """
+    task_rank = get_stage_rank(task.task_type)
+    sorted_sibs = sorted(
+        [s for s in siblings if s.id != task.id],
+        key=lambda s: (get_stage_rank(s.task_type), s.created_at),
+    )
+
+    # Check if any earlier prerequisite task is not yet approved
+    for sib in sorted_sibs:
+        if get_stage_rank(sib.task_type) < task_rank:
+            if sib.status not in (TaskStatus.approved, TaskStatus.done):
+                return True, f"Waiting for '{sib.title}' ({sib.task_type or 'stage'}) to be approved."
+
+    # If the task itself is marked backlog, it is explicitly queued/locked
+    if task.status == TaskStatus.backlog:
+        return True, "Task is queued in backlog and not yet ready for production."
+
+    return False, None
 
 
 async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: AsyncSession) -> TaskDetailOut:
@@ -70,11 +170,14 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
                 else str(assignee_role_val)
             )
 
-    # Submissions (all ContentVersions for this deliverable)
+    # Submissions (ContentVersions scoped to this task)
     cv_stmt = (
         select(ContentVersion)
         .options(selectinload(ContentVersion.approval))
-        .where(ContentVersion.deliverable_id == deliverable.id)
+        .where(
+            ContentVersion.deliverable_id == deliverable.id,
+            ContentVersion.task_id == task.id,
+        )
         .order_by(ContentVersion.version_number.asc())
     )
     cv_res = await db.execute(cv_stmt)
@@ -161,6 +264,12 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
                     )
                 break
 
+    # Siblings lock evaluation
+    sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
+    sib_res = await db.execute(sib_stmt)
+    siblings = sib_res.scalars().all()
+    is_locked, locked_reason = _check_task_lock_status(task, siblings)
+
     return TaskDetailOut(
         id=task.id,
         deliverable_id=task.deliverable_id,
@@ -176,6 +285,8 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
         notes=task.notes,
         created_at=task.created_at,
         updated_at=task.updated_at,
+        is_locked=is_locked,
+        locked_reason=locked_reason,
         client_id=client.id,
         client_name=client.business_name,
         campaign_id=campaign.id,
@@ -207,13 +318,71 @@ async def create_task(
 ) -> TaskOut:
     """Create a task for a deliverable."""
     await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
+
+    if payload.assignee_id is not None:
+        m_stmt = select(Membership).where(
+            Membership.agency_id == agency_id,
+            Membership.user_id == payload.assignee_id,
+        )
+        assignee_member = await db.scalar(m_stmt)
+        if not assignee_member:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assignee does not belong to this agency.",
+            )
+
     task = Task(
         id=uuid.uuid4(),
         deliverable_id=deliverable_id,
-        **payload.model_dump(),
+        **payload.model_dump(exclude={"deliverable_id"}),
     )
     db.add(task)
     await db.commit()
+    await _sync_deliverable_status(deliverable_id, db)
+    await db.refresh(task)
+    return TaskOut.model_validate(task)
+
+
+@router.post(
+    "/agencies/{agency_id}/tasks",
+    response_model=TaskOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agency_task(
+    agency_id: uuid.UUID,
+    payload: TaskCreate,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> TaskOut:
+    """Create a task directly under an agency deliverable."""
+    if not payload.deliverable_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="deliverable_id is required to create a task.",
+        )
+    await assert_deliverable_belongs_to_agency(payload.deliverable_id, agency_id, db)
+
+    if payload.assignee_id is not None:
+        m_stmt = select(Membership).where(
+            Membership.agency_id == agency_id,
+            Membership.user_id == payload.assignee_id,
+        )
+        assignee_member = await db.scalar(m_stmt)
+        if not assignee_member:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assignee does not belong to this agency.",
+            )
+
+    task_data = payload.model_dump(exclude={"deliverable_id"})
+    task = Task(
+        id=uuid.uuid4(),
+        deliverable_id=payload.deliverable_id,
+        **task_data,
+    )
+    db.add(task)
+    await db.commit()
+    await _sync_deliverable_status(payload.deliverable_id, db)
     await db.refresh(task)
     return TaskOut.model_validate(task)
 
@@ -274,6 +443,16 @@ async def list_agency_tasks(
     result = await db.execute(query)
     rows = result.all()
 
+    # Pre-fetch sibling tasks for lock evaluation across loaded deliverables
+    deliv_tasks_map: dict[uuid.UUID, list[Task]] = {}
+    deliv_ids = {r[0].deliverable_id for r in rows}
+    if deliv_ids:
+        all_sibs_res = await db.execute(
+            select(Task).where(Task.deliverable_id.in_(deliv_ids))
+        )
+        for s in all_sibs_res.scalars().all():
+            deliv_tasks_map.setdefault(s.deliverable_id, []).append(s)
+
     out_list: list[TaskOut] = []
     for task, deliv_title, deliv_type, camp_id, camp_title, cli_id, cli_name, assignee_name in rows:
         out = TaskOut.model_validate(task)
@@ -284,6 +463,10 @@ async def list_agency_tasks(
         out.client_id = cli_id
         out.client_name = cli_name
         out.assignee_name = assignee_name
+        sibs = deliv_tasks_map.get(task.deliverable_id, [task])
+        is_locked, locked_reason = _check_task_lock_status(task, sibs)
+        out.is_locked = is_locked
+        out.locked_reason = locked_reason
         out_list.append(out)
 
     return out_list
@@ -340,6 +523,17 @@ async def submit_task_work(
     deliverable = task.deliverable
     if deliverable.campaign.client.agency_id != agency_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+
+    # Enforce task locking: reject submissions if upstream prerequisites are incomplete
+    sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
+    sib_res = await db.execute(sib_stmt)
+    siblings = sib_res.scalars().all()
+    is_locked, locked_reason = _check_task_lock_status(task, siblings)
+    if is_locked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This task is locked. {locked_reason or 'All upstream prerequisite tasks must be approved before submitting work.'}",
+        )
 
     max_ver = (
         await db.scalar(
@@ -419,6 +613,56 @@ async def submit_task_work(
     return out
 
 
+async def _unlock_downstream_tasks(task: Task, deliverable_id: uuid.UUID, db: AsyncSession) -> None:
+    """
+    When a task is approved or marked done, unlock the next sequential downstream sibling
+    from 'backlog' to 'todo' according to stage precedence.
+    """
+    t_type = (task.task_type or "").lower()
+    siblings_res = await db.execute(
+        select(Task)
+        .where(Task.deliverable_id == deliverable_id)
+        .order_by(Task.created_at.asc())
+    )
+    siblings = siblings_res.scalars().all()
+
+    stage_transitions: dict[str, list[str]] = {
+        "script": ["film", "shoot", "edit", "approval", "review"],
+        "copy": ["design", "qa", "approval", "review"],
+        "writing": ["design", "qa", "approval", "review"],
+        "film": ["edit", "qa", "approval", "review"],
+        "shoot": ["edit", "qa", "approval", "review"],
+        "design": ["qa", "approval", "review"],
+        "edit": ["qa", "approval", "review"],
+        "qa": ["approval", "review"],
+    }
+
+    target_candidates: list[str] = []
+    for key, targets in stage_transitions.items():
+        if key in t_type:
+            target_candidates.extend(targets)
+            break
+
+    unlocked_sibling = False
+    if target_candidates:
+        for cand in target_candidates:
+            for sib in siblings:
+                sib_type = (sib.task_type or "").lower()
+                if cand in sib_type and sib.status == TaskStatus.backlog:
+                    sib.status = TaskStatus.todo
+                    unlocked_sibling = True
+                    break
+            if unlocked_sibling:
+                break
+
+    if not unlocked_sibling:
+        for sib in siblings:
+            if sib.id != task.id and sib.status == TaskStatus.backlog:
+                sib.status = TaskStatus.todo
+                unlocked_sibling = True
+                break
+
+
 @router.post(
     "/agencies/{agency_id}/tasks/{task_id}/review",
     response_model=TaskDetailOut,
@@ -460,12 +704,32 @@ async def review_task_work(
     if deliverable.campaign.client.agency_id != agency_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
-    # Get latest ContentVersion for this deliverable
+    # Enforce task locking: reject submissions if upstream prerequisites are incomplete
+    sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
+    sib_res = await db.execute(sib_stmt)
+    siblings = sib_res.scalars().all()
+    is_locked, locked_reason = _check_task_lock_status(task, siblings)
+    if is_locked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This task is locked. {locked_reason or 'All upstream prerequisite tasks must be approved before submitting work.'}",
+        )
+
+    # Get latest ContentVersion for this task (or fallback to deliverable)
     latest_cv = await db.scalar(
         select(ContentVersion)
-        .where(ContentVersion.deliverable_id == deliverable.id)
+        .where(
+            ContentVersion.deliverable_id == deliverable.id,
+            ContentVersion.task_id == task.id,
+        )
         .order_by(ContentVersion.version_number.desc())
     )
+    if not latest_cv:
+        latest_cv = await db.scalar(
+            select(ContentVersion)
+            .where(ContentVersion.deliverable_id == deliverable.id)
+            .order_by(ContentVersion.version_number.desc())
+        )
 
     decision_enum = (
         ApprovalDecision.approved
@@ -494,7 +758,6 @@ async def review_task_work(
 
     if payload.decision == "changes_requested":
         task.status = TaskStatus.changes_requested
-        deliverable.status = DeliverableStatus.changes_requested
         comment = DeliverableComment(
             id=uuid.uuid4(),
             deliverable_id=deliverable.id,
@@ -504,6 +767,7 @@ async def review_task_work(
             is_internal=True,
         )
         db.add(comment)
+        await _sync_deliverable_status(deliverable.id, db)
     elif payload.decision == "approved":
         task.status = TaskStatus.approved
         comment = DeliverableComment(
@@ -517,29 +781,23 @@ async def review_task_work(
         db.add(comment)
 
         # Downstream task unlocking logic
-        t_type = (task.task_type or "").lower()
+        await _unlock_downstream_tasks(task, deliverable.id, db)
+
         siblings_res = await db.execute(
-            select(Task).where(Task.deliverable_id == deliverable.id)
+            select(Task)
+            .where(Task.deliverable_id == deliverable.id)
+            .order_by(Task.created_at.asc())
         )
         siblings = siblings_res.scalars().all()
+        t_type = (task.task_type or "").lower()
 
-        if any(w in t_type for w in ["script", "copy", "writing"]):
-            # Unlocks filming or editing task
-            for sib in siblings:
-                sib_type = (sib.task_type or "").lower()
-                if any(w in sib_type for w in ["shoot", "film", "edit", "design"]) and sib.status == TaskStatus.backlog:
-                    sib.status = TaskStatus.todo
-                    break
-        elif any(w in t_type for w in ["shoot", "film"]):
-            # Unlocks editing task
-            for sib in siblings:
-                sib_type = (sib.task_type or "").lower()
-                if "edit" in sib_type and sib.status == TaskStatus.backlog:
-                    sib.status = TaskStatus.todo
-                    break
-        elif any(w in t_type for w in ["edit", "design", "approval"]):
-            # Video or design render approved -> Deliverable is ready for Client Portal!
-            deliverable.status = DeliverableStatus.client_review
+        if any(w in t_type for w in ["approval", "review"]) or not any(s.status == TaskStatus.backlog for s in siblings):
+            if all(s.status in (TaskStatus.approved, TaskStatus.done) for s in siblings):
+                deliverable.status = DeliverableStatus.approved
+            else:
+                deliverable.status = DeliverableStatus.client_review
+        else:
+            await _sync_deliverable_status(deliverable.id, db)
 
     await db.commit()
     return await _build_task_detail(agency_id, task.id, db)
@@ -550,7 +808,7 @@ async def update_task(
     agency_id: uuid.UUID,
     task_id: uuid.UUID,
     payload: TaskUpdate,
-    _: Membership = Depends(require_agency_member),
+    membership: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> TaskOut:
     """Update a task's status, assignee, or other fields."""
@@ -561,28 +819,234 @@ async def update_task(
     await assert_deliverable_belongs_to_agency(task.deliverable_id, agency_id, db)
 
     update_data = payload.model_dump(exclude_unset=True)
+
+    # 1. Cross-tenant assignee verification
+    if "assignee_id" in update_data and update_data["assignee_id"] is not None:
+        m_stmt = select(Membership).where(
+            Membership.agency_id == agency_id,
+            Membership.user_id == update_data["assignee_id"],
+        )
+        assignee_member = await db.scalar(m_stmt)
+        if not assignee_member:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assignee does not belong to this agency.",
+            )
+
+    # 2. Role security check for approval/done status transition
+    if "status" in update_data and update_data["status"] in (TaskStatus.approved, TaskStatus.done):
+        allowed_roles = {RoleEnum.owner, RoleEnum.manager, RoleEnum.account_manager}
+        if membership.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only agency owners, managers, and account managers can mark tasks as approved or done.",
+            )
+
+    # 3. Enforce task locking: reject advancing status if upstream prerequisites are incomplete
+    if "status" in update_data and update_data["status"] in (TaskStatus.in_progress, TaskStatus.internal_review, TaskStatus.approved, TaskStatus.done):
+        sib_res = await db.execute(select(Task).where(Task.deliverable_id == task.deliverable_id))
+        siblings = sib_res.scalars().all()
+        is_locked, locked_reason = _check_task_lock_status(task, siblings)
+        if is_locked:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot advance locked task: {locked_reason or 'All upstream prerequisite tasks must be approved first.'}",
+            )
+
     for field, value in update_data.items():
         setattr(task, field, value)
 
+    # 4. Synchronize parent deliverable status based on all sibling tasks
     if "status" in update_data:
-        status_map = {
-            TaskStatus.backlog: DeliverableStatus.not_started,
-            TaskStatus.todo: DeliverableStatus.not_started,
-            TaskStatus.in_progress: DeliverableStatus.in_production,
-            TaskStatus.internal_review: DeliverableStatus.internal_review,
-            TaskStatus.client_review: DeliverableStatus.client_review,
-            TaskStatus.changes_requested: DeliverableStatus.changes_requested,
-            TaskStatus.approved: DeliverableStatus.approved,
-            TaskStatus.done: DeliverableStatus.approved,
-        }
-        if task.status in status_map:
-            deliv_res = await db.execute(
-                select(Deliverable).where(Deliverable.id == task.deliverable_id)
-            )
-            deliverable = deliv_res.scalar_one_or_none()
-            if deliverable:
-                deliverable.status = status_map[task.status]
+        if update_data["status"] in (TaskStatus.approved, TaskStatus.done):
+            await _unlock_downstream_tasks(task, task.deliverable_id, db)
+        await _sync_deliverable_status(task.deliverable_id, db)
 
     await db.commit()
     await db.refresh(task)
     return TaskOut.model_validate(task)
+
+
+@router.delete(
+    "/agencies/{agency_id}/tasks/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+async def delete_task(
+    agency_id: uuid.UUID,
+    task_id: uuid.UUID,
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """
+    Delete a task from an agency deliverable.
+    Only owners, managers, and account managers can delete tasks.
+    """
+    allowed_roles = {RoleEnum.owner, RoleEnum.manager, RoleEnum.account_manager}
+    if membership.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only agency owners, managers, and account managers can delete tasks.",
+        )
+
+    stmt = (
+        select(Task)
+        .options(
+            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client)
+        )
+        .where(Task.id == task_id)
+    )
+    result = await db.execute(stmt)
+    task = result.scalars().first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+
+    deliverable = task.deliverable
+    if deliverable.campaign.client.agency_id != agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+
+    deliverable_id = deliverable.id
+
+    # Clean up associated ContentVersion task_id references or records
+    cv_stmt = select(ContentVersion).where(ContentVersion.task_id == task_id)
+    cv_res = await db.execute(cv_stmt)
+    cvs = cv_res.scalars().all()
+    for cv in cvs:
+        await db.execute(delete(Approval).where(Approval.content_version_id == cv.id))
+        await db.delete(cv)
+
+    # Delete task
+    await db.delete(task)
+    await db.commit()
+
+    # Resynchronize parent deliverable status
+    await _sync_deliverable_status(deliverable_id, db)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/agencies/{agency_id}/tasks/{task_id}/ai-assist",
+    response_model=TaskAIAssistResponse,
+)
+async def task_ai_assist_endpoint(
+    agency_id: uuid.UUID,
+    task_id: uuid.UUID,
+    payload: TaskAIAssistRequest,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> TaskAIAssistResponse:
+    """
+    AI Creative Assistant for Specialists:
+    - Provides instant creative guidance, hook variations, brand compliance checks,
+      and scene dialogue expansions directly in the task workspace.
+    """
+    stmt = (
+        select(Task)
+        .options(
+            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client)
+        )
+        .where(Task.id == task_id)
+    )
+    res = await db.execute(stmt)
+    task = res.scalars().first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+
+    deliverable = task.deliverable
+    campaign = deliverable.campaign
+    client = campaign.client
+    if client.agency_id != agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+
+    # Determine Brand Profile context
+    brand_voice = (
+        client.brand_voice
+        if hasattr(client, "brand_voice") and client.brand_voice
+        else "Authoritative, engaging, data-backed and concise"
+    )
+    client_name = client.business_name
+    deliv_type = deliverable.deliverable_type or "reel"
+    t_type = (task.task_type or "scripting").lower()
+
+    agent_name = (
+        "Lead Content Architect"
+        if any(w in t_type for w in ["script", "copy", "writing"])
+        else "Creative Director & Storyboard Lead"
+    )
+
+    system_prompt = f"""You are the {agent_name} at AgencyOS.
+You are assisting a creative specialist working on the task: '{task.title}'
+Parent Deliverable: '{deliverable.title}' (Format: {deliv_type}, Platform: {deliverable.platform or 'general'})
+Client: {client_name}
+Campaign Objective: {campaign.objective or 'Drive high-converting engagement and qualified leads'}
+Brand Voice: {brand_voice}
+
+Your role is to provide surgical, high-converting creative suggestions, sharp hooks, and structured dialogue improvements based on the user's creative instruction.
+"""
+
+    user_prompt = f"""Specialist Instruction: {payload.instruction}
+Current Hook: {payload.current_hook or '(None provided)'}
+Current Script / Draft: {payload.current_script or '(None provided)'}
+Task Type: {payload.task_type or task.task_type or 'scripting'}
+
+Deliver your recommendations structured with:
+1. Constructive critique and tactical advice
+2. A recommended primary hook
+3. A complete recommended script / scene dialogue expansion
+4. 3 punchy alternative hook variations
+"""
+
+    class LLMOutputSchema(BaseModel):
+        critique: str
+        recommended_hook: str
+        recommended_script: str
+        hook_variations: list[str]
+
+    try:
+        llm_result: LLMOutputSchema = await invoke_structured_llm(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            schema_class=LLMOutputSchema,
+        )
+        return TaskAIAssistResponse(
+            agent_name=agent_name,
+            critique=llm_result.critique,
+            recommended_hook=llm_result.recommended_hook,
+            recommended_script=llm_result.recommended_script,
+            hook_variations=llm_result.hook_variations,
+        )
+    except Exception:
+        # Resilient fallback if LLM is unconfigured / rate limited
+        critique = f"Analyzed against {client_name}'s {brand_voice.lower()} brand voice: "
+        if payload.current_hook:
+            critique += "Your hook has strong intent but can capture viewer attention faster in the first 1.5 seconds. "
+        else:
+            critique += "No hook was detected. Starting with a pattern-interrupt question or bold contrarian statement yields 3.2x higher retention. "
+
+        rec_hook = (
+            f"Stop scrolling if you want to eliminate {client_name}'s biggest bottleneck this quarter."
+            if not payload.current_hook
+            else f"Most teams get this completely backwards: {payload.current_hook.rstrip('.!')} — here is the real playbook."
+        )
+
+        rec_script = (
+            f"Scene 1 (0-3s) [Hook]: {rec_hook}\n"
+            f"Scene 2 (3-8s) [Problem]: Breakdown of current inefficiencies and hidden friction.\n"
+            f"Scene 3 (8-15s) [Solution]: How {client_name} delivers certainty without latency.\n"
+            f"Scene 4 (15-25s) [Proof & CTA]: Real-world metrics and link in bio to audit your workflow."
+        )
+
+        variations = [
+            f"The #1 mistake brands make when scaling with {client_name}.",
+            f"If you're still doing this manually in 2026, stop immediately.",
+            f"Here's what 99% of competitors don't know about {deliverable.title}.",
+        ]
+
+        return TaskAIAssistResponse(
+            agent_name=agent_name,
+            critique=critique,
+            recommended_hook=rec_hook,
+            recommended_script=rec_script,
+            hook_variations=variations,
+        )

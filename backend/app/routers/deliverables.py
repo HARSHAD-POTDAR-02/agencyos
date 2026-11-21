@@ -20,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member
+from app.models.campaign import Campaign
+from app.models.client import Client
 from app.models.content_version import ContentVersion
 from app.models.comment import DeliverableComment
 from app.models.deliverable import Deliverable, DeliverableStatus
@@ -55,6 +57,40 @@ async def _get_deliverable_or_404(
     if deliverable is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deliverable not found.")
     return deliverable
+
+
+# ---------------------------------------------------------------------------
+# GET deliverables list for agency
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/agencies/{agency_id}/deliverables",
+    response_model=list[DeliverableOut],
+)
+async def list_agency_deliverables(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID | None = Query(None),
+    campaign_id: uuid.UUID | None = Query(None),
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[DeliverableOut]:
+    """List all deliverables for an agency, optionally filtered by client or campaign."""
+    query = (
+        select(Deliverable)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(Client.agency_id == agency_id)
+        .order_by(Deliverable.created_at.desc())
+    )
+    if campaign_id:
+        query = query.where(Deliverable.campaign_id == campaign_id)
+    if client_id:
+        query = query.where(Campaign.client_id == client_id)
+
+    result = await db.execute(query)
+    deliverables = result.scalars().all()
+    return [DeliverableOut.model_validate(d) for d in deliverables]
 
 
 # ---------------------------------------------------------------------------

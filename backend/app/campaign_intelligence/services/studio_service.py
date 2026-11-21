@@ -546,7 +546,7 @@ async def export_artifact_to_production(
 
     # 8. Create production Task pipeline with enriched creative brief
     brief_markdown = format_production_brief(version.payload, artifact.artifact_type)
-    task_notes = brief_markdown[:1980] if len(brief_markdown) > 1980 else brief_markdown
+    task_notes = brief_markdown
 
     # 9. Save creative brief to upload storage
     upload_dir = Path(settings.UPLOAD_DIR) / str(deliverable.id)

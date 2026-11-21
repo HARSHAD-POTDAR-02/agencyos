@@ -2099,9 +2099,20 @@ async def convert_campaign_to_tasks(
 
         dtype = (item.get("deliverable_type") or "reel").lower()
         planned_dt: date | None = None
-        if item.get("scheduled_date"):
+        date_raw = item.get("scheduled_date") or item.get("planned_date")
+        if date_raw:
             try:
-                planned_dt = datetime.strptime(item["scheduled_date"], "%Y-%m-%d").date()
+                planned_dt = datetime.strptime(str(date_raw)[:10], "%Y-%m-%d").date()
+            except Exception:
+                pass
+        if not planned_dt and day_num and hasattr(campaign, "start_date") and campaign.start_date:
+            try:
+                planned_dt = campaign.start_date + timedelta(days=max(0, int(day_num) - 1))
+            except Exception:
+                pass
+        if not planned_dt and day_num:
+            try:
+                planned_dt = date.today() + timedelta(days=int(day_num))
             except Exception:
                 pass
 
@@ -2130,34 +2141,36 @@ async def convert_campaign_to_tasks(
         existing_titles.add(final_title.lower().strip())
         deliverables_created += 1
 
+        today = date.today()
         # Create polymorphic production workflow tasks for this deliverable
+        # Lead time offsets (days before planned_dt) for realistic sequential scheduling
         if "carousel" in dtype:
             task_stages = [
-                ("Copywriting: Slide Decks & Framework", "copywriting", TaskStatus.todo, TaskPriority.high),
-                ("Visual Design & Slide Layout", "design", TaskStatus.backlog, TaskPriority.medium),
-                ("Graphic QA & Slide Export", "qa", TaskStatus.backlog, TaskPriority.medium),
-                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low),
+                ("Copywriting: Slide Decks & Framework", "copywriting", TaskStatus.todo, TaskPriority.high, 3),
+                ("Visual Design & Slide Layout", "design", TaskStatus.backlog, TaskPriority.medium, 2),
+                ("Graphic QA & Slide Export", "qa", TaskStatus.backlog, TaskPriority.medium, 1),
+                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low, 0),
             ]
         elif "graphic" in dtype or "image" in dtype:
             task_stages = [
-                ("Copywriting: Headline & Caption", "copywriting", TaskStatus.todo, TaskPriority.high),
-                ("Graphic Asset & Creative Design", "design", TaskStatus.backlog, TaskPriority.medium),
-                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low),
+                ("Copywriting: Headline & Caption", "copywriting", TaskStatus.todo, TaskPriority.high, 2),
+                ("Graphic Asset & Creative Design", "design", TaskStatus.backlog, TaskPriority.medium, 1),
+                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low, 0),
             ]
         elif "text" in dtype or "post" in dtype:
             task_stages = [
-                ("Copywriting: Narrative & Hooks", "copywriting", TaskStatus.todo, TaskPriority.high),
-                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low),
+                ("Copywriting: Narrative & Hooks", "copywriting", TaskStatus.todo, TaskPriority.high, 1),
+                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low, 0),
             ]
         else:
             task_stages = [
-                ("Scripting: Hook & Concept", "scripting", TaskStatus.todo, TaskPriority.high),
-                ("Video Shooting / Asset Prep", "filming", TaskStatus.backlog, TaskPriority.medium),
-                ("Video Editing & Sound Sync", "editing", TaskStatus.backlog, TaskPriority.medium),
-                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low),
+                ("Scripting: Hook & Concept", "scripting", TaskStatus.todo, TaskPriority.high, 3),
+                ("Video Shooting / Asset Prep", "filming", TaskStatus.backlog, TaskPriority.medium, 2),
+                ("Video Editing & Sound Sync", "editing", TaskStatus.backlog, TaskPriority.medium, 1),
+                ("Internal & Client Review", "approval", TaskStatus.backlog, TaskPriority.low, 0),
             ]
 
-        for stage_title, stage_type, stage_status, stage_priority in task_stages:
+        for stage_title, stage_type, stage_status, stage_priority, day_offset in task_stages:
             stage_assignee = None
             if stage_type in ("scripting", "copywriting"):
                 stage_assignee = specialist_map.get("writer")
@@ -2166,6 +2179,12 @@ async def convert_campaign_to_tasks(
             elif stage_type in ("design", "qa"):
                 stage_assignee = specialist_map.get("designer") or specialist_map.get("editor")
 
+            # Stagger task due dates backward from planned_dt (clamped to today if lead time lands in past)
+            stage_due_date = planned_dt
+            if planned_dt and day_offset > 0:
+                raw_due = planned_dt - timedelta(days=day_offset)
+                stage_due_date = max(today, raw_due)
+
             t = Task(
                 id=uuid.uuid4(),
                 deliverable_id=deliv.id,
@@ -2173,7 +2192,7 @@ async def convert_campaign_to_tasks(
                 task_type=stage_type,
                 status=stage_status,
                 priority=stage_priority,
-                due_date=planned_dt,
+                due_date=stage_due_date,
                 assignee_id=stage_assignee,
             )
             db.add(t)

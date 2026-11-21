@@ -12,9 +12,10 @@ from app.schemas.comment import CommentOut
 
 class TaskCreate(BaseModel):
     title: str
+    deliverable_id: uuid.UUID | None = None
     task_type: str | None = None
     assignee_id: uuid.UUID | None = None
-    status: TaskStatus = TaskStatus.backlog
+    status: TaskStatus = TaskStatus.todo
     priority: TaskPriority = TaskPriority.medium
     due_date: date | None = None
     notes: str | None = None
@@ -91,6 +92,8 @@ class TaskOut(BaseModel):
     deliverable_type: str | None = None
     assignee_name: str | None = None
     assignee_role: str | None = None
+    is_locked: bool = False
+    locked_reason: str | None = None
 
 
 class TaskDetailOut(TaskOut):
@@ -106,3 +109,18 @@ class TaskDetailOut(TaskOut):
     # Submissions & Approvals History
     submissions: list[TaskContentVersionOut] = []
     review_comments: list[CommentOut] = []
+
+
+class TaskAIAssistRequest(BaseModel):
+    instruction: str
+    current_hook: str | None = None
+    current_script: str | None = None
+    task_type: str | None = None
+
+
+class TaskAIAssistResponse(BaseModel):
+    agent_name: str
+    critique: str
+    recommended_hook: str | None = None
+    recommended_script: str | None = None
+    hook_variations: list[str] = []
