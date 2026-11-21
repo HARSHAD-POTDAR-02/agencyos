@@ -706,6 +706,10 @@ async def execute_chat_turn(
     # 1. Resolve active agent profile & calendar context
     target_agent_id = payload.agent_id if (payload.agent_id and (payload.agent_id in AGENT_SPECS or payload.agent_id in SPECIALIST_REGISTRY)) else "director"
 
+    curr_dt = date.today()
+    ref_year = payload.period_year or curr_dt.year
+    ref_month = payload.period_month or curr_dt.month
+
     user_texts = [m.content for m in payload.messages if m.role == "user"]
     combined_user_text = " ".join(user_texts)
     latest_user_text = user_texts[-1] if user_texts else ""
