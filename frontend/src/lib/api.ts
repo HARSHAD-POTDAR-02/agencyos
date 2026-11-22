@@ -553,15 +553,56 @@ export const taskApi = {
 
 /* ── Deliverable & Content Version endpoints ── */
 export const deliverableApi = {
-  list: (agencyId: string, token: string, clientId?: string, campaignId?: string) => {
-    const params = new URLSearchParams();
-    if (clientId) params.set("client_id", clientId);
-    if (campaignId) params.set("campaign_id", campaignId);
-    const qs = params.toString() ? `?${params.toString()}` : "";
+  list: (
+    agencyId: string,
+    token: string,
+    params?: {
+      client_id?: string;
+      campaign_id?: string;
+      month?: number;
+      year?: number;
+      start_date?: string;
+      end_date?: string;
+      platform?: string;
+      status?: string;
+    } | string,
+    campaignId?: string
+  ) => {
+    const searchParams = new URLSearchParams();
+    if (typeof params === "string") {
+      // Backwards compatible with (agencyId, token, clientId, campaignId)
+      if (params) searchParams.set("client_id", params);
+      if (campaignId) searchParams.set("campaign_id", campaignId);
+    } else if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== "" && v !== "all") {
+          searchParams.set(k, String(v));
+        }
+      }
+    }
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
     return apiFetch<any[]>(`/agencies/${agencyId}/deliverables${qs}`, { token });
   },
   get: (agencyId: string, deliverableId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}`, { token }),
+
+  update: (
+    agencyId: string,
+    deliverableId: string,
+    data: {
+      status?: string;
+      planned_date?: string | null;
+      scheduled_at?: string | null;
+      scheduled_timezone?: string | null;
+      title?: string;
+    },
+    token: string
+  ) =>
+    apiFetch<any>(`/agencies/${agencyId}/deliverables/${deliverableId}`, {
+      method: "PATCH",
+      body: data,
+      token,
+    }),
 
   listVersions: (agencyId: string, deliverableId: string, token: string) =>
     apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/versions`, { token }),

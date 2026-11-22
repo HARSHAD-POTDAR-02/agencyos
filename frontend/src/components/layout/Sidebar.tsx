@@ -22,7 +22,8 @@ import {
   PanelLeftOpen,
   Command,
   ChevronsUpDown,
-  GitFork
+  GitFork,
+  Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -174,12 +175,18 @@ export function Sidebar() {
           ],
         },
         {
-          group: "Campaigns & Briefs",
+          group: "Campaigns & Editorial",
           items: [
+            {
+              name: "Content Calendar",
+              href: "/calendar",
+              icon: CalendarDays,
+              badge: null,
+            },
             {
               name: "Campaign Plans",
               href: "/campaign-plans",
-              icon: CalendarDays,
+              icon: Layers,
               badge: null,
             },
           ],
@@ -231,9 +238,15 @@ export function Sidebar() {
               badge: "AI",
             },
             {
+              name: "Content Calendar",
+              href: "/calendar",
+              icon: CalendarDays,
+              badge: null,
+            },
+            {
               name: "Campaign Plans",
               href: "/campaign-plans",
-              icon: CalendarDays,
+              icon: Layers,
               badge: null,
             },
             {

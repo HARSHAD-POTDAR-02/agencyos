@@ -29,7 +29,7 @@ from app.models.task import Task, TaskStatus
 from app.models.user import Membership, User
 from app.schemas.comment import CommentCreate, CommentOut
 from app.schemas.deliverable import ContentVersionOut, DeliverableDetailOut
-from app.schemas.campaign import DeliverableOut
+from app.schemas.campaign import DeliverableOut, DeliverableUpdate
 from app.services.storage_service import delete_file, save_file
 from app.services.tenant_service import assert_deliverable_belongs_to_agency
 
@@ -72,25 +72,99 @@ async def list_agency_deliverables(
     agency_id: uuid.UUID,
     client_id: uuid.UUID | None = Query(None),
     campaign_id: uuid.UUID | None = Query(None),
+    month: int | None = Query(None, ge=1, le=12),
+    year: int | None = Query(None, ge=2020, le=2050),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    platform: str | None = Query(None),
+    deliverable_status: DeliverableStatus | None = Query(None, alias="status"),
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[DeliverableOut]:
-    """List all deliverables for an agency, optionally filtered by client or campaign."""
+    """List all deliverables for an agency, with calendar date range, client, campaign, and platform filters."""
     query = (
-        select(Deliverable)
+        select(
+            Deliverable,
+            Campaign.name.label("campaign_title"),
+            Client.id.label("client_id"),
+            Client.business_name.label("client_name"),
+        )
         .join(Campaign, Deliverable.campaign_id == Campaign.id)
         .join(Client, Campaign.client_id == Client.id)
         .where(Client.agency_id == agency_id)
-        .order_by(Deliverable.created_at.desc())
     )
     if campaign_id:
         query = query.where(Deliverable.campaign_id == campaign_id)
     if client_id:
         query = query.where(Campaign.client_id == client_id)
+    if platform and platform.lower() != "all":
+        query = query.where(func.lower(Deliverable.platform) == platform.lower())
+    if deliverable_status:
+        query = query.where(Deliverable.status == deliverable_status)
+    if start_date:
+        query = query.where(Deliverable.planned_date >= start_date)
+    if end_date:
+        query = query.where(Deliverable.planned_date <= end_date)
+    if month and year:
+        query = query.where(
+            func.extract("month", Deliverable.planned_date) == month,
+            func.extract("year", Deliverable.planned_date) == year,
+        )
+    elif year:
+        query = query.where(func.extract("year", Deliverable.planned_date) == year)
 
+    query = query.order_by(Deliverable.planned_date.asc().nullslast(), Deliverable.created_at.desc())
     result = await db.execute(query)
-    deliverables = result.scalars().all()
-    return [DeliverableOut.model_validate(d) for d in deliverables]
+    rows = result.all()
+
+    if not rows:
+        return []
+
+    deliv_ids = [r[0].id for r in rows]
+
+    # Pre-fetch latest content versions for these deliverables
+    cv_res = await db.execute(
+        select(ContentVersion)
+        .where(ContentVersion.deliverable_id.in_(deliv_ids))
+        .order_by(ContentVersion.version_number.desc())
+    )
+    all_versions = cv_res.scalars().all()
+    latest_cv_map: dict[uuid.UUID, ContentVersion] = {}
+    for cv in all_versions:
+        if cv.deliverable_id not in latest_cv_map:
+            latest_cv_map[cv.deliverable_id] = cv
+
+    # Pre-fetch sibling tasks to compute progress
+    t_res = await db.execute(
+        select(Task).where(Task.deliverable_id.in_(deliv_ids))
+    )
+    all_tasks = t_res.scalars().all()
+    tasks_map: dict[uuid.UUID, list[Task]] = {}
+    for t in all_tasks:
+        tasks_map.setdefault(t.deliverable_id, []).append(t)
+
+    out: list[DeliverableOut] = []
+    for d, camp_title, c_id, c_name in rows:
+        item = DeliverableOut.model_validate(d)
+        item.campaign_title = camp_title
+        item.client_id = c_id
+        item.client_name = c_name
+
+        # Attach latest asset details
+        latest_cv = latest_cv_map.get(d.id)
+        if latest_cv:
+            item.latest_caption = latest_cv.caption
+            item.latest_asset_url = f"/uploads/{latest_cv.storage_key}"
+            item.latest_file_type = latest_cv.file_type
+
+        # Attach tasks metrics
+        d_tasks = tasks_map.get(d.id, [])
+        item.tasks_count = len(d_tasks)
+        item.tasks_completed_count = sum(1 for t in d_tasks if t.status in (TaskStatus.approved, TaskStatus.done))
+
+        out.append(item)
+
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -274,59 +348,93 @@ async def delete_version(
 # ---------------------------------------------------------------------------
 
 
-class DeliverableStatusUpdate(BaseModel):
-    status: DeliverableStatus
-
-
 @router.patch(
     "/agencies/{agency_id}/deliverables/{deliverable_id}",
     response_model=DeliverableOut,
 )
-async def update_deliverable_status(
+async def update_deliverable(
     agency_id: uuid.UUID,
     deliverable_id: uuid.UUID,
-    payload: DeliverableStatusUpdate,
+    payload: DeliverableUpdate,
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> DeliverableOut:
-    """Update the status of a deliverable (e.g. move to internal_review, approved, published)."""
+    """Update deliverable status, scheduled date, or planned calendar date."""
     deliverable = await _get_deliverable_or_404(deliverable_id, agency_id, db)
-    deliverable.status = payload.status
 
-    # Synchronize linked tasks (preserve production stages when reviewing/approving)
-    task_map = {
-        DeliverableStatus.not_started: TaskStatus.todo,
-        DeliverableStatus.in_production: TaskStatus.in_progress,
-        DeliverableStatus.internal_review: TaskStatus.internal_review,
-        DeliverableStatus.client_review: TaskStatus.client_review,
-        DeliverableStatus.changes_requested: TaskStatus.changes_requested,
-        DeliverableStatus.approved: TaskStatus.approved,
-    }
-    if deliverable.status in task_map:
+    # 1. Update planned_date if provided (Rescheduling on Content Calendar)
+    if payload.planned_date is not None:
+        deliverable.planned_date = payload.planned_date
+        # Stagger sibling task deadlines backward from the new planned date
         tasks_res = await db.execute(
             select(Task).where(Task.deliverable_id == deliverable.id)
         )
         tasks = tasks_res.scalars().all()
-        if deliverable.status in (
-            DeliverableStatus.internal_review,
-            DeliverableStatus.client_review,
-            DeliverableStatus.changes_requested,
-            DeliverableStatus.approved,
-        ):
-            review_tasks = [t for t in tasks if t.task_type in ("approval", "review")]
-            if review_tasks:
-                for t in review_tasks:
-                    t.status = task_map[deliverable.status]
+        if tasks:
+            from datetime import timedelta
+            for t in tasks:
+                t_type = (t.task_type or "").lower()
+                if any(w in t_type for w in ["script", "copy", "writing"]):
+                    t.due_date = payload.planned_date - timedelta(days=4)
+                elif any(w in t_type for w in ["shoot", "film"]):
+                    t.due_date = payload.planned_date - timedelta(days=2)
+                elif any(w in t_type for w in ["edit", "design", "motion"]):
+                    t.due_date = payload.planned_date - timedelta(days=1)
+                else:
+                    t.due_date = payload.planned_date
+
+    # 2. Update scheduled_at if provided
+    if payload.scheduled_at is not None:
+        deliverable.scheduled_at = payload.scheduled_at
+    if payload.scheduled_timezone is not None:
+        deliverable.scheduled_timezone = payload.scheduled_timezone
+    if payload.title is not None and payload.title.strip():
+        deliverable.title = payload.title.strip()
+
+    # 3. Synchronize status if provided
+    if payload.status is not None:
+        deliverable.status = payload.status
+
+        # Synchronize linked tasks (preserve production stages when reviewing/approving)
+        task_map = {
+            DeliverableStatus.not_started: TaskStatus.todo,
+            DeliverableStatus.in_production: TaskStatus.in_progress,
+            DeliverableStatus.internal_review: TaskStatus.internal_review,
+            DeliverableStatus.client_review: TaskStatus.client_review,
+            DeliverableStatus.changes_requested: TaskStatus.changes_requested,
+            DeliverableStatus.approved: TaskStatus.approved,
+        }
+        if deliverable.status in task_map:
+            tasks_res = await db.execute(
+                select(Task).where(Task.deliverable_id == deliverable.id)
+            )
+            tasks = tasks_res.scalars().all()
+            if deliverable.status in (
+                DeliverableStatus.internal_review,
+                DeliverableStatus.client_review,
+                DeliverableStatus.changes_requested,
+                DeliverableStatus.approved,
+            ):
+                review_tasks = [t for t in tasks if t.task_type in ("approval", "review")]
+                if review_tasks:
+                    for t in review_tasks:
+                        t.status = task_map[deliverable.status]
+                else:
+                    for t in tasks:
+                        t.status = task_map[deliverable.status]
             else:
                 for t in tasks:
                     t.status = task_map[deliverable.status]
-        else:
-            for t in tasks:
-                t.status = task_map[deliverable.status]
 
     await db.commit()
     await db.refresh(deliverable)
-    return DeliverableOut.model_validate(deliverable)
+    out = DeliverableOut.model_validate(deliverable)
+    if deliverable.campaign:
+        out.campaign_title = deliverable.campaign.name
+        if deliverable.campaign.client:
+            out.client_id = deliverable.campaign.client.id
+            out.client_name = deliverable.campaign.client.business_name
+    return out
 
 
 # ---------------------------------------------------------------------------

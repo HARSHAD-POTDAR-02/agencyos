@@ -56,6 +56,8 @@ class DeliverableOut(BaseModel):
     planned_date: date | None
     status: DeliverableStatus
     published_at: datetime | None = None
+    scheduled_at: datetime | None = None
+    scheduled_timezone: str | None = None
     live_post_url: str | None = None
     external_post_id: str | None = None
     publishing_platform: str | None = None
@@ -65,8 +67,22 @@ class DeliverableOut(BaseModel):
     shares_count: int | None = 0
     client_id: uuid.UUID | None = None
     client_name: str | None = None
+    campaign_title: str | None = None
+    latest_caption: str | None = None
+    latest_asset_url: str | None = None
+    latest_file_type: str | None = None
+    tasks_count: int = 0
+    tasks_completed_count: int = 0
     created_at: datetime
     updated_at: datetime
+
+
+class DeliverableUpdate(BaseModel):
+    status: DeliverableStatus | None = None
+    planned_date: date | None = None
+    scheduled_at: datetime | None = None
+    scheduled_timezone: str | None = None
+    title: str | None = None
 
 
 class QuotaSummaryOut(BaseModel):

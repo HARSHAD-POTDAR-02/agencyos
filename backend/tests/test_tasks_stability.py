@@ -703,3 +703,121 @@ async def test_task_ai_specialist_assistant(agency_a_client: AsyncClient, agency
     assert "recommended_hook" in data and len(data["recommended_hook"]) > 0
     assert "recommended_script" in data and len(data["recommended_script"]) > 0
     assert "hook_variations" in data and len(data["hook_variations"]) == 3
+
+
+@pytest.mark.asyncio
+async def test_calendar_deliverables_filtering_and_enrichment(agency_a_client: AsyncClient, agency_a_data):
+    """
+    Test 11: GET /agencies/{agency_id}/deliverables with calendar filters (month, year, platform)
+    returns DeliverableOut enriched with campaign_title, client_name, latest_caption, and tasks metrics.
+    """
+    user_a, agency = agency_a_data
+
+    async with TestSessionLocal() as db:
+        client = Client(id=uuid.uuid4(), agency_id=agency.id, business_name="Calendar Test Client")
+        campaign = Campaign(id=uuid.uuid4(), client_id=client.id, name="Holiday Promo 2026")
+        deliv = Deliverable(
+            id=uuid.uuid4(),
+            campaign_id=campaign.id,
+            title="Black Friday Teaser Reel",
+            deliverable_type="reel",
+            platform="instagram",
+            status=DeliverableStatus.in_production,
+            planned_date=date(2026, 11, 27),
+        )
+        t1 = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliv.id,
+            title="Hook Script",
+            task_type="scripting",
+            status=TaskStatus.done,
+            due_date=date(2026, 11, 23),
+        )
+        t2 = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliv.id,
+            title="Video Edit",
+            task_type="editing",
+            status=TaskStatus.in_progress,
+            due_date=date(2026, 11, 26),
+        )
+        cv = ContentVersion(
+            id=uuid.uuid4(),
+            deliverable_id=deliv.id,
+            version_number=1,
+            storage_key="test_asset_key.mp4",
+            file_name="teaser.mp4",
+            file_type="video/mp4",
+            checksum_sha256="abc123hash",
+            caption="Don't miss our biggest drop! #blackfriday #deals",
+            uploaded_by_id=user_a.id,
+        )
+        db.add_all([client, campaign, deliv, t1, t2, cv])
+        await db.commit()
+        deliv_id = str(deliv.id)
+
+    # 1. Query with month=11 and year=2026
+    res = await agency_a_client.get(f"/agencies/{agency.id}/deliverables?month=11&year=2026&platform=instagram")
+    assert res.status_code == 200
+    items = res.json()
+    assert len(items) >= 1
+    target = next((d for d in items if d["id"] == deliv_id), None)
+    assert target is not None
+    assert target["title"] == "Black Friday Teaser Reel"
+    assert target["campaign_title"] == "Holiday Promo 2026"
+    assert target["client_name"] == "Calendar Test Client"
+    assert target["platform"] == "instagram"
+    assert target["latest_caption"] == "Don't miss our biggest drop! #blackfriday #deals"
+    assert target["latest_asset_url"] == "/uploads/test_asset_key.mp4"
+    assert target["tasks_count"] == 2
+    assert target["tasks_completed_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_calendar_deliverables_rescheduling(agency_a_client: AsyncClient, agency_a_data):
+    """
+    Test 12: PATCH /agencies/{agency_id}/deliverables/{id} moves planned_date
+    and automatically recalculates linked task deadlines.
+    """
+    user_a, agency = agency_a_data
+
+    async with TestSessionLocal() as db:
+        client = Client(id=uuid.uuid4(), agency_id=agency.id, business_name="Reschedule Client")
+        campaign = Campaign(id=uuid.uuid4(), client_id=client.id, name="Sprint 4")
+        deliv = Deliverable(
+            id=uuid.uuid4(),
+            campaign_id=campaign.id,
+            title="Podcast Snippet Reel",
+            deliverable_type="reel",
+            platform="tiktok",
+            status=DeliverableStatus.in_production,
+            planned_date=date(2026, 11, 20),
+        )
+        task_script = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliv.id,
+            title="Script hook",
+            task_type="scripting",
+            status=TaskStatus.todo,
+            due_date=date(2026, 11, 16),
+        )
+        db.add_all([client, campaign, deliv, task_script])
+        await db.commit()
+        deliv_id = str(deliv.id)
+        task_id = str(task_script.id)
+
+    # Move planned date to 2026-11-28
+    res = await agency_a_client.patch(
+        f"/agencies/{agency.id}/deliverables/{deliv_id}",
+        json={"planned_date": "2026-11-28"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["planned_date"] == "2026-11-28"
+
+    # Verify task due_date was reverse staggered by 4 days to 2026-11-24
+    task_res = await agency_a_client.get(f"/agencies/{agency.id}/tasks/{task_id}")
+    assert task_res.status_code == 200
+    task_data = task_res.json()
+    assert task_data["due_date"] == "2026-11-24"
+
