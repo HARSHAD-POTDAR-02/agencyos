@@ -206,6 +206,91 @@ const PRODUCTION_STAGES = [
   { id: "done", label: "Approved / Done", statuses: ["approved", "done"] },
 ];
 
+function parseScriptIntoSceneBlocks(
+  text: string,
+  existingBlocks: ScriptBlock[],
+  primaryHook?: string
+): ScriptBlock[] {
+  const defaultSceneTemplates = [
+    { title: "Scene 1: The Hook (0s–5s)", visual_cue: "Close-up direct address to camera", audio_notes: "High-energy beat drop / cutoff" },
+    { title: "Scene 2: Friction & Agitation (5s–12s)", visual_cue: "Dynamic visual problem agitation", audio_notes: "Subtle tension synth" },
+    { title: "Scene 3: Proof & Solution (12s–22s)", visual_cue: "Step-by-step mechanism or product demo", audio_notes: "Uptempo rhythm" },
+    { title: "Scene 4: Call to Action (22s–30s)", visual_cue: "High-contrast end card callout", audio_notes: "Audio brand signature sting" },
+  ];
+
+  const cleanSceneLine = (t: string) => {
+    return t
+      .replace(/^(?:\[?Scene\s*\d+[^\]\n]*\]?|\*\*Scene\s*\d+[^\*]*\*\*|Scene\s*\d+[:\-]?)\s*[:\-]?\s*/i, "")
+      .replace(/^(?:\[[^\]]+\]|\*\*[^\*]+\*\*)\s*[:\-]?\s*/, "")
+      .trim();
+  };
+
+  const cleanBody = text.trim();
+  const lines = cleanBody.split("\n").map((l) => l.trim()).filter(Boolean);
+  let sceneEntries: string[] = [];
+
+  const hasSceneHeaders = lines.some((l) =>
+    /^(?:\[?Scene\s*\d+|\*\*Scene\s*\d+|Scene\s*\d+)/i.test(l)
+  );
+
+  if (hasSceneHeaders) {
+    let currentEntry: string[] = [];
+    for (const l of lines) {
+      if (/^(?:\[?Scene\s*\d+|\*\*Scene\s*\d+|Scene\s*\d+)/i.test(l)) {
+        if (currentEntry.length > 0) {
+          sceneEntries.push(currentEntry.join(" "));
+          currentEntry = [];
+        }
+      }
+      const cleaned = cleanSceneLine(l);
+      if (cleaned) currentEntry.push(cleaned);
+    }
+    if (currentEntry.length > 0) {
+      sceneEntries.push(currentEntry.join(" "));
+    }
+  } else {
+    const paras = cleanBody.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    const candidate = paras.length <= 1 && lines.length > 1 ? lines : paras;
+    sceneEntries = candidate.map(cleanSceneLine).filter(Boolean);
+  }
+
+  const baseCount = Math.max(existingBlocks.length, sceneEntries.length, 4);
+  const updated: ScriptBlock[] = [];
+
+  for (let i = 0; i < baseCount; i++) {
+    const existing = existingBlocks[i];
+    const template = defaultSceneTemplates[i] || {
+      title: `Scene ${i + 1}: Take / B-Roll (${Math.max(20, (i + 1) * 7)}s)`,
+      visual_cue: "B-Roll cutaway or visual proof",
+      audio_notes: "Background riser or sound effect",
+    };
+
+    let spoken = existing?.spoken_words || "";
+    if (sceneEntries[i]) {
+      spoken = sceneEntries[i];
+    }
+    // If Scene 1 and explicit primaryHook provided, prioritize it
+    if (i === 0 && primaryHook && primaryHook.trim()) {
+      spoken = primaryHook.trim();
+    }
+
+    const words = spoken ? spoken.trim().split(/\s+/).filter(Boolean).length : 0;
+    const duration = Math.max(2, Math.round((words / 140) * 60));
+
+    updated.push({
+      id: existing?.id || `scene-${i + 1}-${Date.now()}`,
+      scene_number: i + 1,
+      title: existing?.title || template.title,
+      spoken_words: spoken,
+      visual_cue: existing?.visual_cue || template.visual_cue,
+      audio_notes: existing?.audio_notes || template.audio_notes,
+      duration_seconds: duration || 5,
+    });
+  }
+
+  return updated;
+}
+
 function TaskWorkspaceContent() {
   const params = useParams();
   const taskId = (params?.id as string) || "";
@@ -645,25 +730,109 @@ function TaskWorkspaceContent() {
     }
   };
 
-  const handleApplyHook = (selectedHook: string) => {
+  const handleApplyHook = async (selectedHook: string) => {
     setHook(selectedHook);
     if (submissionMode !== "script") {
       setSubmissionMode("script");
     }
+
+    // Direct Dual Insert: Update Scene 1 in scriptBlocks immediately
+    let updated: ScriptBlock[] = [];
+    if (scriptBlocks.length > 0) {
+      updated = scriptBlocks.map((b, idx) => {
+        if (idx === 0) {
+          const w = selectedHook.trim().split(/\s+/).filter(Boolean).length;
+          return {
+            ...b,
+            spoken_words: selectedHook,
+            duration_seconds: Math.max(2, Math.round((w / 140) * 60)),
+          };
+        }
+        return b;
+      });
+    } else {
+      updated = parseScriptIntoSceneBlocks("", [], selectedHook);
+    }
+    setScriptBlocks(updated);
+
+    // Auto-save to backend task so Teleprompter Presenter view & database reflect it instantly
+    if (token && effectiveAgencyId && taskId) {
+      try {
+        await taskApi.update(effectiveAgencyId, taskId, { script_blocks: updated }, token);
+      } catch (err) {
+        console.error("Failed to auto-persist hook to script_blocks:", err);
+      }
+    }
+
     setNotification({
       type: "success",
-      text: "Inserted recommended hook into submission draft!",
+      text: "Inserted recommended hook into Scene 1 & submission draft (saved to teleprompter)!",
     });
   };
 
-  const handleApplyScript = (selectedScript: string) => {
+  const handleApplyScript = async (selectedScript: string) => {
     setScriptBody(selectedScript);
     if (submissionMode !== "script") {
       setSubmissionMode("script");
     }
+
+    // Direct Dual Insert: Parse script into structured teleprompter scene blocks
+    const updated = parseScriptIntoSceneBlocks(selectedScript, scriptBlocks, hook || undefined);
+    setScriptBlocks(updated);
+
+    // Auto-save to backend task so Teleprompter Presenter view & database reflect it instantly
+    if (token && effectiveAgencyId && taskId) {
+      try {
+        await taskApi.update(effectiveAgencyId, taskId, { script_blocks: updated }, token);
+      } catch (err) {
+        console.error("Failed to auto-persist script to script_blocks:", err);
+      }
+    }
+
     setNotification({
       type: "success",
-      text: "Inserted recommended script dialogue into submission draft!",
+      text: "Inserted script dialogue into Teleprompter scenes & submission draft (saved to teleprompter)!",
+    });
+  };
+
+  const handleCopyScenesToSubmission = () => {
+    if (scriptBlocks.length === 0) return;
+    const scene1Words = scriptBlocks[0]?.spoken_words || "";
+    const remainingScenes = scriptBlocks.slice(1);
+    const bodyText = remainingScenes
+      .filter((s) => s.spoken_words.trim().length > 0)
+      .map((s) => `${s.title}:\n${s.spoken_words}`)
+      .join("\n\n");
+
+    if (scene1Words) setHook(scene1Words);
+    if (bodyText) setScriptBody(bodyText);
+    setSubmissionMode("script");
+    setNotification({
+      type: "success",
+      text: "Copied Teleprompter scenes into submission draft below!",
+    });
+  };
+
+  const handleSyncFromTeleprompter = () => {
+    if (scriptBlocks.length === 0) {
+      setNotification({
+        type: "error",
+        text: "No Teleprompter scenes found to sync.",
+      });
+      return;
+    }
+    const scene1Words = scriptBlocks[0]?.spoken_words || "";
+    const remainingScenes = scriptBlocks.slice(1);
+    const bodyText = remainingScenes
+      .filter((s) => s.spoken_words.trim().length > 0)
+      .map((s) => `${s.title}:\n${s.spoken_words}`)
+      .join("\n\n");
+
+    if (scene1Words) setHook(scene1Words);
+    if (bodyText) setScriptBody(bodyText);
+    setNotification({
+      type: "success",
+      text: "Synced submission draft with latest Teleprompter scenes!",
     });
   };
 
@@ -1186,6 +1355,16 @@ function TaskWorkspaceContent() {
                       <Layers className="w-3.5 h-3.5" />
                     )}
                     <span>Sync to Studio</span>
+                  </button>
+
+                  {/* Copy Scenes to Submission Draft Form */}
+                  <button
+                    onClick={handleCopyScenesToSubmission}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#2c2c3b] text-[#69A9D8] border border-[#69A9D8]/30 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                    title="Populate submission draft form below with current teleprompter scenes"
+                  >
+                    <CornerDownLeft className="w-3.5 h-3.5" />
+                    <span>Copy to Draft</span>
                   </button>
 
                   {/* Save Script */}
@@ -1939,6 +2118,21 @@ function TaskWorkspaceContent() {
                 {submissionMode === "script" ? (
                   /* Writer Script Submission Form */
                   <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-1 border-b border-white/[0.04]">
+                      <span className="text-[11px] font-mono text-[#A3A0B0]">
+                        Scriptwriter Review Submission Draft
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSyncFromTeleprompter}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#20202A] hover:bg-[#2c2c3b] text-[#A78BFA] border border-white/[0.08] text-[11px] font-semibold transition-all cursor-pointer"
+                        title="Pull latest dialogue from the Teleprompter Studio above"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Sync from Teleprompter Scenes</span>
+                      </button>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-medium text-[#A3A0B0] mb-1">
                         Script Draft Title

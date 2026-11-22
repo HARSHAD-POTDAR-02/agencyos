@@ -131,6 +131,141 @@ def _populate_starter_script_blocks(
     ]
 
 
+def _sync_submitted_script_to_blocks(
+    task: Task,
+    hook: str | None,
+    script_body: str | None,
+) -> list[dict[str, Any]]:
+    """
+    Parses submitted hook and script dialogue into structured teleprompter scenes,
+    ensuring teleprompter blocks stay in sync with submitted and approved copy.
+    """
+    import re
+
+    current_blocks = [dict(b) for b in (task.script_blocks or [])]
+    if not current_blocks:
+        current_blocks = [
+            {
+                "id": "scene-1",
+                "scene_number": 1,
+                "title": "Scene 1: The Hook (0s–5s)",
+                "spoken_words": "",
+                "visual_cue": "Close-up direct address to camera",
+                "audio_notes": "High-energy beat drop / cutoff",
+                "duration_seconds": 5,
+            },
+            {
+                "id": "scene-2",
+                "scene_number": 2,
+                "title": "Scene 2: Friction & Agitation (5s–12s)",
+                "spoken_words": "",
+                "visual_cue": "Dynamic visual problem agitation",
+                "audio_notes": "Subtle tension synth",
+                "duration_seconds": 7,
+            },
+            {
+                "id": "scene-3",
+                "scene_number": 3,
+                "title": "Scene 3: Proof & Solution (12s–22s)",
+                "spoken_words": "",
+                "visual_cue": "Step-by-step mechanism or product demo",
+                "audio_notes": "Uptempo rhythm",
+                "duration_seconds": 10,
+            },
+            {
+                "id": "scene-4",
+                "scene_number": 4,
+                "title": "Scene 4: Call to Action (22s–30s)",
+                "spoken_words": "Comment below or visit the link in bio to learn more.",
+                "visual_cue": "High-contrast end card callout",
+                "audio_notes": "Audio brand signature sting",
+                "duration_seconds": 8,
+            },
+        ]
+
+    # Update Hook in Scene 1
+    if hook and hook.strip():
+        current_blocks[0]["spoken_words"] = hook.strip()
+
+    # Parse Script Body across scenes
+    if script_body and script_body.strip():
+        clean_body = script_body.strip()
+
+        def _clean_scene_line(t: str) -> str:
+            t = re.sub(
+                r"^(?:\[?Scene\s*\d+[^\]\n]*\]?|\*\*Scene\s*\d+[^\*]*\*\*|Scene\s*\d+[:\-]?)\s*[:\-]?\s*",
+                "",
+                t,
+                flags=re.IGNORECASE,
+            )
+            t = re.sub(r"^(?:\[[^\]]+\]|\*\*[^\*]+\*\*)\s*[:\-]?\s*", "", t)
+            return t.strip()
+
+        lines = [l.strip() for l in clean_body.splitlines() if l.strip()]
+        scene_entries: list[str] = []
+        has_scene_headers = any(
+            re.match(r"^(?:\[?Scene\s*\d+|\*\*Scene\s*\d+|Scene\s*\d+)", l, re.IGNORECASE)
+            for l in lines
+        )
+
+        if has_scene_headers:
+            current_entry: list[str] = []
+            for l in lines:
+                if re.match(r"^(?:\[?Scene\s*\d+|\*\*Scene\s*\d+|Scene\s*\d+)", l, re.IGNORECASE):
+                    if current_entry:
+                        scene_entries.append(" ".join(current_entry))
+                        current_entry = []
+                cleaned = _clean_scene_line(l)
+                if cleaned:
+                    current_entry.append(cleaned)
+            if current_entry:
+                scene_entries.append(" ".join(current_entry))
+        else:
+            paras = [p.strip() for p in clean_body.split("\n\n") if p.strip()]
+            if len(paras) <= 1 and len(lines) > 1:
+                paras = lines
+            scene_entries = [_clean_scene_line(p) for p in paras if _clean_scene_line(p)]
+
+        if len(scene_entries) == 1:
+            if len(current_blocks) > 1:
+                current_blocks[1]["spoken_words"] = scene_entries[0]
+        elif len(scene_entries) == 2:
+            if len(current_blocks) > 1:
+                current_blocks[1]["spoken_words"] = scene_entries[0]
+            if len(current_blocks) > 2:
+                current_blocks[2]["spoken_words"] = scene_entries[1]
+        elif len(scene_entries) == 3:
+            if not hook and not current_blocks[0].get("spoken_words"):
+                current_blocks[0]["spoken_words"] = scene_entries[0]
+                if len(current_blocks) > 1:
+                    current_blocks[1]["spoken_words"] = scene_entries[1]
+                if len(current_blocks) > 2:
+                    current_blocks[2]["spoken_words"] = scene_entries[2]
+            else:
+                if len(current_blocks) > 1:
+                    current_blocks[1]["spoken_words"] = scene_entries[0]
+                if len(current_blocks) > 2:
+                    current_blocks[2]["spoken_words"] = scene_entries[1]
+                if len(current_blocks) > 3:
+                    current_blocks[3]["spoken_words"] = scene_entries[2]
+        elif len(scene_entries) >= 4:
+            if not hook or not hook.strip():
+                current_blocks[0]["spoken_words"] = scene_entries[0]
+            if len(current_blocks) > 1:
+                current_blocks[1]["spoken_words"] = scene_entries[1]
+            if len(current_blocks) > 2:
+                current_blocks[2]["spoken_words"] = scene_entries[2]
+            if len(current_blocks) > 3:
+                current_blocks[3]["spoken_words"] = " ".join(scene_entries[3:])
+
+    # Recalculate durations
+    for b in current_blocks:
+        words = len((b.get("spoken_words") or "").strip().split())
+        b["duration_seconds"] = max(2, round((words / 140) * 60))
+
+    return current_blocks
+
+
 async def _sync_deliverable_status(deliverable_id: uuid.UUID, db: AsyncSession) -> Deliverable | None:
     """
     Synchronizes the parent deliverable status based on the aggregate status
@@ -697,6 +832,13 @@ async def submit_task_work(
     )
     db.add(cv)
 
+    # Sync script blocks if script was submitted
+    if submission_type == "script" or hook or script_body:
+        updated_blocks = _sync_submitted_script_to_blocks(task, hook, script_body)
+        task.script_blocks = updated_blocks
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(task, "script_blocks")
+
     # Auto-assign task if currently unassigned
     if not task.assignee_id:
         task.assignee_id = current_user.id
@@ -901,6 +1043,30 @@ async def review_task_work(
         )
         siblings = siblings_res.scalars().all()
         t_type = (task.task_type or "").lower()
+
+        # Propagate approved script blocks to downstream siblings (filming, video editing)
+        if ("script" in t_type or "copy" in t_type or "writing" in t_type) and task.script_blocks:
+            for sib in siblings:
+                if sib.id != task.id:
+                    sib.script_blocks = list(task.script_blocks)
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(sib, "script_blocks")
+
+            # Also update campaign.ai_plan_draft if deliverable is mapped
+            if deliverable.campaign and deliverable.campaign.ai_plan_draft and isinstance(deliverable.campaign.ai_plan_draft, dict):
+                delivs = deliverable.campaign.ai_plan_draft.get("deliverables") or []
+                for d in delivs:
+                    if str(d.get("deliverable_id")) == str(deliverable.id) or d.get("title") == deliverable.title:
+                        first_words = task.script_blocks[0].get("spoken_words", "") if task.script_blocks else ""
+                        last_words = task.script_blocks[-1].get("spoken_words", "") if len(task.script_blocks) > 1 else ""
+                        if first_words:
+                            d["hook"] = first_words
+                        if last_words:
+                            d["cta"] = last_words
+                        d["script_blocks"] = task.script_blocks
+                        from sqlalchemy.orm.attributes import flag_modified
+                        flag_modified(deliverable.campaign, "ai_plan_draft")
+                        break
 
         if any(w in t_type for w in ["approval", "review"]) or not any(s.status == TaskStatus.backlog for s in siblings):
             if all(s.status in (TaskStatus.approved, TaskStatus.done) for s in siblings):

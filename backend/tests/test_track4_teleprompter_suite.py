@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.models.agency import Agency
 from app.models.campaign import Campaign
 from app.models.client import Client
-from app.models.deliverable import Deliverable
+from app.models.deliverable import Deliverable, DeliverableStatus
 from app.models.task import Task, TaskPriority, TaskStatus
 from app.models.user import Membership, RoleEnum, User
 from app.routers.tasks import _compute_script_metrics
@@ -187,3 +187,137 @@ async def test_teleprompter_and_studio_sync_e2e(agency_a_client: AsyncClient, ag
         assert deliv_in_draft["hook"] == "Stop guessing your reels strategy."
         assert deliv_in_draft["caption"] == "Refined viral caption with #AgencyOS"
         assert deliv_in_draft["cta"] == "Comment 'GROWTH' to get our free system."
+
+
+@pytest.mark.asyncio
+async def test_submit_and_review_script_sync_to_teleprompter_and_siblings(
+    agency_a_client: AsyncClient,
+    agency_a_data,
+):
+    """
+    Verifies that when a writer submits work with a hook and script dialogue:
+    1. The task's teleprompter script_blocks are immediately synced with the submitted copy.
+    2. When the manager approves the task, the approved script_blocks are propagated to
+       downstream sibling tasks (e.g. video editor) and back to campaign.ai_plan_draft.
+    """
+    user_a, agency = agency_a_data
+
+    async with TestSessionLocal() as db:
+        client = Client(id=uuid.uuid4(), agency_id=agency.id, business_name="Sync Brand Co")
+        db.add(client)
+        await db.flush()
+
+        camp = Campaign(
+            id=uuid.uuid4(),
+            client_id=client.id,
+            name="Viral Sync Campaign",
+            ai_plan_draft={
+                "deliverables": [
+                    {
+                        "deliverable_id": None,
+                        "title": "Launch Reel Post",
+                        "hook": "Old starter hook",
+                        "cta": "Old starter cta",
+                    }
+                ]
+            },
+        )
+        db.add(camp)
+        await db.flush()
+
+        deliv = Deliverable(
+            id=uuid.uuid4(),
+            campaign_id=camp.id,
+            title="Launch Reel Post",
+            deliverable_type="reels",
+            platform="instagram",
+            status=DeliverableStatus.in_production,
+        )
+        db.add(deliv)
+        await db.flush()
+
+        # Update deliverable_id in draft
+        camp.ai_plan_draft["deliverables"][0]["deliverable_id"] = str(deliv.id)
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(camp, "ai_plan_draft")
+
+        # Scriptwriting Task
+        script_task = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliv.id,
+            title="Write Script: Launch Reel Post",
+            task_type="scriptwriting",
+            status=TaskStatus.todo,
+            script_blocks=[],
+            assignee_id=user_a.id,
+        )
+        # Sibling Video Editing Task
+        edit_task = Task(
+            id=uuid.uuid4(),
+            deliverable_id=deliv.id,
+            title="Edit Video: Launch Reel Post",
+            task_type="video_editing",
+            status=TaskStatus.backlog,
+            script_blocks=[],
+            assignee_id=user_a.id,
+        )
+        db.add_all([script_task, edit_task])
+        await db.commit()
+
+        agency_id = str(agency.id)
+        script_task_id = str(script_task.id)
+        edit_task_id = str(edit_task.id)
+
+    # 1. Specialist submits work
+    submit_payload = {
+        "submission_type": "script",
+        "script_title": "Final Viral Script Take",
+        "hook": "Stop wasting budget on broken funnels.",
+        "script_body": (
+            "Scene 1 (0-3s) [Hook]: Stop wasting budget on broken funnels.\n"
+            "Scene 2 (3-8s) [Friction]: You are spending thousands with zero lead flow.\n"
+            "Scene 3 (8-18s) [Solution]: Here is the exact 3-step automation we installed.\n"
+            "Scene 4 (18-25s) [CTA]: Comment 'SCALE' to get the full blueprint."
+        ),
+        "caption": "The blueprint you needed.",
+        "notes": "Ready for manager sign-off.",
+    }
+    submit_res = await agency_a_client.post(
+        f"/agencies/{agency_id}/tasks/{script_task_id}/submissions",
+        data=submit_payload,
+    )
+    assert submit_res.status_code == 201, submit_res.text
+
+    # Verify script_task now has synced teleprompter blocks!
+    get_res = await agency_a_client.get(f"/agencies/{agency_id}/tasks/{script_task_id}")
+    assert get_res.status_code == 200
+    script_detail = get_res.json()
+    assert len(script_detail["script_blocks"]) == 4
+    assert script_detail["script_blocks"][0]["spoken_words"] == "Stop wasting budget on broken funnels."
+    assert "You are spending thousands" in script_detail["script_blocks"][1]["spoken_words"]
+    assert "Here is the exact 3-step" in script_detail["script_blocks"][2]["spoken_words"]
+    assert "Comment 'SCALE'" in script_detail["script_blocks"][3]["spoken_words"]
+
+    # 2. Manager approves work
+    review_res = await agency_a_client.post(
+        f"/agencies/{agency_id}/tasks/{script_task_id}/review",
+        json={"decision": "approved", "feedback_notes": "Flawless script dialogue and pacing."},
+    )
+    assert review_res.status_code == 200, review_res.text
+
+    # 3. Verify sibling video editing task received the approved script blocks!
+    get_edit_res = await agency_a_client.get(f"/agencies/{agency_id}/tasks/{edit_task_id}")
+    assert get_edit_res.status_code == 200
+    edit_detail = get_edit_res.json()
+    assert len(edit_detail["script_blocks"]) == 4
+    assert edit_detail["script_blocks"][0]["spoken_words"] == "Stop wasting budget on broken funnels."
+    assert "You are spending thousands" in edit_detail["script_blocks"][1]["spoken_words"]
+
+    # 4. Verify campaign.ai_plan_draft updated
+    async with TestSessionLocal() as db:
+        c_check = await db.get(Campaign, camp.id)
+        draft_deliv = c_check.ai_plan_draft["deliverables"][0]
+        assert draft_deliv["hook"] == "Stop wasting budget on broken funnels."
+        assert "script_blocks" in draft_deliv
+        assert len(draft_deliv["script_blocks"]) == 4
+
