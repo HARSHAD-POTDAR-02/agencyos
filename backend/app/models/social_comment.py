@@ -59,16 +59,16 @@ class SocialComment(Base):
     )
 
     platform: Mapped[str] = mapped_column(String(50), default="instagram", nullable=False)
-    external_comment_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
-    external_media_id: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
-    external_parent_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    external_comment_id: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    external_media_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    external_parent_id: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     media_permalink: Mapped[str | None] = mapped_column(String(512), nullable=True)
     media_thumbnail_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     media_caption: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    author_username: Mapped[str] = mapped_column(String(100), nullable=False)
-    author_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    author_username: Mapped[str] = mapped_column(String(255), nullable=False)
+    author_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     author_profile_pic: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     comment_text: Mapped[str] = mapped_column(Text, nullable=False)
     like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -102,7 +102,7 @@ class SocialComment(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    external_reply_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    external_reply_id: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -147,9 +147,9 @@ class SocialConversation(Base):
     )
 
     platform: Mapped[str] = mapped_column(String(50), default="instagram", nullable=False)
-    external_thread_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
-    participant_username: Mapped[str] = mapped_column(String(100), nullable=False)
-    participant_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    external_thread_id: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
+    participant_username: Mapped[str] = mapped_column(String(255), nullable=False)
+    participant_id: Mapped[str] = mapped_column(String(255), nullable=False)
     participant_avatar: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
     last_message_text: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -184,7 +184,11 @@ class SocialConversation(Base):
     client: Mapped["Client"] = relationship("Client", lazy="selectin")  # noqa: F821
     social_account: Mapped["ClientSocialAccount"] = relationship("ClientSocialAccount", lazy="selectin")  # noqa: F821
     messages: Mapped[list["SocialMessage"]] = relationship(
-        "SocialMessage", back_populates="conversation", lazy="selectin", cascade="all, delete-orphan"
+        "SocialMessage",
+        back_populates="conversation",
+        lazy="selectin",
+        order_by="SocialMessage.sent_at.asc()",
+        cascade="all, delete-orphan",
     )
 
 
@@ -200,9 +204,9 @@ class SocialMessage(Base):
         nullable=False,
         index=True,
     )
-    external_message_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
-    sender_username: Mapped[str] = mapped_column(String(100), nullable=False)
-    sender_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    external_message_id: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
+    sender_username: Mapped[str] = mapped_column(String(255), nullable=False)
+    sender_id: Mapped[str] = mapped_column(String(255), nullable=False)
     is_from_brand: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     message_text: Mapped[str] = mapped_column(Text, nullable=False)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

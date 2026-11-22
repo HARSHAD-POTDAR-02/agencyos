@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -226,11 +229,18 @@ async def reply_to_comment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Linked social account not found.")
 
     # Call Meta Graph API
-    meta_reply = await reply_to_instagram_comment(
-        access_token=account.access_token,
-        comment_id=comment.external_comment_id,
-        message=payload.message,
-    )
+    try:
+        meta_reply = await reply_to_instagram_comment(
+            access_token=account.access_token,
+            comment_id=comment.external_comment_id,
+            message=payload.message,
+        )
+    except Exception as e:
+        logger.error(f"Failed to post comment reply to Meta: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Meta API error replying to comment: {str(e)}",
+        )
 
     comment.reply_text = payload.message
     comment.replied_at = datetime.now(timezone.utc)
@@ -265,10 +275,14 @@ async def like_comment(
     if not account:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Linked social account not found.")
 
-    success = await like_instagram_comment(
-        access_token=account.access_token,
-        comment_id=comment.external_comment_id,
-    )
+    try:
+        success = await like_instagram_comment(
+            access_token=account.access_token,
+            comment_id=comment.external_comment_id,
+        )
+    except Exception as e:
+        logger.warning(f"Error liking comment on Meta: {e}")
+        success = False
 
     if success or True:  # Mark liked in AgencyOS state
         comment.is_liked_by_brand = True
@@ -300,11 +314,18 @@ async def hide_comment(
     if not account:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Linked social account not found.")
 
-    await hide_instagram_comment(
-        access_token=account.access_token,
-        comment_id=comment.external_comment_id,
-        hide=True,
-    )
+    try:
+        await hide_instagram_comment(
+            access_token=account.access_token,
+            comment_id=comment.external_comment_id,
+            hide=True,
+        )
+    except Exception as e:
+        logger.error(f"Error hiding comment on Meta: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Meta API error hiding comment: {str(e)}",
+        )
 
     comment.is_hidden = True
     comment.status = EngagementStatus.hidden
@@ -338,7 +359,10 @@ async def generate_comment_ai_replies(
         b_res = await db.execute(select(BrandProfile).where(BrandProfile.client_id == comment.client_id))
         bp = b_res.scalar_one_or_none()
         if bp:
-            brand_context = f"Tone: {bp.tone_of_voice}. Audience: {bp.target_audience}. Guidelines: {bp.approved_phrases}"
+            voice = bp.brand_voice or ""
+            audience = json.dumps(bp.target_audience) if isinstance(bp.target_audience, (dict, list)) else str(bp.target_audience or "")
+            phrases = json.dumps(bp.approved_phrases) if isinstance(bp.approved_phrases, (dict, list)) else str(bp.approved_phrases or "")
+            brand_context = f"Tone & Voice: {voice}. Target Audience: {audience}. Approved Phrases: {phrases}"
 
     post_context = comment.media_caption or "Instagram post"
     if payload.instruction:
@@ -383,13 +407,20 @@ async def send_dm_reply(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid sender ID on account.")
 
     # Send DM via Meta
-    send_res = await send_instagram_dm(
-        access_token=account.access_token,
-        page_or_ig_id=page_or_ig_id,
-        recipient_id=conv.participant_id,
-        message=payload.message,
-        use_human_agent_tag=payload.use_human_agent_tag,
-    )
+    try:
+        send_res = await send_instagram_dm(
+            access_token=account.access_token,
+            page_or_ig_id=page_or_ig_id,
+            recipient_id=conv.participant_id,
+            message=payload.message,
+            use_human_agent_tag=payload.use_human_agent_tag,
+        )
+    except Exception as e:
+        logger.error(f"Failed to send Instagram DM via Meta: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Meta API error sending Direct Message: {str(e)}",
+        )
 
     new_msg = SocialMessage(
         conversation_id=conv.id,
