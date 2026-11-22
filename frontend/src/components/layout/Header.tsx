@@ -701,8 +701,6 @@ export function Header() {
           )}
         </div>
 
-        <div className="h-4 w-px bg-white/[0.08] mx-0.5" />
-
         {/* User Monogram Avatar */}
         <div className="flex items-center gap-2.5 pl-1">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#262630] to-[#17171E] border border-white/[0.1] shadow-inner flex items-center justify-center text-[#F2F0F7] font-semibold text-xs font-mono">

@@ -66,7 +66,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root, .dark {
+:root,
+.dark {
   /* ── Core Surfaces & Dark Canvas ── */
   --app-background: #101014;
   --surface-primary: #17171E;
@@ -237,3 +238,5 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+

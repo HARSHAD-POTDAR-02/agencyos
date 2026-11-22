@@ -35,7 +35,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${manrope.variable} ${jetbrainsMono.variable} dark`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable} ${jetbrainsMono.variable} dark`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                localStorage.setItem('agencyos-theme', 'dark');
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+                document.documentElement.style.colorScheme = 'dark';
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased bg-[#101014] text-[#F2F0F7] selection:bg-violet-500/25 selection:text-white">
         <AuthProvider>{children}</AuthProvider>
       </body>
