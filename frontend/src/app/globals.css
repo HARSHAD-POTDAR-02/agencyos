@@ -11,25 +11,33 @@
   --font-heading: var(--font-heading);
   --font-mono: var(--font-mono);
 
-  /* Centralized AgencyOS Dark Tokens */
+  /* Centralized AgencyOS Surfaces & Canvas */
   --color-app-background: var(--app-background);
+  --color-surface-sidebar: var(--surface-sidebar);
+  --color-surface-canvas: var(--surface-canvas);
   --color-surface-primary: var(--surface-primary);
   --color-surface-secondary: var(--surface-secondary);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-floating: var(--surface-floating);
-  --color-surface-canvas: var(--surface-canvas);
 
   --color-border-subtle: var(--border-subtle);
   --color-border-muted: var(--border-muted);
   --color-border-highlight: var(--border-highlight);
+  --color-divider-subtle: var(--divider-subtle);
 
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-cta-primary: var(--cta-primary);
+  --color-cta-primary-hover: var(--cta-primary-hover);
+  --color-cta-primary-text: var(--cta-primary-text);
 
   --color-accent-primary: var(--accent-primary);
   --color-accent-hover: var(--accent-hover);
   --color-accent-muted: var(--accent-muted);
+  --color-accent-border: var(--accent-border);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -66,21 +74,126 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root,
+:root {
+  /* ── Notion Warm Paper Light Mode Surfaces ── */
+  --app-background: #FFFFFF;
+  --surface-sidebar: #F7F6F3;
+  --surface-canvas: #F1F1EF;
+  --surface-primary: #FFFFFF;
+  --surface-secondary: #EFEFED;
+  --surface-elevated: #FFFFFF;
+  --surface-floating: #FFFFFF;
+
+  /* ── Typography & Ink Hierarchy ── */
+  --text-primary: #37352F;
+  --text-secondary: #6B6A65;
+  --text-muted: #9B9A97;
+  --text-disabled: #C7C6C2;
+
+  /* ── Primary CTAs & Interactive Accent (Zero Purple) ── */
+  --cta-primary: #191919;
+  --cta-primary-hover: #2F2E2B;
+  --cta-primary-text: #FFFFFF;
+  --accent-primary: #2383E2;
+  --accent-hover: #1B6EC2;
+  --accent-muted: rgba(35, 131, 226, 0.09);
+  --accent-border: rgba(35, 131, 226, 0.28);
+
+  /* ── Borders, Dividers & Shadows ── */
+  --border-subtle: rgba(55, 53, 47, 0.09);
+  --border-muted: rgba(55, 53, 47, 0.09);
+  --border-hover: rgba(55, 53, 47, 0.18);
+  --border-highlight: rgba(55, 53, 47, 0.18);
+  --border-active: #2383E2;
+  --divider-subtle: #E9E9E7;
+  --shadow-card: 0 1px 2px rgba(15, 15, 15, 0.04), 0 0 0 1px rgba(55, 53, 47, 0.06);
+  --shadow-elevated: 0 12px 32px -4px rgba(15, 15, 15, 0.12), 0 0 0 1px rgba(55, 53, 47, 0.08);
+
+  /* ── Semantic Status Pills (Notion Pastel Palette) ── */
+  --status-success-fg: #0F7B6C;
+  --status-success-bg: #DDEDEA;
+  --status-success-border: rgba(15, 123, 108, 0.22);
+
+  --status-warning-fg: #9A6700;
+  --status-warning-bg: #FBF3DB;
+  --status-warning-border: rgba(154, 103, 0, 0.24);
+
+  --status-error-fg: #E03E3E;
+  --status-error-bg: #FBE4E4;
+  --status-error-border: rgba(224, 62, 62, 0.22);
+
+  --status-info-fg: #0B6E99;
+  --status-info-bg: #DDEBF1;
+  --status-info-border: rgba(11, 110, 153, 0.22);
+
+  --status-creative-fg: #D9730D;
+  --status-creative-bg: #FAEBDD;
+  --status-creative-border: rgba(217, 115, 13, 0.22);
+
+  --status-neutral-fg: #64473A;
+  --status-neutral-bg: #E9E5E3;
+  --status-neutral-border: rgba(100, 71, 58, 0.20);
+
+  /* Legacy Status Alignment */
+  --success: #0F7B6C;
+  --success-bg: #DDEDEA;
+  --warning: #9A6700;
+  --warning-bg: #FBF3DB;
+  --error: #E03E3E;
+  --error-bg: #FBE4E4;
+  --info: #0B6E99;
+  --info-bg: #DDEBF1;
+
+  /* System / Shadcn Variable Alignment for Light Mode */
+  --background: #FFFFFF;
+  --foreground: #37352F;
+  --card: #FFFFFF;
+  --card-foreground: #37352F;
+  --popover: #FFFFFF;
+  --popover-foreground: #37352F;
+  --primary: #191919;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EFEFED;
+  --secondary-foreground: #37352F;
+  --muted: #EFEFED;
+  --muted-foreground: #6B6A65;
+  --accent: #EFEFED;
+  --accent-foreground: #37352F;
+  --destructive: #E03E3E;
+  --border: rgba(55, 53, 47, 0.09);
+  --input: rgba(55, 53, 47, 0.09);
+  --ring: #2383E2;
+  --radius: 0.625rem;
+
+  --sidebar: #F7F6F3;
+  --sidebar-foreground: #37352F;
+  --sidebar-primary: #191919;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EFEFED;
+  --sidebar-accent-foreground: #37352F;
+  --sidebar-border: rgba(55, 53, 47, 0.09);
+  --sidebar-ring: #2383E2;
+}
+
 .dark {
   /* ── Core Surfaces & Dark Canvas ── */
   --app-background: #101014;
+  --surface-sidebar: #17171E;
+  --surface-canvas: #0D0D11;
   --surface-primary: #17171E;
   --surface-secondary: #20202A;
   --surface-elevated: #262630;
   --surface-floating: #2E2E3B;
-  --surface-canvas: #0D0D11;
 
   /* ── Subtle Hairline Borders ── */
   --border-subtle: #30303D;
   --border-muted: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.14);
   --border-highlight: rgba(255, 255, 255, 0.14);
   --border-active: #A78BFA;
+  --divider-subtle: #30303D;
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-elevated: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.6);
 
   /* ── Typography Contrast Hierarchy ── */
   --text-primary: #F2F0F7;
@@ -89,12 +202,39 @@
   --text-disabled: #474554;
 
   /* ── Selective Violet Brand Accent ── */
+  --cta-primary: #A78BFA;
+  --cta-primary-hover: #B69BFF;
+  --cta-primary-text: #101014;
   --accent-primary: #A78BFA;
   --accent-hover: #B69BFF;
   --accent-muted: rgba(167, 139, 250, 0.12);
   --accent-border: rgba(167, 139, 250, 0.28);
 
   /* ── Semantic Operational Signals ── */
+  --status-success-fg: #45B88A;
+  --status-success-bg: rgba(69, 184, 138, 0.12);
+  --status-success-border: rgba(69, 184, 138, 0.3);
+
+  --status-warning-fg: #E5AA58;
+  --status-warning-bg: rgba(229, 170, 88, 0.12);
+  --status-warning-border: rgba(229, 170, 88, 0.3);
+
+  --status-error-fg: #E16F7B;
+  --status-error-bg: rgba(225, 111, 123, 0.12);
+  --status-error-border: rgba(225, 111, 123, 0.3);
+
+  --status-info-fg: #69A9D8;
+  --status-info-bg: rgba(105, 169, 216, 0.12);
+  --status-info-border: rgba(105, 169, 216, 0.3);
+
+  --status-creative-fg: #F472B6;
+  --status-creative-bg: rgba(244, 114, 182, 0.10);
+  --status-creative-border: rgba(244, 114, 182, 0.2);
+
+  --status-neutral-fg: #38BDF8;
+  --status-neutral-bg: rgba(56, 189, 248, 0.10);
+  --status-neutral-border: rgba(56, 189, 248, 0.2);
+
   --success: #45B88A;
   --success-bg: rgba(69, 184, 138, 0.12);
   --warning: #E5AA58;
@@ -237,6 +377,294 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Notion Warm Paper Light Mode Adapter ── */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #FFFFFF !important;
+  color: #37352F !important;
+}
+
+/* Base Surfaces in Notion Light Mode */
+html:not(.dark) .surface-card {
+  background-color: #FFFFFF !important;
+  border-color: rgba(55, 53, 47, 0.09) !important;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 0 0 1px rgba(55, 53, 47, 0.06) !important;
+}
+
+html:not(.dark) .surface-card-hover:hover {
+  background-color: #FAFAF9 !important;
+  border-color: rgba(55, 53, 47, 0.18) !important;
+  box-shadow: 0 4px 12px -2px rgba(15, 15, 15, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+html:not(.dark) .surface-elevated {
+  background-color: #FFFFFF !important;
+  border-color: rgba(55, 53, 47, 0.12) !important;
+  box-shadow: 0 12px 32px -4px rgba(15, 15, 15, 0.12), 0 0 0 1px rgba(55, 53, 47, 0.08) !important;
+}
+
+/* Notion Sidebar & Header: Warm Cream #F7F6F3 */
+html:not(.dark) aside,
+html:not(.dark) header {
+  background-color: #F7F6F3 !important;
+  border-color: rgba(55, 53, 47, 0.09) !important;
+}
+
+/* Table Headers, Footers & Strips in Notion Light Mode */
+html:not(.dark) table thead tr,
+html:not(.dark) .bg-\[\#121217\]\/90,
+html:not(.dark) .bg-\[\#121217\]\/50,
+html:not(.dark) .bg-\[\#121217\] {
+  background-color: #F7F6F3 !important;
+  color: #6B6A65 !important;
+}
+
+html:not(.dark) table th {
+  color: #6B6A65 !important;
+}
+
+html:not(.dark) table tbody tr:hover {
+  background-color: #FAFAF9 !important;
+}
+
+html:not(.dark) .bg-gradient-to-br.from-\[\#262630\].to-\[\#17171E\] {
+  background-image: none !important;
+  background-color: #EFEFED !important;
+  color: #37352F !important;
+  border-color: rgba(55, 53, 47, 0.12) !important;
+}
+
+/* Dark canvas background mappings -> Warm Paper White */
+html:not(.dark) .bg-\[\#101014\],
+html:not(.dark) .bg-\[\#0D0D11\] {
+  background-color: #FFFFFF !important;
+}
+
+html:not(.dark) .bg-\[\#17171E\] {
+  background-color: #FFFFFF !important;
+}
+
+/* Secondary surfaces & inputs -> #EFEFED */
+html:not(.dark) .bg-\[\#20202A\] {
+  background-color: #EFEFED !important;
+}
+
+html:not(.dark) .bg-\[\#262630\] {
+  background-color: #FFFFFF !important;
+}
+
+html:not(.dark) .bg-\[\#2E2E3B\] {
+  background-color: #FFFFFF !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#20202A\]:hover {
+  background-color: #E6E6E4 !important;
+}
+
+html:not(.dark) .hover\:bg-\[\#262630\]:hover {
+  background-color: #EFEFED !important;
+}
+
+/* Notion Warm Charcoal Text Hierarchy */
+html:not(.dark) .text-\[\#F2F0F7\] {
+  color: #37352F !important;
+}
+
+html:not(.dark) .text-\[\#A3A0B0\] {
+  color: #6B6A65 !important;
+}
+
+html:not(.dark) .text-\[\#6C697D\] {
+  color: #9B9A97 !important;
+}
+
+html:not(.dark) .text-\[\#474554\] {
+  color: #C7C6C2 !important;
+}
+
+/* Hairline borders in Notion Light Mode */
+html:not(.dark) .border-white\/\[0\.08\],
+html:not(.dark) .border-white\/\[0\.06\],
+html:not(.dark) .border-white\/\[0\.04\],
+html:not(.dark) .border-white\/\[0\.1\],
+html:not(.dark) .border-white\/\[0\.12\],
+html:not(.dark) .border-white\/\[0\.14\],
+html:not(.dark) .border-white\/\[0\.18\],
+html:not(.dark) .border-white\/\[0\.2\] {
+  border-color: rgba(55, 53, 47, 0.09) !important;
+}
+
+html:not(.dark) .divide-white\/\[0\.08\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark) .divide-white\/\[0\.06\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark) .divide-white\/\[0\.04\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(55, 53, 47, 0.09) !important;
+}
+
+/* Translucent fills mapped to subtle ink tints */
+html:not(.dark) .bg-white\/\[0\.02\],
+html:not(.dark) .bg-white\/\[0\.04\],
+html:not(.dark) .bg-white\/\[0\.06\] {
+  background-color: rgba(55, 53, 47, 0.04) !important;
+}
+
+html:not(.dark) .bg-white\/\[0\.08\],
+html:not(.dark) .bg-white\/\[0\.1\] {
+  background-color: rgba(55, 53, 47, 0.06) !important;
+}
+
+html:not(.dark) .hover\:bg-white\/\[0\.04\]:hover,
+html:not(.dark) .hover\:bg-white\/\[0\.06\]:hover,
+html:not(.dark) .hover\:bg-white\/\[0\.08\]:hover {
+  background-color: rgba(55, 53, 47, 0.06) !important;
+}
+
+/* Primary Brand Accent (Zero Purple): Map to Notion Blue #2383E2 */
+html:not(.dark) .text-\[\#A78BFA\],
+html:not(.dark) .text-\[\#B69BFF\] {
+  color: #2383E2 !important;
+}
+
+/* Telemetry & fractional accent text in Notion Light Mode */
+html:not(.dark) .text-\[\#A78BFA\]\/20,
+html:not(.dark) .text-\[\#A78BFA\]\/30,
+html:not(.dark) .text-\[\#A78BFA\]\/40,
+html:not(.dark) .text-\[\#A78BFA\]\/50,
+html:not(.dark) .text-\[\#A78BFA\]\/60 {
+  color: #6B6A65 !important;
+}
+
+html:not(.dark) .group:hover .group-hover\:text-\[\#A78BFA\],
+html:not(.dark) .group:hover .group-hover\:text-\[\#A78BFA\]\/60,
+html:not(.dark) .group:hover .group-hover\:text-\[\#A78BFA\]\/80 {
+  color: #191919 !important;
+}
+
+html:not(.dark) .bg-\[\#A78BFA\]\/10,
+html:not(.dark) .bg-\[\#A78BFA\]\/\[0\.12\],
+html:not(.dark) .bg-\[\#A78BFA\]\/\[0\.08\] {
+  background-color: rgba(35, 131, 226, 0.09) !important;
+}
+
+html:not(.dark) .border-\[\#A78BFA\]\/30,
+html:not(.dark) .border-\[\#A78BFA\]\/\[0\.28\],
+html:not(.dark) .border-\[\#A78BFA\]\/20 {
+  border-color: rgba(35, 131, 226, 0.28) !important;
+}
+
+/* Solid primary action buttons become Notion Solid Charcoal #191919 with #FFFFFF text */
+html:not(.dark) .bg-\[\#A78BFA\]:not(.bg-\[\#A78BFA\]\/10):not(.bg-\[\#A78BFA\]\/20):not(.bg-\[\#A78BFA\]\/\[0\.12\]):not(.bg-\[\#A78BFA\]\/\[0\.08\]) {
+  background-color: #191919 !important;
+  color: #FFFFFF !important;
+}
+html:not(.dark) .bg-\[\#A78BFA\]:not(.bg-\[\#A78BFA\]\/10):not(.bg-\[\#A78BFA\]\/20):hover {
+  background-color: #2F2E2B !important;
+}
+
+/* Notion Status Pills: Pastel Palette */
+html:not(.dark) .text-\[\#45B88A\] {
+  color: #0F7B6C !important;
+}
+html:not(.dark) .bg-\[\#45B88A\]\/10,
+html:not(.dark) .bg-\[\#45B88A\]\/\[0\.12\] {
+  background-color: #DDEDEA !important;
+}
+html:not(.dark) .border-\[\#45B88A\]\/30,
+html:not(.dark) .border-\[\#45B88A\]\/20 {
+  border-color: rgba(15, 123, 108, 0.22) !important;
+}
+
+html:not(.dark) .text-\[\#E5AA58\] {
+  color: #9A6700 !important;
+}
+html:not(.dark) .bg-\[\#E5AA58\]\/10,
+html:not(.dark) .bg-\[\#E5AA58\]\/\[0\.12\] {
+  background-color: #FBF3DB !important;
+}
+html:not(.dark) .border-\[\#E5AA58\]\/30,
+html:not(.dark) .border-\[\#E5AA58\]\/20 {
+  border-color: rgba(154, 103, 0, 0.24) !important;
+}
+
+html:not(.dark) .text-\[\#E16F7B\] {
+  color: #E03E3E !important;
+}
+html:not(.dark) .bg-\[\#E16F7B\]\/10,
+html:not(.dark) .bg-\[\#E16F7B\]\/\[0\.12\] {
+  background-color: #FBE4E4 !important;
+}
+html:not(.dark) .border-\[\#E16F7B\]\/30,
+html:not(.dark) .border-\[\#E16F7B\]\/20 {
+  border-color: rgba(224, 62, 62, 0.22) !important;
+}
+
+html:not(.dark) .text-\[\#69A9D8\] {
+  color: #0B6E99 !important;
+}
+html:not(.dark) .bg-\[\#69A9D8\]\/10,
+html:not(.dark) .bg-\[\#69A9D8\]\/\[0\.12\] {
+  background-color: #DDEBF1 !important;
+}
+html:not(.dark) .border-\[\#69A9D8\]\/30,
+html:not(.dark) .border-\[\#69A9D8\]\/20 {
+  border-color: rgba(11, 110, 153, 0.22) !important;
+}
+
+html:not(.dark) .text-\[\#38BDF8\] {
+  color: #64473A !important;
+}
+html:not(.dark) .bg-\[\#38BDF8\]\/10,
+html:not(.dark) .bg-\[\#38BDF8\]\/20 {
+  background-color: #E9E5E3 !important;
+}
+html:not(.dark) .border-\[\#38BDF8\]\/20 {
+  border-color: rgba(100, 71, 58, 0.20) !important;
+}
+
+html:not(.dark) .text-\[\#F472B6\] {
+  color: #D9730D !important;
+}
+html:not(.dark) .bg-\[\#F472B6\]\/10,
+html:not(.dark) .bg-\[\#F472B6\]\/20 {
+  background-color: #FAEBDD !important;
+}
+html:not(.dark) .border-\[\#F472B6\]\/20 {
+  border-color: rgba(217, 115, 13, 0.22) !important;
+}
+
+/* Keyboard shortcut badges in Notion Light Mode */
+html:not(.dark) .kbd-pill {
+  color: #6B6A65 !important;
+  background-color: #EFEFED !important;
+  border-color: #E9E9E7 !important;
+  box-shadow: 0 1px 0 rgba(55, 53, 47, 0.08) !important;
+}
+
+/* Canvas dot-matrix & subtle glow in Notion Light Mode */
+html:not(.dark) .framer-canvas-grid {
+  background-image: radial-gradient(rgba(55, 53, 47, 0.09) 1px, transparent 1px) !important;
+}
+
+html:not(.dark) .ambient-glow {
+  background-image: radial-gradient(ellipse 90% 40% at 50% -10%, rgba(35, 131, 226, 0.04), transparent 70%) !important;
+}
+
+/* Telemetry strip separator in Notion Light Mode */
+html:not(.dark) .telemetry-cell:not(:last-child)::after {
+  background-color: rgba(55, 53, 47, 0.09) !important;
+}
+
+/* Scrollbar in Notion Light Mode */
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(55, 53, 47, 0.15) !important;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(55, 53, 47, 0.28) !important;
 }
 
 

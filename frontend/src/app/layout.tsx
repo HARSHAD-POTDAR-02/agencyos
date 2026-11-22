@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -41,17 +42,25 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                localStorage.setItem('agencyos-theme', 'dark');
-                document.documentElement.classList.add('dark');
-                document.documentElement.classList.remove('light');
-                document.documentElement.style.colorScheme = 'dark';
+                var theme = localStorage.getItem('agencyos-theme') || 'dark';
+                if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                  document.documentElement.style.colorScheme = 'dark';
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                  document.documentElement.style.colorScheme = 'light';
+                }
               } catch (e) {}
             `,
           }}
         />
       </head>
-      <body className="font-sans antialiased bg-[#101014] text-[#F2F0F7] selection:bg-violet-500/25 selection:text-white">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="font-sans antialiased bg-background text-foreground transition-colors duration-150 selection:bg-neutral-500/20">
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

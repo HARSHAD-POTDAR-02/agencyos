@@ -27,10 +27,13 @@ import {
   UserCheck,
   ChevronsUpDown,
   Command,
-  Plus
+  Plus,
+  Sun,
+  Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { agencyApi, SearchItem, NotificationItem } from "@/lib/api";
 
 const MONTH_NAMES = [
@@ -72,6 +75,7 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, token, activeAgencyId, agencies, setActiveAgencyId } = useAuth();
+  const { theme, mounted, toggleTheme } = useTheme();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
   const currentAgency = agencies.find((a) => a.agency_id === (activeAgencyId || effectiveAgencyId));
 
@@ -700,6 +704,23 @@ export function Header() {
             </div>
           )}
         </div>
+
+        {/* Notion Light / Dark Mode Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          suppressHydrationWarning
+          title={mounted && theme === "light" ? "Switch to Dark Mode" : "Switch to Notion Light Mode"}
+          aria-label={mounted && theme === "light" ? "Switch to Dark Mode" : "Switch to Notion Light Mode"}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.06] transition-all cursor-pointer relative"
+        >
+          {mounted && theme === "light" ? (
+            <Moon className="w-4 h-4 text-[#37352F] transition-transform hover:-rotate-12" />
+          ) : (
+            <Sun className="w-4 h-4 text-[#E5AA58] transition-transform hover:rotate-45" />
+          )}
+        </button>
+
+        <div className="h-4 w-px bg-white/[0.08] mx-0.5" />
 
         {/* User Monogram Avatar */}
         <div className="flex items-center gap-2.5 pl-1">
