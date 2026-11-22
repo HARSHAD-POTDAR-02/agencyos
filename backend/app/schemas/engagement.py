@@ -142,6 +142,7 @@ class EngagementSyncResponse(BaseModel):
     conversations_synced: int
     status: str = "success"
     synced_at: datetime
+    dm_warning: str | None = None
 
 
 class EngagementStatsOut(BaseModel):

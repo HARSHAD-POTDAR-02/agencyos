@@ -1280,7 +1280,7 @@ export const engagementApi = {
 
   sync: (agencyId: string, token: string, clientId?: string) => {
     const qs = clientId && clientId !== "all" ? `?client_id=${clientId}` : "";
-    return apiFetch<{ comments_synced: number; conversations_synced: number; status: string }>(
+    return apiFetch<{ comments_synced: number; conversations_synced: number; status: string; dm_warning?: string | null }>(
       `/agencies/${agencyId}/engagement/sync${qs}`,
       { method: "POST", token }
     );

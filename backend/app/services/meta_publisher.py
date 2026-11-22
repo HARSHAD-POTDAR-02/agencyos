@@ -1390,32 +1390,55 @@ async def hide_instagram_comment(
 async def fetch_instagram_conversations(
     access_token: str,
     instagram_business_id: str,
+    facebook_page_id: str | None = None,
     limit: int = 25,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], str | None]:
     """
     Fetch direct message conversations for an Instagram Business Account.
-    Endpoint: GET /{ig_business_id}/conversations?platform=instagram&fields=id,updated_time,participants,messages{id,message,created_time,from}
+    Tries /{facebook_page_id}/conversations?platform=instagram first if available,
+    falling back to /{instagram_business_id}/conversations?platform=instagram.
+    Returns (conversations_list, error_notice_or_none).
     """
     version = _get_api_version()
+    endpoints = []
+    if facebook_page_id:
+        endpoints.append(f"{GRAPH_API_BASE}/{version}/{facebook_page_id}/conversations")
+    if instagram_business_id:
+        endpoints.append(f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/conversations")
+
     async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            res = await client.get(
-                f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/conversations",
-                params={
-                    "platform": "instagram",
-                    "fields": "id,updated_time,participants,unread_count,messages{id,message,created_time,from}",
-                    "access_token": access_token,
-                    "limit": limit,
-                },
-            )
-            if res.status_code == 200:
-                return res.json().get("data", [])
-            else:
-                logger.info(f"Instagram conversations query status {res.status_code}: {res.text}")
-                return []
-        except Exception as e:
-            logger.warning(f"Error fetching Instagram conversations: {e}")
-            return []
+        last_error_msg = None
+        for endpoint in endpoints:
+            try:
+                res = await client.get(
+                    endpoint,
+                    params={
+                        "platform": "instagram",
+                        "fields": "id,updated_time,participants,unread_count,messages{id,message,created_time,from}",
+                        "access_token": access_token,
+                        "limit": limit,
+                    },
+                )
+                if res.status_code == 200:
+                    return res.json().get("data", []), None
+                else:
+                    err_json = res.json().get("error", {})
+                    err_msg = err_json.get("message", "")
+                    subcode = err_json.get("error_subcode")
+                    if subcode == 2534041 or "disabled access" in err_msg.lower():
+                        last_error_msg = (
+                            "Instagram message access is disabled in the Instagram app. "
+                            "Go to Settings & Privacy > Messages and story replies > Message controls > "
+                            "Connected tools > Turn ON 'Allow access to messages'."
+                        )
+                    else:
+                        last_error_msg = err_msg
+                    logger.info(f"Instagram conversations query status {res.status_code} on {endpoint}: {res.text}")
+            except Exception as e:
+                logger.warning(f"Error fetching Instagram conversations on {endpoint}: {e}")
+                last_error_msg = str(e)
+
+        return [], last_error_msg
 
 
 async def send_instagram_dm(

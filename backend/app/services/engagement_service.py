@@ -175,6 +175,7 @@ async def sync_client_social_engagement(
 
     comments_synced = 0
     conversations_synced = 0
+    dm_warning: str | None = None
 
     for account in accounts:
         # -------------------------------------------------------------
@@ -294,11 +295,14 @@ async def sync_client_social_engagement(
                 # ---------------------------------------------------------
                 # 2. Instagram Direct Messages Ingestion
                 # ---------------------------------------------------------
-                conversations_data = await fetch_instagram_conversations(
+                conversations_data, dm_err = await fetch_instagram_conversations(
                     access_token=account.access_token,
                     instagram_business_id=account.instagram_business_id,
+                    facebook_page_id=account.facebook_page_id,
                     limit=20,
                 )
+                if dm_err:
+                    dm_warning = dm_err
 
                 for conv_item in conversations_data:
                     thread_id = str(conv_item.get("id"))
@@ -382,4 +386,8 @@ async def sync_client_social_engagement(
                 logger.error("Error during Instagram engagement sync for account %s: %s", account.id, e)
 
     await db.commit()
-    return {"comments_synced": comments_synced, "conversations_synced": conversations_synced}
+    return {
+        "comments_synced": comments_synced,
+        "conversations_synced": conversations_synced,
+        "dm_warning": dm_warning,
+    }

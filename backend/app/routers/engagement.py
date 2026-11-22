@@ -172,11 +172,14 @@ async def sync_engagement_feed(
     """
     total_comments = 0
     total_convs = 0
+    dm_warning: str | None = None
 
     if client_id:
         res = await sync_client_social_engagement(agency_id, client_id, db)
         total_comments += res["comments_synced"]
         total_convs += res["conversations_synced"]
+        if res.get("dm_warning"):
+            dm_warning = res["dm_warning"]
     else:
         # Sync across all clients in the agency that have connected social accounts
         clients_res = await db.execute(
@@ -190,12 +193,15 @@ async def sync_engagement_feed(
             res = await sync_client_social_engagement(agency_id, cid, db)
             total_comments += res["comments_synced"]
             total_convs += res["conversations_synced"]
+            if res.get("dm_warning"):
+                dm_warning = res["dm_warning"]
 
     return EngagementSyncResponse(
         comments_synced=total_comments,
         conversations_synced=total_convs,
         status="success",
         synced_at=datetime.now(timezone.utc),
+        dm_warning=dm_warning,
     )
 
 

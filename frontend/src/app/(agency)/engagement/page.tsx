@@ -331,10 +331,14 @@ function EngagementContent() {
         token,
         selectedClientId !== "all" ? selectedClientId : undefined
       );
-      showToast(
-        `Synchronized ${res.comments_synced} new comments and ${res.conversations_synced} DMs from Meta!`,
-        "success"
-      );
+      if (res.dm_warning) {
+        showToast(res.dm_warning, "error");
+      } else {
+        showToast(
+          `Synchronized ${res.comments_synced} new comments and ${res.conversations_synced} DMs from Meta!`,
+          "success"
+        );
+      }
       await fetchData();
     } catch (err: any) {
       console.error("Sync error:", err);
@@ -421,7 +425,7 @@ function EngagementContent() {
     }
   };
 
-  // Re-run Nemotron LLM assist
+  // Re-run AI assist
   const handleTriggerAIAssist = async () => {
     if (!activeComment || !effectiveAgencyId || !token) return;
     setGeneratingAI(true);
@@ -432,7 +436,7 @@ function EngagementContent() {
       if (res.suggestions.length > 0) {
         setReplyText(res.suggestions[0].reply);
       }
-      showToast("Generated 3 fresh brand-voice reply options using Nemotron 8B", "success");
+      showToast("Generated 3 fresh brand-voice reply suggestions", "success");
     } catch (err: any) {
       showToast(err.message || "Failed to generate AI replies", "error");
     } finally {
@@ -475,7 +479,7 @@ function EngagementContent() {
                 </span>
               </h1>
               <p className="text-xs text-[#8A8797]">
-                AI-powered comment triage, Nemotron brand-voice replies & omnichannel Instagram DMs
+                AI-powered comment triage, brand-voice replies & unified Instagram DMs
               </p>
             </div>
           </div>
@@ -700,10 +704,27 @@ function EngagementContent() {
             )
           ) : (
             conversations.length === 0 ? (
-              <div className="p-8 text-center text-[#71717A] text-xs flex flex-col items-center gap-2">
+              <div className="p-6 text-center text-[#71717A] text-xs flex flex-col items-center gap-3">
                 <Send className="w-8 h-8 opacity-30 text-purple-400" />
-                <p>No direct messages found.</p>
-                <p className="text-[11px] text-[#52525B]">Incoming Instagram DMs will appear here in real time.</p>
+                <p className="font-semibold text-white">No direct messages loaded yet</p>
+                <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-800/40 text-left text-[11px] text-[#A1A1AA] flex flex-col gap-1.5 leading-relaxed w-full">
+                  <div className="flex items-center gap-1.5 font-semibold text-purple-300">
+                    <AlertCircle className="w-3.5 h-3.5 text-purple-400" />
+                    <span>How to enable Instagram DM access:</span>
+                  </div>
+                  <p className="text-[#8A8797]">
+                    By default, Instagram requires you to enable third-party app message access on your phone:
+                  </p>
+                  <ol className="list-decimal pl-4 space-y-1 text-[#8A8797]">
+                    <li>Open the <strong className="text-white">Instagram App</strong> on your phone.</li>
+                    <li>Go to <strong className="text-white">Settings and privacy</strong> &gt; <strong className="text-white">Messages and story replies</strong>.</li>
+                    <li>Tap <strong className="text-white">Message controls</strong> &gt; <strong className="text-white">Connected tools</strong>.</li>
+                    <li>Toggle <strong className="text-purple-300">"Allow access to messages"</strong> to <strong className="text-emerald-400">ON</strong>.</li>
+                  </ol>
+                  <p className="pt-1 text-[10px] text-purple-300/80">
+                    Once enabled, click <strong>"Sync Live Feed"</strong> above to import incoming DMs.
+                  </p>
+                </div>
               </div>
             ) : (
               conversations.map((conv) => {
@@ -849,13 +870,13 @@ function EngagementContent() {
                   </div>
                 )}
 
-                {/* Nemotron 8B AI Reply Specialist Suggestions */}
+                {/* AI Reply Suggestions */}
                 <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-purple-400" />
                       <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
-                        Nemotron 8B AI Copilot Suggestions
+                        AI Suggested Replies
                       </h4>
                     </div>
                     <button
@@ -871,7 +892,7 @@ function EngagementContent() {
                   {generatingAI ? (
                     <div className="py-4 flex items-center justify-center text-xs text-[#8A8797] gap-2">
                       <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
-                      Synthesizing brand-voice replies with Nemotron 8B...
+                      Generating AI reply suggestions...
                     </div>
                   ) : aiSuggestions.length > 0 ? (
                     <div className="flex flex-col gap-2">
@@ -893,7 +914,7 @@ function EngagementContent() {
                     </div>
                   ) : (
                     <p className="text-xs text-[#71717A] italic">
-                      Click "Regenerate" to run deep intent classification and generate 3 brand-aligned replies with Nemotron 8B.
+                      Click "Regenerate" to generate 3 tailored brand replies with AI.
                     </p>
                   )}
                 </div>
