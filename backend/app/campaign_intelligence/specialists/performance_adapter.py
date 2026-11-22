@@ -62,15 +62,37 @@ class PerformanceSpecialistAdapter(SpecialistAdapter):
         activity_logs: list[str] = []
         activity_logs.append("Querying client published deliverables and engagement analytics...")
 
-        # 1. Deterministic database retrieval
-        deliverables = await get_client_published_deliverables(
-            client_id=context.client_id,
-            agency_id=context.agency_id,
-            db=db,
-            limit=50,
+        # 1. Deterministic database retrieval (Check ingested social history first)
+        from app.campaign_intelligence.tools.performance_tools import (
+            calculate_historical_posts_metrics,
+            get_client_historical_posts,
         )
-        total_posts = len(deliverables)
-        activity_logs.append(f"Retrieved {total_posts} published deliverables from AgencyOS database.")
+        historical_posts = await get_client_historical_posts(
+            client_id=context.client_id,
+            db=db,
+            limit=100,
+        )
+
+        total_posts = 0
+        format_summaries = []
+        fatigue_signals = []
+
+        if historical_posts:
+            total_posts = len(historical_posts)
+            activity_logs.append(f"Retrieved {total_posts} ingested historical posts from connected Meta accounts.")
+            format_summaries = calculate_historical_posts_metrics(historical_posts)
+        else:
+            deliverables = await get_client_published_deliverables(
+                client_id=context.client_id,
+                agency_id=context.agency_id,
+                db=db,
+                limit=50,
+            )
+            total_posts = len(deliverables)
+            activity_logs.append(f"Retrieved {total_posts} published deliverables from AgencyOS database.")
+            if total_posts > 0:
+                format_summaries = calculate_format_performance_metrics(deliverables)
+                fatigue_signals = detect_audience_fatigue_signals(deliverables)
 
         # 2. Determine Data Sufficiency
         if total_posts == 0:
@@ -79,10 +101,6 @@ class PerformanceSpecialistAdapter(SpecialistAdapter):
             data_sufficiency_str = "sparse"
         else:
             data_sufficiency_str = "sufficient"
-
-        # 3. Calculate Deterministic Aggregates
-        format_summaries = calculate_format_performance_metrics(deliverables)
-        fatigue_signals = detect_audience_fatigue_signals(deliverables)
 
         # 4. Construct Typed FormatPerformanceMetric list with explicit None support
         format_metrics: list[FormatPerformanceMetric] = []

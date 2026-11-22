@@ -120,6 +120,15 @@ async def create_or_update_client_social_account(
 
     await db.commit()
     await db.refresh(account)
+
+    # Automatically trigger background historical backfill
+    try:
+        import asyncio
+        from app.services.analytics_engine import run_background_backfill
+        asyncio.create_task(run_background_backfill(client_id, limit=50, days=180))
+    except Exception:
+        pass
+
     return ClientSocialAccountOut.model_validate(account)
 
 
@@ -374,5 +383,14 @@ async def connect_selected_meta_accounts(
     await db.commit()
     for acc in saved_accounts:
         await db.refresh(acc)
+
+    # Automatically trigger background historical backfill
+    try:
+        import asyncio
+        from app.services.analytics_engine import run_background_backfill
+        asyncio.create_task(run_background_backfill(client_id, limit=100, days=180))
+    except Exception:
+        pass
+
     return [ClientSocialAccountOut.model_validate(a) for a in saved_accounts]
 

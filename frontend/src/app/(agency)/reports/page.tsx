@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense, useMemo } from "reac
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { clientApi, publishingApi, MonthlyReport, LiveMetaPostItem } from "@/lib/api";
+import { clientApi, publishingApi, analyticsApi, MonthlyReport, LiveMetaPostItem, ClientAnalyticsBenchmarks } from "@/lib/api";
 import {
   BarChart3,
   TrendingUp,
@@ -627,10 +627,16 @@ function ReportsContent() {
     parseInt(searchParams.get("year") || "") || currentYear
   );
 
-  const [activeTab, setActiveTab] = useState<"deliverables" | "live_feed">("deliverables");
+  const [activeTab, setActiveTab] = useState<"deliverables" | "live_feed" | "benchmarks">("deliverables");
   const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook">("all");
   const [sortBy, setSortBy] = useState<"views" | "likes" | "comments" | "engagement">("views");
   const [showRoiInfo, setShowRoiInfo] = useState(false);
+
+  // Track 2: Historical benchmarks & backfill state
+  const [benchmarks, setBenchmarks] = useState<ClientAnalyticsBenchmarks | null>(null);
+  const [loadingBenchmarks, setLoadingBenchmarks] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const m = parseInt(searchParams.get("month") || "");
@@ -707,6 +713,42 @@ function ReportsContent() {
       loadReport();
     }
   }, [selectedClientId, selectedMonth, selectedYear, loadReport]);
+
+  // Load Historical Benchmarks & Outliers
+  const fetchBenchmarks = useCallback(async () => {
+    if (!token || !effectiveAgencyId || !selectedClientId) return;
+    try {
+      setLoadingBenchmarks(true);
+      const data = await analyticsApi.getBenchmarks(effectiveAgencyId, selectedClientId, token);
+      setBenchmarks(data);
+    } catch (e: unknown) {
+      console.warn("Failed to load benchmarks:", e);
+    } finally {
+      setLoadingBenchmarks(false);
+    }
+  }, [token, effectiveAgencyId, selectedClientId]);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      fetchBenchmarks();
+    }
+  }, [selectedClientId, fetchBenchmarks]);
+
+  const handleBackfill = async () => {
+    if (!token || !effectiveAgencyId || !selectedClientId || backfilling) return;
+    try {
+      setBackfilling(true);
+      setBackfillMessage("Connecting to Meta Graph API & classifying posts with Nemotron AI...");
+      const res = await analyticsApi.backfill(effectiveAgencyId, selectedClientId, { limit: 100, days: 180 }, token);
+      setBackfillMessage(res.message);
+      await fetchBenchmarks();
+    } catch (e: unknown) {
+      setBackfillMessage(`Backfill failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+    } finally {
+      setBackfilling(false);
+      setTimeout(() => setBackfillMessage(null), 6000);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1379,7 +1421,7 @@ function ReportsContent() {
           <div className="surface-card rounded-2xl border border-white/[0.08] overflow-hidden shadow-xs">
             <div className="p-5 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={() => setActiveTab("deliverables")}
                     className={`text-sm font-heading font-bold tracking-tight pb-1 border-b-2 transition-colors cursor-pointer ${
@@ -1404,48 +1446,80 @@ function ReportsContent() {
                       {report.live_meta_posts?.length || 0}
                     </span>
                   </button>
+
+                  <button
+                    onClick={() => setActiveTab("benchmarks")}
+                    className={`text-sm font-heading font-bold tracking-tight pb-1 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      activeTab === "benchmarks"
+                        ? "text-[#F2F0F7] border-[#A78BFA]"
+                        : "text-[#A3A0B0] border-transparent hover:text-[#F2F0F7]"
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <span>Historical Benchmarks &amp; Outliers</span>
+                    {benchmarks && benchmarks.total_posts_analyzed > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-[#A78BFA]/20 text-[#A78BFA] text-[10px] font-mono font-bold">
+                        {benchmarks.total_posts_analyzed} Posts
+                      </span>
+                    )}
+                  </button>
                 </div>
                 <p className="text-xs text-[#A3A0B0] mt-1">
                   {activeTab === "deliverables"
                     ? "Ranked by live impressions, audience likes, and comments on Meta"
-                    : "Real-time published feed streamed directly from Instagram and Facebook Graph API nodes"}
+                    : activeTab === "live_feed"
+                    ? "Real-time published feed streamed directly from Instagram and Facebook Graph API nodes"
+                    : "Ingested account history, top 10% winning outlier patterns, and Nemotron AI hook classification"}
                 </p>
               </div>
 
-              {/* Platform filter pills & Sort dropdown */}
+              {/* Platform filter pills, Sort dropdown, and Backfill Action */}
               <div className="flex flex-wrap items-center gap-2.5 print:hidden">
-                <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs">
+                {activeTab === "benchmarks" && (
                   <button
-                    onClick={() => setPlatformFilter("all")}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
-                      platformFilter === "all"
-                        ? "bg-white/[0.08] text-[#F2F0F7] font-bold shadow-xs"
-                        : "text-[#A3A0B0] hover:text-[#F2F0F7]"
-                    }`}
+                    onClick={handleBackfill}
+                    disabled={backfilling}
+                    className="flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50 shadow-xs"
                   >
-                    All
+                    <RefreshCw className={`w-3.5 h-3.5 ${backfilling ? "animate-spin" : ""}`} />
+                    <span>{backfilling ? "Classifying with Nemotron..." : "Run Social Backfill"}</span>
                   </button>
-                  <button
-                    onClick={() => setPlatformFilter("instagram")}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
-                      platformFilter === "instagram"
-                        ? "bg-[#E16F7B]/20 text-[#E16F7B] font-bold border border-[#E16F7B]/30 shadow-xs"
-                        : "text-[#A3A0B0] hover:text-[#E16F7B]"
-                    }`}
-                  >
-                    Instagram ({instagramCount})
-                  </button>
-                  <button
-                    onClick={() => setPlatformFilter("facebook")}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
-                      platformFilter === "facebook"
-                        ? "bg-[#69A9D8]/20 text-[#69A9D8] font-bold border border-[#69A9D8]/30 shadow-xs"
-                        : "text-[#A3A0B0] hover:text-[#69A9D8]"
-                    }`}
-                  >
-                    Facebook ({facebookCount})
-                  </button>
-                </div>
+                )}
+
+                {activeTab !== "benchmarks" && (
+                  <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs">
+                    <button
+                      onClick={() => setPlatformFilter("all")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                        platformFilter === "all"
+                          ? "bg-white/[0.08] text-[#F2F0F7] font-bold shadow-xs"
+                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setPlatformFilter("instagram")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                        platformFilter === "instagram"
+                          ? "bg-[#E16F7B]/20 text-[#E16F7B] font-bold border border-[#E16F7B]/30 shadow-xs"
+                          : "text-[#A3A0B0] hover:text-[#E16F7B]"
+                      }`}
+                    >
+                      Instagram ({instagramCount})
+                    </button>
+                    <button
+                      onClick={() => setPlatformFilter("facebook")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                        platformFilter === "facebook"
+                          ? "bg-[#69A9D8]/20 text-[#69A9D8] font-bold border border-[#69A9D8]/30 shadow-xs"
+                          : "text-[#A3A0B0] hover:text-[#69A9D8]"
+                      }`}
+                    >
+                      Facebook ({facebookCount})
+                    </button>
+                  </div>
+                )}
 
                 {activeTab === "deliverables" && (
                   <div className="flex items-center gap-1.5 bg-[#101014] px-2.5 py-1 rounded-lg border border-white/[0.08] text-xs">
@@ -1729,6 +1803,220 @@ function ReportsContent() {
                   })}
                 </div>
               )
+            )}
+
+            {/* TAB 3: HISTORICAL BENCHMARKS & TOP OUTLIERS (NEMOTRON AI) */}
+            {activeTab === "benchmarks" && (
+              <div className="p-5 space-y-6">
+                {backfillMessage && (
+                  <div className="p-3.5 bg-[#A78BFA]/10 border border-[#A78BFA]/30 rounded-xl text-xs text-[#F2F0F7] flex items-center justify-between animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#A78BFA] shrink-0" />
+                      <span>{backfillMessage}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4 Summary Benchmark Metric Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08]">
+                    <div className="text-[11px] font-mono text-[#A3A0B0] uppercase tracking-wider">Posts Analyzed</div>
+                    <div className="text-xl font-bold font-heading text-[#F2F0F7] mt-1">
+                      {benchmarks?.total_posts_analyzed || 0}
+                    </div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">
+                      {benchmarks?.date_range_days ? `${benchmarks.date_range_days}-day historical depth` : "Lifetime connected feed"}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08]">
+                    <div className="text-[11px] font-mono text-[#A3A0B0] uppercase tracking-wider">Baseline Interaction Rate</div>
+                    <div className="text-xl font-bold font-heading text-[#45B88A] mt-1">
+                      {benchmarks?.baseline_engagement_rate ? `${benchmarks.baseline_engagement_rate}%` : "0.0%"}
+                    </div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Average across all past posts</div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08]">
+                    <div className="text-[11px] font-mono text-[#A3A0B0] uppercase tracking-wider">Dominant Winning Format</div>
+                    <div className="text-xl font-bold font-heading text-[#A78BFA] mt-1">
+                      {benchmarks?.dominant_winning_format || "REEL"}
+                    </div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Highest engagement delivery</div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#101014] border border-white/[0.08]">
+                    <div className="text-[11px] font-mono text-[#A3A0B0] uppercase tracking-wider">Top Outlier Multiplier</div>
+                    <div className="text-xl font-bold font-heading text-[#E5AA58] mt-1">
+                      {benchmarks?.outlier_multiplier_ceiling ? `${benchmarks.outlier_multiplier_ceiling}x` : "1.0x"}
+                    </div>
+                    <div className="text-[10px] text-[#A3A0B0] mt-0.5">Above baseline performance</div>
+                  </div>
+                </div>
+
+                {/* Top 10% Winning Outliers Showcase */}
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-heading font-bold text-[#F2F0F7] flex items-center gap-2">
+                        <Award className="w-4 h-4 text-[#E5AA58]" />
+                        <span>Top 10% Winning Outlier Posts</span>
+                      </h4>
+                      <p className="text-[11px] text-[#A3A0B0]">
+                        Posts driving 2x–5x baseline interaction. Hook framework &amp; psychological archetype classified with Nemotron AI.
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/30 px-2.5 py-1 rounded-lg self-start sm:self-auto font-bold">
+                      {benchmarks?.top_winning_outliers?.length || 0} Outliers Identified
+                    </span>
+                  </div>
+
+                  {(!benchmarks?.top_winning_outliers || benchmarks.top_winning_outliers.length === 0) ? (
+                    <div className="p-8 text-center text-xs text-[#A3A0B0] bg-[#101014] rounded-xl border border-white/[0.08]">
+                      No outlier posts computed yet. Click &quot;Run Social Backfill&quot; to ingest and classify posts with Nemotron.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      {benchmarks.top_winning_outliers.map((outlier, idx) => (
+                        <div
+                          key={outlier.id || idx}
+                          className="p-4 rounded-xl bg-[#101014] border border-white/[0.08] hover:border-[#A78BFA]/40 transition-all flex flex-col justify-between gap-3 group"
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30">
+                                  {outlier.deliverable_format}
+                                </span>
+                                <span className="text-[10px] font-mono text-[#A3A0B0] capitalize">
+                                  {outlier.platform}
+                                </span>
+                              </div>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/40 shadow-xs">
+                                🔥 {outlier.outlier_multiplier}x Baseline
+                              </span>
+                            </div>
+
+                            {/* Hook & Archetype Badge */}
+                            <div className="p-3 rounded-lg bg-[#17171E] border border-white/[0.06] space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#A78BFA]">
+                                <Sparkles className="w-3 h-3 text-[#A78BFA]" />
+                                <span className="font-semibold">{outlier.hook_archetype}</span>
+                              </div>
+                              <p className="text-xs text-[#F2F0F7] font-semibold leading-relaxed">
+                                &ldquo;{outlier.extracted_hook}&rdquo;
+                              </p>
+                            </div>
+
+                            {/* Caption snippet */}
+                            <p className="text-[11px] text-[#A3A0B0] line-clamp-2 leading-relaxed">
+                              {outlier.caption_snippet}
+                            </p>
+                          </div>
+
+                          {/* Stats footer */}
+                          <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                            <div className="flex items-center gap-3 text-[#A3A0B0]">
+                              <span className="flex items-center gap-1 text-[#F2F0F7]" title="Likes">
+                                <Heart className="w-3 h-3 text-[#E16F7B]" />
+                                <span>{outlier.likes}</span>
+                              </span>
+                              <span className="flex items-center gap-1 text-[#F2F0F7]" title="Comments">
+                                <MessageCircle className="w-3 h-3 text-[#69A9D8]" />
+                                <span>{outlier.comments}</span>
+                              </span>
+                              {outlier.views > 0 && (
+                                <span className="flex items-center gap-1 text-[#45B88A]" title="Views">
+                                  <Eye className="w-3 h-3" />
+                                  <span>{outlier.views}</span>
+                                </span>
+                              )}
+                              <span className="text-[#A78BFA] font-bold">
+                                {outlier.engagement_rate}% ER
+                              </span>
+                            </div>
+                            {outlier.permalink && (
+                              <a
+                                href={outlier.permalink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-[#A78BFA] hover:underline flex items-center gap-1"
+                              >
+                                View Post <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Format Win-Rate Matrix Table */}
+                {benchmarks && benchmarks.format_benchmarks.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-heading font-bold text-[#F2F0F7] flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-[#A78BFA]" />
+                      <span>Format Win-Rate &amp; Historical Distribution</span>
+                    </h4>
+                    <div className="overflow-x-auto rounded-xl border border-white/[0.08] bg-[#101014]">
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="bg-[#17171E] border-b border-white/[0.08] text-[#A3A0B0] uppercase text-[10px]">
+                          <tr>
+                            <th className="p-3">Format</th>
+                            <th className="p-3">Sample Volume</th>
+                            <th className="p-3">Avg Likes</th>
+                            <th className="p-3">Avg Comments</th>
+                            <th className="p-3">Avg Reach / Views</th>
+                            <th className="p-3">Avg Interaction Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.06]">
+                          {benchmarks.format_benchmarks.map((fmt, i) => (
+                            <tr key={i} className="hover:bg-white/[0.02]">
+                              <td className="p-3 font-bold text-[#F2F0F7] flex items-center gap-2">
+                                <span className="uppercase">{fmt.deliverable_format}</span>
+                                {fmt.is_dominant_format && (
+                                  <span className="px-1.5 py-0.2 bg-[#A78BFA]/20 text-[#A78BFA] text-[9px] rounded font-mono font-bold">
+                                    Winning Format
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-[#A3A0B0]">{fmt.total_posts} ({fmt.share_of_volume_pct}%)</td>
+                              <td className="p-3 text-[#F2F0F7]">{fmt.avg_likes}</td>
+                              <td className="p-3 text-[#F2F0F7]">{fmt.avg_comments}</td>
+                              <td className="p-3 text-[#F2F0F7]">{fmt.avg_reach || fmt.avg_views || "N/A"}</td>
+                              <td className="p-3">
+                                <span className="text-[#45B88A] font-bold">{fmt.avg_engagement_rate}%</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Continuous Loop to Campaign Studio Banner */}
+                <div className="p-4 rounded-xl bg-gradient-to-r from-[#A78BFA]/10 to-[#69A9D8]/10 border border-[#A78BFA]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#F2F0F7]">
+                      <Sparkles className="w-4 h-4 text-[#A78BFA]" />
+                      <span>Continuous Loop to Campaign Studio Active</span>
+                    </div>
+                    <p className="text-[11px] text-[#A3A0B0] max-w-xl leading-relaxed">
+                      These {benchmarks?.total_posts_analyzed || 0} historical posts and winning hook archetypes are automatically ingested by the Historical Performance Agent and passed into Campaign Studio AI when generating 30-day plans.
+                    </p>
+                  </div>
+                  <Link
+                    href={`/campaigns?clientId=${selectedClientId}`}
+                    className="px-3.5 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold rounded-xl transition-all shrink-0 flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span>Open in Campaign Studio</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
         </div>

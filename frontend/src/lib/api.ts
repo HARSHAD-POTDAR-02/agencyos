@@ -1394,3 +1394,138 @@ export const engagementApi = {
     }>(`/agencies/${agencyId}/engagement/permissions?client_id=${clientId}`, { token }),
 };
 
+// ── Track 2: Analytics & Historical Benchmarks ──
+export interface HistoricalPostItem {
+  id: string;
+  client_id: string;
+  platform: string;
+  external_post_id: string;
+  media_type: string;
+  deliverable_format: string;
+  caption?: string | null;
+  permalink?: string | null;
+  media_url?: string | null;
+  published_at?: string | null;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  saves_count: number;
+  views_count: number;
+  reach_count: number;
+  impressions_count: number;
+  engagement_rate: number;
+  is_outlier: boolean;
+  outlier_score: number;
+  extracted_hook?: string | null;
+  hook_archetype?: string | null;
+  content_pillar?: string | null;
+  created_at: string;
+}
+
+export interface FormatBenchmarkItem {
+  deliverable_format: string;
+  platform: string;
+  total_posts: number;
+  share_of_volume_pct: number;
+  avg_likes: number;
+  avg_comments: number;
+  avg_shares: number;
+  avg_reach: number;
+  avg_views: number;
+  avg_engagement_rate: number;
+  top_hooks: string[];
+  is_dominant_format: boolean;
+}
+
+export interface WinningOutlierPost {
+  id: string;
+  platform: string;
+  external_post_id: string;
+  deliverable_format: string;
+  published_at?: string | null;
+  media_url?: string | null;
+  permalink?: string | null;
+  caption_snippet: string;
+  extracted_hook: string;
+  hook_archetype: string;
+  likes: number;
+  comments: number;
+  reach: number;
+  views: number;
+  engagement_rate: number;
+  outlier_multiplier: number;
+}
+
+export interface ClientAnalyticsBenchmarks {
+  client_id: string;
+  client_name: string;
+  data_sufficiency: "cold_start" | "sparse" | "sufficient";
+  total_posts_analyzed: number;
+  date_range_days: number;
+  earliest_post_date?: string | null;
+  latest_post_date?: string | null;
+  baseline_engagement_rate: number;
+  baseline_avg_reach: number;
+  baseline_avg_views: number;
+  dominant_winning_format: string;
+  outlier_multiplier_ceiling: number;
+  format_benchmarks: FormatBenchmarkItem[];
+  top_winning_outliers: WinningOutlierPost[];
+  winning_hooks_and_angles: string[];
+  underperforming_patterns: string[];
+  recommended_format_mix: Record<string, number>;
+  campaign_studio_synced: boolean;
+}
+
+export interface BackfillResponse {
+  success: boolean;
+  client_id: string;
+  posts_ingested: number;
+  posts_updated: number;
+  total_historical_posts: number;
+  top_outliers_identified: number;
+  dominant_format: string;
+  baseline_engagement_rate: number;
+  message: string;
+}
+
+export const analyticsApi = {
+  backfill: (agencyId: string, clientId: string, params?: { limit?: number; days?: number }, token?: string) =>
+    apiFetch<BackfillResponse>(`/agencies/${agencyId}/clients/${clientId}/analytics/backfill`, {
+      method: "POST",
+      body: params || { limit: 100, days: 180 },
+      token,
+    }),
+
+  getBenchmarks: (agencyId: string, clientId: string, token?: string) =>
+    apiFetch<ClientAnalyticsBenchmarks>(`/agencies/${agencyId}/clients/${clientId}/analytics/benchmarks`, {
+      token,
+    }),
+
+  getHistoricalPosts: (
+    agencyId: string,
+    clientId: string,
+    params?: {
+      format?: string;
+      platform?: string;
+      is_outlier?: boolean;
+      sort_by?: string;
+      limit?: number;
+      offset?: number;
+    },
+    token?: string
+  ) => {
+    const q = new URLSearchParams();
+    if (params?.format) q.set("format", params.format);
+    if (params?.platform) q.set("platform", params.platform);
+    if (params?.is_outlier !== undefined) q.set("is_outlier", String(params.is_outlier));
+    if (params?.sort_by) q.set("sort_by", params.sort_by);
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.offset) q.set("offset", String(params.offset));
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return apiFetch<HistoricalPostItem[]>(`/agencies/${agencyId}/clients/${clientId}/analytics/historical-posts${qs}`, {
+      token,
+    });
+  },
+};
+

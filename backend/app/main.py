@@ -18,6 +18,7 @@ from app.core.database import async_engine, Base, AsyncSessionLocal
 from app.services.scheduler_coordinator import run_scheduler_worker
 from app.routers import (
     agencies,
+    analytics,
     approvals,
     auth,
     campaigns,
@@ -111,6 +112,7 @@ app.include_router(deliverables.router)
 app.include_router(portal.router)
 app.include_router(social.router)
 app.include_router(publishing.router)
+app.include_router(analytics.router)
 app.include_router(engagement.router)
 app.include_router(operational_workflows.router)
 

@@ -466,7 +466,7 @@ async def invoke_structured_llm(
                         max_completion_tokens=max_tokens or 8192,
                         top_p=0.95,
                         timeout=effective_timeout,
-                        reasoning_budget=1024,
+                        model_kwargs={"reasoning_budget": 1024},
                     )
                 else:
                     fast_client = get_llm(

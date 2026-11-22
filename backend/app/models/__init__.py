@@ -54,3 +54,4 @@ from app.models.social_comment import (  # noqa: F401
     CommentSentiment,
     EngagementStatus,
 )
+from app.models.historical_post import ClientHistoricalPost  # noqa: F401

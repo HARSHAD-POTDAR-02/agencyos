@@ -235,3 +235,68 @@ def detect_audience_fatigue_signals(
 
     return signals
 
+
+async def get_client_historical_posts(
+    client_id: uuid.UUID,
+    db: AsyncSession,
+    limit: int = 100,
+) -> list[Any]:
+    """Retrieve ingested historical social posts for client."""
+    from app.models.historical_post import ClientHistoricalPost
+    stmt = (
+        select(ClientHistoricalPost)
+        .where(ClientHistoricalPost.client_id == client_id)
+        .order_by(desc(ClientHistoricalPost.published_at))
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def calculate_historical_posts_metrics(
+    posts: list[Any],
+) -> list[FormatPerformanceSummary]:
+    """Calculate deterministic statistical aggregates from ClientHistoricalPost entities."""
+    if not posts:
+        return []
+    groups: dict[tuple[str, str], list[Any]] = defaultdict(list)
+    for p in posts:
+        fmt = (getattr(p, "deliverable_format", None) or "single_image").lower()
+        plat = (getattr(p, "platform", None) or "instagram").lower()
+        groups[(fmt, plat)].append(p)
+
+    summaries: list[FormatPerformanceSummary] = []
+    for (fmt, plat), items in groups.items():
+        total = len(items)
+        views = [p.views_count or 0 for p in items]
+        likes = [p.likes_count or 0 for p in items]
+        comments = [p.comments_count or 0 for p in items]
+        shares = [p.shares_count or 0 for p in items]
+        er_rates = [float(p.engagement_rate or 0.0) for p in items]
+
+        avg_views = sum(views) / total if total > 0 else 0.0
+        avg_likes = sum(likes) / total if total > 0 else 0.0
+        avg_comments = sum(comments) / total if total > 0 else 0.0
+        avg_shares = sum(shares) / total if total > 0 else 0.0
+        avg_er = sum(er_rates) / total if total > 0 else 0.0
+
+        sorted_items = sorted(items, key=lambda x: (x.engagement_rate or 0.0, x.likes_count or 0), reverse=True)
+        top_hooks = [p.extracted_hook for p in sorted_items[:3] if getattr(p, "extracted_hook", None)]
+
+        summaries.append(
+            FormatPerformanceSummary(
+                deliverable_type=fmt,
+                platform=plat,
+                total_published=total,
+                avg_views=round(avg_views, 1),
+                avg_likes=round(avg_likes, 1),
+                avg_comments=round(avg_comments, 1),
+                avg_shares=round(avg_shares, 1),
+                avg_engagement_rate=round(avg_er, 2),
+                top_performing_angles=top_hooks,
+            )
+        )
+
+    return sorted(summaries, key=lambda s: s.total_published, reverse=True)
+
+

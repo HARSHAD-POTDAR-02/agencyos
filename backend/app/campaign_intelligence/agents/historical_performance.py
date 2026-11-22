@@ -153,20 +153,41 @@ class HistoricalPerformanceAgent:
         """
         Execute deterministic historical performance analysis and strategic interpretation.
         """
-        # 1. Deterministic database retrieval
-        deliverables = await get_client_published_deliverables(
+        # 1. Check ingested client historical social posts (Meta/IG/FB)
+        from app.campaign_intelligence.tools.performance_tools import (
+            calculate_historical_posts_metrics,
+            get_client_historical_posts,
+        )
+        historical_posts = await get_client_historical_posts(
             client_id=brief.client_id,
-            agency_id=brief.agency_id,
             db=db,
-            limit=50,
+            limit=100,
         )
 
-        total_posts = len(deliverables)
+        total_posts = 0
         live_ig_used = False
+        historical_db_used = False
         format_summaries: list[FormatPerformanceSummary] = []
         fatigue_signals: list[AudienceFatigueSignal] = []
 
-        # 2. If 0 internal deliverables, check connected Instagram account
+        if historical_posts:
+            total_posts = len(historical_posts)
+            format_summaries = calculate_historical_posts_metrics(historical_posts)
+            historical_db_used = True
+        else:
+            # Fallback to internal AgencyOS published deliverables
+            deliverables = await get_client_published_deliverables(
+                client_id=brief.client_id,
+                agency_id=brief.agency_id,
+                db=db,
+                limit=50,
+            )
+            total_posts = len(deliverables)
+            if total_posts > 0:
+                format_summaries = calculate_format_performance_metrics(deliverables)
+                fatigue_signals = detect_audience_fatigue_signals(deliverables)
+
+        # 2. If 0 posts found in DB, check connected Instagram account on the fly
         if total_posts == 0:
             try:
                 from app.models.client_social_account import ClientSocialAccount
@@ -213,11 +234,6 @@ class HistoricalPerformanceAgent:
             data_sufficiency = DataSufficiency.sparse
         else:
             data_sufficiency = DataSufficiency.sufficient
-
-        # 4. If internal deliverables were found, calculate standard metrics and fatigue signals
-        if not live_ig_used and total_posts > 0:
-            format_summaries = calculate_format_performance_metrics(deliverables)
-            fatigue_signals = detect_audience_fatigue_signals(deliverables)
 
         # 5. Handle Cold Start scenario (Zero Fabrication)
         if data_sufficiency == DataSufficiency.cold_start:
@@ -297,7 +313,7 @@ Interpret the following calculated performance statistics for client '{brief.cli
 ### DETERMINISTIC STATISTICAL METRICS (Calculated by SQL/Python)
 - Total Historical Posts Analyzed: {total_posts}
 - Data Sufficiency Category: {data_sufficiency.value}
-- Data Source: {'Live Instagram Sync' if live_ig_used else 'Client Deliverables Database'}
+- Data Source: {'Ingested Social History (Meta Graph API)' if historical_db_used else ('Live Instagram Sync' if live_ig_used else 'Client Deliverables Database')}
 
 Format Performance Breakdowns:
 {summaries_str}
