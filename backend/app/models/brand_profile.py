@@ -38,6 +38,7 @@ class BrandProfile(Base):
     content_pillars: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     goals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     website_crawl_cache: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    taste_memory: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

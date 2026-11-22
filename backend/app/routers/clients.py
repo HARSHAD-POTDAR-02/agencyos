@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -424,4 +425,61 @@ async def invite_client_reviewer(
         full_name=user.full_name,
         created_at=reviewer.created_at,
     )
+
+
+class TasteRuleCreate(BaseModel):
+    category: str = "do"
+    rule: str
+    reason: str = ""
+
+
+@router.get("/{client_id}/taste-memory", response_model=list[dict])
+async def get_client_taste_memory_endpoint(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Retrieve captured brand taste rules (dos, don'ts, styling rules) for a client."""
+    await get_client_for_agency(client_id, agency_id, db)
+    from app.services.taste_capture_service import get_client_taste_memory
+    return await get_client_taste_memory(client_id, db)
+
+
+@router.post("/{client_id}/taste-memory", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def add_client_taste_rule_endpoint(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: TasteRuleCreate,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Manually add a brand taste rule (do, dont, style, pacing, tone) for a client."""
+    await get_client_for_agency(client_id, agency_id, db)
+    from app.services.taste_capture_service import add_manual_taste_rule
+    return await add_manual_taste_rule(
+        client_id=client_id,
+        category=payload.category,
+        rule=payload.rule,
+        reason=payload.reason,
+        db=db,
+    )
+
+
+@router.delete("/{client_id}/taste-memory/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_client_taste_rule_endpoint(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    rule_id: str,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Delete a captured brand taste rule."""
+    await get_client_for_agency(client_id, agency_id, db)
+    from app.services.taste_capture_service import delete_taste_rule
+    deleted = await delete_taste_rule(client_id, rule_id, db)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Taste rule not found.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 

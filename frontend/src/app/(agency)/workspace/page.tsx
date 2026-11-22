@@ -31,11 +31,16 @@ import {
   X,
   Eye,
   SlidersHorizontal,
+  Lock,
 } from "lucide-react";
 
 interface TaskItem {
   id: string;
-  deliverable_id: string;
+  deliverable_id?: string | null;
+  agency_id?: string;
+  is_operational?: boolean;
+  is_locked?: boolean;
+  locked_reason?: string | null;
   title: string;
   task_type: string | null;
   assignee_id: string | null;
@@ -165,6 +170,16 @@ export default function EmployeeWorkspacePage() {
   const awaitingReview = useMemo(() => tasks.filter((t) => t.status === "internal_review"), [tasks]);
   const completed = useMemo(() => tasks.filter((t) => ["approved", "done"].includes(t.status)), [tasks]);
 
+  const STAGE_PILLS = [
+    { id: "all", label: "All Stages", icon: Layers },
+    { id: "script", label: "Scriptwriting", icon: PenTool },
+    { id: "edit", label: "Video Editing", icon: Scissors },
+    { id: "design", label: "Graphic Design", icon: Sparkles },
+    { id: "shoot", label: "Shooting", icon: Film },
+    { id: "qa", label: "QA & Review", icon: ShieldCheck },
+    { id: "operational", label: "Operational Tasks", icon: Briefcase },
+  ];
+
   // Filtering based on active tab and search
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
@@ -179,8 +194,16 @@ export default function EmployeeWorkspacePage() {
       }
 
       if (selectedTaskType !== "all") {
-        const type = (t.task_type || "").toLowerCase();
-        if (!type.includes(selectedTaskType)) return false;
+        if (selectedTaskType === "operational") {
+          if (!t.is_operational) return false;
+        } else {
+          const type = (t.task_type || "").toLowerCase();
+          if (selectedTaskType === "qa") {
+            if (!type.includes("review") && !type.includes("qa") && !type.includes("quality")) return false;
+          } else {
+            if (!type.includes(selectedTaskType)) return false;
+          }
+        }
       }
 
       if (searchQuery.trim()) {
@@ -197,7 +220,15 @@ export default function EmployeeWorkspacePage() {
     });
   }, [tasks, activeTab, selectedTaskType, searchQuery]);
 
-  const getTaskTypeBadge = (taskType: string | null) => {
+  const getTaskTypeBadge = (taskType: string | null, isOperational?: boolean) => {
+    if (isOperational) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/20">
+          <Briefcase className="w-3 h-3 text-[#38BDF8]" />
+          <span>Operational</span>
+        </span>
+      );
+    }
     const type = (taskType || "").toLowerCase();
     if (type.includes("script") || type.includes("copy")) {
       return (
@@ -220,6 +251,14 @@ export default function EmployeeWorkspacePage() {
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/20">
           <Film className="w-3 h-3 text-[#E5AA58]" />
           <span>Footage Shoot</span>
+        </span>
+      );
+    }
+    if (type.includes("design") || type.includes("graphics")) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-[#F472B6]/10 text-[#F472B6] border border-[#F472B6]/20">
+          <Sparkles className="w-3 h-3 text-[#F472B6]" />
+          <span>Design</span>
         </span>
       );
     }
@@ -668,6 +707,28 @@ export default function EmployeeWorkspacePage() {
         </div>
       </div>
 
+      {/* ── Stage Filter Pills (Interactive Stage Filter Strip) ── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+        {STAGE_PILLS.map((pill) => {
+          const Icon = pill.icon;
+          const isSelected = selectedTaskType === pill.id;
+          return (
+            <button
+              key={pill.id}
+              onClick={() => setSelectedTaskType(pill.id)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+                isSelected
+                  ? "bg-[#A78BFA] text-[#101014] font-bold shadow-xs shadow-[#A78BFA]/20"
+                  : "bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.06]"
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-[#101014]" : "text-[#A3A0B0]"}`} />
+              <span>{pill.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Task Content */}
       {loading ? (
         <div className="surface-card rounded-2xl border border-white/[0.08] py-24 text-center space-y-3">
@@ -752,12 +813,19 @@ export default function EmployeeWorkspacePage() {
 
                       {/* Task Title */}
                       <td className="py-2 px-4 min-w-[240px]">
-                        <Link
-                          href={`/tasks/${t.id}`}
-                          className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors truncate block max-w-sm"
-                        >
-                          {t.title}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          {t.is_locked && (
+                            <span title={t.locked_reason || "Locked by pipeline dependency"} className="shrink-0">
+                              <Lock className="w-3.5 h-3.5 text-[#E5AA58]" />
+                            </span>
+                          )}
+                          <Link
+                            href={`/tasks/${t.id}`}
+                            className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors truncate block max-w-sm"
+                          >
+                            {t.title}
+                          </Link>
+                        </div>
                       </td>
 
                       {/* Client & Campaign */}
@@ -767,14 +835,14 @@ export default function EmployeeWorkspacePage() {
                             {getClientInitials(t.client_name)}
                           </span>
                           <span className="truncate max-w-[140px] text-[#F2F0F7] font-medium text-[11px]">
-                            {t.client_name || "Client"}
+                            {t.client_name || (t.is_operational ? "General Ops" : "Client")}
                           </span>
                         </div>
                       </td>
 
                       {/* Specialty */}
                       <td className="py-2 px-4 whitespace-nowrap">
-                        {getTaskTypeBadge(t.task_type)}
+                        {getTaskTypeBadge(t.task_type, t.is_operational)}
                       </td>
 
                       {/* Due Date */}
@@ -807,19 +875,28 @@ export default function EmployeeWorkspacePage() {
 
                       {/* Action Button */}
                       <td className="py-2 px-4 text-right whitespace-nowrap">
-                        <Link
-                          href={`/tasks/${t.id}`}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shadow-xs ${
-                            isRevision
-                              ? "bg-[#E5AA58] hover:bg-[#f0b560] text-[#101014]"
-                              : isInReview
-                              ? "bg-[#69A9D8] hover:bg-[#7bb3dc] text-[#101014]"
-                              : "bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014]"
-                          }`}
-                        >
-                          <span>{isRevision ? "Address Feedback" : "Workbench"}</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </Link>
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          <Link
+                            href={`/tasks/${t.id}`}
+                            className="p-1.5 rounded-lg bg-[#20202A] hover:bg-[#2a2a38] text-[#A78BFA] border border-white/[0.08] transition-colors"
+                            title="Quick AI Copilot"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                          </Link>
+                          <Link
+                            href={`/tasks/${t.id}`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shadow-xs ${
+                              isRevision
+                                ? "bg-[#E5AA58] hover:bg-[#f0b560] text-[#101014]"
+                                : isInReview
+                                ? "bg-[#69A9D8] hover:bg-[#7bb3dc] text-[#101014]"
+                                : "bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014]"
+                            }`}
+                          >
+                            <span>{isRevision ? "Address Feedback" : "Workbench"}</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -846,8 +923,14 @@ export default function EmployeeWorkspacePage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {getTaskTypeBadge(t.task_type)}
+                      {getTaskTypeBadge(t.task_type, t.is_operational)}
                       {getPriorityBadge(t.priority)}
+                      {t.is_locked && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30">
+                          <Lock className="w-3 h-3 text-[#E5AA58]" />
+                          <span>Locked</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 text-xs text-[#A3A0B0]">
@@ -870,11 +953,11 @@ export default function EmployeeWorkspacePage() {
                       {getClientInitials(t.client_name)}
                     </div>
                     <span className="font-semibold text-[#F2F0F7] truncate max-w-[160px]">
-                      {t.client_name || "Client"}
+                      {t.client_name || (t.is_operational ? "General Operations" : "Client")}
                     </span>
                     <span className="text-white/[0.2]">&bull;</span>
                     <span className="truncate max-w-[200px] text-[#A3A0B0] font-mono">
-                      {t.campaign_title || "Campaign"}
+                      {t.campaign_title || (t.is_operational ? "Internal Workflow" : "Campaign")}
                     </span>
                   </div>
 
@@ -885,6 +968,14 @@ export default function EmployeeWorkspacePage() {
                   >
                     {t.title}
                   </Link>
+
+                  {/* Dependency Lock Notice */}
+                  {t.is_locked && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-[#E5AA58]/10 border border-[#E5AA58]/20 text-[#E5AA58] text-[11px] font-mono">
+                      <Lock className="w-3.5 h-3.5 text-[#E5AA58] shrink-0" />
+                      <span className="truncate">Pipeline lock: {t.locked_reason || "Upstream stage in progress"}</span>
+                    </div>
+                  )}
 
                   {/* Context Note preview */}
                   {t.notes && (
@@ -919,24 +1010,35 @@ export default function EmployeeWorkspacePage() {
                 </div>
 
                 {/* Card Bottom: Open Task Action */}
-                <div className="pt-3 mt-3 border-t border-white/[0.06] flex items-center justify-between">
+                <div className="pt-3 mt-3 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-[10px] font-mono text-[#A3A0B0] uppercase tracking-wider">
                     Status: <span className="text-[#F2F0F7] font-medium">{t.status.replace("_", " ")}</span>
                   </span>
 
-                  <Link
-                    href={`/tasks/${t.id}`}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-[0.98] ${
-                      isRevision
-                        ? "bg-[#E5AA58] hover:bg-[#f0b560] text-[#101014]"
-                        : isInReview
-                        ? "bg-[#69A9D8] hover:bg-[#7bb3dc] text-[#101014]"
-                        : "bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014]"
-                    }`}
-                  >
-                    <span>{isRevision ? "Address Feedback" : "Open Workbench"}</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/tasks/${t.id}`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-[#20202A] hover:bg-[#282836] text-[#A78BFA] border border-[#A78BFA]/30 transition-all shadow-xs"
+                      title="Open AI Copilot"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                      <span>AI Copilot</span>
+                    </Link>
+
+                    <Link
+                      href={`/tasks/${t.id}`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs active:scale-[0.98] ${
+                        isRevision
+                          ? "bg-[#E5AA58] hover:bg-[#f0b560] text-[#101014]"
+                          : isInReview
+                          ? "bg-[#69A9D8] hover:bg-[#7bb3dc] text-[#101014]"
+                          : "bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014]"
+                      }`}
+                    >
+                      <span>{isRevision ? "Address Feedback" : "Open Workbench"}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             );

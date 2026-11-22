@@ -540,6 +540,19 @@ async def submit_public_review_decision(
         )
         db.add(audit_comment)
 
+        # Cortex Brand Taste Capture from Client Feedback
+        if payload.feedback_notes:
+            try:
+                from app.services.taste_capture_service import capture_cortex_taste_memory
+                await capture_cortex_taste_memory(
+                    client_id=client.id,
+                    feedback_text=payload.feedback_notes,
+                    source=f"client_review_room:{reviewer_name}",
+                    db=db,
+                )
+            except Exception as taste_exc:
+                logger.warning(f"Client taste capture failed gracefully: {taste_exc}")
+
     await db.commit()
 
     return await get_public_review_room(token, db)

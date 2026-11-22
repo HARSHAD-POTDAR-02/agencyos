@@ -30,6 +30,8 @@ class TaskChecklistItem(BaseModel):
 class TaskCreate(BaseModel):
     title: str
     deliverable_id: uuid.UUID | None = None
+    client_id: uuid.UUID | None = None
+    is_operational: bool = False
     task_type: str | None = None
     assignee_id: uuid.UUID | None = None
     status: TaskStatus = TaskStatus.todo
@@ -59,7 +61,7 @@ class TaskContentVersionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    deliverable_id: uuid.UUID
+    deliverable_id: uuid.UUID | None = None
     task_id: uuid.UUID | None = None
     version_number: int
     storage_key: str
@@ -94,7 +96,9 @@ class TaskOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    deliverable_id: uuid.UUID
+    deliverable_id: uuid.UUID | None = None
+    agency_id: uuid.UUID | None = None
+    is_operational: bool = False
     title: str
     task_type: str | None
     assignee_id: uuid.UUID | None
@@ -148,6 +152,7 @@ class TaskDetailOut(TaskOut):
     # Submissions & Approvals History
     submissions: list[TaskContentVersionOut] = []
     review_comments: list[CommentOut] = []
+    task_comments: list[CommentOut] = []
 
 
 class TaskStudioSyncRequest(BaseModel):

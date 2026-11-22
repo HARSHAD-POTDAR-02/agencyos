@@ -204,6 +204,15 @@ export const clientApi = {
 
   quota: (agencyId: string, clientId: string, month: number, year: number, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients/${clientId}/quota?period_month=${month}&period_year=${year}`, { token }),
+
+  getTasteMemory: (agencyId: string, clientId: string, token: string) =>
+    apiFetch<any[]>(`/agencies/${agencyId}/clients/${clientId}/taste-memory`, { token }),
+
+  addTasteRule: (agencyId: string, clientId: string, data: { category: string; rule: string; reason?: string }, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/clients/${clientId}/taste-memory`, { method: "POST", body: data, token }),
+
+  deleteTasteRule: (agencyId: string, clientId: string, ruleId: string, token: string) =>
+    apiFetch<void>(`/agencies/${agencyId}/clients/${clientId}/taste-memory/${ruleId}`, { method: "DELETE", token }),
 };
 
 /* ── Brand Profile endpoints ── */
@@ -568,6 +577,19 @@ export const taskApi = {
       deliverable_id?: string;
       message: string;
     }>(`/agencies/${agencyId}/tasks/${taskId}/sync-studio`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+  listComments: (agencyId: string, taskId: string, token: string) =>
+    apiFetch<any[]>(`/agencies/${agencyId}/tasks/${taskId}/comments`, { token }),
+  createComment: (
+    agencyId: string,
+    taskId: string,
+    data: { message: string; is_internal?: boolean; content_version_id?: string | null },
+    token: string
+  ) =>
+    apiFetch<any>(`/agencies/${agencyId}/tasks/${taskId}/comments`, {
       method: "POST",
       body: data,
       token,

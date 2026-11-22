@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,12 +36,25 @@ class Task(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    deliverable_id: Mapped[uuid.UUID] = mapped_column(
+    agency_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("deliverables.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("agencies.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
+    deliverable_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("deliverables.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("clients.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    is_operational: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     task_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -80,8 +93,13 @@ class Task(Base):
     )
 
     # Relationships
-    deliverable: Mapped["Deliverable"] = relationship("Deliverable", back_populates="tasks")  # noqa: F821
-    assignee: Mapped["User | None"] = relationship("User")  # noqa: F821
+    agency: Mapped["Agency"] = relationship("Agency", lazy="selectin")  # noqa: F821
+    deliverable: Mapped["Deliverable | None"] = relationship("Deliverable", back_populates="tasks", lazy="selectin")  # noqa: F821
+    client: Mapped["Client | None"] = relationship("Client", lazy="selectin")  # noqa: F821
+    assignee: Mapped["User | None"] = relationship("User", lazy="selectin")  # noqa: F821
     content_versions: Mapped[list["ContentVersion"]] = relationship(  # noqa: F821
         "ContentVersion", back_populates="task"
+    )
+    comments: Mapped[list["DeliverableComment"]] = relationship(  # noqa: F821
+        "DeliverableComment", back_populates="task", cascade="all, delete-orphan", lazy="selectin"
     )

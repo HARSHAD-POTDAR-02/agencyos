@@ -16,10 +16,10 @@ class ContentVersion(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    deliverable_id: Mapped[uuid.UUID] = mapped_column(
+    deliverable_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("deliverables.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     task_id: Mapped[uuid.UUID | None] = mapped_column(

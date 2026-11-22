@@ -53,6 +53,7 @@ import {
   CheckCheck,
   AlertCircle,
   Share2,
+  MessageSquare,
 } from "lucide-react";
 
 interface SubmissionVersion {
@@ -95,7 +96,9 @@ interface AgencyMember {
 
 interface TaskDetail {
   id: string;
-  deliverable_id: string;
+  deliverable_id?: string | null;
+  agency_id?: string;
+  is_operational?: boolean;
   title: string;
   task_type: string | null;
   assignee_id: string | null;
@@ -124,14 +127,15 @@ interface TaskDetail {
   campaign_id?: string;
   campaign_title?: string;
   campaign_objective?: string;
-  deliverable_title: string;
-  deliverable_type: string;
-  platform: string;
+  deliverable_title?: string | null;
+  deliverable_type?: string | null;
+  platform?: string | null;
   brand_voice?: string | null;
   target_audience: string[];
   storyboard_text?: string | null;
   submissions: SubmissionVersion[];
   review_comments: ReviewComment[];
+  task_comments?: ReviewComment[];
   script_blocks?: ScriptBlock[];
   checklists?: TaskChecklistItem[];
   target_duration_seconds?: number;
@@ -359,6 +363,9 @@ function TaskWorkspaceContent() {
   const [newChecklistStage, setNewChecklistStage] = useState<"scripting" | "editing">("scripting");
   const [generatingReviewLink, setGeneratingReviewLink] = useState(false);
   const [copiedReviewLink, setCopiedReviewLink] = useState(false);
+  const [taskComments, setTaskComments] = useState<ReviewComment[]>([]);
+  const [newCommentMessage, setNewCommentMessage] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
   const teleprompterRef = useRef<HTMLDivElement>(null);
 
   const loadTask = useCallback(async () => {
@@ -375,6 +382,17 @@ function TaskWorkspaceContent() {
 
       const data = (await taskApi.get(effectiveAgencyId, taskId, token)) as TaskDetail;
       setTask(data);
+
+      if (data.task_comments) {
+        setTaskComments(data.task_comments);
+      } else {
+        try {
+          const comms = (await taskApi.listComments(effectiveAgencyId, taskId, token)) as ReviewComment[];
+          setTaskComments(comms || []);
+        } catch (e) {
+          // ignore
+        }
+      }
 
       if (data.script_blocks && data.script_blocks.length > 0) {
         setScriptBlocks(data.script_blocks);
@@ -552,6 +570,33 @@ function TaskWorkspaceContent() {
       await taskApi.update(effectiveAgencyId, task.id, { checklists: updated }, token);
     } catch (err) {
       console.error("Failed to add checklist item", err);
+    }
+  };
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentMessage.trim() || !effectiveAgencyId || !task || !token) return;
+    setPostingComment(true);
+    try {
+      const created = await taskApi.createComment(
+        effectiveAgencyId,
+        task.id,
+        { message: newCommentMessage.trim(), is_internal: true },
+        token
+      );
+      setTaskComments((prev) => [...prev, created]);
+      setNewCommentMessage("");
+      setNotification({
+        type: "success",
+        text: "Discussion directive posted to this task thread.",
+      });
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        text: err?.message || "Failed to post task comment.",
+      });
+    } finally {
+      setPostingComment(false);
     }
   };
 
@@ -2355,6 +2400,94 @@ function TaskWorkspaceContent() {
                 </button>
               </form>
             </div>
+
+            {/* ── Track 5: Task-Scoped Discussion & Revision Thread ── */}
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-[#A78BFA]/10 text-[#A78BFA] flex items-center justify-center border border-[#A78BFA]/30">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider flex items-center gap-2">
+                      <span>Task-Scoped Discussion & Revision Notes</span>
+                      <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30">
+                        {taskComments.length}
+                      </span>
+                    </h3>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-[#A3A0B0]/70 hidden sm:inline-block">
+                  Scoped to #{task.id.slice(0, 8)}
+                </span>
+              </div>
+
+              {/* Comments Thread List */}
+              <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                {taskComments.length === 0 ? (
+                  <div className="p-6 text-center rounded-xl bg-[#0F0F14] border border-dashed border-white/[0.08] space-y-1">
+                    <p className="text-xs font-medium text-[#A3A0B0]">No task-scoped discussion notes yet.</p>
+                    <p className="text-[10px] text-[#71717A]">
+                      Direct revisions, director notes, and specialist feedback posted here are isolated strictly to this task.
+                    </p>
+                  </div>
+                ) : (
+                  taskComments.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-3.5 rounded-xl bg-[#0F0F14] border border-white/[0.06] space-y-1.5 transition-all hover:border-white/[0.1]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-[#20202A] text-[#A78BFA] text-[10px] font-mono font-bold flex items-center justify-center border border-white/[0.08]">
+                            {getMonogram(c.author_name)}
+                          </span>
+                          <span className="text-xs font-semibold text-[#F2F0F7]">
+                            {c.author_name || "Specialist"}
+                          </span>
+                          {c.is_internal && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-white/[0.06] text-[#A3A0B0] border border-white/[0.06]">
+                              Internal Note
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-[#71717A]">
+                          {new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#A3A0B0] leading-relaxed whitespace-pre-wrap pl-8">
+                        {c.message}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Real-time Comment Input Form */}
+              <form onSubmit={handlePostComment} className="pt-2 border-t border-white/[0.06] flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Post directive, revision request, or question for this task..."
+                  value={newCommentMessage}
+                  onChange={(e) => setNewCommentMessage(e.target.value)}
+                  className="flex-1 bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={postingComment || !newCommentMessage.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] disabled:opacity-40 text-[#101014] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                >
+                  {postingComment ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Post Note</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
 
           {/* ── Right Column (Sticky Contextual Inspector, 4 cols) ── */}
@@ -2492,25 +2625,25 @@ function TaskWorkspaceContent() {
               </div>
             </div>
 
-            {/* Deliverable Association Card */}
+            {/* Deliverable Association Card / Operational Task Card */}
             <div className="surface-card rounded-2xl border border-white/[0.08] p-4 space-y-3 shadow-xs">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
                 <span className="text-[11px] font-mono uppercase text-[#A3A0B0] font-medium flex items-center gap-1.5">
                   <Film className="w-3 h-3 text-[#A78BFA]" />
-                  <span>Deliverable Output</span>
+                  <span>{task.is_operational ? "Operational Workflow" : "Deliverable Output"}</span>
                 </span>
                 <span className="text-[10px] font-mono text-[#71717A] uppercase">
-                  {task.platform}
+                  {task.is_operational ? "General Agency Ops" : task.platform || "Deliverable"}
                 </span>
               </div>
 
               <div className="space-y-2">
                 <h4 className="text-xs font-semibold text-[#F2F0F7] leading-snug">
-                  {task.deliverable_title}
+                  {task.deliverable_title || "Standalone Operational Activity"}
                 </h4>
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#101014] px-2 py-0.5 rounded border border-white/[0.06]">
-                    {task.deliverable_type}
+                    {task.deliverable_type || "Operational"}
                   </span>
                   {task.deliverable_id && (
                     <Link

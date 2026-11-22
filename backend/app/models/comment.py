@@ -16,10 +16,16 @@ class DeliverableComment(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    deliverable_id: Mapped[uuid.UUID] = mapped_column(
+    deliverable_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("deliverables.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
     content_version_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -42,7 +48,8 @@ class DeliverableComment(Base):
     )
 
     # Relationships
-    deliverable: Mapped["Deliverable"] = relationship("Deliverable", back_populates="comments")  # noqa: F821
+    deliverable: Mapped["Deliverable | None"] = relationship("Deliverable", back_populates="comments")  # noqa: F821
+    task: Mapped["Task | None"] = relationship("Task", back_populates="comments", lazy="selectin")  # noqa: F821
     content_version: Mapped["ContentVersion | None"] = relationship("ContentVersion")  # noqa: F821
     author: Mapped["User | None"] = relationship("User", lazy="selectin")  # noqa: F821
 

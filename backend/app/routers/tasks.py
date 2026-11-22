@@ -22,7 +22,7 @@ from app.models.studio_artifact import StudioArtifactVersion, StudioExport
 from app.models.task import Task, TaskPriority, TaskStatus
 from app.models.user import Membership, RoleEnum, User
 from app.core.llm import invoke_structured_llm
-from app.schemas.comment import CommentOut
+from app.schemas.comment import CommentCreate, CommentOut
 from app.schemas.task import (
     TaskAIAssistRequest,
     TaskAIAssistResponse,
@@ -368,6 +368,7 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
         .options(
             joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client),
             joinedload(Task.assignee),
+            joinedload(Task.client),
         )
         .where(Task.id == task_id)
     )
@@ -377,9 +378,15 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
 
     deliverable = task.deliverable
-    campaign = deliverable.campaign
-    client = campaign.client
-    if client.agency_id != agency_id:
+    campaign = deliverable.campaign if deliverable else None
+    client = (campaign.client if campaign else None) or task.client
+    if not client and task.client_id:
+        cli_stmt = select(Client).where(Client.id == task.client_id)
+        client = await db.scalar(cli_stmt)
+
+    if task.agency_id and task.agency_id != agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this task.")
+    if client and client.agency_id != agency_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this task.")
 
     # Get assignee role in this agency if assigned
@@ -398,15 +405,23 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
             )
 
     # Submissions (ContentVersions scoped to this task)
-    cv_stmt = (
-        select(ContentVersion)
-        .options(selectinload(ContentVersion.approval))
-        .where(
-            ContentVersion.deliverable_id == deliverable.id,
-            ContentVersion.task_id == task.id,
+    if deliverable:
+        cv_stmt = (
+            select(ContentVersion)
+            .options(selectinload(ContentVersion.approval))
+            .where(
+                ContentVersion.deliverable_id == deliverable.id,
+                ContentVersion.task_id == task.id,
+            )
+            .order_by(ContentVersion.version_number.asc())
         )
-        .order_by(ContentVersion.version_number.asc())
-    )
+    else:
+        cv_stmt = (
+            select(ContentVersion)
+            .options(selectinload(ContentVersion.approval))
+            .where(ContentVersion.task_id == task.id)
+            .order_by(ContentVersion.version_number.asc())
+        )
     cv_res = await db.execute(cv_stmt)
     versions = cv_res.scalars().all()
 
@@ -423,45 +438,77 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
             item.approval_notes = cv.approval.comment
         submissions.append(item)
 
-    # Review Comments
-    comm_stmt = (
+    # Deliverable Review Comments
+    review_comments = []
+    if deliverable:
+        comm_stmt = (
+            select(DeliverableComment)
+            .options(joinedload(DeliverableComment.author))
+            .where(DeliverableComment.deliverable_id == deliverable.id)
+            .order_by(DeliverableComment.created_at.asc())
+        )
+        comm_res = await db.execute(comm_stmt)
+        comments = comm_res.scalars().all()
+        review_comments = [
+            CommentOut(
+                id=c.id,
+                deliverable_id=c.deliverable_id,
+                task_id=c.task_id,
+                content_version_id=c.content_version_id,
+                author_id=c.author_id,
+                author_name=c.author_name or (c.author.full_name if c.author else "Team"),
+                author_role=None,
+                guest_author_name=c.guest_author_name,
+                timestamp_seconds=c.timestamp_seconds,
+                message=c.message,
+                is_internal=c.is_internal,
+                created_at=c.created_at,
+            )
+            for c in comments
+        ]
+
+    # Task Scoped Discussion Comments
+    task_comm_stmt = (
         select(DeliverableComment)
         .options(joinedload(DeliverableComment.author))
-        .where(DeliverableComment.deliverable_id == deliverable.id)
+        .where(DeliverableComment.task_id == task.id)
         .order_by(DeliverableComment.created_at.asc())
     )
-    comm_res = await db.execute(comm_stmt)
-    comments = comm_res.scalars().all()
-
-    review_comments = [
+    task_comm_res = await db.execute(task_comm_stmt)
+    task_raw_comments = task_comm_res.scalars().all()
+    task_comments = [
         CommentOut(
             id=c.id,
             deliverable_id=c.deliverable_id,
+            task_id=c.task_id,
             content_version_id=c.content_version_id,
             author_id=c.author_id,
             author_name=c.author_name or (c.author.full_name if c.author else "Team"),
             author_role=None,
+            guest_author_name=c.guest_author_name,
+            timestamp_seconds=c.timestamp_seconds,
             message=c.message,
             is_internal=c.is_internal,
             created_at=c.created_at,
         )
-        for c in comments
+        for c in task_raw_comments
     ]
 
     # Audience & Brand Voice
     target_aud: list[str] = []
-    if hasattr(campaign, "target_audience") and getattr(campaign, "target_audience"):
-        val = getattr(campaign, "target_audience")
-        if isinstance(val, list):
-            target_aud = [str(x) for x in val]
-        elif isinstance(val, str):
-            target_aud = [str(val)]
-    elif campaign.ai_plan_draft and isinstance(campaign.ai_plan_draft, dict):
-        val = campaign.ai_plan_draft.get("target_audience")
-        if isinstance(val, list):
-            target_aud = [str(x) for x in val]
-        elif isinstance(val, str):
-            target_aud = [str(val)]
+    if campaign:
+        if hasattr(campaign, "target_audience") and getattr(campaign, "target_audience"):
+            val = getattr(campaign, "target_audience")
+            if isinstance(val, list):
+                target_aud = [str(x) for x in val]
+            elif isinstance(val, str):
+                target_aud = [str(val)]
+        elif campaign.ai_plan_draft and isinstance(campaign.ai_plan_draft, dict):
+            val = campaign.ai_plan_draft.get("target_audience")
+            if isinstance(val, list):
+                target_aud = [str(x) for x in val]
+            elif isinstance(val, str):
+                target_aud = [str(val)]
 
     brand_voice = None
     if client:
@@ -472,7 +519,7 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
 
     # Storyboard text from Task notes or StudioExport
     storyboard_text = task.notes or ""
-    if not storyboard_text or len(storyboard_text) < 50:
+    if deliverable and campaign and (not storyboard_text or len(storyboard_text) < 50):
         exp_stmt = select(StudioExport).where(StudioExport.campaign_id == campaign.id)
         exp_res = await db.execute(exp_stmt)
         exports = exp_res.scalars().all()
@@ -492,19 +539,30 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
                 break
 
     # Siblings lock evaluation
-    sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
-    sib_res = await db.execute(sib_stmt)
-    siblings = sib_res.scalars().all()
-    is_locked, locked_reason = _check_task_lock_status(task, siblings)
+    if deliverable:
+        sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
+        sib_res = await db.execute(sib_stmt)
+        siblings = sib_res.scalars().all()
+        is_locked, locked_reason = _check_task_lock_status(task, siblings)
+    else:
+        is_locked = False
+        locked_reason = None
 
     # Script blocks & Checklists initialization if empty
     script_blocks = list(task.script_blocks or [])
-    if not script_blocks:
+    if not script_blocks and deliverable and campaign:
         script_blocks = _populate_starter_script_blocks(deliverable, campaign, storyboard_text)
 
     checklists = list(task.checklists or [])
     if not checklists:
-        checklists = [dict(c) for c in DEFAULT_SCRIPTING_CHECKLISTS]
+        if task.is_operational:
+            checklists = [
+                {"id": "chk-op-1", "text": "Scope & Requirements Defined", "completed": False, "stage": "operational"},
+                {"id": "chk-op-2", "text": "Action Items Executed & Documented", "completed": False, "stage": "operational"},
+                {"id": "chk-op-3", "text": "Client / Stakeholder Review Completed", "completed": False, "stage": "operational"},
+            ]
+        else:
+            checklists = [dict(c) for c in DEFAULT_SCRIPTING_CHECKLISTS]
 
     target_dur = task.target_duration_seconds or 30
     total_words, speaking_sec, hook_words, hook_warning = _compute_script_metrics(script_blocks, target_dur)
@@ -512,6 +570,8 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
     return TaskDetailOut(
         id=task.id,
         deliverable_id=task.deliverable_id,
+        agency_id=task.agency_id or agency_id,
+        is_operational=task.is_operational,
         title=task.title,
         task_type=task.task_type,
         assignee_id=task.assignee_id,
@@ -526,20 +586,21 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
         updated_at=task.updated_at,
         is_locked=is_locked,
         locked_reason=locked_reason,
-        client_id=client.id,
-        client_name=client.business_name,
-        campaign_id=campaign.id,
-        campaign_title=campaign.name,
-        campaign_objective=campaign.objective,
-        deliverable_title=deliverable.title,
-        deliverable_type=deliverable.deliverable_type,
-        platform=deliverable.platform,
+        client_id=client.id if client else None,
+        client_name=client.business_name if client else None,
+        campaign_id=campaign.id if campaign else None,
+        campaign_title=campaign.name if campaign else None,
+        campaign_objective=campaign.objective if campaign else None,
+        deliverable_title=deliverable.title if deliverable else ("Operational Workflow" if task.is_operational else None),
+        deliverable_type=deliverable.deliverable_type if deliverable else ("Operational" if task.is_operational else None),
+        platform=deliverable.platform if deliverable else None,
         brand_voice=brand_voice,
         target_audience=target_aud,
         storyboard_text=storyboard_text,
         reference_assets=[],
         submissions=submissions,
         review_comments=review_comments,
+        task_comments=task_comments,
         script_blocks=script_blocks,
         checklists=checklists,
         target_duration_seconds=target_dur,
@@ -577,10 +638,12 @@ async def create_task(
                 detail="Assignee does not belong to this agency.",
             )
 
+    task_data = payload.model_dump(exclude={"deliverable_id", "agency_id"})
     task = Task(
         id=uuid.uuid4(),
+        agency_id=agency_id,
         deliverable_id=deliverable_id,
-        **payload.model_dump(exclude={"deliverable_id"}),
+        **task_data,
     )
     db.add(task)
     await db.commit()
@@ -600,13 +663,25 @@ async def create_agency_task(
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> TaskOut:
-    """Create a task directly under an agency deliverable."""
-    if not payload.deliverable_id:
+    """Create a task directly under an agency (deliverable-backed or standalone operational)."""
+    if not payload.deliverable_id and not payload.is_operational:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="deliverable_id is required to create a task.",
+            detail="deliverable_id is required unless creating an operational task (is_operational=true).",
         )
-    await assert_deliverable_belongs_to_agency(payload.deliverable_id, agency_id, db)
+
+    if payload.deliverable_id:
+        await assert_deliverable_belongs_to_agency(payload.deliverable_id, agency_id, db)
+
+    if payload.client_id:
+        cli_exists = await db.scalar(
+            select(Client.id).where(Client.id == payload.client_id, Client.agency_id == agency_id)
+        )
+        if not cli_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specified client does not belong to this agency.",
+            )
 
     if payload.assignee_id is not None:
         m_stmt = select(Membership).where(
@@ -620,15 +695,19 @@ async def create_agency_task(
                 detail="Assignee does not belong to this agency.",
             )
 
-    task_data = payload.model_dump(exclude={"deliverable_id"})
+    task_data = payload.model_dump(exclude={"deliverable_id", "agency_id", "is_operational", "client_id"})
     task = Task(
         id=uuid.uuid4(),
+        agency_id=agency_id,
         deliverable_id=payload.deliverable_id,
+        client_id=payload.client_id,
+        is_operational=payload.is_operational,
         **task_data,
     )
     db.add(task)
     await db.commit()
-    await _sync_deliverable_status(payload.deliverable_id, db)
+    if payload.deliverable_id:
+        await _sync_deliverable_status(payload.deliverable_id, db)
     await db.refresh(task)
     return TaskOut.model_validate(task)
 
@@ -640,6 +719,8 @@ async def list_agency_tasks(
     assignee_id: uuid.UUID | None = Query(None),
     client_id: uuid.UUID | None = Query(None),
     deliverable_id: uuid.UUID | None = Query(None),
+    is_operational: bool | None = Query(None),
+    stage: str | None = Query(None),
     my_tasks: bool = Query(False),
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=500),
@@ -653,6 +734,8 @@ async def list_agency_tasks(
     - assignee_id
     - client_id
     - deliverable_id
+    - is_operational
+    - stage (scripting, editing, design, qa, operational)
     - my_tasks: filters by current logged-in user
     """
     query = (
@@ -666,11 +749,16 @@ async def list_agency_tasks(
             Client.business_name.label("cli_name"),
             User.full_name.label("assignee_name"),
         )
-        .join(Deliverable, Task.deliverable_id == Deliverable.id)
-        .join(Campaign, Deliverable.campaign_id == Campaign.id)
-        .join(Client, Campaign.client_id == Client.id)
+        .outerjoin(Deliverable, Task.deliverable_id == Deliverable.id)
+        .outerjoin(Campaign, Deliverable.campaign_id == Campaign.id)
+        .outerjoin(Client, or_(Task.client_id == Client.id, Campaign.client_id == Client.id))
         .outerjoin(User, Task.assignee_id == User.id)
-        .where(Client.agency_id == agency_id)
+        .where(
+            or_(
+                Task.agency_id == agency_id,
+                Client.agency_id == agency_id,
+            )
+        )
     )
 
     if my_tasks:
@@ -680,10 +768,25 @@ async def list_agency_tasks(
 
     if task_status is not None:
         query = query.where(Task.status == task_status)
+    if is_operational is not None:
+        query = query.where(Task.is_operational == is_operational)
     if client_id is not None:
-        query = query.where(Campaign.client_id == client_id)
+        query = query.where(or_(Task.client_id == client_id, Campaign.client_id == client_id))
     if deliverable_id is not None:
         query = query.where(Task.deliverable_id == deliverable_id)
+
+    if stage:
+        s = stage.lower().strip()
+        if s == "operational":
+            query = query.where(Task.is_operational == True)
+        elif s == "scripting":
+            query = query.where(or_(Task.task_type.ilike("%script%"), Task.task_type.ilike("%copy%"), Task.task_type.ilike("%writ%")))
+        elif s == "editing":
+            query = query.where(or_(Task.task_type.ilike("%edit%"), Task.task_type.ilike("%cut%"), Task.task_type.ilike("%film%")))
+        elif s == "design":
+            query = query.where(or_(Task.task_type.ilike("%design%"), Task.task_type.ilike("%graphic%")))
+        elif s == "qa":
+            query = query.where(or_(Task.task_type.ilike("%qa%"), Task.task_type.ilike("%review%"), Task.task_type.ilike("%check%")))
 
     query = query.order_by(Task.due_date.asc().nullslast(), Task.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -691,7 +794,7 @@ async def list_agency_tasks(
 
     # Pre-fetch sibling tasks for lock evaluation across loaded deliverables
     deliv_tasks_map: dict[uuid.UUID, list[Task]] = {}
-    deliv_ids = {r[0].deliverable_id for r in rows}
+    deliv_ids = {r[0].deliverable_id for r in rows if r[0].deliverable_id is not None}
     if deliv_ids:
         all_sibs_res = await db.execute(
             select(Task).where(Task.deliverable_id.in_(deliv_ids))
@@ -702,17 +805,21 @@ async def list_agency_tasks(
     out_list: list[TaskOut] = []
     for task, deliv_title, deliv_type, camp_id, camp_title, cli_id, cli_name, assignee_name in rows:
         out = TaskOut.model_validate(task)
-        out.deliverable_title = deliv_title
-        out.deliverable_type = deliv_type
+        out.deliverable_title = deliv_title or ("Operational Workflow" if task.is_operational else None)
+        out.deliverable_type = deliv_type or ("Operational" if task.is_operational else None)
         out.campaign_id = camp_id
         out.campaign_title = camp_title
-        out.client_id = cli_id
+        out.client_id = cli_id or task.client_id
         out.client_name = cli_name
         out.assignee_name = assignee_name
-        sibs = deliv_tasks_map.get(task.deliverable_id, [task])
-        is_locked, locked_reason = _check_task_lock_status(task, sibs)
-        out.is_locked = is_locked
-        out.locked_reason = locked_reason
+        if task.deliverable_id and task.deliverable_id in deliv_tasks_map:
+            sibs = deliv_tasks_map.get(task.deliverable_id, [task])
+            is_locked, locked_reason = _check_task_lock_status(task, sibs)
+            out.is_locked = is_locked
+            out.locked_reason = locked_reason
+        else:
+            out.is_locked = False
+            out.locked_reason = None
         out_list.append(out)
 
     return out_list
@@ -727,6 +834,112 @@ async def get_task_detail(
 ) -> TaskDetailOut:
     """Get full task details, creative context, submissions, and review history."""
     return await _build_task_detail(agency_id, task_id, db)
+
+
+@router.get(
+    "/agencies/{agency_id}/tasks/{task_id}/comments",
+    response_model=list[CommentOut],
+)
+async def list_task_comments(
+    agency_id: uuid.UUID,
+    task_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> list[CommentOut]:
+    """Retrieve discussion and revision comments strictly scoped to this task."""
+    stmt = (
+        select(DeliverableComment)
+        .options(joinedload(DeliverableComment.author))
+        .join(Task, DeliverableComment.task_id == Task.id)
+        .outerjoin(Deliverable, Task.deliverable_id == Deliverable.id)
+        .outerjoin(Campaign, Deliverable.campaign_id == Campaign.id)
+        .outerjoin(Client, or_(Task.client_id == Client.id, Campaign.client_id == Client.id))
+        .where(
+            DeliverableComment.task_id == task_id,
+            or_(
+                Task.agency_id == agency_id,
+                Client.agency_id == agency_id,
+            ),
+        )
+        .order_by(DeliverableComment.created_at.asc())
+    )
+    res = await db.execute(stmt)
+    comments = res.scalars().all()
+    return [
+        CommentOut(
+            id=c.id,
+            deliverable_id=c.deliverable_id,
+            task_id=c.task_id,
+            content_version_id=c.content_version_id,
+            author_id=c.author_id,
+            author_name=c.author_name or (c.author.full_name if c.author else "Team"),
+            author_role=None,
+            guest_author_name=c.guest_author_name,
+            timestamp_seconds=c.timestamp_seconds,
+            message=c.message,
+            is_internal=c.is_internal,
+            created_at=c.created_at,
+        )
+        for c in comments
+    ]
+
+
+@router.post(
+    "/agencies/{agency_id}/tasks/{task_id}/comments",
+    response_model=CommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_task_comment(
+    agency_id: uuid.UUID,
+    task_id: uuid.UUID,
+    payload: CommentCreate,
+    current_user: User = Depends(get_current_user),
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> CommentOut:
+    """Create a scoped discussion or revision comment directly inside a task thread."""
+    task_stmt = (
+        select(Task)
+        .outerjoin(Deliverable, Task.deliverable_id == Deliverable.id)
+        .outerjoin(Campaign, Deliverable.campaign_id == Campaign.id)
+        .outerjoin(Client, or_(Task.client_id == Client.id, Campaign.client_id == Client.id))
+        .where(
+            Task.id == task_id,
+            or_(
+                Task.agency_id == agency_id,
+                Client.agency_id == agency_id,
+            ),
+        )
+    )
+    task = await db.scalar(task_stmt)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+
+    comment = DeliverableComment(
+        id=uuid.uuid4(),
+        task_id=task.id,
+        deliverable_id=task.deliverable_id,
+        content_version_id=payload.content_version_id,
+        author_id=current_user.id,
+        message=payload.message.strip(),
+        is_internal=payload.is_internal,
+    )
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+
+    return CommentOut(
+        id=comment.id,
+        deliverable_id=comment.deliverable_id,
+        task_id=comment.task_id,
+        content_version_id=comment.content_version_id,
+        author_id=comment.author_id,
+        author_name=current_user.full_name or current_user.email,
+        author_role=None,
+        message=comment.message,
+        is_internal=comment.is_internal,
+        created_at=comment.created_at,
+    )
 
 
 @router.post(
@@ -757,7 +970,8 @@ async def submit_task_work(
     stmt = (
         select(Task)
         .options(
-            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client)
+            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client),
+            joinedload(Task.client),
         )
         .where(Task.id == task_id)
     )
@@ -767,32 +981,45 @@ async def submit_task_work(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
 
     deliverable = task.deliverable
-    if deliverable.campaign.client.agency_id != agency_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+    if deliverable:
+        if deliverable.campaign.client.agency_id != agency_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
-    # Enforce task locking: reject submissions if upstream prerequisites are incomplete
-    sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
-    sib_res = await db.execute(sib_stmt)
-    siblings = sib_res.scalars().all()
-    is_locked, locked_reason = _check_task_lock_status(task, siblings)
-    if is_locked:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"This task is locked. {locked_reason or 'All upstream prerequisite tasks must be approved before submitting work.'}",
-        )
-
-    max_ver = (
-        await db.scalar(
-            select(func.coalesce(func.max(ContentVersion.version_number), 0)).where(
-                ContentVersion.deliverable_id == deliverable.id
+        # Enforce task locking: reject submissions if upstream prerequisites are incomplete
+        sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
+        sib_res = await db.execute(sib_stmt)
+        siblings = sib_res.scalars().all()
+        is_locked, locked_reason = _check_task_lock_status(task, siblings)
+        if is_locked:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This task is locked. {locked_reason or 'All upstream prerequisite tasks must be approved before submitting work.'}",
             )
+
+        max_ver = (
+            await db.scalar(
+                select(func.coalesce(func.max(ContentVersion.version_number), 0)).where(
+                    ContentVersion.deliverable_id == deliverable.id
+                )
+            )
+            or 0
         )
-        or 0
-    )
+    else:
+        if task.agency_id != agency_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+        max_ver = (
+            await db.scalar(
+                select(func.coalesce(func.max(ContentVersion.version_number), 0)).where(
+                    ContentVersion.task_id == task.id
+                )
+            )
+            or 0
+        )
     next_ver = max_ver + 1
 
+    deliv_or_task_id = deliverable.id if deliverable else task.id
     if file is not None and file.filename:
-        storage_key, checksum, size = await save_file(file, deliverable.id)
+        storage_key, checksum, size = await save_file(file, deliv_or_task_id)
         file_name = file.filename
         file_type = file.content_type or "application/octet-stream"
     else:
@@ -812,13 +1039,13 @@ async def submit_task_work(
         base_name = script_title or "script"
         cleaned_base = "".join(c for c in base_name if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
         target_name = f"{cleaned_base or 'script'}_v{next_ver}.txt"
-        storage_key, checksum, size = save_text_content(deliverable.id, target_name, full_text)
+        storage_key, checksum, size = save_text_content(deliv_or_task_id, target_name, full_text)
         file_name = target_name
         file_type = "text/plain"
 
     cv = ContentVersion(
         id=uuid.uuid4(),
-        deliverable_id=deliverable.id,
+        deliverable_id=deliverable.id if deliverable else None,
         task_id=task.id,
         version_number=next_ver,
         storage_key=storage_key,
@@ -845,12 +1072,14 @@ async def submit_task_work(
 
     # Update statuses
     task.status = TaskStatus.internal_review
-    deliverable.status = DeliverableStatus.internal_review
+    if deliverable:
+        deliverable.status = DeliverableStatus.internal_review
 
     # Log internal activity comment
     comment = DeliverableComment(
         id=uuid.uuid4(),
-        deliverable_id=deliverable.id,
+        task_id=task.id,
+        deliverable_id=deliverable.id if deliverable else None,
         content_version_id=cv.id,
         author_id=current_user.id,
         message=f"Submitted {file_name} (Version {next_ver}) for internal review.",
@@ -944,7 +1173,8 @@ async def review_task_work(
     stmt = (
         select(Task)
         .options(
-            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client)
+            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client),
+            joinedload(Task.client),
         )
         .where(Task.id == task_id)
     )
@@ -954,33 +1184,43 @@ async def review_task_work(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
 
     deliverable = task.deliverable
-    if deliverable.campaign.client.agency_id != agency_id:
+    if deliverable and deliverable.campaign.client.agency_id != agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+    elif not deliverable and task.agency_id != agency_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
     # Enforce task locking: reject submissions if upstream prerequisites are incomplete
-    sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
-    sib_res = await db.execute(sib_stmt)
-    siblings = sib_res.scalars().all()
-    is_locked, locked_reason = _check_task_lock_status(task, siblings)
-    if is_locked:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"This task is locked. {locked_reason or 'All upstream prerequisite tasks must be approved before submitting work.'}",
-        )
+    if deliverable:
+        sib_stmt = select(Task).where(Task.deliverable_id == deliverable.id)
+        sib_res = await db.execute(sib_stmt)
+        siblings = sib_res.scalars().all()
+        is_locked, locked_reason = _check_task_lock_status(task, siblings)
+        if is_locked:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This task is locked. {locked_reason or 'All upstream prerequisite tasks must be approved before submitting work.'}",
+            )
 
     # Get latest ContentVersion for this task (or fallback to deliverable)
-    latest_cv = await db.scalar(
-        select(ContentVersion)
-        .where(
-            ContentVersion.deliverable_id == deliverable.id,
-            ContentVersion.task_id == task.id,
-        )
-        .order_by(ContentVersion.version_number.desc())
-    )
-    if not latest_cv:
+    if deliverable:
         latest_cv = await db.scalar(
             select(ContentVersion)
-            .where(ContentVersion.deliverable_id == deliverable.id)
+            .where(
+                ContentVersion.deliverable_id == deliverable.id,
+                ContentVersion.task_id == task.id,
+            )
+            .order_by(ContentVersion.version_number.desc())
+        )
+        if not latest_cv:
+            latest_cv = await db.scalar(
+                select(ContentVersion)
+                .where(ContentVersion.deliverable_id == deliverable.id)
+                .order_by(ContentVersion.version_number.desc())
+            )
+    else:
+        latest_cv = await db.scalar(
+            select(ContentVersion)
+            .where(ContentVersion.task_id == task.id)
             .order_by(ContentVersion.version_number.desc())
         )
 
@@ -1013,19 +1253,43 @@ async def review_task_work(
         task.status = TaskStatus.changes_requested
         comment = DeliverableComment(
             id=uuid.uuid4(),
-            deliverable_id=deliverable.id,
+            task_id=task.id,
+            deliverable_id=deliverable.id if deliverable else None,
             content_version_id=latest_cv.id if latest_cv else None,
             author_id=current_user.id,
             message=f"[Revision Requested]: {payload.feedback_notes or 'Please revise and resubmit.'}",
             is_internal=True,
         )
         db.add(comment)
-        await _sync_deliverable_status(deliverable.id, db)
+        if deliverable:
+            await _sync_deliverable_status(deliverable.id, db)
+
+        # Cortex Continuous Brand Memory ("Taste Capture") via Nemotron
+        if payload.feedback_notes:
+            target_client_id = (
+                deliverable.campaign.client_id
+                if deliverable and deliverable.campaign
+                else task.client_id
+            )
+            if target_client_id:
+                try:
+                    from app.services.taste_capture_service import capture_cortex_taste_memory
+                    await capture_cortex_taste_memory(
+                        client_id=target_client_id,
+                        feedback_text=payload.feedback_notes,
+                        source=f"internal_review:{current_user.full_name or current_user.email}",
+                        db=db,
+                    )
+                except Exception as taste_exc:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Cortex taste capture failed gracefully: {taste_exc}")
+
     elif payload.decision == "approved":
         task.status = TaskStatus.approved
         comment = DeliverableComment(
             id=uuid.uuid4(),
-            deliverable_id=deliverable.id,
+            task_id=task.id,
+            deliverable_id=deliverable.id if deliverable else None,
             content_version_id=latest_cv.id if latest_cv else None,
             author_id=current_user.id,
             message=f"[Internal Approval]: {payload.feedback_notes or 'Submission approved.'}",
@@ -1033,48 +1297,49 @@ async def review_task_work(
         )
         db.add(comment)
 
-        # Downstream task unlocking logic
-        await _unlock_downstream_tasks(task, deliverable.id, db)
+        if deliverable:
+            # Downstream task unlocking logic
+            await _unlock_downstream_tasks(task, deliverable.id, db)
 
-        siblings_res = await db.execute(
-            select(Task)
-            .where(Task.deliverable_id == deliverable.id)
-            .order_by(Task.created_at.asc())
-        )
-        siblings = siblings_res.scalars().all()
-        t_type = (task.task_type or "").lower()
+            siblings_res = await db.execute(
+                select(Task)
+                .where(Task.deliverable_id == deliverable.id)
+                .order_by(Task.created_at.asc())
+            )
+            siblings = siblings_res.scalars().all()
+            t_type = (task.task_type or "").lower()
 
-        # Propagate approved script blocks to downstream siblings (filming, video editing)
-        if ("script" in t_type or "copy" in t_type or "writing" in t_type) and task.script_blocks:
-            for sib in siblings:
-                if sib.id != task.id:
-                    sib.script_blocks = list(task.script_blocks)
-                    from sqlalchemy.orm.attributes import flag_modified
-                    flag_modified(sib, "script_blocks")
-
-            # Also update campaign.ai_plan_draft if deliverable is mapped
-            if deliverable.campaign and deliverable.campaign.ai_plan_draft and isinstance(deliverable.campaign.ai_plan_draft, dict):
-                delivs = deliverable.campaign.ai_plan_draft.get("deliverables") or []
-                for d in delivs:
-                    if str(d.get("deliverable_id")) == str(deliverable.id) or d.get("title") == deliverable.title:
-                        first_words = task.script_blocks[0].get("spoken_words", "") if task.script_blocks else ""
-                        last_words = task.script_blocks[-1].get("spoken_words", "") if len(task.script_blocks) > 1 else ""
-                        if first_words:
-                            d["hook"] = first_words
-                        if last_words:
-                            d["cta"] = last_words
-                        d["script_blocks"] = task.script_blocks
+            # Propagate approved script blocks to downstream siblings (filming, video editing)
+            if ("script" in t_type or "copy" in t_type or "writing" in t_type) and task.script_blocks:
+                for sib in siblings:
+                    if sib.id != task.id:
+                        sib.script_blocks = list(task.script_blocks)
                         from sqlalchemy.orm.attributes import flag_modified
-                        flag_modified(deliverable.campaign, "ai_plan_draft")
-                        break
+                        flag_modified(sib, "script_blocks")
 
-        if any(w in t_type for w in ["approval", "review"]) or not any(s.status == TaskStatus.backlog for s in siblings):
-            if all(s.status in (TaskStatus.approved, TaskStatus.done) for s in siblings):
-                deliverable.status = DeliverableStatus.approved
+                # Also update campaign.ai_plan_draft if deliverable is mapped
+                if deliverable.campaign and deliverable.campaign.ai_plan_draft and isinstance(deliverable.campaign.ai_plan_draft, dict):
+                    delivs = deliverable.campaign.ai_plan_draft.get("deliverables") or []
+                    for d in delivs:
+                        if str(d.get("deliverable_id")) == str(deliverable.id) or d.get("title") == deliverable.title:
+                            first_words = task.script_blocks[0].get("spoken_words", "") if task.script_blocks else ""
+                            last_words = task.script_blocks[-1].get("spoken_words", "") if len(task.script_blocks) > 1 else ""
+                            if first_words:
+                                d["hook"] = first_words
+                            if last_words:
+                                d["cta"] = last_words
+                            d["script_blocks"] = task.script_blocks
+                            from sqlalchemy.orm.attributes import flag_modified
+                            flag_modified(deliverable.campaign, "ai_plan_draft")
+                            break
+
+            if any(w in t_type for w in ["approval", "review"]) or not any(s.status == TaskStatus.backlog for s in siblings):
+                if all(s.status in (TaskStatus.approved, TaskStatus.done) for s in siblings):
+                    deliverable.status = DeliverableStatus.approved
+                else:
+                    deliverable.status = DeliverableStatus.client_review
             else:
-                deliverable.status = DeliverableStatus.client_review
-        else:
-            await _sync_deliverable_status(deliverable.id, db)
+                await _sync_deliverable_status(deliverable.id, db)
 
     await db.commit()
     return await _build_task_detail(agency_id, task.id, db)

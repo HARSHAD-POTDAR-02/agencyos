@@ -48,7 +48,8 @@ import {
   SlidersHorizontal,
   ChevronRight,
   ShieldAlert,
-  CheckCheck
+  CheckCheck,
+  Brain
 } from "lucide-react";
 
 function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -232,6 +233,15 @@ function ClientWorkspaceContent() {
   // Campaigns State
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
+  // Cortex Taste Memory State
+  const [tasteRules, setTasteRules] = useState<any[]>([]);
+  const [showAddTasteModal, setShowAddTasteModal] = useState(false);
+  const [newTasteCategory, setNewTasteCategory] = useState<"do" | "dont" | "style" | "pacing" | "tone">("dont");
+  const [newTasteRule, setNewTasteRule] = useState("");
+  const [newTasteReason, setNewTasteReason] = useState("");
+  const [savingTasteRule, setSavingTasteRule] = useState(false);
+  const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
     if (!token || !effectiveAgencyId || !clientId || isSpecialist) {
       setLoading(false);
@@ -290,6 +300,14 @@ function ClientWorkspaceContent() {
       } catch (e) {
         // ignore
       }
+
+      // 7. Fetch Cortex Taste Memory
+      try {
+        const rules = await clientApi.getTasteMemory(effectiveAgencyId, clientId, token);
+        setTasteRules(Array.isArray(rules) ? rules : []);
+      } catch (e) {
+        // ignore
+      }
     } catch (err: any) {
       setNotification({ type: "error", text: err.message || "Failed to load client details." });
     } finally {
@@ -309,11 +327,53 @@ function ClientWorkspaceContent() {
         setShowInviteModal(false);
         setShowContractModal(false);
         setShowDeleteModal(false);
+        setShowAddTasteModal(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  const handleAddTasteRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !effectiveAgencyId || !clientId || !newTasteRule.trim()) return;
+    setSavingTasteRule(true);
+    try {
+      const created = await clientApi.addTasteRule(
+        effectiveAgencyId,
+        clientId,
+        {
+          category: newTasteCategory,
+          rule: newTasteRule.trim(),
+          reason: newTasteReason.trim() || undefined,
+        },
+        token
+      );
+      setTasteRules((prev) => [...prev, created]);
+      setNewTasteRule("");
+      setNewTasteReason("");
+      setShowAddTasteModal(false);
+      setNotification({ type: "success", text: "Brand creative taste rule captured successfully!" });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to add taste rule." });
+    } finally {
+      setSavingTasteRule(false);
+    }
+  };
+
+  const handleDeleteTasteRule = async (ruleId: string) => {
+    if (!token || !effectiveAgencyId || !clientId) return;
+    setDeletingRuleId(ruleId);
+    try {
+      await clientApi.deleteTasteRule(effectiveAgencyId, clientId, ruleId, token);
+      setTasteRules((prev) => prev.filter((r) => r.id !== ruleId));
+      setNotification({ type: "success", text: "Taste rule removed from brand memory." });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Failed to delete taste rule." });
+    } finally {
+      setDeletingRuleId(null);
+    }
+  };
 
   const fetchMonthlyReport = async (m?: number, y?: number) => {
     if (!token || !effectiveAgencyId || !clientId) return;
@@ -1028,6 +1088,120 @@ function ClientWorkspaceContent() {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* ── Cortex Continuous Brand Memory ("Taste Capture") Card ── */}
+          <div className="surface-card rounded-2xl border border-white/[0.08] p-5 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/20 flex items-center justify-center text-[#A78BFA] shrink-0">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-heading text-sm font-semibold text-[#F2F0F7]">
+                      Cortex Continuous Brand Memory (Taste Capture)
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30">
+                      <Sparkles className="w-3 h-3 text-[#A78BFA]" />
+                      NVIDIA Nemotron Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#A3A0B0] mt-0.5 max-w-2xl">
+                    Every manager rejection and client change request is analyzed by NVIDIA Nemotron to parse durable creative rules (dos, don&apos;ts, pacing, and styling nuances). These rules are automatically compiled into future Campaign Studio generations.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddTasteModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#20202A] hover:bg-[#282836] text-[#A78BFA] border border-[#A78BFA]/30 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <span>Add Taste Rule</span>
+              </button>
+            </div>
+
+            {/* List of Captured Rules */}
+            {tasteRules.length === 0 ? (
+              <div className="py-10 text-center space-y-2 border border-white/[0.06] border-dashed rounded-xl bg-[#101014]/40 p-6">
+                <Sparkles className="w-6 h-6 text-[#A78BFA]/60 mx-auto" />
+                <h4 className="text-xs font-semibold text-[#F2F0F7]">No creative taste rules captured yet</h4>
+                <p className="text-[11px] text-[#A3A0B0] max-w-md mx-auto leading-relaxed">
+                  As managers reject internal drafts in Specialist Workbench or clients request revisions via the Magic-Link Review Room, Cortex automatically parses and saves creative taste benchmarks here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[11px] font-mono text-[#A3A0B0] px-1">
+                  <span>{tasteRules.length} Active Taste {tasteRules.length === 1 ? "Rule" : "Rules"} Compiled into Campaign Strategist</span>
+                  <span className="text-[#45B88A] flex items-center gap-1 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#45B88A]" />
+                    Auto-enforced
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {tasteRules.map((rule) => {
+                    const cat = (rule.category || "style").toLowerCase();
+                    const badgeStyles =
+                      cat === "do"
+                        ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30"
+                        : cat === "dont"
+                        ? "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
+                        : cat === "pacing"
+                        ? "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30"
+                        : cat === "tone"
+                        ? "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30"
+                        : "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30";
+
+                    return (
+                      <div
+                        key={rule.id}
+                        className="p-3.5 rounded-xl bg-[#101014] border border-white/[0.06] hover:border-white/[0.12] transition-colors flex items-start justify-between gap-3"
+                      >
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border ${badgeStyles}`}>
+                              {cat === "dont" ? "Don't" : cat}
+                            </span>
+                            <span className="text-xs font-semibold text-[#F2F0F7] leading-snug">
+                              {rule.rule}
+                            </span>
+                          </div>
+                          {rule.reason && (
+                            <p className="text-[11px] text-[#A3A0B0] leading-relaxed pl-1">
+                              {rule.reason}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 text-[10px] font-mono text-[#A3A0B0]/60 pl-1">
+                            <span>Source: {rule.source ? rule.source.replace("_", " ") : "Manual"}</span>
+                            {rule.created_at && (
+                              <span>&bull; {new Date(rule.created_at).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTasteRule(rule.id)}
+                          disabled={deletingRuleId === rule.id}
+                          className="text-[#A3A0B0]/60 hover:text-[#E16F7B] p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer shrink-0"
+                          title="Remove Rule"
+                        >
+                          {deletingRuleId === rule.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#E16F7B]" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1976,6 +2150,89 @@ function ClientWorkspaceContent() {
                 {deletingClient ? "Deleting..." : "Delete Permanently"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD TASTE RULE MODAL */}
+      {showAddTasteModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-[#17171E] rounded-2xl border border-white/[0.1] shadow-[0_24px_60px_rgba(0,0,0,0.8)] max-w-lg w-full p-6 scale-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-4">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-[#A78BFA]" />
+                <h3 className="font-heading text-sm font-semibold text-[#F2F0F7]">Add Brand Taste Rule</h3>
+              </div>
+              <button
+                onClick={() => setShowAddTasteModal(false)}
+                className="text-[#A3A0B0] hover:text-[#F2F0F7] p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddTasteRule} className="space-y-4">
+              <div>
+                <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">
+                  Category
+                </label>
+                <select
+                  value={newTasteCategory}
+                  onChange={(e) => setNewTasteCategory(e.target.value as any)}
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]"
+                >
+                  <option value="dont">Don&apos;t (Forbidden style, trope, or pace)</option>
+                  <option value="do">Do (Required creative aesthetic or element)</option>
+                  <option value="style">Style (Visual framing, typography, or grade)</option>
+                  <option value="pacing">Pacing (Word pacing, cut speed, tempo)</option>
+                  <option value="tone">Tone (Emotional delivery, vocabulary)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">
+                  Actionable Rule *
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  value={newTasteRule}
+                  onChange={(e) => setNewTasteRule(e.target.value)}
+                  placeholder="e.g. Never use robotic intro hooks like 'In today's fast-paced world...'"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">
+                  Reason / Creative Context (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newTasteReason}
+                  onChange={(e) => setNewTasteReason(e.target.value)}
+                  placeholder="e.g. Client founders hate generic corporate tropes and prefer conversational cold hooks"
+                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] p-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-white/[0.08] flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAddTasteModal(false)}
+                  className="surface-card surface-card-hover px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTasteRule || !newTasteRule.trim()}
+                  className="px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {savingTasteRule ? "Saving..." : "Add to Taste Memory"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
