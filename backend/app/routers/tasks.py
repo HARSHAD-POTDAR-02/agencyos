@@ -31,12 +31,104 @@ from app.schemas.task import (
     TaskDetailOut,
     TaskOut,
     TaskReviewDecision,
+    TaskStudioSyncRequest,
+    TaskStudioSyncResponse,
     TaskUpdate,
 )
 from app.services.storage_service import save_file, save_text_content
 from app.services.tenant_service import assert_deliverable_belongs_to_agency
 
 router = APIRouter(tags=["tasks"])
+
+
+DEFAULT_SCRIPTING_CHECKLISTS = [
+    {"id": "chk-1", "text": "Hook Drafted & Polished (<12 words)", "completed": False, "stage": "scripting"},
+    {"id": "chk-2", "text": "Scene-by-Scene Dialogue Written", "completed": False, "stage": "scripting"},
+    {"id": "chk-3", "text": "Visual & Camera Directives Added", "completed": False, "stage": "scripting"},
+    {"id": "chk-4", "text": "Spoken Duration Verified (<30s)", "completed": False, "stage": "scripting"},
+    {"id": "chk-5", "text": "A-Roll Rough Cut Completed", "completed": False, "stage": "editing"},
+    {"id": "chk-6", "text": "B-Roll & Visual Overlays Synced", "completed": False, "stage": "editing"},
+    {"id": "chk-7", "text": "Dynamic Kinetic Captions Added", "completed": False, "stage": "editing"},
+    {"id": "chk-8", "text": "Sound Design & Music Levelled (-18dB)", "completed": False, "stage": "editing"},
+    {"id": "chk-9", "text": "Color Grade & Brand Presets Applied", "completed": False, "stage": "editing"},
+]
+
+
+def _compute_script_metrics(script_blocks: list[dict[str, Any]], target_duration: int = 30) -> tuple[int, int, int, str | None]:
+    """Computes total word count, speaking duration (at ~140 WPM), hook words, and hook warning."""
+    total_words = 0
+    hook_words = 0
+    for idx, block in enumerate(script_blocks):
+        words = len((block.get("spoken_words") or "").strip().split())
+        total_words += words
+        if idx == 0:
+            hook_words = words
+
+    # 140 words per minute speaking pace for Reels/TikToks (~2.33 words/sec)
+    speaking_sec = round((total_words / 140.0) * 60) if total_words > 0 else 0
+
+    hook_warning = None
+    if hook_words > 15:
+        hook_warning = f"Hook is {hook_words} words (exceeds 15 words). Risk of 3-second viewer drop-off. Trim to under 12 words."
+
+    return total_words, speaking_sec, hook_words, hook_warning
+
+
+def _populate_starter_script_blocks(
+    deliverable: Deliverable,
+    campaign: Campaign,
+    storyboard_text: str | None,
+) -> list[dict[str, Any]]:
+    matching_d = None
+    if campaign.ai_plan_draft and isinstance(campaign.ai_plan_draft, dict):
+        for d in campaign.ai_plan_draft.get("deliverables") or []:
+            if str(d.get("deliverable_id")) == str(deliverable.id) or d.get("title") == deliverable.title:
+                matching_d = d
+                break
+
+    hook_text = (matching_d.get("hook") if matching_d else None) or "Stop scrolling: here is what nobody tells you about this."
+    concept_text = (matching_d.get("visual_concept") if matching_d else None) or "Dynamic cinematic camera motion."
+    cta_text = (matching_d.get("cta") if matching_d else None) or "Save this reel and follow for more insights!"
+    audio_text = (matching_d.get("audio_vibe") if matching_d else None) or "Trending upbeat electronic soundtrack."
+
+    return [
+        {
+            "id": "scene-1",
+            "scene_number": 1,
+            "title": "Scene 1: The Hook (0s–5s)",
+            "spoken_words": hook_text,
+            "visual_cue": concept_text,
+            "audio_notes": audio_text,
+            "duration_seconds": 5,
+        },
+        {
+            "id": "scene-2",
+            "scene_number": 2,
+            "title": "Scene 2: Friction & Agitation (5s–12s)",
+            "spoken_words": "Most brands struggle because they spend hours guessing without a structured system.",
+            "visual_cue": "Fast cuts highlighting the problem, split screen or text callout overlay.",
+            "audio_notes": "Tension build-up, subtle bass riser.",
+            "duration_seconds": 7,
+        },
+        {
+            "id": "scene-3",
+            "scene_number": 3,
+            "title": "Scene 3: Proof & Solution (12s–22s)",
+            "spoken_words": "Instead, automate your strategic calendar, lock production stages, and approve in one click.",
+            "visual_cue": "Clean product workflow demo showcasing smooth UI execution.",
+            "audio_notes": "Rhythmic beat drop, bright uplifting tempo.",
+            "duration_seconds": 10,
+        },
+        {
+            "id": "scene-4",
+            "scene_number": 4,
+            "title": "Scene 4: Call to Action (22s–30s)",
+            "spoken_words": cta_text,
+            "visual_cue": "High-contrast text on screen pointing to comment icon or link in bio.",
+            "audio_notes": "Memorable audio logo chime to close.",
+            "duration_seconds": 8,
+        },
+    ]
 
 
 async def _sync_deliverable_status(deliverable_id: uuid.UUID, db: AsyncSession) -> Deliverable | None:
@@ -270,6 +362,18 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
     siblings = sib_res.scalars().all()
     is_locked, locked_reason = _check_task_lock_status(task, siblings)
 
+    # Script blocks & Checklists initialization if empty
+    script_blocks = list(task.script_blocks or [])
+    if not script_blocks:
+        script_blocks = _populate_starter_script_blocks(deliverable, campaign, storyboard_text)
+
+    checklists = list(task.checklists or [])
+    if not checklists:
+        checklists = [dict(c) for c in DEFAULT_SCRIPTING_CHECKLISTS]
+
+    target_dur = task.target_duration_seconds or 30
+    total_words, speaking_sec, hook_words, hook_warning = _compute_script_metrics(script_blocks, target_dur)
+
     return TaskDetailOut(
         id=task.id,
         deliverable_id=task.deliverable_id,
@@ -301,6 +405,13 @@ async def _build_task_detail(agency_id: uuid.UUID, task_id: uuid.UUID, db: Async
         reference_assets=[],
         submissions=submissions,
         review_comments=review_comments,
+        script_blocks=script_blocks,
+        checklists=checklists,
+        target_duration_seconds=target_dur,
+        speaking_duration_seconds=speaking_sec,
+        total_word_count=total_words,
+        hook_word_count=hook_words,
+        hook_warning=hook_warning,
     )
 
 
@@ -856,6 +967,13 @@ async def update_task(
     for field, value in update_data.items():
         setattr(task, field, value)
 
+    if "script_blocks" in update_data:
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(task, "script_blocks")
+    if "checklists" in update_data:
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(task, "checklists")
+
     # 4. Synchronize parent deliverable status based on all sibling tasks
     if "status" in update_data:
         if update_data["status"] in (TaskStatus.approved, TaskStatus.done):
@@ -864,7 +982,18 @@ async def update_task(
 
     await db.commit()
     await db.refresh(task)
-    return TaskOut.model_validate(task)
+    
+    out = TaskOut.model_validate(task)
+    blocks = list(task.script_blocks or [])
+    out.script_blocks = blocks
+    out.checklists = list(task.checklists or [])
+    out.target_duration_seconds = task.target_duration_seconds or 30
+    total_words, speaking_sec, hook_words, hook_warning = _compute_script_metrics(blocks, out.target_duration_seconds)
+    out.total_word_count = total_words
+    out.speaking_duration_seconds = speaking_sec
+    out.hook_word_count = hook_words
+    out.hook_warning = hook_warning
+    return out
 
 
 @router.delete(
@@ -1050,3 +1179,91 @@ Deliver your recommendations structured with:
             recommended_script=rec_script,
             hook_variations=variations,
         )
+
+
+@router.post(
+    "/agencies/{agency_id}/tasks/{task_id}/sync-studio",
+    response_model=TaskStudioSyncResponse,
+)
+async def sync_task_to_campaign_studio(
+    agency_id: uuid.UUID,
+    task_id: uuid.UUID,
+    payload: TaskStudioSyncRequest,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> TaskStudioSyncResponse:
+    """
+    Bi-directionally push refined script, hook, and scene directives from a Task
+    back to the Campaign Studio deliverable card and AI Plan Draft.
+    """
+    stmt = (
+        select(Task)
+        .options(
+            joinedload(Task.deliverable).joinedload(Deliverable.campaign).joinedload(Campaign.client)
+        )
+        .where(Task.id == task_id)
+    )
+    res = await db.execute(stmt)
+    task = res.scalars().first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+
+    deliverable = task.deliverable
+    campaign = deliverable.campaign
+    client = campaign.client
+    if client.agency_id != agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+
+    # 1. Update task's own script blocks if provided
+    if payload.script_blocks is not None:
+        task.script_blocks = payload.script_blocks
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(task, "script_blocks")
+
+    # 2. Extract hook & CTA
+    hook = payload.hook
+    if not hook and payload.script_blocks and len(payload.script_blocks) > 0:
+        hook = payload.script_blocks[0].get("spoken_words")
+
+    cta = payload.cta
+    if not cta and payload.script_blocks and len(payload.script_blocks) > 1:
+        cta = payload.script_blocks[-1].get("spoken_words")
+
+    # 3. Update campaign's ai_plan_draft
+    if campaign.ai_plan_draft and isinstance(campaign.ai_plan_draft, dict):
+        draft = dict(campaign.ai_plan_draft)
+        delivs = list(draft.get("deliverables") or [])
+        matched = False
+        for idx, d in enumerate(delivs):
+            if str(d.get("deliverable_id")) == str(deliverable.id) or d.get("title") == deliverable.title:
+                updated_item = dict(d)
+                if hook:
+                    updated_item["hook"] = hook
+                if payload.caption:
+                    updated_item["caption"] = payload.caption
+                if payload.visual_concept:
+                    updated_item["visual_concept"] = payload.visual_concept
+                if cta:
+                    updated_item["cta"] = cta
+                if payload.audio_vibe:
+                    updated_item["audio_vibe"] = payload.audio_vibe
+                if payload.script_blocks:
+                    updated_item["script_blocks"] = payload.script_blocks
+                delivs[idx] = updated_item
+                matched = True
+                break
+        if matched:
+            draft["deliverables"] = delivs
+            campaign.ai_plan_draft = draft
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(campaign, "ai_plan_draft")
+
+    await db.commit()
+    await db.refresh(task)
+
+    return TaskStudioSyncResponse(
+        success=True,
+        campaign_id=campaign.id,
+        deliverable_id=deliverable.id,
+        message="Script and visual directives successfully synchronized to Campaign Studio master plan.",
+    )

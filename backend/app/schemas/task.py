@@ -4,10 +4,27 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models.task import TaskPriority, TaskStatus
 from app.schemas.comment import CommentOut
+
+
+class ScriptBlock(BaseModel):
+    id: str
+    scene_number: int
+    title: str
+    spoken_words: str = ""
+    visual_cue: str | None = None
+    audio_notes: str | None = None
+    duration_seconds: int | None = None
+
+
+class TaskChecklistItem(BaseModel):
+    id: str
+    text: str
+    completed: bool = False
+    stage: str = "scripting"  # "scripting" | "editing" | "qa"
 
 
 class TaskCreate(BaseModel):
@@ -19,6 +36,9 @@ class TaskCreate(BaseModel):
     priority: TaskPriority = TaskPriority.medium
     due_date: date | None = None
     notes: str | None = None
+    script_blocks: list[dict[str, Any]] | None = None
+    checklists: list[dict[str, Any]] | None = None
+    target_duration_seconds: int | None = 30
 
 
 class TaskUpdate(BaseModel):
@@ -30,6 +50,9 @@ class TaskUpdate(BaseModel):
     due_date: date | None = None
     blocked_reason: str | None = None
     notes: str | None = None
+    script_blocks: list[dict[str, Any]] | None = None
+    checklists: list[dict[str, Any]] | None = None
+    target_duration_seconds: int | None = None
 
 
 class TaskContentVersionOut(BaseModel):
@@ -95,6 +118,22 @@ class TaskOut(BaseModel):
     is_locked: bool = False
     locked_reason: str | None = None
 
+    # Teleprompter & Checklist Fields
+    script_blocks: list[dict[str, Any]] = []
+    checklists: list[dict[str, Any]] = []
+    target_duration_seconds: int = 30
+    speaking_duration_seconds: int = 0
+    total_word_count: int = 0
+    hook_word_count: int = 0
+    hook_warning: str | None = None
+
+    @field_validator("script_blocks", "checklists", mode="before")
+    @classmethod
+    def ensure_list(cls, v: Any) -> list[Any]:
+        if v is None:
+            return []
+        return v
+
 
 class TaskDetailOut(TaskOut):
     campaign_objective: str | None = None
@@ -109,6 +148,22 @@ class TaskDetailOut(TaskOut):
     # Submissions & Approvals History
     submissions: list[TaskContentVersionOut] = []
     review_comments: list[CommentOut] = []
+
+
+class TaskStudioSyncRequest(BaseModel):
+    hook: str | None = None
+    caption: str | None = None
+    visual_concept: str | None = None
+    cta: str | None = None
+    audio_vibe: str | None = None
+    script_blocks: list[dict[str, Any]] | None = None
+
+
+class TaskStudioSyncResponse(BaseModel):
+    success: bool
+    campaign_id: uuid.UUID | None = None
+    deliverable_id: uuid.UUID | None = None
+    message: str
 
 
 class TaskAIAssistRequest(BaseModel):

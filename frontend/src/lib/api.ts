@@ -549,7 +549,47 @@ export const taskApi = {
       body: data,
       token,
     }),
+  syncStudio: (
+    agencyId: string,
+    taskId: string,
+    data: {
+      hook?: string;
+      caption?: string;
+      visual_concept?: string;
+      cta?: string;
+      audio_vibe?: string;
+      script_blocks?: any[];
+    },
+    token: string
+  ) =>
+    apiFetch<{
+      success: boolean;
+      campaign_id?: string;
+      deliverable_id?: string;
+      message: string;
+    }>(`/agencies/${agencyId}/tasks/${taskId}/sync-studio`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
 };
+
+export interface ScriptBlock {
+  id: string;
+  scene_number: number;
+  title: string;
+  spoken_words: string;
+  visual_cue?: string | null;
+  audio_notes?: string | null;
+  duration_seconds?: number | null;
+}
+
+export interface TaskChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  stage: "scripting" | "editing" | "qa" | string;
+}
 
 /* ── Deliverable & Content Version endpoints ── */
 export const deliverableApi = {

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, Suspense } from "react";
+import React, { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { taskApi, agencyApi, API_BASE } from "@/lib/api";
+import { taskApi, agencyApi, API_BASE, ScriptBlock, TaskChecklistItem } from "@/lib/api";
 import {
   ArrowLeft,
   Briefcase,
@@ -36,6 +36,22 @@ import {
   Bot,
   Wand2,
   CornerDownLeft,
+  Mic,
+  Play,
+  Pause,
+  RotateCcw,
+  ListChecks,
+  Plus,
+  Maximize2,
+  Minimize2,
+  SlidersHorizontal,
+  Timer,
+  Flame,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  CheckCheck,
+  AlertCircle,
 } from "lucide-react";
 
 interface SubmissionVersion {
@@ -115,6 +131,13 @@ interface TaskDetail {
   storyboard_text?: string | null;
   submissions: SubmissionVersion[];
   review_comments: ReviewComment[];
+  script_blocks?: ScriptBlock[];
+  checklists?: TaskChecklistItem[];
+  target_duration_seconds?: number;
+  speaking_duration_seconds?: number;
+  total_word_count?: number;
+  hook_word_count?: number;
+  hook_warning?: string | null;
 }
 
 function getMonogram(name?: string | null, email?: string | null): string {
@@ -236,6 +259,20 @@ function TaskWorkspaceContent() {
     hook_variations: string[];
   } | null>(null);
 
+  // ── Track 4: Creative Specialist Tooling State ──
+  const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
+  const [checklists, setChecklists] = useState<TaskChecklistItem[]>([]);
+  const [targetDuration, setTargetDuration] = useState<number>(30);
+  const [savingScript, setSavingScript] = useState(false);
+  const [syncingStudio, setSyncingStudio] = useState(false);
+  const [teleprompterModalOpen, setTeleprompterModalOpen] = useState(false);
+  const [teleprompterPlaying, setTeleprompterPlaying] = useState(false);
+  const [teleprompterSpeed, setTeleprompterSpeed] = useState<number>(1);
+  const [checklistFilter, setChecklistFilter] = useState<"all" | "scripting" | "editing">("all");
+  const [newChecklistText, setNewChecklistText] = useState("");
+  const [newChecklistStage, setNewChecklistStage] = useState<"scripting" | "editing">("scripting");
+  const teleprompterRef = useRef<HTMLDivElement>(null);
+
   const loadTask = useCallback(async () => {
     if (!token || !effectiveAgencyId || !taskId) return;
     setLoading(true);
@@ -250,6 +287,16 @@ function TaskWorkspaceContent() {
 
       const data = (await taskApi.get(effectiveAgencyId, taskId, token)) as TaskDetail;
       setTask(data);
+
+      if (data.script_blocks && data.script_blocks.length > 0) {
+        setScriptBlocks(data.script_blocks);
+      }
+      if (data.checklists && data.checklists.length > 0) {
+        setChecklists(data.checklists);
+      }
+      if (data.target_duration_seconds) {
+        setTargetDuration(data.target_duration_seconds);
+      }
 
       // Determine default submission mode based on task_type
       const ttype = (data.task_type || "").toLowerCase();
@@ -290,6 +337,164 @@ function TaskWorkspaceContent() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [reviewModalOpen, activePreviewVersion]);
+
+  // ── Track 4: Real-time Script Pacing & Metrics ──
+  const liveTotalWords = scriptBlocks.reduce(
+    (acc, b) => acc + (b.spoken_words ? b.spoken_words.trim().split(/\s+/).filter(Boolean).length : 0),
+    0
+  );
+  // ~140 words per minute speaking pace for Reels/TikToks (~2.33 words/sec)
+  const liveSpeakingSec = Math.round((liveTotalWords / 140) * 60);
+  const liveHookWords =
+    scriptBlocks.length > 0 && scriptBlocks[0].spoken_words
+      ? scriptBlocks[0].spoken_words.trim().split(/\s+/).filter(Boolean).length
+      : 0;
+  const liveHookWarning =
+    liveHookWords > 15
+      ? `Opening hook has ${liveHookWords} words (exceeds 15-word threshold). High risk of 3-second viewer drop-off. Trim to under 12 words for optimal retention.`
+      : liveHookWords >= 12
+      ? `Hook has ${liveHookWords} words (borderline). Consider tightening for punchier impact.`
+      : null;
+  const pacingRatio = targetDuration > 0 ? liveSpeakingSec / targetDuration : 1;
+  const pacingLabel =
+    liveTotalWords === 0
+      ? "No Dialogue Yet"
+      : pacingRatio < 0.75
+      ? "Short & Snappy"
+      : pacingRatio <= 1.15
+      ? "Optimal Viral Pace"
+      : pacingRatio <= 1.35
+      ? "Borderline Extended"
+      : "Extended Reel (Risk of Drop-off)";
+
+  // Auto-scroll loop for Fullscreen Teleprompter Presenter Mode
+  useEffect(() => {
+    let interval: any;
+    if (teleprompterPlaying && teleprompterModalOpen) {
+      interval = setInterval(() => {
+        if (teleprompterRef.current) {
+          teleprompterRef.current.scrollTop += 2 * teleprompterSpeed;
+        }
+      }, 35);
+    }
+    return () => clearInterval(interval);
+  }, [teleprompterPlaying, teleprompterModalOpen, teleprompterSpeed]);
+
+  const handleUpdateScene = (id: string, field: keyof ScriptBlock, value: any) => {
+    setScriptBlocks((prev) =>
+      prev.map((block) => {
+        if (block.id !== id) return block;
+        const updated = { ...block, [field]: value };
+        if (field === "spoken_words") {
+          const w = (value as string).trim().split(/\s+/).filter(Boolean).length;
+          updated.duration_seconds = Math.max(2, Math.round((w / 140) * 60));
+        }
+        return updated;
+      })
+    );
+  };
+
+  const handleAddScene = () => {
+    const nextNum = scriptBlocks.length + 1;
+    const newBlock: ScriptBlock = {
+      id: `scene-${Date.now()}`,
+      scene_number: nextNum,
+      title: `Scene ${nextNum}: Extra Take / B-Roll (${Math.max(20, nextNum * 7)}s)`,
+      spoken_words: "",
+      visual_cue: "B-Roll cutaway or close-up demonstration",
+      audio_notes: "Background riser or sound effect",
+      duration_seconds: 5,
+    };
+    setScriptBlocks((prev) => [...prev, newBlock]);
+  };
+
+  const handleDeleteScene = (id: string) => {
+    setScriptBlocks((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  const handleSaveScriptBlocks = async () => {
+    if (!token || !effectiveAgencyId || !task) return;
+    setSavingScript(true);
+    try {
+      await taskApi.update(
+        effectiveAgencyId,
+        task.id,
+        {
+          script_blocks: scriptBlocks,
+          target_duration_seconds: targetDuration,
+        },
+        token
+      );
+      setNotification({
+        type: "success",
+        text: "Teleprompter script & scene blocks saved successfully.",
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err?.message || "Failed to save script blocks." });
+    } finally {
+      setSavingScript(false);
+    }
+  };
+
+  const handleToggleChecklist = async (id: string) => {
+    const updated = checklists.map((c) => (c.id === id ? { ...c, completed: !c.completed } : c));
+    setChecklists(updated);
+    if (!token || !effectiveAgencyId || !task) return;
+    try {
+      await taskApi.update(effectiveAgencyId, task.id, { checklists: updated }, token);
+    } catch (err) {
+      console.error("Failed to persist checklist toggle", err);
+    }
+  };
+
+  const handleAddChecklistItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChecklistText.trim()) return;
+    const newItem: TaskChecklistItem = {
+      id: `chk-${Date.now()}`,
+      text: newChecklistText.trim(),
+      completed: false,
+      stage: newChecklistStage,
+    };
+    const updated = [...checklists, newItem];
+    setChecklists(updated);
+    setNewChecklistText("");
+    if (!token || !effectiveAgencyId || !task) return;
+    try {
+      await taskApi.update(effectiveAgencyId, task.id, { checklists: updated }, token);
+    } catch (err) {
+      console.error("Failed to add checklist item", err);
+    }
+  };
+
+  const handleSyncToStudio = async () => {
+    if (!token || !effectiveAgencyId || !task) return;
+    setSyncingStudio(true);
+    try {
+      const firstSceneWords = scriptBlocks.length > 0 ? scriptBlocks[0].spoken_words : "";
+      const lastSceneWords = scriptBlocks.length > 1 ? scriptBlocks[scriptBlocks.length - 1].spoken_words : "";
+      const res = await taskApi.syncStudio(
+        effectiveAgencyId,
+        task.id,
+        {
+          hook: firstSceneWords || undefined,
+          cta: lastSceneWords || undefined,
+          visual_concept: scriptBlocks[0]?.visual_cue || undefined,
+          audio_vibe: scriptBlocks[0]?.audio_notes || undefined,
+          script_blocks: scriptBlocks,
+        },
+        token
+      );
+      setNotification({
+        type: "success",
+        text: res.message || "Script and visual directives synced to Campaign Studio!",
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err?.message || "Failed to sync with Campaign Studio." });
+    } finally {
+      setSyncingStudio(false);
+    }
+  };
 
   // Handle reassigning task
   const handleReassign = async (newAssigneeId: string | null) => {
@@ -913,6 +1118,412 @@ function TaskWorkspaceContent() {
                   No formal storyboard attached to this deliverable.
                 </p>
               )}
+            </div>
+
+            {/* ── TRACK 4: VIRAL TELEPROMPTER & SCRIPT PRECISION STUDIO ── */}
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-5 shadow-xs bg-gradient-to-b from-[#14141A] to-[#101014]">
+              {/* Studio Header & Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center shrink-0">
+                      <Mic className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-heading font-bold text-[#F2F0F7] flex items-center gap-2">
+                        <span>Viral Teleprompter & Script Studio</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 uppercase">
+                          Precision Pacing
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-[#A3A0B0]">
+                        Structured scene beats, speaking duration pacing & bi-directional Campaign Studio synchronization.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Target Duration Selector */}
+                  <div className="flex items-center gap-1.5 bg-[#20202A] px-2.5 py-1.5 rounded-xl border border-white/[0.08] text-xs font-mono">
+                    <Timer className="w-3.5 h-3.5 text-[#A3A0B0]" />
+                    <span className="text-[11px] text-[#A3A0B0]">Target:</span>
+                    <select
+                      value={targetDuration}
+                      onChange={(e) => setTargetDuration(Number(e.target.value))}
+                      className="bg-transparent text-[#F2F0F7] font-bold text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value={15} className="bg-[#20202A]">15s (Flash)</option>
+                      <option value={30} className="bg-[#20202A]">30s (Standard)</option>
+                      <option value={45} className="bg-[#20202A]">45s (Extended)</option>
+                      <option value={60} className="bg-[#20202A]">60s (Long)</option>
+                    </select>
+                  </div>
+
+                  {/* Fullscreen Teleprompter Button */}
+                  <button
+                    onClick={() => {
+                      setTeleprompterPlaying(false);
+                      setTeleprompterModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#2a2a38] text-[#F2F0F7] text-xs font-semibold border border-white/[0.08] transition-all cursor-pointer"
+                    title="Open Fullscreen Teleprompter for Recording"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <span>Teleprompter Mode</span>
+                  </button>
+
+                  {/* Sync to Campaign Studio */}
+                  <button
+                    onClick={handleSyncToStudio}
+                    disabled={syncingStudio}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                    title="Push updated script & hook back to Campaign Studio plan"
+                  >
+                    {syncingStudio ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Layers className="w-3.5 h-3.5" />
+                    )}
+                    <span>Sync to Studio</span>
+                  </button>
+
+                  {/* Save Script */}
+                  <button
+                    onClick={handleSaveScriptBlocks}
+                    disabled={savingScript}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#A78BFA] hover:bg-[#906fe7] text-[#101014] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {savingScript ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    )}
+                    <span>Save Script</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Live Speaking Duration & Word-Count Meter Bar ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Total Words & Speaking Speed */}
+                <div className="bg-[#101014] border border-white/[0.06] rounded-xl p-3.5 space-y-1">
+                  <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-mono">
+                    <span>Word Count & Pacing</span>
+                    <span className="text-[#A78BFA] font-bold">~140 WPM</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-heading font-extrabold text-[#F2F0F7]">{liveTotalWords}</span>
+                    <span className="text-xs text-[#A3A0B0]">spoken words</span>
+                  </div>
+                  <p className="text-[10px] text-[#71717A] font-mono">
+                    Standard viral short-form pace: ~2.3 words/sec
+                  </p>
+                </div>
+
+                {/* Estimated Duration vs Target Gauge */}
+                <div className="bg-[#101014] border border-white/[0.06] rounded-xl p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-mono">
+                    <span>Duration vs Target</span>
+                    <span className={`font-bold ${liveSpeakingSec > targetDuration ? "text-[#E16F7B]" : "text-[#45B88A]"}`}>
+                      {liveSpeakingSec}s / {targetDuration}s
+                    </span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-[#20202A] h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        liveSpeakingSec > targetDuration
+                          ? "bg-[#E16F7B]"
+                          : liveSpeakingSec >= targetDuration * 0.8
+                          ? "bg-[#45B88A]"
+                          : "bg-[#69A9D8]"
+                      }`}
+                      style={{ width: `${Math.min(100, targetDuration > 0 ? (liveSpeakingSec / targetDuration) * 100 : 0)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-[#A3A0B0]">{pacingLabel}</span>
+                    <span className="text-[#71717A]">
+                      {targetDuration - liveSpeakingSec >= 0 ? `${targetDuration - liveSpeakingSec}s remaining` : `${liveSpeakingSec - targetDuration}s over target`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hook Retention Score */}
+                <div className={`border rounded-xl p-3.5 space-y-1 ${
+                  liveHookWords > 15
+                    ? "bg-[#E16F7B]/10 border-[#E16F7B]/30"
+                    : liveHookWords >= 12
+                    ? "bg-[#E5AA58]/10 border-[#E5AA58]/30"
+                    : "bg-[#45B88A]/10 border-[#45B88A]/30"
+                }`}>
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="font-semibold flex items-center gap-1">
+                      <Flame className={`w-3.5 h-3.5 ${liveHookWords > 15 ? "text-[#E16F7B]" : liveHookWords >= 12 ? "text-[#E5AA58]" : "text-[#45B88A]"}`} />
+                      <span>Hook Retention</span>
+                    </span>
+                    <span className={`font-bold ${liveHookWords > 15 ? "text-[#E16F7B]" : liveHookWords >= 12 ? "text-[#E5AA58]" : "text-[#45B88A]"}`}>
+                      {liveHookWords} words (Scene 1)
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-[#F2F0F7] pt-0.5">
+                    {liveHookWords === 0
+                      ? "No hook written yet"
+                      : liveHookWords <= 12
+                      ? "✓ High 3s Retention (<12 words)"
+                      : liveHookWords <= 15
+                      ? "⚠ Borderline Retention (12–15 words)"
+                      : "🚨 High Drop-Off Risk (>15 words)"}
+                  </p>
+                  <p className="text-[10px] text-[#A3A0B0] leading-tight">
+                    {liveHookWords <= 12 ? "Viewers make stay/swipe decisions in 1.5s." : "Hooks over 15 words suffer ~40% viewer drop-off."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Hook Warning Banner (Alert if exceeds 15 words) */}
+              {liveHookWarning && (
+                <div className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs ${
+                  liveHookWords > 15
+                    ? "bg-[#E16F7B]/10 border-[#E16F7B]/30 text-[#E16F7B]"
+                    : "bg-[#E5AA58]/10 border-[#E5AA58]/30 text-[#E5AA58]"
+                }`}>
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <span className="font-bold block">Hook Length Warning (Viewer Retention Guardrail):</span>
+                    <p className="text-[#F2F0F7] leading-relaxed">{liveHookWarning}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Scene-by-Scene Structured Teleprompter Blocks ── */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-[#A3A0B0] uppercase tracking-wider">
+                    Structured Scene Beats ({scriptBlocks.length} Scenes)
+                  </span>
+                  <button
+                    onClick={handleAddScene}
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-[#A78BFA] hover:text-[#c4b5fd] transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Scene Take
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {scriptBlocks.map((block, idx) => {
+                    const sceneWords = block.spoken_words.trim().split(/\s+/).filter(Boolean).length;
+                    const sceneDuration = Math.max(2, Math.round((sceneWords / 140) * 60));
+
+                    return (
+                      <div
+                        key={block.id}
+                        className="bg-[#101014] border border-white/[0.08] hover:border-[#A78BFA]/30 rounded-xl p-4 space-y-3 transition-colors shadow-xs"
+                      >
+                        {/* Scene Header */}
+                        <div className="flex items-center justify-between gap-2 flex-wrap border-b border-white/[0.04] pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-md bg-[#20202A] text-[#A78BFA] font-mono font-bold text-xs flex items-center justify-center border border-white/[0.06]">
+                              {idx + 1}
+                            </span>
+                            <input
+                              type="text"
+                              value={block.title}
+                              onChange={(e) => handleUpdateScene(block.id, "title", e.target.value)}
+                              className="bg-transparent text-xs font-bold text-[#F2F0F7] focus:outline-none hover:border-b border-white/[0.2] py-0.5"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#20202A] px-2 py-0.5 rounded-md border border-white/[0.06]">
+                              {sceneWords} words • ~{sceneDuration}s
+                            </span>
+                            {scriptBlocks.length > 1 && (
+                              <button
+                                onClick={() => handleDeleteScene(block.id)}
+                                className="p-1 rounded-md text-[#71717A] hover:text-[#E16F7B] transition-colors cursor-pointer"
+                                title="Delete Scene"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Scene Fields Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                          {/* Spoken Dialogue (Col 7) */}
+                          <div className="md:col-span-7 space-y-1">
+                            <label className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
+                              <Mic className="w-3 h-3 text-[#A78BFA]" />
+                              <span>Spoken Words / Voiceover</span>
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={block.spoken_words}
+                              onChange={(e) => handleUpdateScene(block.id, "spoken_words", e.target.value)}
+                              placeholder="What the creator / voiceover actually says word-for-word..."
+                              className="w-full bg-[#0D0D12] text-xs text-[#F2F0F7] font-mono p-3 rounded-lg border border-white/[0.08] focus:border-[#A78BFA] focus:outline-none resize-y leading-relaxed placeholder-[#71717A]"
+                            />
+                          </div>
+
+                          {/* Visual Directive & Audio Notes (Col 5) */}
+                          <div className="md:col-span-5 space-y-2">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
+                                <Film className="w-3 h-3 text-[#69A9D8]" />
+                                <span>Visual Cue & B-Roll</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={block.visual_cue || ""}
+                                onChange={(e) => handleUpdateScene(block.id, "visual_cue", e.target.value)}
+                                placeholder="Camera angle, split screen, graphic overlay..."
+                                className="w-full bg-[#0D0D12] text-[11px] text-[#F2F0F7] px-3 py-1.5 rounded-lg border border-white/[0.08] focus:border-[#69A9D8] focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-[#E5AA58]" />
+                                <span>Audio & SFX Notes</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={block.audio_notes || ""}
+                                onChange={(e) => handleUpdateScene(block.id, "audio_notes", e.target.value)}
+                                placeholder="Tension build, riser, chime, upbeat rhythm..."
+                                className="w-full bg-[#0D0D12] text-[11px] text-[#F2F0F7] px-3 py-1.5 rounded-lg border border-white/[0.08] focus:border-[#E5AA58] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ── IN-TASK PRODUCTION CHECKLISTS / SUBTASKS ── */}
+            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
+              {/* Checklist Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="w-4 h-4 text-[#A78BFA]" />
+                  <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider">
+                    Production Checklists & Quality Subtasks
+                  </span>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1 bg-[#20202A] p-0.5 rounded-xl border border-white/[0.06] text-xs">
+                  {(["all", "scripting", "editing"] as const).map((stage) => (
+                    <button
+                      key={stage}
+                      onClick={() => setChecklistFilter(stage)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all capitalize cursor-pointer ${
+                        checklistFilter === stage
+                          ? "bg-[#A78BFA] text-[#101014] font-bold shadow-xs"
+                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      }`}
+                    >
+                      {stage === "all" ? "All Stages" : stage}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {checklists.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-[#A3A0B0]">
+                      Completed: {checklists.filter((c) => c.completed).length} / {checklists.length} Subtasks
+                    </span>
+                    <span className="font-bold text-[#A78BFA]">
+                      {Math.round((checklists.filter((c) => c.completed).length / checklists.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#20202A] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#A78BFA] to-[#45B88A] h-full transition-all duration-300"
+                      style={{
+                        width: `${(checklists.filter((c) => c.completed).length / checklists.length) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Checklist Items List */}
+              <div className="space-y-2">
+                {checklists
+                  .filter((c) => checklistFilter === "all" || c.stage === checklistFilter)
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleToggleChecklist(item.id)}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                        item.completed
+                          ? "bg-[#101014]/60 border-white/[0.04] opacity-70"
+                          : "bg-[#101014] border-white/[0.08] hover:border-[#A78BFA]/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors border ${
+                            item.completed
+                              ? "bg-[#45B88A] border-[#45B88A] text-[#101014]"
+                              : "bg-[#20202A] border-white/[0.12] text-transparent hover:border-[#A78BFA]"
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                        <span
+                          className={`text-xs ${
+                            item.completed
+                              ? "line-through text-[#71717A]"
+                              : "text-[#F2F0F7] font-medium"
+                          }`}
+                        >
+                          {item.text}
+                        </span>
+                      </div>
+
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md bg-[#20202A] text-[#A3A0B0] border border-white/[0.06]">
+                        {item.stage}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Add Custom Subtask Form */}
+              <form onSubmit={handleAddChecklistItem} className="flex items-center gap-2 pt-2">
+                <input
+                  type="text"
+                  value={newChecklistText}
+                  onChange={(e) => setNewChecklistText(e.target.value)}
+                  placeholder="Add a new production subtask (e.g. Export 9:16 vertical crop)..."
+                  className="flex-1 bg-[#101014] text-xs text-[#F2F0F7] px-3.5 py-2 rounded-xl border border-white/[0.08] focus:border-[#A78BFA] focus:outline-none"
+                />
+                <select
+                  value={newChecklistStage}
+                  onChange={(e) => setNewChecklistStage(e.target.value as any)}
+                  className="bg-[#20202A] text-[#A3A0B0] text-xs font-mono px-3 py-2 rounded-xl border border-white/[0.08] focus:outline-none cursor-pointer"
+                >
+                  <option value="scripting">Scripting</option>
+                  <option value="editing">Editing</option>
+                  <option value="qa">QA Review</option>
+                </select>
+                <button
+                  type="submit"
+                  className="px-3.5 py-2 rounded-xl bg-[#20202A] hover:bg-[#A78BFA] hover:text-[#101014] text-xs font-bold text-[#F2F0F7] border border-white/[0.08] transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </form>
             </div>
 
             {/* Version History & Submissions Accordion */}
@@ -1839,6 +2450,125 @@ function TaskWorkspaceContent() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FULLSCREEN TELEPROMPTER PRESENTER MODAL ── */}
+        {teleprompterModalOpen && (
+          <div className="fixed inset-0 z-50 bg-[#09090D] flex flex-col justify-between p-6 sm:p-10 select-none">
+            {/* Prompter Controls Header */}
+            <div className="flex items-center justify-between border-b border-white/[0.1] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center shrink-0">
+                  <Mic className="w-4 h-4 text-[#A78BFA]" />
+                </div>
+                <div>
+                  <h2 className="text-base font-heading font-bold text-[#F2F0F7]">
+                    Presenter Teleprompter Studio
+                  </h2>
+                  <p className="text-xs font-mono text-[#A3A0B0]">
+                    {liveTotalWords} words • ~{liveSpeakingSec}s estimated duration • Target: {targetDuration}s
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Speed Controls */}
+                <div className="flex items-center gap-2 bg-[#17171E] px-3 py-1.5 rounded-xl border border-white/[0.08] text-xs font-mono">
+                  <span className="text-[#A3A0B0]">Scroll Speed:</span>
+                  {[0.8, 1.0, 1.25, 1.5].map((spd) => (
+                    <button
+                      key={spd}
+                      onClick={() => setTeleprompterSpeed(spd)}
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        teleprompterSpeed === spd
+                          ? "bg-[#A78BFA] text-[#101014] font-bold"
+                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                      }`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
+
+                {/* Play / Pause Toggle */}
+                <button
+                  onClick={() => setTeleprompterPlaying(!teleprompterPlaying)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+                    teleprompterPlaying
+                      ? "bg-[#E5AA58] hover:bg-[#d89b47] text-[#101014]"
+                      : "bg-[#45B88A] hover:bg-[#3ca379] text-[#101014]"
+                  }`}
+                >
+                  {teleprompterPlaying ? (
+                    <>
+                      <Pause className="w-4 h-4 fill-current" />
+                      <span>Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Start Auto-Scroll</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Reset Scroll */}
+                <button
+                  onClick={() => {
+                    if (teleprompterRef.current) teleprompterRef.current.scrollTop = 0;
+                    setTeleprompterPlaying(false);
+                  }}
+                  className="p-2 rounded-xl bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
+                  title="Reset to Top"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setTeleprompterPlaying(false);
+                    setTeleprompterModalOpen(false);
+                  }}
+                  className="p-2 rounded-xl bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
+                  title="Close Teleprompter"
+                >
+                  <Minimize2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrolling Text Window */}
+            <div
+              ref={teleprompterRef}
+              className="flex-1 overflow-y-auto my-6 px-4 sm:px-16 scroll-smooth space-y-12 max-w-4xl mx-auto w-full"
+            >
+              {scriptBlocks.map((block, idx) => (
+                <div key={block.id} className="space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#A78BFA] uppercase tracking-wider">
+                    <span className="w-6 h-6 rounded-md bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span>{block.title}</span>
+                    {block.visual_cue && (
+                      <span className="text-[#69A9D8] font-normal normal-case">
+                        — [🎬 {block.visual_cue}]
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-3xl sm:text-4xl font-heading font-medium text-[#F2F0F7] leading-relaxed tracking-normal select-text">
+                    {block.spoken_words || "(No dialogue written for this scene)"}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Prompter Footer Guide */}
+            <div className="border-t border-white/[0.1] pt-3 flex items-center justify-between text-xs font-mono text-[#71717A]">
+              <span>💡 Pro Tip: Read at a steady, conversational pace (~140 WPM). Stand 3–5 feet back from camera.</span>
+              <span>ESC closes presenter mode</span>
             </div>
           </div>
         )}
