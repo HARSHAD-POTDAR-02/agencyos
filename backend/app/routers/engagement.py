@@ -178,9 +178,12 @@ async def sync_engagement_feed(
         total_comments += res["comments_synced"]
         total_convs += res["conversations_synced"]
     else:
-        # Sync across all clients in the agency
+        # Sync across all clients in the agency that have connected social accounts
         clients_res = await db.execute(
-            select(Client.id).where(Client.agency_id == agency_id)
+            select(Client.id)
+            .join(ClientSocialAccount, ClientSocialAccount.client_id == Client.id)
+            .where(Client.agency_id == agency_id, ClientSocialAccount.is_active == True)
+            .distinct()
         )
         c_ids = clients_res.scalars().all()
         for cid in c_ids:

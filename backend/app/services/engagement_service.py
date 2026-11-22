@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -38,11 +39,10 @@ from app.services.meta_publisher import (
 logger = logging.getLogger(__name__)
 
 # Nemotron models prioritized for deep intent and sentiment classification
+# nvidia/nemotron-3.5-bolt-e4b via NVIDIA NIM API (https://integrate.api.nvidia.com/v1)
 NEMOTRON_MODELS = [
-    "nvidia/llama-3.1-nemotron-8b-instruct",
+    "nvidia/nemotron-3.5-bolt-e4b",
     "nvidia/nemotron-mini-4b-instruct",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
-    getattr(settings, "NVIDIA_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b"),
     "llama-3.1-8b-instant",
 ]
 
@@ -168,7 +168,10 @@ async def sync_client_social_engagement(
     brand_profile = brand_res.scalar_one_or_none()
     brand_context = ""
     if brand_profile:
-        brand_context = f"Tone: {brand_profile.tone_of_voice}. Audience: {brand_profile.target_audience}. Guidelines: {brand_profile.approved_phrases}"
+        voice = brand_profile.brand_voice or ""
+        audience = json.dumps(brand_profile.target_audience) if isinstance(brand_profile.target_audience, (dict, list)) else str(brand_profile.target_audience or "")
+        phrases = json.dumps(brand_profile.approved_phrases) if isinstance(brand_profile.approved_phrases, (dict, list)) else str(brand_profile.approved_phrases or "")
+        brand_context = f"Tone & Voice: {voice}. Target Audience: {audience}. Approved Phrases: {phrases}"
 
     comments_synced = 0
     conversations_synced = 0
@@ -186,10 +189,14 @@ async def sync_client_social_engagement(
                 )
                 posts = telemetry.get("posts", [])
 
-                for post in posts[:15]:  # Process recent 15 posts
+                # Only process posts with comments to avoid dozens of redundant network round-trips
+                posts_with_comments = [
+                    p for p in posts[:15]
+                    if str(p.get("id")) and int(p.get("comments_count") or 0) > 0
+                ]
+
+                for post in posts_with_comments:
                     media_id = str(post.get("id"))
-                    if not media_id:
-                        continue
 
                     # Match with AgencyOS deliverable if possible
                     deliv_res = await db.execute(
@@ -205,15 +212,35 @@ async def sync_client_social_engagement(
                         limit=30,
                     )
 
+                    new_raw_comments = []
                     for c in comments_data:
                         ext_c_id = str(c.get("id"))
-                        # Check if already saved
                         existing_res = await db.execute(
-                            select(SocialComment).where(SocialComment.external_comment_id == ext_c_id)
+                            select(SocialComment.id).where(SocialComment.external_comment_id == ext_c_id)
                         )
-                        if existing_res.scalar_one_or_none() is not None:
+                        if existing_res.scalar_one_or_none() is None:
+                            new_raw_comments.append(c)
+
+                    if not new_raw_comments:
+                        continue
+
+                    # Concurrently triage all new incoming comments using Nemotron Bolt
+                    triage_tasks = [
+                        triage_social_comment_llm(
+                            comment_text=c.get("text") or "",
+                            brand_context=brand_context,
+                            post_context=post.get("caption"),
+                        )
+                        for c in new_raw_comments
+                    ]
+                    triage_results = await asyncio.gather(*triage_tasks, return_exceptions=True)
+
+                    for c, triage in zip(new_raw_comments, triage_results):
+                        if isinstance(triage, Exception):
+                            logger.warning(f"Error triaging comment {c.get('id')}: {triage}")
                             continue
 
+                        ext_c_id = str(c.get("id"))
                         comment_text = c.get("text") or ""
                         author_user = c.get("user", {}) or {}
                         author_username = c.get("username") or author_user.get("username") or "instagram_user"
@@ -226,14 +253,6 @@ async def sync_client_social_engagement(
                             except Exception:
                                 pass
 
-                        # Run Nemotron 8B LLM Triage
-                        triage = await triage_social_comment_llm(
-                            comment_text=comment_text,
-                            brand_context=brand_context,
-                            post_context=post.get("caption"),
-                        )
-
-                        # Determine Sentiment Enum
                         sentiment_map = {
                             "positive": CommentSentiment.positive,
                             "inquiry": CommentSentiment.inquiry,
@@ -241,7 +260,6 @@ async def sync_client_social_engagement(
                             "spam": CommentSentiment.spam,
                         }
                         sent_enum = sentiment_map.get(triage.sentiment, CommentSentiment.neutral)
-
                         options_json = json.dumps([r.model_dump() for r in triage.suggested_replies])
                         top_reply = triage.suggested_replies[0].reply if triage.suggested_replies else None
 
