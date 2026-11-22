@@ -1449,28 +1449,46 @@ async def send_instagram_dm(
     use_human_agent_tag: bool = True,
 ) -> dict[str, Any]:
     """
-    Send an Instagram Direct Message using standard messaging or Human Agent Tag (up to 7 days).
+    Send an Instagram Direct Message using standard 24-hour messaging or Human Agent Tag fallback.
     Endpoint: POST /{page_id}/messages
     """
     version = _get_api_version()
-    payload: dict[str, Any] = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": message},
-        "messaging_type": "MESSAGE_TAG" if use_human_agent_tag else "RESPONSE",
-        "access_token": access_token,
-    }
-    if use_human_agent_tag:
-        payload["tag"] = "HUMAN_AGENT"
+    endpoint_url = f"{GRAPH_API_BASE}/{version}/{page_or_ig_id}/messages"
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        res = await client.post(
-            f"{GRAPH_API_BASE}/{version}/{page_or_ig_id}/messages",
-            json=payload,
-        )
+        # 1. First attempt: Standard 24-hour messaging payload (preferred for apps without Advanced Human Agent approval)
+        standard_payload: dict[str, Any] = {
+            "recipient": {"id": recipient_id},
+            "message": {"text": message},
+            "access_token": access_token,
+        }
+        res = await client.post(endpoint_url, json=standard_payload)
         data = res.json()
-        if res.status_code != 200 or "error" in data:
-            err_msg = data.get("error", {}).get("message", "Failed to send Instagram DM.")
-            raise MetaPublishingError(f"Meta API error: {err_msg}", data.get("error"))
-        return data
+        if res.status_code == 200 and "error" not in data:
+            return data
+
+        # 2. If standard failed and human agent tag is enabled, attempt with HUMAN_AGENT message tag
+        if use_human_agent_tag:
+            tagged_payload: dict[str, Any] = {
+                "recipient": {"id": recipient_id},
+                "message": {"text": message},
+                "messaging_type": "MESSAGE_TAG",
+                "tag": "HUMAN_AGENT",
+                "access_token": access_token,
+            }
+            res_tagged = await client.post(endpoint_url, json=tagged_payload)
+            data_tagged = res_tagged.json()
+            if res_tagged.status_code == 200 and "error" not in data_tagged:
+                return data_tagged
+
+        # If both attempts failed, raise descriptive error
+        err_msg = data.get("error", {}).get("message", "Failed to send Instagram DM.")
+        err_subcode = data.get("error", {}).get("error_subcode")
+        if err_subcode == 2534022:
+            err_msg = (
+                "Outside 24-hour messaging window. In Development Mode, the recipient Instagram account must be "
+                "an accepted Instagram Tester on your Meta App, and must have sent a fresh inbound message to open the window."
+            )
+        raise MetaPublishingError(f"Meta API error: {err_msg}", data.get("error"))
 
 
