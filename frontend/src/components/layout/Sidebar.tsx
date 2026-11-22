@@ -23,7 +23,8 @@ import {
   Command,
   ChevronsUpDown,
   GitFork,
-  Layers
+  Layers,
+  MessagesSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -184,6 +185,12 @@ export function Sidebar() {
               badge: null,
             },
             {
+              name: "Community Inbox",
+              href: "/engagement",
+              icon: MessagesSquare,
+              badge: "Live",
+            },
+            {
               name: "Campaign Plans",
               href: "/campaign-plans",
               icon: Layers,
@@ -242,6 +249,12 @@ export function Sidebar() {
               href: "/calendar",
               icon: CalendarDays,
               badge: null,
+            },
+            {
+              name: "Community Inbox",
+              href: "/engagement",
+              icon: MessagesSquare,
+              badge: "Live",
             },
             {
               name: "Campaign Plans",

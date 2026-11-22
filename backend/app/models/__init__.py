@@ -47,3 +47,10 @@ from app.models.operational_workflow import (  # noqa: F401
     ReviewDecision,
     ModelInvocation,
 )
+from app.models.social_comment import (  # noqa: F401
+    SocialComment,
+    SocialConversation,
+    SocialMessage,
+    CommentSentiment,
+    EngagementStatus,
+)

@@ -213,9 +213,15 @@ async def get_meta_oauth_url(
     scopes = [
         "pages_show_list",
         "pages_read_engagement",
+        "pages_read_user_content",
         "pages_manage_posts",
+        "pages_manage_engagement",
         "instagram_basic",
         "instagram_content_publish",
+        "instagram_manage_comments",
+        "instagram_manage_messages",
+        "instagram_manage_insights",
+        "instagram_manage_engagement",
         "business_management",
     ]
     scope_str = ",".join(scopes)

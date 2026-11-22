@@ -1247,3 +1247,207 @@ async def fetch_live_meta_telemetry(
     result["posts"].sort(key=_parse_time, reverse=True)
     return result
 
+
+async def get_token_permissions(access_token: str) -> dict[str, Any]:
+    """
+    Check granted and declined OAuth scopes for an access token via Meta Graph API /me/permissions.
+    """
+    version = _get_api_version()
+    granted: list[str] = []
+    declined: list[str] = []
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/me/permissions",
+                params={"access_token": access_token},
+            )
+            if res.status_code == 200:
+                data = res.json().get("data", [])
+                for item in data:
+                    perm = item.get("permission")
+                    status = item.get("status")
+                    if status == "granted":
+                        granted.append(perm)
+                    elif status == "declined":
+                        declined.append(perm)
+        except Exception as e:
+            logger.warning(f"Failed to check token permissions: {e}")
+
+    return {
+        "has_manage_comments": "instagram_manage_comments" in granted or "instagram_business_manage_comments" in granted,
+        "has_manage_messages": "instagram_manage_messages" in granted or "instagram_business_manage_messages" in granted or "pages_messaging" in granted,
+        "has_manage_engagement": "instagram_manage_engagement" in granted or "pages_manage_engagement" in granted,
+        "has_manage_insights": "instagram_manage_insights" in granted or "instagram_business_manage_insights" in granted,
+        "granted_scopes": granted,
+        "declined_scopes": declined,
+    }
+
+
+async def fetch_instagram_media_comments(
+    access_token: str,
+    media_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """
+    Fetch top-level comments and nested replies for an Instagram Media object (Post or Reel).
+    Endpoint: GET /{media_id}/comments?fields=id,text,timestamp,username,like_count,hidden,replies{id,text,timestamp,username,like_count}
+    """
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/{media_id}/comments",
+                params={
+                    "fields": "id,text,timestamp,username,like_count,hidden,user{id,username,profile_picture_url},replies{id,text,timestamp,username,like_count}",
+                    "access_token": access_token,
+                    "limit": limit,
+                },
+            )
+            if res.status_code == 200:
+                return res.json().get("data", [])
+            else:
+                logger.warning(f"Failed to fetch comments for media {media_id}: {res.text}")
+                return []
+        except Exception as e:
+            logger.error(f"Error calling Meta comments API for {media_id}: {e}")
+            return []
+
+
+async def reply_to_instagram_comment(
+    access_token: str,
+    comment_id: str,
+    message: str,
+) -> dict[str, Any]:
+    """
+    Publish a reply to an Instagram comment.
+    Endpoint: POST /{comment_id}/replies?message={message}
+    """
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        res = await client.post(
+            f"{GRAPH_API_BASE}/{version}/{comment_id}/replies",
+            data={
+                "message": message,
+                "access_token": access_token,
+            },
+        )
+        data = res.json()
+        if res.status_code != 200 or "error" in data:
+            err_msg = data.get("error", {}).get("message", "Failed to reply to comment.")
+            raise MetaPublishingError(f"Meta API error: {err_msg}", data.get("error"))
+        return data
+
+
+async def like_instagram_comment(
+    access_token: str,
+    comment_id: str,
+) -> bool:
+    """
+    Like an Instagram comment using instagram_manage_engagement permission.
+    Endpoint: POST /{comment_id}/likes
+    """
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.post(
+                f"{GRAPH_API_BASE}/{version}/{comment_id}/likes",
+                data={"access_token": access_token},
+            )
+            data = res.json()
+            return res.status_code == 200 and data.get("success", False)
+        except Exception as e:
+            logger.warning(f"Failed to like Instagram comment: {e}")
+            return False
+
+
+async def hide_instagram_comment(
+    access_token: str,
+    comment_id: str,
+    hide: bool = True,
+) -> bool:
+    """
+    Hide or unhide an offensive/spam comment on Instagram.
+    Endpoint: POST /{comment_id}?hide={true|false}
+    """
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.post(
+                f"{GRAPH_API_BASE}/{version}/{comment_id}",
+                data={
+                    "hide": "true" if hide else "false",
+                    "access_token": access_token,
+                },
+            )
+            data = res.json()
+            return res.status_code == 200 and data.get("success", False)
+        except Exception as e:
+            logger.warning(f"Failed to hide Instagram comment: {e}")
+            return False
+
+
+async def fetch_instagram_conversations(
+    access_token: str,
+    instagram_business_id: str,
+    limit: int = 25,
+) -> list[dict[str, Any]]:
+    """
+    Fetch direct message conversations for an Instagram Business Account.
+    Endpoint: GET /{ig_business_id}/conversations?platform=instagram&fields=id,updated_time,participants,messages{id,message,created_time,from}
+    """
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/conversations",
+                params={
+                    "platform": "instagram",
+                    "fields": "id,updated_time,participants,unread_count,messages{id,message,created_time,from}",
+                    "access_token": access_token,
+                    "limit": limit,
+                },
+            )
+            if res.status_code == 200:
+                return res.json().get("data", [])
+            else:
+                logger.info(f"Instagram conversations query status {res.status_code}: {res.text}")
+                return []
+        except Exception as e:
+            logger.warning(f"Error fetching Instagram conversations: {e}")
+            return []
+
+
+async def send_instagram_dm(
+    access_token: str,
+    page_or_ig_id: str,
+    recipient_id: str,
+    message: str,
+    use_human_agent_tag: bool = True,
+) -> dict[str, Any]:
+    """
+    Send an Instagram Direct Message using standard messaging or Human Agent Tag (up to 7 days).
+    Endpoint: POST /{page_id}/messages
+    """
+    version = _get_api_version()
+    payload: dict[str, Any] = {
+        "recipient": {"id": recipient_id},
+        "message": {"text": message},
+        "messaging_type": "MESSAGE_TAG" if use_human_agent_tag else "RESPONSE",
+        "access_token": access_token,
+    }
+    if use_human_agent_tag:
+        payload["tag"] = "HUMAN_AGENT"
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        res = await client.post(
+            f"{GRAPH_API_BASE}/{version}/{page_or_ig_id}/messages",
+            json=payload,
+        )
+        data = res.json()
+        if res.status_code != 200 or "error" in data:
+            err_msg = data.get("error", {}).get("message", "Failed to send Instagram DM.")
+            raise MetaPublishingError(f"Meta API error: {err_msg}", data.get("error"))
+        return data
+
+

@@ -1226,3 +1226,131 @@ export const operationalWorkflowApi = {
   getTelemetry: (agencyId: string, runId: string, token: string) =>
     apiFetch<TelemetrySummary>(`/agencies/${agencyId}/operational-workflows/runs/${runId}/telemetry`, { token }),
 };
+
+/* ── Community Engagement & Inbox Endpoints ── */
+export const engagementApi = {
+  listComments: (
+    agencyId: string,
+    token: string,
+    params?: {
+      client_id?: string;
+      platform?: string;
+      sentiment?: string;
+      status?: string;
+      urgency?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== "" && v !== "all") {
+          searchParams.set(k, String(v));
+        }
+      }
+    }
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return apiFetch<any[]>(`/agencies/${agencyId}/engagement/comments${qs}`, { token });
+  },
+
+  listConversations: (
+    agencyId: string,
+    token: string,
+    params?: {
+      client_id?: string;
+      status?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== "" && v !== "all") {
+          searchParams.set(k, String(v));
+        }
+      }
+    }
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return apiFetch<any[]>(`/agencies/${agencyId}/engagement/conversations${qs}`, { token });
+  },
+
+  sync: (agencyId: string, token: string, clientId?: string) => {
+    const qs = clientId && clientId !== "all" ? `?client_id=${clientId}` : "";
+    return apiFetch<{ comments_synced: number; conversations_synced: number; status: string }>(
+      `/agencies/${agencyId}/engagement/sync${qs}`,
+      { method: "POST", token }
+    );
+  },
+
+  replyComment: (agencyId: string, commentId: string, message: string, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/engagement/comments/${commentId}/reply`, {
+      method: "POST",
+      body: { message },
+      token,
+    }),
+
+  likeComment: (agencyId: string, commentId: string, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/engagement/comments/${commentId}/like`, {
+      method: "POST",
+      token,
+    }),
+
+  hideComment: (agencyId: string, commentId: string, token: string) =>
+    apiFetch<any>(`/agencies/${agencyId}/engagement/comments/${commentId}/hide`, {
+      method: "POST",
+      token,
+    }),
+
+  aiAssist: (agencyId: string, commentId: string, data: { instruction?: string }, token: string) =>
+    apiFetch<{
+      suggestions: Array<{ tone: string; title: string; reply: string }>;
+      sentiment: string;
+      intent_category?: string;
+      explanation?: string;
+    }>(`/agencies/${agencyId}/engagement/comments/${commentId}/ai-assist`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  sendDm: (
+    agencyId: string,
+    conversationId: string,
+    data: { message: string; use_human_agent_tag?: boolean },
+    token: string
+  ) =>
+    apiFetch<any>(`/agencies/${agencyId}/engagement/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  stats: (agencyId: string, token: string, clientId?: string) => {
+    const qs = clientId && clientId !== "all" ? `?client_id=${clientId}` : "";
+    return apiFetch<{
+      total_comments: number;
+      pending_comments: number;
+      replied_comments: number;
+      total_conversations: number;
+      unread_conversations: number;
+      positive_sentiment_percent: number;
+      leads_count: number;
+      complaints_count: number;
+    }>(`/agencies/${agencyId}/engagement/stats${qs}`, { token });
+  },
+
+  permissions: (agencyId: string, clientId: string, token: string) =>
+    apiFetch<{
+      has_manage_comments: boolean;
+      has_manage_messages: boolean;
+      has_manage_engagement: boolean;
+      has_manage_insights: boolean;
+      granted_scopes: string[];
+      declined_scopes: string[];
+    }>(`/agencies/${agencyId}/engagement/permissions?client_id=${clientId}`, { token }),
+};
+
