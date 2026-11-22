@@ -1529,3 +1529,103 @@ export const analyticsApi = {
   },
 };
 
+// ── Track 6: Zero-Login Magic-Link Client Review Room ──
+export interface ReviewTokenData {
+  token: string;
+  review_url: string;
+  is_active: boolean;
+  views_count: number;
+  last_accessed_at: string | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+export interface PublicContentVersion {
+  id: string;
+  version_number: number;
+  file_name: string;
+  file_type: string | null;
+  file_size_bytes: number | null;
+  url: string | null;
+  caption: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ReviewComment {
+  id: string;
+  author_name: string;
+  author_role: "client" | "agency";
+  message: string;
+  timestamp_seconds?: number | null;
+  content_version_id?: string | null;
+  created_at: string;
+}
+
+export interface PublicReviewRoom {
+  token: string;
+  deliverable_id: string;
+  title: string;
+  deliverable_type: string;
+  platform: string;
+  status: string;
+  planned_date: string | null;
+  scheduled_at: string | null;
+  live_post_url: string | null;
+  client_id: string;
+  client_name: string;
+  brand_voice: string | null;
+  campaign_id: string;
+  campaign_name: string;
+  script_blocks: ScriptBlock[];
+  content_versions: PublicContentVersion[];
+  comments: ReviewComment[];
+  views_count: number;
+  created_at: string;
+  is_active: boolean;
+}
+
+export const reviewApi = {
+  generateToken: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch<ReviewTokenData>(`/agencies/${agencyId}/deliverables/${deliverableId}/review-token`, {
+      method: "POST",
+      token,
+    }),
+
+  revokeToken: (agencyId: string, deliverableId: string, token: string) =>
+    apiFetch<void>(`/agencies/${agencyId}/deliverables/${deliverableId}/review-token`, {
+      method: "DELETE",
+      token,
+    }),
+
+  getPublicRoom: (reviewToken: string) =>
+    apiFetch<PublicReviewRoom>(`/public/review/${reviewToken}`),
+
+  postComment: (
+    reviewToken: string,
+    payload: {
+      author_name: string;
+      message: string;
+      content_version_id?: string;
+      timestamp_seconds?: number;
+    }
+  ) =>
+    apiFetch<ReviewComment>(`/public/review/${reviewToken}/comments`, {
+      method: "POST",
+      body: payload,
+    }),
+
+  submitDecision: (
+    reviewToken: string,
+    payload: {
+      decision: "approved" | "changes_requested";
+      reviewer_name: string;
+      feedback_notes?: string;
+    }
+  ) =>
+    apiFetch<PublicReviewRoom>(`/public/review/${reviewToken}/decision`, {
+      method: "POST",
+      body: payload,
+    }),
+};
+

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, Suspense, useRef } from "react
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { deliverableApi, approvalApi, publishingApi, API_BASE } from "@/lib/api";
+import { deliverableApi, approvalApi, publishingApi, reviewApi, API_BASE } from "@/lib/api";
 import PublishModal from "@/components/publishing/PublishModal";
 import {
   ArrowLeft,
@@ -178,6 +178,8 @@ function DeliverableDetailContent() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [copiedChecksum, setCopiedChecksum] = useState(false);
+  const [generatingReviewLink, setGeneratingReviewLink] = useState(false);
+  const [copiedReviewLink, setCopiedReviewLink] = useState(false);
 
   // Comments state
   const [newComment, setNewComment] = useState("");
@@ -491,6 +493,22 @@ function DeliverableDetailContent() {
     }
   };
 
+  const handleCopyMagicReviewLink = async () => {
+    if (!effectiveAgencyId || !token || !deliverable) return;
+    setGeneratingReviewLink(true);
+    try {
+      const data = await reviewApi.generateToken(effectiveAgencyId, deliverable.id, token);
+      const fullUrl = `${window.location.origin}/review/${data.token}`;
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedReviewLink(true);
+      setTimeout(() => setCopiedReviewLink(false), 3000);
+    } catch (err: any) {
+      console.error("Failed to generate magic review link:", err);
+    } finally {
+      setGeneratingReviewLink(false);
+    }
+  };
+
   const getStatusBadge = (status: DeliverableDetail["status"]) => {
     switch (status) {
       case "not_started":
@@ -665,6 +683,23 @@ function DeliverableDetailContent() {
               <option value="ambiguous" className="bg-[#17171E] text-[#F2F0F7]">Reconciling</option>
             </select>
           </div>
+
+          {/* Share Magic Client Review Link */}
+          <button
+            onClick={handleCopyMagicReviewLink}
+            disabled={generatingReviewLink}
+            className="inline-flex items-center gap-1.5 bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 border border-[#A78BFA]/30 text-[#A78BFA] hover:text-[#c4b5fd] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs"
+            title="Generate & copy zero-login client review link"
+          >
+            {generatingReviewLink ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : copiedReviewLink ? (
+              <Check className="w-3.5 h-3.5 text-[#45B88A]" />
+            ) : (
+              <Share2 className="w-3.5 h-3.5" />
+            )}
+            <span>{copiedReviewLink ? "Review Link Copied!" : "Share Review Link"}</span>
+          </button>
 
           {/* Action buttons based on status */}
           {(deliverable.status === "approved" || deliverable.status === "partially_published") && (

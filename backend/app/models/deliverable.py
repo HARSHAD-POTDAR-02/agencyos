@@ -91,6 +91,9 @@ class Deliverable(Base):
     publication_jobs: Mapped[list["PublicationJob"]] = relationship(  # noqa: F821
         "PublicationJob", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
     )
+    review_tokens: Mapped[list["ReviewToken"]] = relationship(  # noqa: F821
+        "ReviewToken", back_populates="deliverable", lazy="selectin", cascade="all, delete-orphan"
+    )
 
     @property
     def client_id(self) -> uuid.UUID | None:

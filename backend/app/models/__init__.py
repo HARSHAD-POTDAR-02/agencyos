@@ -55,3 +55,4 @@ from app.models.social_comment import (  # noqa: F401
     EngagementStatus,
 )
 from app.models.historical_post import ClientHistoricalPost  # noqa: F401
+from app.models.review_token import ReviewToken  # noqa: F401

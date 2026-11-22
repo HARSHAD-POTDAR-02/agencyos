@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, Suspense, useRef } from "react
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { taskApi, agencyApi, API_BASE, ScriptBlock, TaskChecklistItem } from "@/lib/api";
+import { taskApi, agencyApi, reviewApi, API_BASE, ScriptBlock, TaskChecklistItem } from "@/lib/api";
 import {
   ArrowLeft,
   Briefcase,
@@ -52,6 +52,7 @@ import {
   Zap,
   CheckCheck,
   AlertCircle,
+  Share2,
 } from "lucide-react";
 
 interface SubmissionVersion {
@@ -356,6 +357,8 @@ function TaskWorkspaceContent() {
   const [checklistFilter, setChecklistFilter] = useState<"all" | "scripting" | "editing">("all");
   const [newChecklistText, setNewChecklistText] = useState("");
   const [newChecklistStage, setNewChecklistStage] = useState<"scripting" | "editing">("scripting");
+  const [generatingReviewLink, setGeneratingReviewLink] = useState(false);
+  const [copiedReviewLink, setCopiedReviewLink] = useState(false);
   const teleprompterRef = useRef<HTMLDivElement>(null);
 
   const loadTask = useCallback(async () => {
@@ -686,6 +689,30 @@ function TaskWorkspaceContent() {
     } else {
       setCopiedStoryboard(true);
       setTimeout(() => setCopiedStoryboard(false), 2000);
+    }
+  };
+
+  const handleCopyMagicReviewLink = async () => {
+    if (!effectiveAgencyId || !token || !task || !task.deliverable_id) return;
+    setGeneratingReviewLink(true);
+    try {
+      const data = await reviewApi.generateToken(effectiveAgencyId, task.deliverable_id, token);
+      const fullUrl = `${window.location.origin}/review/${data.token}`;
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedReviewLink(true);
+      setNotification({
+        type: "success",
+        text: "Zero-login client review link copied to clipboard!",
+      });
+      setTimeout(() => setCopiedReviewLink(false), 3000);
+    } catch (err: any) {
+      console.error("Failed to generate magic review link:", err);
+      setNotification({
+        type: "error",
+        text: err?.message || "Failed to generate review link.",
+      });
+    } finally {
+      setGeneratingReviewLink(false);
     }
   };
 
@@ -1031,6 +1058,25 @@ function TaskWorkspaceContent() {
                 <Calendar className="w-3.5 h-3.5" />
                 <span>{sla.text}</span>
               </div>
+            )}
+
+            {task.deliverable_id && (
+              <button
+                type="button"
+                onClick={handleCopyMagicReviewLink}
+                disabled={generatingReviewLink}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 border border-[#A78BFA]/30 text-xs font-semibold text-[#A78BFA] hover:text-[#c4b5fd] transition-colors cursor-pointer shadow-xs"
+                title="Generate & copy zero-login client review link"
+              >
+                {generatingReviewLink ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : copiedReviewLink ? (
+                  <Check className="w-3.5 h-3.5 text-[#45B88A]" />
+                ) : (
+                  <Share2 className="w-3.5 h-3.5" />
+                )}
+                <span>{copiedReviewLink ? "Review Link Copied!" : "Share Review Link"}</span>
+              </button>
             )}
 
             <Link

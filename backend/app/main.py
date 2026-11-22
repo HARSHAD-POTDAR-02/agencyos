@@ -28,6 +28,7 @@ from app.routers import (
     operational_workflows,
     portal,
     publishing,
+    review,
     social,
     tasks,
 )
@@ -114,6 +115,7 @@ app.include_router(social.router)
 app.include_router(publishing.router)
 app.include_router(analytics.router)
 app.include_router(engagement.router)
+app.include_router(review.router)
 app.include_router(operational_workflows.router)
 
 # ---------------------------------------------------------------------------

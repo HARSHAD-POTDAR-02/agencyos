@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,11 +28,13 @@ class DeliverableComment(Base):
         nullable=True,
         index=True,
     )
-    author_id: Mapped[uuid.UUID] = mapped_column(
+    author_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
+    guest_author_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    timestamp_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     message: Mapped[str] = mapped_column(String(2000), nullable=False)
     is_internal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -42,10 +44,13 @@ class DeliverableComment(Base):
     # Relationships
     deliverable: Mapped["Deliverable"] = relationship("Deliverable", back_populates="comments")  # noqa: F821
     content_version: Mapped["ContentVersion | None"] = relationship("ContentVersion")  # noqa: F821
-    author: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
+    author: Mapped["User | None"] = relationship("User", lazy="selectin")  # noqa: F821
 
     @property
     def author_name(self) -> str | None:
+        if self.guest_author_name:
+            return self.guest_author_name
         if self.author:
             return self.author.full_name or self.author.email
+        return "Client Reviewer"
         return None
