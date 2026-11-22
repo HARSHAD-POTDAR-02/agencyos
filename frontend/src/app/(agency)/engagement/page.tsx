@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { engagementApi, clientApi, API_BASE } from "@/lib/api";
@@ -298,6 +298,20 @@ function EngagementContent() {
   const activeConversation = useMemo(() => {
     return conversations.find((c) => c.id === selectedConvId) || (conversations.length > 0 ? conversations[0] : null);
   }, [conversations, selectedConvId]);
+
+  // Chronological order: oldest at top, latest at bottom right above texting input
+  const sortedMessages = useMemo(() => {
+    if (!activeConversation?.messages) return [];
+    return [...activeConversation.messages].sort(
+      (a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+    );
+  }, [activeConversation]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [sortedMessages]);
 
   // Load AI suggestions whenever active comment changes
   useEffect(() => {
@@ -969,28 +983,31 @@ function EngagementContent() {
                   </div>
                 </div>
 
-                {/* Messages Timeline */}
+                {/* Messages Timeline (Chronological: oldest at top, newest at bottom near composer) */}
                 <div className="flex-1 flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1">
-                  {activeConversation.messages && activeConversation.messages.length > 0 ? (
-                    activeConversation.messages.map((m) => (
-                      <div
-                        key={m.id}
-                        className={`flex flex-col max-w-[80%] ${
-                          m.is_from_brand ? "self-end items-end" : "self-start items-start"
-                        }`}
-                      >
+                  {sortedMessages.length > 0 ? (
+                    <>
+                      {sortedMessages.map((m) => (
                         <div
-                          className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                            m.is_from_brand
-                              ? "bg-purple-600 text-white rounded-br-none"
-                              : "bg-[#181822] border border-[#2B2B3B] text-[#D4D4D8] rounded-bl-none"
+                          key={m.id}
+                          className={`flex flex-col max-w-[80%] ${
+                            m.is_from_brand ? "self-end items-end" : "self-start items-start"
                           }`}
                         >
-                          {m.message_text}
+                          <div
+                            className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                              m.is_from_brand
+                                ? "bg-purple-600 text-white rounded-br-none"
+                                : "bg-[#181822] border border-[#2B2B3B] text-[#D4D4D8] rounded-bl-none"
+                            }`}
+                          >
+                            {m.message_text}
+                          </div>
+                          <span className="text-[9px] text-[#71717A] mt-1 px-1">{formatRelativeTime(m.sent_at)}</span>
                         </div>
-                        <span className="text-[9px] text-[#71717A] mt-1 px-1">{formatRelativeTime(m.sent_at)}</span>
-                      </div>
-                    ))
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </>
                   ) : (
                     <div className="p-6 text-center text-xs text-[#71717A] italic">No prior messages recorded.</div>
                   )}

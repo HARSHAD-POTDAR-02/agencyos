@@ -156,7 +156,8 @@ async def list_social_conversations(
     for conv, c_name in rows:
         item = SocialConversationOut.model_validate(conv)
         item.client_name = c_name
-        item.messages = [SocialMessageOut.model_validate(m) for m in conv.messages]
+        sorted_messages = sorted(conv.messages, key=lambda m: m.sent_at)
+        item.messages = [SocialMessageOut.model_validate(m) for m in sorted_messages]
         out.append(item)
 
     return out
@@ -444,7 +445,8 @@ async def send_dm_reply(
     out = SocialConversationOut.model_validate(conv)
     if conv.client:
         out.client_name = conv.client.business_name
-    out.messages = [SocialMessageOut.model_validate(m) for m in conv.messages]
+    sorted_messages = sorted(conv.messages, key=lambda m: m.sent_at)
+    out.messages = [SocialMessageOut.model_validate(m) for m in sorted_messages]
     return out
 
 
