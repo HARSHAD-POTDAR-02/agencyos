@@ -1018,5 +1018,40 @@ html:not(.dark) .pitch-deck-screen-view footer kbd {
   animation-play-state: paused;
 }
 
+/* ── Notion Warm Paper Light Landing Page Utilities ── */
+
+.bg-warm-canvas {
+  background-color: #FBFBF9;
+}
+
+.bg-warm-sidebar {
+  background-color: #F7F6F3;
+}
+
+.bg-warm-card {
+  background-color: #FFFFFF;
+}
+
+.border-warm-subtle {
+  border-color: rgba(55, 53, 47, 0.09);
+}
+
+.border-warm-medium {
+  border-color: rgba(55, 53, 47, 0.14);
+}
+
+.shadow-notion-card {
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 0 0 1px rgba(55, 53, 47, 0.06);
+}
+
+.shadow-notion-window {
+  box-shadow: 0 24px 60px -16px rgba(15, 15, 15, 0.09), 0 0 0 1px rgba(55, 53, 47, 0.09);
+}
+
+.shadow-notion-hover {
+  box-shadow: 0 8px 24px -4px rgba(15, 15, 15, 0.08), 0 0 0 1px rgba(55, 53, 47, 0.12);
+}
+
+
 
 

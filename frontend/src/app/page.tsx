@@ -1,106 +1,97 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
+  Brain,
   Sparkles,
-  ShieldCheck,
-  Zap,
-  CheckCircle2,
-  ArrowRight,
-  TrendingUp,
-  Cpu,
-  Layers,
-  CalendarDays,
   FileCheck2,
   MessagesSquare,
-  BarChart3,
-  Users,
-  Lock,
-  Globe,
+  ShieldCheck,
+  CheckCircle2,
+  ArrowRight,
   Clock,
-  ChevronRight,
-  Play,
+  Layers,
+  CalendarDays,
+  Lock,
   Check,
-  AlertTriangle,
-  Flame,
-  Search,
-  Command,
+  Zap,
+  BarChart3,
   Sliders,
-  ExternalLink,
-  ShieldAlert,
-  Brain,
-  Video,
-  Mic,
-  Activity,
-  Terminal,
+  Globe,
+  Building2,
+  Send,
+  AlertCircle,
+  Database,
+  Eye,
+  FileText,
+  CornerDownRight,
+  ChevronRight,
+  Smartphone,
+  Cpu,
 } from "lucide-react";
 
 export default function LandingPage() {
-  const [signalCount, setSignalCount] = useState(1482890);
-  const [activeTab, setActiveTab] = useState<"cortex" | "campaigns" | "teleprompter" | "reviews" | "meta" | "community">("cortex");
-  const [clientsCount, setClientsCount] = useState(12);
+  const [activeTab, setActiveTab] = useState<"cortex" | "studio" | "review" | "inbox">("cortex");
+  const [retainerCount, setRetainerCount] = useState<number>(12);
 
-  // Live signal counter ticker (simulates active stream)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSignalCount((prev) => prev + Math.floor(Math.random() * 3) + 1);
-    }, 2500);
-    return () => clearInterval(timer);
-  }, []);
+  const hoursSavedPerMonth = retainerCount * 14;
+  const saasSavedPerMonth = Math.round(retainerCount * 65);
+  const extraRetainerCapacity = Math.floor(retainerCount * 0.45);
 
   return (
-    <div className="min-h-screen bg-[#FBFBF9] dark:bg-[#0B0F15] text-[#1F2B33] dark:text-[#E2E8F0] font-sans antialiased selection:bg-[#0D4A32] selection:text-white">
-      {/* ── Top Minimalist Sticky Header ── */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-[#FBFBF9]/80 dark:bg-[#0B0F15]/80 border-b border-black/[0.06] dark:border-white/[0.08] transition-all">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo & Live Status Pill */}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0D4A32] to-[#1F6E4E] dark:from-[#10B981] dark:to-[#059669] flex items-center justify-center text-white shadow-xs">
-                <Brain className="w-4 h-4" />
+    <div className="min-h-screen bg-[#FBFBF9] text-[#37352F] font-sans antialiased selection:bg-[#E9E9E7] selection:text-[#37352F]">
+      {/* ── Sticky Top Header ── */}
+      <header className="sticky top-0 z-50 bg-[#FBFBF9]/90 backdrop-blur-md border-b border-[rgba(55,53,47,0.08)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="w-8 h-8 rounded-lg bg-[#191919] flex items-center justify-center text-white font-mono text-sm font-bold shadow-xs transition-transform group-hover:scale-105">
+                A
               </div>
-              <span className="font-heading font-extrabold text-base tracking-tight text-[#1F2B33] dark:text-white">
-                AgencyOS
-              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-semibold text-base tracking-tight text-[#37352F]">AgencyOS</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#F1F1EF] text-[#6B6A65] border border-[rgba(55,53,47,0.08)]">
+                  v2.4
+                </span>
+              </div>
             </Link>
 
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[#0D4A32]/10 text-[#0D4A32] dark:bg-emerald-500/10 dark:text-emerald-400 border border-[#0D4A32]/20 dark:border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              v2.4 System Live
-            </span>
+            <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#6B6A65]">
+              <a href="#demo" className="hover:text-[#37352F] transition-colors">
+                Interactive Workspace
+              </a>
+              <a href="#comparison" className="hover:text-[#37352F] transition-colors">
+                Old Stack vs OS
+              </a>
+              <a href="#workflow" className="hover:text-[#37352F] transition-colors">
+                5-Stage Engine
+              </a>
+              <a href="#modules" className="hover:text-[#37352F] transition-colors">
+                Core Modules
+              </a>
+              <a href="#calculator" className="hover:text-[#37352F] transition-colors">
+                Capacity Calculator
+              </a>
+            </nav>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-7 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-            <a href="#architecture" className="hover:text-[#1F2B33] dark:hover:text-white transition-colors">
-              Agency Brain
-            </a>
-            <a href="#comparison" className="hover:text-[#1F2B33] dark:hover:text-white transition-colors">
-              The Old Way vs OS
-            </a>
-            <a href="#modules" className="hover:text-[#1F2B33] dark:hover:text-white transition-colors">
-              Six Modules
-            </a>
-            <a href="#calculator" className="hover:text-[#1F2B33] dark:hover:text-white transition-colors">
-              ROI Calculator
-            </a>
-            <a href="#security" className="hover:text-[#1F2B33] dark:hover:text-white transition-colors">
-              Security
-            </a>
-          </nav>
-
-          {/* Top Actions */}
           <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#DDEDEA] border border-[rgba(15,123,108,0.2)] text-[11px] font-mono text-[#0F7B6C]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0F7B6C] animate-pulse" />
+              <span>SOC-2 Type II Certified</span>
+            </div>
+
             <Link
               href="/login"
-              className="text-xs font-semibold text-[#1F2B33] dark:text-white hover:text-[#0D4A32] dark:hover:text-emerald-400 transition-colors px-3 py-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#6B6A65] hover:text-[#37352F] hover:bg-[#F1F1EF] transition-colors"
             >
               Sign In
             </Link>
+
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[#0D4A32] hover:bg-[#083322] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-[#061A12] shadow-xs transition-all transform hover:-translate-y-0.5"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#191919] text-white hover:bg-[#2F2E2B] transition-all shadow-xs flex items-center gap-1.5"
             >
               <span>Launch Workspace</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -109,630 +100,893 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ── HERO SECTION: THE AI-NATIVE AGENCY OPERATING SYSTEM ── */}
-      <section className="relative pt-16 pb-20 md:pt-24 md:pb-32 overflow-hidden border-b border-black/[0.06] dark:border-white/[0.06]">
-        {/* Subtle Ambient Radial Lighting */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-emerald-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
-
-        <div className="max-w-6xl mx-auto px-6 text-center space-y-6">
-          {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#F4F3ED] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] text-[#64748B] dark:text-[#94A3B8] shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>The AI-Native Operating System for Enterprise Marketing Agencies</span>
-          </div>
-
-          {/* Main Headline with Tight Negative Tracking */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-heading font-black tracking-[-0.03em] leading-[1.05] text-[#1F2B33] dark:text-white max-w-4xl mx-auto">
-            One autonomous system for everything your agency delivers.
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-base sm:text-lg text-[#64748B] dark:text-[#94A3B8] max-w-2xl mx-auto leading-relaxed font-normal">
-            Institutional brand memory, 6-agent campaign intelligence, short-form teleprompter scripting, and frictionless review rooms — running on everything your client knows.
-          </p>
-
-          {/* Dual CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link
-              href="/dashboard"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold bg-[#0D4A32] hover:bg-[#093524] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-[#061A12] shadow-md transition-all transform hover:-translate-y-0.5"
-            >
-              <span>Start 14-Day Agency Trial</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-
-            <a
-              href="#architecture"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold bg-white dark:bg-white/[0.06] hover:bg-[#F4F3ED] dark:hover:bg-white/[0.1] text-[#1F2B33] dark:text-white border border-black/[0.1] dark:border-white/[0.15] shadow-2xs transition-all"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>See the System Run</span>
-            </a>
-          </div>
-
-          {/* Micro Trust Proof */}
-          <div className="pt-2 flex items-center justify-center gap-6 text-[11px] font-mono text-[#64748B] dark:text-[#94A3B8]">
-            <span className="flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Zero Brand Drift
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Meta Graph API Verified
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Free Client Reviewers
-            </span>
-          </div>
-
-          {/* ── THE LIVE AGENCY BRAIN ARCHITECTURE NODE DIAGRAM (ZOCKET STYLE) ── */}
-          <div id="architecture" className="pt-12 sm:pt-16 max-w-5xl mx-auto">
-            <div className="relative rounded-3xl border border-black/[0.1] dark:border-white/[0.1] bg-[#F4F3ED]/80 dark:bg-[#0E1520]/80 backdrop-blur-md p-6 sm:p-10 shadow-2xl overflow-hidden">
-              {/* Concentric Pulsing Radar Rings */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 sm:w-96 sm:h-96 rounded-full border border-emerald-500/20 animate-pulse-ring-1 pointer-events-none" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 sm:w-[480px] sm:h-[480px] rounded-full border border-emerald-500/15 animate-pulse-ring-2 pointer-events-none" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 sm:w-[600px] sm:h-[600px] rounded-full border border-emerald-500/10 animate-pulse-ring-3 pointer-events-none" />
-
-              {/* Streaming Data Ingestion Pill Bar (Top) */}
-              <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
-                {[
-                  "Instagram Business",
-                  "Facebook Pages",
-                  "Client Brand Vaults",
-                  "Negative Legal Taboos",
-                  "Historical CTR Benchmarks",
-                  "Review Audio Transcripts",
-                ].map((src, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono bg-white dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.08] text-[#64748B] dark:text-[#94A3B8] shadow-2xs"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    {src}
-                  </span>
-                ))}
-              </div>
-
-              {/* Center Architecture: Central Cortex Node + 4 Radiating Agent Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center relative z-10">
-                {/* Left Radiating Agent Cards */}
-                <div className="space-y-4">
-                  {/* Agent 1 */}
-                  <div className="p-4 rounded-2xl bg-white dark:bg-[#151D2A] border border-black/[0.08] dark:border-white/[0.1] text-left shadow-xs hover:border-[#0D4A32] dark:hover:border-emerald-500 transition-colors group">
-                    <div className="flex items-center justify-between text-xs font-mono mb-1">
-                      <span className="font-bold text-[#0D4A32] dark:text-emerald-400">Agent 01 · Brand Strategist</span>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                        98% Match
-                      </span>
-                    </div>
-                    <p className="text-xs font-semibold text-[#1F2B33] dark:text-white">
-                      "What angles resonate with enterprise VP buyers?"
-                    </p>
-                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1 font-mono">
-                      → 5 egress cost predictability hooks proposed
-                    </p>
-                  </div>
-
-                  {/* Agent 2 */}
-                  <div className="p-4 rounded-2xl bg-white dark:bg-[#151D2A] border border-black/[0.08] dark:border-white/[0.1] text-left shadow-xs hover:border-[#0D4A32] dark:hover:border-emerald-500 transition-colors group">
-                    <div className="flex items-center justify-between text-xs font-mono mb-1">
-                      <span className="font-bold text-[#0D4A32] dark:text-emerald-400">Agent 02 · Script Director</span>
-                      <span className="text-[10px] text-purple-600 dark:text-[#A78BFA] bg-purple-500/10 px-1.5 py-0.5 rounded font-mono">
-                        30s Teleprompter
-                      </span>
-                    </div>
-                    <p className="text-xs font-semibold text-[#1F2B33] dark:text-white">
-                      "Paced scene dialogue with visual camera cuts"
-                    </p>
-                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1 font-mono">
-                      → Word count locked at 72 words (~28s read)
-                    </p>
-                  </div>
-                </div>
-
-                {/* Central Brain Node */}
-                <div className="p-6 rounded-3xl bg-[#061A12] text-white border-2 border-emerald-500/30 text-center space-y-4 shadow-2xl relative overflow-hidden">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-inner">
-                    <Brain className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-                      Central Cortex
-                    </span>
-                    <h3 className="text-lg font-heading font-bold text-white">
-                      Agency Brain Vault
-                    </h3>
-                    <p className="text-xs text-[#94A3B8] mt-1">
-                      Deterministic institutional memory graph with zero brand drift.
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-mono">
-                    <span className="text-emerald-400 font-bold block text-sm">
-                      {signalCount.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-[#94A3B8]">
-                      Active Institutional Rules &amp; Signals
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right Radiating Agent Cards */}
-                <div className="space-y-4">
-                  {/* Agent 3 */}
-                  <div className="p-4 rounded-2xl bg-white dark:bg-[#151D2A] border border-black/[0.08] dark:border-white/[0.1] text-left shadow-xs hover:border-[#0D4A32] dark:hover:border-emerald-500 transition-colors group">
-                    <div className="flex items-center justify-between text-xs font-mono mb-1">
-                      <span className="font-bold text-[#0D4A32] dark:text-emerald-400">Agent 03 · Taboo Guardian</span>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono">
-                        Rule 677cdaeb
-                      </span>
-                    </div>
-                    <p className="text-xs font-semibold text-[#1F2B33] dark:text-white">
-                      "Never claim FedRAMP High; SOC-2 Type II only"
-                    </p>
-                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1 font-mono">
-                      → Scanned 12 deliverables: 100% compliant
-                    </p>
-                  </div>
-
-                  {/* Agent 4 */}
-                  <div className="p-4 rounded-2xl bg-white dark:bg-[#151D2A] border border-black/[0.08] dark:border-white/[0.1] text-left shadow-xs hover:border-[#0D4A32] dark:hover:border-emerald-500 transition-colors group">
-                    <div className="flex items-center justify-between text-xs font-mono mb-1">
-                      <span className="font-bold text-[#0D4A32] dark:text-emerald-400">Agent 04 · Engagement Sentinel</span>
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-mono">
-                        11s SLA
-                      </span>
-                    </div>
-                    <p className="text-xs font-semibold text-[#1F2B33] dark:text-white">
-                      "Autonomous replies to Instagram &amp; Facebook comments"
-                    </p>
-                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1 font-mono">
-                      → 78% answered on-brand without human review
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* ── Hero Section ── */}
+      <section className="pt-16 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+        {/* Release Pill */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[rgba(55,53,47,0.12)] shadow-xs mb-6 text-xs text-[#6B6A65]">
+          <span className="font-semibold text-[#37352F]">Zero Brand Drift</span>
+          <span className="text-[#C7C6C2]">|</span>
+          <span>Deterministic memory for client campaigns</span>
+          <ChevronRight className="w-3.5 h-3.5 text-[#9B9A97]" />
         </div>
-      </section>
 
-      {/* ── ENTERPRISE CLIENT MARQUEE TICKER ── */}
-      <section className="py-8 bg-white dark:bg-[#080B10] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 text-center mb-4">
-          <p className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
-            Powering Next-Gen Social &amp; Digital Agencies Worldwide
-          </p>
-        </div>
-        <div className="relative w-full overflow-hidden">
-          <div className="animate-marquee-track flex items-center gap-12 sm:gap-20 text-sm font-heading font-extrabold text-[#64748B]/60 dark:text-[#94A3B8]/40 tracking-wider uppercase">
-            <span>Elevate Media</span>
-            <span>HyperScale Digital</span>
-            <span>Vertex Cloud Labs</span>
-            <span>Pulse Growth</span>
-            <span>Northline Creative</span>
-            <span>Omnia Studios</span>
-            <span>Horizon Media</span>
-            <span>Elevate Media</span>
-            <span>HyperScale Digital</span>
-            <span>Vertex Cloud Labs</span>
-            <span>Pulse Growth</span>
-            <span>Northline Creative</span>
-          </div>
-        </div>
-      </section>
+        {/* Hero Title */}
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.035em] text-[#37352F] max-w-4xl mx-auto leading-[1.12]">
+          The Operating System for High-Output Marketing Agencies
+        </h1>
 
-      {/* ── SECTION 3: THE OLD AGENCY WAY VS WITH AGENCYOS ── */}
-      <section id="comparison" className="py-20 md:py-28 max-w-6xl mx-auto px-6">
-        <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#0D4A32] dark:text-emerald-400 bg-[#0D4A32]/10 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
-            Paradigm Shift
+        {/* Subtitle */}
+        <p className="mt-5 text-base sm:text-lg text-[#6B6A65] max-w-2xl mx-auto leading-relaxed">
+          Scale client retainers without scaling headcount. AgencyOS unifies institutional brand memory, multi-agent campaign production, and frictionless client approvals in one calm, deterministic workspace.
+        </p>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+          <Link
+            href="/dashboard"
+            className="w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-medium bg-[#191919] text-white hover:bg-[#2F2E2B] transition-all shadow-sm flex items-center justify-center gap-2 group"
+          >
+            <span>Start Free Agency Trial</span>
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          <a
+            href="#demo"
+            className="w-full sm:w-auto px-5 py-3 rounded-lg text-sm font-medium bg-white text-[#37352F] hover:bg-[#F7F6F3] border border-[rgba(55,53,47,0.12)] transition-all shadow-xs flex items-center justify-center gap-2"
+          >
+            <span>Explore Live Workspace Demo</span>
+          </a>
+        </div>
+
+        {/* Trust Points */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-[#9B9A97]">
+          <span className="flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-[#0F7B6C]" />
+            No credit card required
           </span>
-          <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-[-0.02em] text-[#1F2B33] dark:text-white">
-            Stop stitching together six fragmented tools.
-          </h2>
-          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
-            Creative agencies waste 35% of their working hours copying text between Google Docs, Asana, Frame.io, and scheduling spreadsheets.
-          </p>
+          <span className="flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-[#0F7B6C]" />
+            Instant client workspace spin-up
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-[#0F7B6C]" />
+            Meta & LinkedIn Graph API verified
+          </span>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* The Old Way Card */}
-          <div className="rounded-3xl border border-black/[0.08] dark:border-white/[0.08] bg-[#F4F3ED] dark:bg-white/[0.02] p-8 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-black/[0.08] dark:border-white/[0.08]">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                The Fragmented Agency Stack
+      {/* ── Interactive AgencyOS Workspace Window Demo ── */}
+      <section id="demo" className="px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto mb-24">
+        <div className="bg-white rounded-2xl border border-[rgba(55,53,47,0.12)] shadow-notion-window overflow-hidden">
+          {/* Top Window Bar (macOS / Notion Header) */}
+          <div className="bg-[#F7F6F3] border-b border-[rgba(55,53,47,0.08)] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#E03E3E]/70 border border-[#E03E3E]" />
+              <span className="w-3 h-3 rounded-full bg-[#9A6700]/70 border border-[#9A6700]" />
+              <span className="w-3 h-3 rounded-full bg-[#0F7B6C]/70 border border-[#0F7B6C]" />
+              <span className="ml-2 text-xs font-mono text-[#6B6A65]">
+                agencyos.io/app/vertex-cloud
               </span>
-              <span className="text-xs font-mono text-[#64748B] dark:text-[#94A3B8]">High Friction</span>
             </div>
 
-            <div className="space-y-4 text-xs text-[#64748B] dark:text-[#94A3B8]">
-              {[
-                { title: "Six separate SaaS subscriptions", desc: "Asana, Google Docs, ChatGPT, Frame.io, Buffer, and spreadsheets." },
-                { title: "Constant brand drift", desc: "Freelance copywriters violate negative client rules and legal taboos." },
-                { title: "Feedback lost in WhatsApp & email", desc: "Client revisions scattered across messy threads and lost attachments." },
-                { title: "Manual teleprompter & video cutting", desc: "Video creators waste hours pacing lines and recalculating durations." },
-                { title: "Token expirations break publishing", desc: "Posts fail silently when social OAuth tokens expire without warnings." },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
-                    ✕
-                  </div>
-                  <div>
-                    <strong className="text-[#1F2B33] dark:text-white block font-semibold">{item.title}</strong>
-                    <span>{item.desc}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center gap-2 text-xs text-[#6B6A65]">
+              <span className="px-2 py-0.5 rounded bg-white border border-[rgba(55,53,47,0.08)] font-mono text-[11px]">
+                Retainer: Vertex Cloud Technologies
+              </span>
+              <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] border border-[rgba(15,123,108,0.2)] font-mono text-[11px]">
+                6 Rules Active
+              </span>
             </div>
           </div>
 
-          {/* With AgencyOS Card */}
-          <div className="rounded-3xl border-2 border-emerald-500/30 bg-[#061A12] text-white p-8 space-y-6 shadow-xl">
-            <div className="flex items-center justify-between pb-4 border-b border-white/[0.1]">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400">
-                With AgencyOS
+          {/* Interactive Navigation Tab Strip */}
+          <div className="bg-white border-b border-[rgba(55,53,47,0.08)] px-4 flex overflow-x-auto scrollbar-none gap-2">
+            <button
+              onClick={() => setActiveTab("cortex")}
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === "cortex"
+                  ? "border-[#191919] text-[#37352F]"
+                  : "border-transparent text-[#6B6A65] hover:text-[#37352F]"
+              }`}
+            >
+              <Brain className="w-4 h-4 text-[#2383E2]" />
+              <span>1. Cortex Memory Vault</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#F1F1EF] text-[#6B6A65]">
+                6 Rules
               </span>
-              <span className="text-xs font-mono text-emerald-400 font-semibold">+400% Velocity</span>
-            </div>
+            </button>
 
-            <div className="space-y-4 text-xs text-[#94A3B8]">
-              {[
-                { title: "One unified agentic operating system", desc: "Everything from client onboarding to live Meta analytics in a single platform." },
-                { title: "Deterministic Cortex brand vault", desc: "Zero brand drift. Institutional rules halt violations before client review." },
-                { title: "Frictionless magic-link review rooms", desc: "Clients review and approve deliverables in one click without login credentials." },
-                { title: "Integrated teleprompter & scriptwriter", desc: "Scene-by-scene speaking durations and full-screen prompter recording." },
-                { title: "Automated publishing & 24/7 community loop", desc: "Scheduled post rollout with proactive Meta token health warnings." },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                    ✓
-                  </div>
+            <button
+              onClick={() => setActiveTab("studio")}
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === "studio"
+                  ? "border-[#191919] text-[#37352F]"
+                  : "border-transparent text-[#6B6A65] hover:text-[#37352F]"
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-[#D9730D]" />
+              <span>2. Campaign Studio</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#FAEBDD] text-[#D9730D]">
+                6-Agent
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("review")}
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === "review"
+                  ? "border-[#191919] text-[#37352F]"
+                  : "border-transparent text-[#6B6A65] hover:text-[#37352F]"
+              }`}
+            >
+              <FileCheck2 className="w-4 h-4 text-[#9A6700]" />
+              <span>3. Client Review Room</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700]">
+                Magic-Link
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("inbox")}
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === "inbox"
+                  ? "border-[#191919] text-[#37352F]"
+                  : "border-transparent text-[#6B6A65] hover:text-[#37352F]"
+              }`}
+            >
+              <MessagesSquare className="w-4 h-4 text-[#0F7B6C]" />
+              <span>4. Community Inbox</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C]">
+                Live Meta
+              </span>
+            </button>
+          </div>
+
+          {/* Interactive Tab Body */}
+          <div className="p-6 bg-[#FBFBF9] min-h-[440px]">
+            {/* ── TAB 1: CORTEX MEMORY VAULT ── */}
+            {activeTab === "cortex" && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[rgba(55,53,47,0.08)] gap-2">
                   <div>
-                    <strong className="text-white block font-semibold">{item.title}</strong>
-                    <span>{item.desc}</span>
+                    <h3 className="text-sm font-semibold text-[#37352F]">
+                      Living Institutional Brand Vault & Hard Boundaries
+                    </h3>
+                    <p className="text-xs text-[#6B6A65]">
+                      Deterministic rules injected into every AI generation run to prevent brand drift and compliance errors.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#6B6A65] self-start sm:self-auto">
+                    Compiled: 2026-11-23 20:07 UTC
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Negative Taboo Rule 1 */}
+                  <div className="p-4 rounded-xl bg-white border border-[rgba(224,62,62,0.2)] shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded bg-[#FBE4E4] text-[#E03E3E] text-[10px] font-mono font-semibold">
+                        Negative Taboo (Hard Boundary)
+                      </span>
+                      <span className="text-[10px] font-mono text-[#9B9A97]">ID: 677cdaeb</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#37352F] leading-snug">
+                      Never claim FedRAMP High certification; only state SOC-2 Type II certification.
+                    </p>
+                    <div className="text-[11px] text-[#6B6A65] space-y-1 pt-1 border-t border-[rgba(55,53,47,0.06)]">
+                      <p>
+                        <span className="font-medium text-[#37352F]">Rationale:</span> Legal breach occurs if FedRAMP High is claimed prematurely.
+                      </p>
+                      <p>
+                        <span className="font-medium text-[#37352F]">Provenance Quote:</span> &quot;Never claim we are FedRAMP High certified yet. We are SOC-2 Type II only.&quot; (Client VP)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Negative Taboo Rule 2 */}
+                  <div className="p-4 rounded-xl bg-white border border-[rgba(224,62,62,0.2)] shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded bg-[#FBE4E4] text-[#E03E3E] text-[10px] font-mono font-semibold">
+                        Negative Taboo (Hard Boundary)
+                      </span>
+                      <span className="text-[10px] font-mono text-[#9B9A97]">ID: 39475d4e</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#37352F] leading-snug">
+                      Do not mention pricing, cheap rates, or percentage-off promo codes in public LinkedIn posts.
+                    </p>
+                    <div className="text-[11px] text-[#6B6A65] space-y-1 pt-1 border-t border-[rgba(55,53,47,0.06)]">
+                      <p>
+                        <span className="font-medium text-[#37352F]">Rationale:</span> Maintains premium enterprise positioning and avoids discount perception.
+                      </p>
+                      <p>
+                        <span className="font-medium text-[#37352F]">Provenance Quote:</span> &quot;Absolutely no public discounting.&quot; (Client VP Marketing)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Brand Guardrail Rule 3 */}
+                  <div className="p-4 rounded-xl bg-white border border-[rgba(15,123,108,0.2)] shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-semibold">
+                        Active Brand Standard
+                      </span>
+                      <span className="text-[10px] font-mono text-[#9B9A97]">ID: e66615b1</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#37352F] leading-snug">
+                      All technical case studies must include actual multi-region failover benchmarks under 50 milliseconds.
+                    </p>
+                    <div className="text-[11px] text-[#6B6A65] space-y-1 pt-1 border-t border-[rgba(55,53,47,0.06)]">
+                      <p>
+                        <span className="font-medium text-[#37352F]">Enforced Channels:</span> Technical whitepapers, sales case studies, LinkedIn carousels.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Target Audience Persona Rule 4 */}
+                  <div className="p-4 rounded-xl bg-white border border-[rgba(35,131,226,0.2)] shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded bg-[#DDEBF1] text-[#0B6E99] text-[10px] font-mono font-semibold">
+                        Target Audience Persona
+                      </span>
+                      <span className="text-[10px] font-mono text-[#9B9A97]">Role: VP Eng</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#37352F] leading-snug">
+                      VP of Engineering or Cloud Infrastructure Directors managing multi-region Kubernetes clusters.
+                    </p>
+                    <div className="text-[11px] text-[#6B6A65] space-y-1 pt-1 border-t border-[rgba(55,53,47,0.06)]">
+                      <p>
+                        <span className="font-medium text-[#37352F]">Focus Area:</span> Egress predictability, deterministic latency, and uptime SLA.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* ── TAB 2: CAMPAIGN STUDIO ── */}
+            {activeTab === "studio" && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[rgba(55,53,47,0.08)] gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#37352F]">
+                      6-Agent Campaign Production Workspace
+                    </h3>
+                    <p className="text-xs text-[#6B6A65]">
+                      Specialist agents debate, script, and verify multi-asset rollouts under human supervision.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] font-mono text-[10px]">
+                      Taboo Guardian: Verified
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Agent Roster */}
+                  <div className="space-y-2 lg:col-span-1">
+                    <span className="text-[11px] font-mono uppercase text-[#9B9A97] tracking-wider">
+                      Collaborative Agent Roster
+                    </span>
+                    <div className="p-3 rounded-lg bg-white border border-[rgba(55,53,47,0.08)] flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded bg-[#DDEBF1] text-[#0B6E99] flex items-center justify-center font-mono text-xs font-bold">
+                        1
+                      </div>
+                      <div className="text-xs">
+                        <p className="font-medium text-[#37352F]">Brand Strategist</p>
+                        <p className="text-[10px] text-[#6B6A65]">Formulates core messaging angle</p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white border border-[rgba(55,53,47,0.08)] flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded bg-[#FAEBDD] text-[#D9730D] flex items-center justify-center font-mono text-xs font-bold">
+                        2
+                      </div>
+                      <div className="text-xs">
+                        <p className="font-medium text-[#37352F]">Script & Carousel Director</p>
+                        <p className="text-[10px] text-[#6B6A65]">Structures 5-slide visual pacing</p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white border border-[rgba(15,123,108,0.2)] flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded bg-[#DDEDEA] text-[#0F7B6C] flex items-center justify-center font-mono text-xs font-bold">
+                        3
+                      </div>
+                      <div className="text-xs">
+                        <p className="font-medium text-[#37352F]">Taboo Guardian</p>
+                        <p className="text-[10px] text-[#0F7B6C]">Scans against negative boundaries</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Generated Campaign Artifact */}
+                  <div className="p-4 rounded-xl bg-white border border-[rgba(55,53,47,0.1)] shadow-xs space-y-3 lg:col-span-2">
+                    <div className="flex items-center justify-between pb-2 border-b border-[rgba(55,53,47,0.06)]">
+                      <span className="text-xs font-semibold text-[#37352F]">
+                        Sprint Deliverable: 5-Slide LinkedIn Carousel
+                      </span>
+                      <span className="text-[10px] font-mono text-[#0F7B6C] px-2 py-0.5 rounded bg-[#DDEDEA]">
+                        Compliant with Rule 677cdaeb & 39475d4e
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-xs text-[#6B6A65]">
+                      <div className="p-2.5 rounded-lg bg-[#FBFBF9] border border-[rgba(55,53,47,0.06)]">
+                        <span className="font-semibold text-[#37352F]">Slide 1 (Hook):</span> &quot;Stop guessing your egress bill across multi-region clusters.&quot;
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#FBFBF9] border border-[rgba(55,53,47,0.06)]">
+                        <span className="font-semibold text-[#37352F]">Slide 2 (The Enterprise Pain):</span> Real-world cost variance breakdown showing unexpected cross-region egress spikes.
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#FBFBF9] border border-[rgba(55,53,47,0.06)]">
+                        <span className="font-semibold text-[#37352F]">Slide 3 (Architecture Solution):</span> Vertex Cloud predictive routing model with deterministic latency under 50ms.
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#FBFBF9] border border-[rgba(55,53,47,0.06)]">
+                        <span className="font-semibold text-[#37352F]">Slide 4 (Verification Standard):</span> Certified SOC-2 Type II infrastructure reliability. Zero unverified claims.
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between text-xs text-[#6B6A65]">
+                      <span>Human Review Gate: Ready for Agency Director Sign-off</span>
+                      <button className="px-3 py-1 rounded bg-[#191919] text-white font-medium hover:bg-[#2F2E2B] transition-colors cursor-pointer">
+                        Send to Client Room
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 3: CLIENT REVIEW ROOM ── */}
+            {activeTab === "review" && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[rgba(55,53,47,0.08)] gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#37352F]">
+                      Magic-Link Client Review Room (No Client Sign-in Required)
+                    </h3>
+                    <p className="text-xs text-[#6B6A65]">
+                      Send clients a secure, branded link to review copy, scripts, and media with 1-click approvals on mobile or desktop.
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-[#FBF3DB] text-[#9A6700] text-[10px] font-mono">
+                    Token Expiry: 72 Hours
+                  </span>
+                </div>
+
+                <div className="max-w-2xl mx-auto p-5 rounded-xl bg-white border border-[rgba(55,53,47,0.12)] shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[rgba(55,53,47,0.08)]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-[#191919] text-white flex items-center justify-center font-mono text-xs font-bold">
+                        V
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#37352F]">Vertex Cloud Review Queue</p>
+                        <p className="text-[10px] text-[#6B6A65]">Prepared by Omnia Digital Agency</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">
+                      Client Review Pending
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-[#37352F]">
+                      Asset: Q4 Cross-Region Egress Carousel (5 Slides)
+                    </span>
+                    <p className="text-xs text-[#6B6A65] leading-relaxed">
+                      This campaign highlights architecture value and egress cost predictability for enterprise engineering directors, referencing SOC-2 Type II standards and sub-50ms failovers.
+                    </p>
+                  </div>
+
+                  {/* Client Action Buttons */}
+                  <div className="pt-3 border-t border-[rgba(55,53,47,0.08)] flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-[#6B6A65]">
+                      <ShieldCheck className="w-4 h-4 text-[#0F7B6C]" />
+                      <span>Tamper-proof audit trail enabled</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#F1F1EF] text-[#37352F] hover:bg-[#E9E9E7] transition-colors cursor-pointer">
+                        Request Copy Tweak
+                      </button>
+                      <button className="px-4 py-1.5 rounded-lg text-xs font-medium bg-[#0F7B6C] text-white hover:bg-[#0B6558] transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Approve for Publication</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 4: COMMUNITY INBOX ── */}
+            {activeTab === "inbox" && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[rgba(55,53,47,0.08)] gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#37352F]">
+                      Unified Social CRM & Meta Comment Triage
+                    </h3>
+                    <p className="text-xs text-[#6B6A65]">
+                      Real-time webhook ingestion from LinkedIn & Instagram with AI intent classification and on-brand draft replies.
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono">
+                    Meta Graph API Connected
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white border border-[rgba(55,53,47,0.1)] shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#0B6E99] text-white flex items-center justify-center text-[10px] font-bold">
+                        in
+                      </div>
+                      <span className="text-xs font-semibold text-[#37352F]">David K. (Staff DevOps Engineer)</span>
+                      <span className="text-[10px] text-[#9B9A97]">on LinkedIn Post #841</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-semibold">
+                      High Intent Lead (94/100)
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[#37352F] bg-[#FBFBF9] p-2.5 rounded-lg border border-[rgba(55,53,47,0.06)]">
+                    &quot;Does your egress predictability model support multi-cloud GCP + AWS or just single-region AWS setups? We have 14 clusters across Frankfurt and Virginia.&quot;
+                  </p>
+
+                  <div className="p-3 rounded-lg bg-[#DDEBF1]/30 border border-[rgba(35,131,226,0.15)] space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-[#0B6E99] font-medium">
+                      <span>Cortex-Verified Draft Reply</span>
+                      <span>Enforces Rule e66615b1 & Sub-50ms Benchmark</span>
+                    </div>
+                    <p className="text-xs text-[#37352F]">
+                      &quot;Hi David, yes, our predictive routing is multi-cloud across AWS, GCP, and Azure with deterministic cross-region failover under 50ms. I can share the technical whitepaper with the multi-cloud topology if helpful.&quot;
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button className="px-3 py-1 rounded text-xs text-[#6B6A65] hover:text-[#37352F] transition-colors cursor-pointer">
+                      Edit Draft
+                    </button>
+                    <button className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#191919] text-white hover:bg-[#2F2E2B] transition-colors flex items-center gap-1.5 cursor-pointer">
+                      <Send className="w-3 h-3" />
+                      <span>Approve & Post to LinkedIn</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* ── SECTION 4: THE AUTONOMOUS AGENT LOOP & LIVE EXECUTION TRACE ── */}
-      <section className="py-20 bg-white dark:bg-[#0E1520] border-y border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#0D4A32] dark:text-emerald-400 bg-[#0D4A32]/10 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
-              State Machine Engineering
+      {/* ── Enterprise Client Ticker ── */}
+      <section className="border-y border-[rgba(55,53,47,0.08)] bg-white py-8 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 text-center">
+          <p className="text-xs font-mono uppercase tracking-wider text-[#9B9A97]">
+            Trusted by modern marketing agencies managing 200+ brand retainers
+          </p>
+        </div>
+
+        <div className="relative w-full overflow-hidden">
+          <div className="animate-marquee-track flex items-center gap-12 text-sm font-semibold tracking-wide text-[#6B6A65]">
+            <span className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-[#9B9A97]" /> OMNIA STUDIOS
             </span>
-            <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-[-0.02em] text-[#1F2B33] dark:text-white">
-              The Agent Loop: 10s Autonomous Cycles
-            </h2>
-            <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
-              Every deliverable runs through a 5-stage deterministic state machine with strict human review gates.
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#9B9A97]" /> HORIZON MEDIA GROUP
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#9B9A97]" /> ELEVATE AGENCY
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#9B9A97]" /> HYPERSCALE DIGITAL
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-[#9B9A97]" /> VERTEX CLOUD LABS
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-[#9B9A97]" /> PULSE GROWTH PARTNERS
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-[#9B9A97]" /> ALTURA BRANDS
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            {/* Duplicate for infinite loop */}
+            <span className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-[#9B9A97]" /> OMNIA STUDIOS
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#9B9A97]" /> HORIZON MEDIA GROUP
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#9B9A97]" /> ELEVATE AGENCY
+            </span>
+            <span className="text-[#C7C6C2]">•</span>
+            <span className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#9B9A97]" /> HYPERSCALE DIGITAL
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── The Fragmented Stack vs AgencyOS ── */}
+      <section id="comparison" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="text-xs font-mono uppercase tracking-wider text-[#9B9A97]">
+            Operational Contrast
+          </span>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-semibold text-[#37352F] tracking-tight">
+            Stop stitching together 6 disconnected tools for every client
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-[#6B6A65]">
+            Most agencies lose 15+ hours per retainer per week copy-pasting between Google Docs, Asana, generative AI windows, and email approval threads.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* The Old Fragmented Way */}
+          <div className="p-6 sm:p-8 rounded-2xl bg-[#F7F6F3] border border-[rgba(55,53,47,0.12)] space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-[rgba(55,53,47,0.08)]">
+              <div>
+                <h3 className="text-base font-semibold text-[#37352F]">The Fragmented Agency Stack</h3>
+                <p className="text-xs text-[#6B6A65]">Zapier + Asana + ChatGPT + Hootsuite + WhatsApp</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-[#FBE4E4] text-[#E03E3E] text-xs font-mono font-medium">
+                Fragile & Manual
+              </span>
+            </div>
+
+            <ul className="space-y-4 text-xs sm:text-sm text-[#6B6A65]">
+              <li className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-[#E03E3E] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Brand voice drift:</strong> Junior copywriters and generic AI prompts constantly forget client compliance boundaries and hard taboos.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-[#E03E3E] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Approval bottlenecks:</strong> Client feedback is scattered across WhatsApp voice notes, Google Doc comment pings, and email chains.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-[#E03E3E] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Expensive software sprawl:</strong> Spending $1,200 to $2,500 every month on redundant single-purpose SaaS seats.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-[#E03E3E] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Hiring trap:</strong> You can only take on more client retainers by hiring more account managers and junior writers.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {/* With AgencyOS */}
+          <div className="p-6 sm:p-8 rounded-2xl bg-white border border-[rgba(55,53,47,0.14)] shadow-notion-hover space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-[rgba(55,53,47,0.08)]">
+              <div>
+                <h3 className="text-base font-semibold text-[#37352F]">With AgencyOS</h3>
+                <p className="text-xs text-[#0F7B6C]">One Unified Institutional Operating System</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-xs font-mono font-medium">
+                +400% Velocity
+              </span>
+            </div>
+
+            <ul className="space-y-4 text-xs sm:text-sm text-[#6B6A65]">
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-[#0F7B6C] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Zero brand drift:</strong> The Cortex vault deterministically injects hard negative boundaries and certified facts into every run.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-[#0F7B6C] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Magic-link review rooms:</strong> Clients approve complete multi-asset campaigns on their phone with 1 click. Zero login barrier.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-[#0F7B6C] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">All-in-one efficiency:</strong> Strategy, 6-agent drafting, review rooms, teleprompter, social calendar, and community CRM in one tool.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-[#0F7B6C] shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-[#37352F]">Margin expansion:</strong> Scale from 5 to 25 active retainers with the same core high-performing agency team.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5-Stage Agent Production Engine ── */}
+      <section id="workflow" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-white border-y border-[rgba(55,53,47,0.08)]">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="text-xs font-mono uppercase tracking-wider text-[#9B9A97]">
+            Deterministic Architecture
+          </span>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-semibold text-[#37352F] tracking-tight">
+            The 5-Stage Closed-Loop Production Engine
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-[#6B6A65]">
+            How AgencyOS takes a campaign brief from institutional memory to scheduled client delivery with mathematical rigor.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="p-4 rounded-xl bg-[#FBFBF9] border border-[rgba(55,53,47,0.09)] space-y-2">
+            <span className="text-xs font-mono font-bold text-[#2383E2]">01</span>
+            <h4 className="text-sm font-semibold text-[#37352F]">Context Ingestion</h4>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Cortex compiles negative taboos, verified facts, past top-performing hooks, and target persona rules.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* 5-Stage Step Flow (Left 5 cols) */}
-            <div className="lg:col-span-5 space-y-3 font-mono text-xs">
-              {[
-                { step: "01", name: "Read Context", badge: "Graph Read", desc: "Loads active institutional facts, tone, and negative taboos from Cortex." },
-                { step: "02", name: "Coordinate Agents", badge: "Multi-Agent", desc: "6 specialized agents architect strategy, hooks, scenes, and visual prompts." },
-                { step: "03", name: "Script & Prompter", badge: "Production", desc: "Transforms concept into timed speech dialogue blocks for video creators." },
-                { step: "04", name: "Check Gates", badge: "Human Gate", desc: "Deterministic safety pre-check + magic-link client reviewer sign-off." },
-                { step: "05", name: "Publish & Learn", badge: "Graph Write", desc: "Deploys to Meta Graph API and ingests real engagement CTR telemetry." },
-              ].map((st, i) => (
-                <div
-                  key={i}
-                  className="p-3.5 rounded-2xl border border-black/[0.08] dark:border-white/[0.08] bg-[#FBFBF9] dark:bg-white/[0.02] flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      {st.step}
-                    </span>
-                    <div>
-                      <span className="font-bold text-[#1F2B33] dark:text-white block font-sans text-xs">
-                        {st.name}
-                      </span>
-                      <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8]">
-                        {st.desc}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-[9px] uppercase px-2 py-0.5 rounded bg-black/[0.04] dark:bg-white/[0.06] text-[#64748B] dark:text-[#94A3B8] shrink-0 font-mono">
-                    {st.badge}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div className="p-4 rounded-xl bg-[#FBFBF9] border border-[rgba(55,53,47,0.09)] space-y-2">
+            <span className="text-xs font-mono font-bold text-[#D9730D]">02</span>
+            <h4 className="text-sm font-semibold text-[#37352F]">Agent Coordination</h4>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Brand Strategist and Persona Architect debate angles, hooks, and channel-specific pacing.
+            </p>
+          </div>
 
-            {/* Live Terminal Telemetry Trace (Right 7 cols) */}
-            <div className="lg:col-span-7">
-              <div className="rounded-3xl border border-black/[0.1] dark:border-white/[0.1] bg-[#061A12] text-white p-6 shadow-2xl font-mono text-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-white/[0.1] text-[11px]">
-                  <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-                    <Terminal className="w-3.5 h-3.5" />
-                    RUN #4,182: VERTEX CLOUD Q4 SPRINT
-                  </span>
-                  <span className="text-[#94A3B8]">STATUS: COMPLETED</span>
-                </div>
+          <div className="p-4 rounded-xl bg-[#FBFBF9] border border-[rgba(55,53,47,0.09)] space-y-2">
+            <span className="text-xs font-mono font-bold text-[#6941C6]">03</span>
+            <h4 className="text-sm font-semibold text-[#37352F]">Multi-Asset Scripting</h4>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Script Director and Copywriter draft carousels, video scripts, ad copy, and teleprompter cues in parallel.
+            </p>
+          </div>
 
-                <div className="space-y-2 text-[#94A3B8] text-[11px] leading-relaxed">
-                  <p>
-                    <span className="text-emerald-400 font-bold">[READ 0.4s]</span> Loaded 6 verified Cortex rules.
-                    Rule 677cdaeb active: &quot;Never claim FedRAMP High&quot;.
-                  </p>
-                  <p>
-                    <span className="text-emerald-400 font-bold">[PLAN 4 steps]</span> Concept: 5-slide carousel spotlighting egress cost variance.
-                  </p>
-                  <p>
-                    <span className="text-emerald-400 font-bold">[ACT 38.2s]</span> Generated 5 visual storyboard cards &amp; directorial hooks. Zero markdown clutter applied.
-                  </p>
-                  <p>
-                    <span className="text-purple-400 font-bold">[HUMAN GATE]</span> Magic-link review room #rev_83b. Approved by A. Menon (Client VP).
-                  </p>
-                  <p>
-                    <span className="text-emerald-400 font-bold">[SHIP]</span> Scheduled to Instagram Business. Token valid for 58 days.
-                  </p>
-                </div>
+          <div className="p-4 rounded-xl bg-[#FBFBF9] border border-[rgba(55,53,47,0.09)] space-y-2">
+            <span className="text-xs font-mono font-bold text-[#E03E3E]">04</span>
+            <h4 className="text-sm font-semibold text-[#37352F]">Taboo Gate Check</h4>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Deterministic guardian scans all copy against certified legal boundaries before human review.
+            </p>
+          </div>
 
-                <div className="pt-3 border-t border-white/[0.1] flex items-center justify-between text-[10px]">
-                  <span className="text-emerald-400">● RUN #4,183 QUEUED</span>
-                  <span className="text-[#94A3B8]">STARTS SMARTER THAN #4,182</span>
-                </div>
-              </div>
-            </div>
+          <div className="p-4 rounded-xl bg-[#FBFBF9] border border-[rgba(55,53,47,0.09)] space-y-2">
+            <span className="text-xs font-mono font-bold text-[#0F7B6C]">05</span>
+            <h4 className="text-sm font-semibold text-[#37352F]">Publish & Learn</h4>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Client approves via magic-link. Campaign auto-schedules directly to Meta and LinkedIn.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ── SECTION 5: SIX CORE MODULES (BENTO GRID WITH GIANT NUMERALS) ── */}
-      <section id="modules" className="py-20 md:py-28 max-w-6xl mx-auto px-6">
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#0D4A32] dark:text-emerald-400 bg-[#0D4A32]/10 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
-            The Product Suite
+      {/* ── Six Core Product Modules (Bento Grid) ── */}
+      <section id="modules" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="text-xs font-mono uppercase tracking-wider text-[#9B9A97]">
+            Full Suite Capabilities
           </span>
-          <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-[-0.02em] text-[#1F2B33] dark:text-white">
-            Six engines. One cohesive workspace.
+          <h2 className="mt-2 text-3xl sm:text-4xl font-semibold text-[#37352F] tracking-tight">
+            Everything your agency needs under one roof
           </h2>
-          <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
-            Built specifically to eradicate tool hopping and ensure strict adherence to client guidelines.
+          <p className="mt-3 text-sm sm:text-base text-[#6B6A65]">
+            Built specifically for marketing agencies, creative directors, and performance marketers managing high-value retainers.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            {
-              num: "01",
-              title: "Cortex Living Brand Vault",
-              tag: "Deterministic Rules",
-              desc: "Autonomous ingestion of client contracts and brand voice. Enforces negative taboos and facts deterministically across all outputs.",
-            },
-            {
-              num: "02",
-              title: "6-Agent Campaign Studio",
-              tag: "Parallel AI Pipeline",
-              desc: "Coordinated intelligence engine with Brand Strategist, Persona Architect, Content Planner, Creative Director, Copywriter, and Scheduler.",
-            },
-            {
-              num: "03",
-              title: "Viral Teleprompter Studio",
-              tag: "Pacing & Speech Sync",
-              desc: "Scene-by-scene script beats with target speaking duration timers, hook rewrites, and full-screen auto-scrolling presenter view.",
-            },
-            {
-              num: "04",
-              title: "Magic-Link Review Rooms",
-              tag: "Zero-Login Client Sign-off",
-              desc: "Shareable client portals with time-stamped video comments, side-by-side asset comparison, and single-click approval gates.",
-            },
-            {
-              num: "05",
-              title: "Native Meta Publishing",
-              tag: "Proactive Token Alerts",
-              desc: "Direct scheduling to Instagram Reels and Facebook Pages with automatic 60-day OAuth token health monitoring and expiration warnings.",
-            },
-            {
-              num: "06",
-              title: "Community Inbox & CRM",
-              tag: "24/7 Autonomous Moderation",
-              desc: "Real-time Instagram and Facebook comment triage with sentiment analysis and AI-drafted replies grounded in brand guidelines.",
-            },
-          ].map((m, i) => (
-            <div
-              key={i}
-              className="relative p-6 rounded-3xl border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-[#0E1520] shadow-xs hover:border-[#0D4A32] dark:hover:border-emerald-500 transition-all flex flex-col justify-between overflow-hidden group"
-            >
-              {/* Giant Translucent Numeral Watermark */}
-              <span className="absolute -bottom-4 -right-2 text-7xl font-heading font-black text-black/[0.03] dark:text-white/[0.03] select-none pointer-events-none transition-transform group-hover:scale-105">
-                {m.num}
+          {/* Module 1 */}
+          <div className="p-6 rounded-2xl bg-white border border-[rgba(55,53,47,0.09)] shadow-xs hover:border-[rgba(55,53,47,0.18)] transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#DDEBF1] text-[#0B6E99] flex items-center justify-center">
+              <Brain className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-mono text-[#9B9A97]">Module 01</span>
+            <h3 className="text-base font-semibold text-[#37352F]">Cortex Living Brand Vault</h3>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Store client voice rules, negative taboos, and approved claims. Injected deterministically so AI never breaks compliance.
+            </p>
+          </div>
+
+          {/* Module 2 */}
+          <div className="p-6 rounded-2xl bg-white border border-[rgba(55,53,47,0.09)] shadow-xs hover:border-[rgba(55,53,47,0.18)] transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FAEBDD] text-[#D9730D] flex items-center justify-center">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-mono text-[#9B9A97]">Module 02</span>
+            <h3 className="text-base font-semibold text-[#37352F]">6-Agent Campaign Studio</h3>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Formulate 30-day omnichannel campaign plans, carousels, video scripts, and ad angles in minutes with specialized AI roles.
+            </p>
+          </div>
+
+          {/* Module 3 */}
+          <div className="p-6 rounded-2xl bg-white border border-[rgba(55,53,47,0.09)] shadow-xs hover:border-[rgba(55,53,47,0.18)] transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FBF3DB] text-[#9A6700] flex items-center justify-center">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-mono text-[#9B9A97]">Module 03</span>
+            <h3 className="text-base font-semibold text-[#37352F]">Viral Teleprompter Studio</h3>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Give your creators and client executives a mobile-optimized prompter with scene pacing, timer sync, and hook emphasis.
+            </p>
+          </div>
+
+          {/* Module 4 */}
+          <div className="p-6 rounded-2xl bg-white border border-[rgba(55,53,47,0.09)] shadow-xs hover:border-[rgba(55,53,47,0.18)] transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#DDEDEA] text-[#0F7B6C] flex items-center justify-center">
+              <FileCheck2 className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-mono text-[#9B9A97]">Module 04</span>
+            <h3 className="text-base font-semibold text-[#37352F]">Magic-Link Review Rooms</h3>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Frictionless client approvals with zero password setup. Clean visual previews, one-click sign-offs, and clear revision logs.
+            </p>
+          </div>
+
+          {/* Module 5 */}
+          <div className="p-6 rounded-2xl bg-white border border-[rgba(55,53,47,0.09)] shadow-xs hover:border-[rgba(55,53,47,0.18)] transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#F1F1EF] text-[#37352F] flex items-center justify-center">
+              <CalendarDays className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-mono text-[#9B9A97]">Module 05</span>
+            <h3 className="text-base font-semibold text-[#37352F]">Omnichannel Calendar & Dispatch</h3>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Direct Meta Graph API and LinkedIn API publishing. Drag-and-drop rescheduling with automatic token health verification.
+            </p>
+          </div>
+
+          {/* Module 6 */}
+          <div className="p-6 rounded-2xl bg-white border border-[rgba(55,53,47,0.09)] shadow-xs hover:border-[rgba(55,53,47,0.18)] transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-[#DDEBF1] text-[#2383E2] flex items-center justify-center">
+              <MessagesSquare className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-mono text-[#9B9A97]">Module 06</span>
+            <h3 className="text-base font-semibold text-[#37352F]">Community Inbox & Social CRM</h3>
+            <p className="text-xs text-[#6B6A65] leading-relaxed">
+              Turn post comments and DMs into qualified leads. Automatic intent triage, sentiment scoring, and 1-click on-brand replies.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Interactive Retainer Capacity & ROI Calculator ── */}
+      <section id="calculator" className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+        <div className="p-8 sm:p-10 rounded-3xl bg-[#F7F6F3] border border-[rgba(55,53,47,0.12)] space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-mono uppercase tracking-wider text-[#9B9A97]">
+              Interactive Margin Engine
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-[#37352F]">
+              Calculate Your Agency Margin Expansion
+            </h2>
+            <p className="text-xs sm:text-sm text-[#6B6A65]">
+              Drag the slider to match your current active client retainers and see the hours and margin unlocked with AgencyOS.
+            </p>
+          </div>
+
+          {/* Slider Control */}
+          <div className="max-w-md mx-auto space-y-3 text-center">
+            <div className="flex items-center justify-between text-xs font-mono text-[#6B6A65]">
+              <span>3 Retainers</span>
+              <span className="text-base font-semibold text-[#37352F]">{retainerCount} Active Client Retainers</span>
+              <span>50 Retainers</span>
+            </div>
+            <input
+              type="range"
+              min="3"
+              max="50"
+              value={retainerCount}
+              onChange={(e) => setRetainerCount(Number(e.target.value))}
+              className="w-full h-2 bg-[#E9E9E7] rounded-lg appearance-none cursor-pointer accent-[#191919]"
+            />
+          </div>
+
+          {/* Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+            <div className="p-5 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] shadow-xs text-center space-y-1">
+              <span className="text-2xl sm:text-3xl font-semibold text-[#37352F] tracking-tight">
+                {hoursSavedPerMonth} hrs
               </span>
-
-              <div className="space-y-3 relative z-10">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    {m.tag}
-                  </span>
-                  <span className="text-xs font-mono font-bold text-[#64748B] dark:text-[#94A3B8]">
-                    {m.num}
-                  </span>
-                </div>
-
-                <h3 className="text-base font-heading font-bold text-[#1F2B33] dark:text-white">
-                  {m.title}
-                </h3>
-
-                <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                  {m.desc}
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-black/[0.06] dark:border-white/[0.06] relative z-10">
-                <Link
-                  href="/dashboard"
-                  className="text-xs font-semibold text-[#0D4A32] dark:text-emerald-400 flex items-center gap-1 group-hover:gap-1.5 transition-all"
-                >
-                  <span>Explore module</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
+              <p className="text-xs font-medium text-[#6B6A65]">Monthly Specialist Hours Reclaimed</p>
+              <p className="text-[10px] text-[#9B9A97]">No more manual copy-pasting</p>
             </div>
-          ))}
+
+            <div className="p-5 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] shadow-xs text-center space-y-1">
+              <span className="text-2xl sm:text-3xl font-semibold text-[#0F7B6C] tracking-tight">
+                ${saasSavedPerMonth.toLocaleString()}
+              </span>
+              <p className="text-xs font-medium text-[#6B6A65]">Eliminated Redundant SaaS Spend</p>
+              <p className="text-[10px] text-[#9B9A97]">Consolidated 6 tools into 1</p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] shadow-xs text-center space-y-1">
+              <span className="text-2xl sm:text-3xl font-semibold text-[#2383E2] tracking-tight">
+                +{extraRetainerCapacity} Retainers
+              </span>
+              <p className="text-xs font-medium text-[#6B6A65]">Capacity Growth Without New Hires</p>
+              <p className="text-[10px] text-[#9B9A97]">Scale agency margins directly</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── SECTION 6: INTERACTIVE ROI & CAPACITY CALCULATOR ── */}
-      <section id="calculator" className="py-20 bg-[#F4F3ED] dark:bg-[#080B10] border-y border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center max-w-xl mx-auto mb-12 space-y-3">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#0D4A32] dark:text-emerald-400 bg-[#0D4A32]/10 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
-              Economic Model
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-heading font-black tracking-[-0.02em] text-[#1F2B33] dark:text-white">
-              Calculate your agency savings
-            </h2>
-            <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-              See how consolidating onto AgencyOS impacts your monthly retainer margins.
+      {/* ── Enterprise Governance & Security ── */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-[rgba(55,53,47,0.08)]">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs font-mono uppercase tracking-wider text-[#9B9A97]">
+            Enterprise Trust
+          </span>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-semibold text-[#37352F]">
+            Built for client confidentiality and data integrity
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="p-4 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] space-y-2">
+            <Database className="w-5 h-5 text-[#2383E2]" />
+            <h4 className="text-xs font-semibold text-[#37352F]">Row-Level Tenant Isolation</h4>
+            <p className="text-[11px] text-[#6B6A65]">
+              Every client agency has strictly isolated Postgres schemas. No cross-client data bleeding.
             </p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-white dark:bg-[#0E1520] border border-black/[0.08] dark:border-white/[0.08] shadow-xl space-y-8">
-            <div>
-              <div className="flex items-center justify-between mb-3 text-xs">
-                <span className="font-semibold text-[#1F2B33] dark:text-white">Active Client Retainers</span>
-                <span className="text-base font-heading font-extrabold text-[#0D4A32] dark:text-emerald-400">
-                  {clientsCount} Brands
-                </span>
-              </div>
-              <input
-                type="range"
-                min="3"
-                max="50"
-                value={clientsCount}
-                onChange={(e) => setClientsCount(Number(e.target.value))}
-                className="w-full accent-[#0D4A32] dark:accent-emerald-500 cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8] mt-1">
-                <span>3 Boutique</span>
-                <span>25 Growth Agency</span>
-                <span>50+ Enterprise Scale</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-black/[0.06] dark:border-white/[0.06] text-center">
-              <div className="p-4 rounded-2xl bg-[#FBFBF9] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06]">
-                <span className="text-2xl font-heading font-extrabold text-[#1F2B33] dark:text-white block">
-                  {(clientsCount * 14).toLocaleString()} hrs
-                </span>
-                <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                  Monthly Hours Saved on Copy &amp; Admin
-                </span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#FBFBF9] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06]">
-                <span className="text-2xl font-heading font-extrabold text-emerald-600 dark:text-emerald-400 block">
-                  ${(clientsCount * 65).toLocaleString()}
-                </span>
-                <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                  Eliminated SaaS Subscriptions / Mo
-                </span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#FBFBF9] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06]">
-                <span className="text-2xl font-heading font-extrabold text-purple-600 dark:text-[#A78BFA] block">
-                  +{Math.round(clientsCount * 0.45)} Retainers
-                </span>
-                <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                  Capacity Growth Without Extra Staff
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECTION 7: ENTERPRISE SECURITY & GOVERNANCE ── */}
-      <section id="security" className="py-20 bg-[#0C1626] text-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-              Enterprise Governance
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-[-0.02em] text-white">
-              Built for strict client confidentiality
-            </h2>
-            <p className="text-xs sm:text-sm text-[#94A3B8]">
-              Every client's credentials, vector embeddings, and media are cryptographically isolated with zero cross-tenant contamination.
+          <div className="p-4 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] space-y-2">
+            <Lock className="w-5 h-5 text-[#0F7B6C]" />
+            <h4 className="text-xs font-semibold text-[#37352F]">Zero AI Model Training</h4>
+            <p className="text-[11px] text-[#6B6A65]">
+              Client guidelines, proprietary copy, and voice rules are never used to train public or foundation models.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[
-              {
-                title: "Row-Level Multi-Tenancy",
-                desc: "Strict agency_id isolation across PostgreSQL tables. Clients never see sibling tenant records.",
-              },
-              {
-                title: "Zero AI Model Training",
-                desc: "Your client's brand secrets, transcripts, and hooks are never used to train foundation models.",
-              },
-              {
-                title: "Meta OAuth Token Health",
-                desc: "Continuous proactive monitoring of 60-day token lifespans with instant 1-click renewal alerts.",
-              },
-              {
-                title: "Role-Based Access Control",
-                desc: "Owners, Managers, and Specialists have distinct granular permissions to safeguard billing and settings.",
-              },
-            ].map((sec, i) => (
-              <div
-                key={i}
-                className="p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] space-y-2.5 shadow-inner"
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  0{i + 1}
-                </div>
-                <h4 className="text-sm font-heading font-bold text-white">{sec.title}</h4>
-                <p className="text-xs text-[#94A3B8] leading-relaxed">{sec.desc}</p>
-              </div>
-            ))}
+          <div className="p-4 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] space-y-2">
+            <ShieldCheck className="w-5 h-5 text-[#D9730D]" />
+            <h4 className="text-xs font-semibold text-[#37352F]">Meta Graph API Partner</h4>
+            <p className="text-[11px] text-[#6B6A65]">
+              Direct token health monitoring and automated alerts if client permissions or page tokens expire.
+            </p>
           </div>
 
-          {/* Live SIEM Audit Log Ticker */}
-          <div className="mt-10 p-3.5 rounded-2xl bg-black/40 border border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-[#94A3B8] flex-wrap gap-2">
-            <span className="text-emerald-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              AUDIT LOG: 214 AUTONOMOUS ACTIONS · 0 BRAND TABOO BREACHES · 100% ISOLATED
-            </span>
-            <span className="text-white/60">SIEM · CSV · API EXPORTABLE</span>
+          <div className="p-4 rounded-xl bg-white border border-[rgba(55,53,47,0.08)] space-y-2">
+            <CheckCircle2 className="w-5 h-5 text-[#6941C6]" />
+            <h4 className="text-xs font-semibold text-[#37352F]">Role-Based Access Control</h4>
+            <p className="text-[11px] text-[#6B6A65]">
+              Hide agency billing, credit burn rates, and financial margins from freelancers and junior writers.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ── SECTION 8: BOTTOM CELESTIAL HORIZON CTA (ZOCKET STYLE) ── */}
-      <section className="py-24 bg-[#061A12] text-white relative overflow-hidden text-center">
-        {/* Amber / Golden Horizon Arc */}
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-amber-500/25 via-emerald-500/10 to-transparent rounded-[100%] blur-2xl pointer-events-none" />
-
-        <div className="max-w-3xl mx-auto px-6 relative z-10 space-y-6">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
-            A New Operational Standard
+      {/* ── High-Converting Bottom CTA ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+        <div className="p-8 sm:p-12 rounded-3xl bg-[#F7F6F3] border border-[rgba(55,53,47,0.12)] text-center space-y-6">
+          <span className="px-3 py-1 rounded-full bg-white border border-[rgba(55,53,47,0.09)] text-xs font-mono text-[#6B6A65]">
+            Instant Workspace Activation
           </span>
 
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight text-white leading-tight">
-            Bring your client guidelines.
-            <br />
-            Leave with your autonomous engine running.
+          <h2 className="text-3xl sm:text-4xl font-semibold text-[#37352F] tracking-tight max-w-xl mx-auto">
+            Ready to run your agency on a modern operating system?
           </h2>
 
-          <p className="text-xs sm:text-sm text-[#94A3B8] max-w-xl mx-auto leading-relaxed">
-            Eliminate six fragmented tools and scale your monthly brand retainers with zero brand drift.
+          <p className="text-sm sm:text-base text-[#6B6A65] max-w-lg mx-auto">
+            Join forward-thinking agencies scaling retainers with zero brand drift and frictionless client approvals.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Link
               href="/dashboard"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-[#061A12] shadow-lg transition-all transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-medium bg-[#191919] text-white hover:bg-[#2F2E2B] transition-all shadow-sm flex items-center justify-center gap-2"
             >
               <span>Launch Agency Workspace</span>
               <ArrowRight className="w-4 h-4" />
@@ -740,93 +994,74 @@ export default function LandingPage() {
 
             <Link
               href="/login"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-semibold bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.15] shadow-xs transition-all"
+              className="w-full sm:w-auto px-5 py-3 rounded-lg text-sm font-medium bg-white text-[#37352F] hover:bg-[#F1F1EF] border border-[rgba(55,53,47,0.12)] transition-all shadow-xs"
             >
-              <span>Sign In to Existing Agency</span>
+              Sign In to Existing Agency
             </Link>
-          </div>
-
-          <div className="pt-4 flex items-center justify-center gap-6 text-[11px] font-mono text-[#94A3B8]">
-            <span>14-DAY RISK-FREE TRIAL</span>
-            <span>•</span>
-            <span>NO CREDIT CARD REQUIRED</span>
-            <span>•</span>
-            <span>INSTANT SETUP</span>
           </div>
         </div>
       </section>
 
-      {/* ── ENTERPRISE FOOTER WITH TELEMETRY TICKER ── */}
-      <footer className="bg-[#05130D] text-[#94A3B8] border-t border-white/[0.08] text-xs py-12">
-        <div className="max-w-6xl mx-auto px-6 space-y-8">
-          {/* Telemetry Ticker Strip */}
-          <div className="pb-6 border-b border-white/[0.08] flex flex-wrap items-center justify-between gap-4 font-mono text-[11px]">
-            <div className="flex items-center gap-2 text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>SYSTEM LIVE · {signalCount.toLocaleString()} BRAND SIGNALS IN GRAPH · 44 DATA HOOKS</span>
-            </div>
-            <div className="text-[#94A3B8]/60">
-              NEXT SPRINT CYCLE: 8:00 AM UTC
-            </div>
+      {/* ── Deep Enterprise Footer ── */}
+      <footer className="border-t border-[rgba(55,53,47,0.08)] bg-white py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 text-xs text-[#6B6A65]">
+          <div className="space-y-3">
+            <p className="font-semibold text-[#37352F] uppercase tracking-wider font-mono text-[11px]">Product</p>
+            <ul className="space-y-2">
+              <li><a href="#demo" className="hover:text-[#37352F]">Cortex Memory Vault</a></li>
+              <li><a href="#demo" className="hover:text-[#37352F]">6-Agent Campaign Studio</a></li>
+              <li><a href="#demo" className="hover:text-[#37352F]">Magic-Link Review Rooms</a></li>
+              <li><a href="#demo" className="hover:text-[#37352F]">Viral Teleprompter</a></li>
+              <li><a href="#demo" className="hover:text-[#37352F]">Community Inbox</a></li>
+            </ul>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            {/* Col 1: Brand & Bio */}
-            <div className="col-span-2 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-[#061A12]">
-                  <Brain className="w-3.5 h-3.5" />
-                </div>
-                <span className="font-heading font-extrabold text-sm text-white">AgencyOS</span>
-              </div>
-              <p className="text-xs text-[#94A3B8] max-w-sm leading-relaxed">
-                The AI-native operating system for modern social, creative, and digital marketing agencies.
-              </p>
-              <p className="text-[11px] font-mono text-[#94A3B8]/60">
-                &copy; {new Date().getFullYear()} AgencyOS Inc. All rights reserved.
-              </p>
-            </div>
+          <div className="space-y-3">
+            <p className="font-semibold text-[#37352F] uppercase tracking-wider font-mono text-[11px]">Solutions</p>
+            <ul className="space-y-2">
+              <li><span className="hover:text-[#37352F] cursor-pointer">For Performance Agencies</span></li>
+              <li><span className="hover:text-[#37352F] cursor-pointer">For Creative Studios</span></li>
+              <li><span className="hover:text-[#37352F] cursor-pointer">For Social Media Teams</span></li>
+              <li><span className="hover:text-[#37352F] cursor-pointer">For Fractional CMOs</span></li>
+            </ul>
+          </div>
 
-            {/* Col 2: Product */}
-            <div className="space-y-2">
-              <h5 className="font-heading font-bold text-white text-xs uppercase tracking-wider font-mono">
-                Product
-              </h5>
-              <ul className="space-y-1.5 text-xs">
-                <li><Link href="/cortex" className="hover:text-white transition-colors">Cortex Memory</Link></li>
-                <li><Link href="/campaigns" className="hover:text-white transition-colors">Campaign Studio</Link></li>
-                <li><Link href="/tasks" className="hover:text-white transition-colors">Teleprompter Studio</Link></li>
-                <li><Link href="/approvals" className="hover:text-white transition-colors">Review Rooms</Link></li>
-                <li><Link href="/calendar" className="hover:text-white transition-colors">Content Calendar</Link></li>
-              </ul>
-            </div>
+          <div className="space-y-3">
+            <p className="font-semibold text-[#37352F] uppercase tracking-wider font-mono text-[11px]">Security & Legal</p>
+            <ul className="space-y-2">
+              <li><span className="hover:text-[#37352F] cursor-pointer">SOC-2 Type II Certified</span></li>
+              <li><span className="hover:text-[#37352F] cursor-pointer">Meta Graph API Compliance</span></li>
+              <li><span className="hover:text-[#37352F] cursor-pointer">GDPR & Tenant Privacy</span></li>
+              <li><span className="hover:text-[#37352F] cursor-pointer">Zero Model Training Policy</span></li>
+            </ul>
+          </div>
 
-            {/* Col 3: Operations */}
-            <div className="space-y-2">
-              <h5 className="font-heading font-bold text-white text-xs uppercase tracking-wider font-mono">
-                Workspaces
-              </h5>
-              <ul className="space-y-1.5 text-xs">
-                <li><Link href="/dashboard" className="hover:text-white transition-colors">Agency Dashboard</Link></li>
-                <li><Link href="/workspace" className="hover:text-white transition-colors">My Daily Workbench</Link></li>
-                <li><Link href="/clients" className="hover:text-white transition-colors">Client Workspaces</Link></li>
-                <li><Link href="/engagement" className="hover:text-white transition-colors">Community Inbox</Link></li>
-                <li><Link href="/reports" className="hover:text-white transition-colors">Reports &amp; ROI</Link></li>
-              </ul>
-            </div>
+          <div className="space-y-3">
+            <p className="font-semibold text-[#37352F] uppercase tracking-wider font-mono text-[11px]">AgencyOS</p>
+            <p className="text-xs text-[#9B9A97] leading-relaxed">
+              The operating system powering modern marketing agencies with institutional memory and multi-agent production.
+            </p>
+            <p className="text-xs text-[#9B9A97]">
+              &copy; {new Date().getFullYear()} AgencyOS Inc. All rights reserved.
+            </p>
+          </div>
+        </div>
 
-            {/* Col 4: Administration */}
-            <div className="space-y-2">
-              <h5 className="font-heading font-bold text-white text-xs uppercase tracking-wider font-mono">
-                Admin
-              </h5>
-              <ul className="space-y-1.5 text-xs">
-                <li><Link href="/team" className="hover:text-white transition-colors">Team &amp; Seats</Link></li>
-                <li><Link href="/billing" className="hover:text-white transition-colors">Billing &amp; Credits</Link></li>
-                <li><Link href="/settings" className="hover:text-white transition-colors">Workspace Config</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Agency Login</Link></li>
-              </ul>
-            </div>
+        {/* Live Monospace Telemetry Strip */}
+        <div className="max-w-7xl mx-auto pt-6 border-t border-[rgba(55,53,47,0.06)] flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-[#9B9A97] gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-[#0F7B6C]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0F7B6C]" />
+              <span>All Systems Operational</span>
+            </span>
+            <span>•</span>
+            <span>Uptime: 99.98%</span>
+            <span>•</span>
+            <span>Cluster: us-east-1</span>
+          </div>
+
+          <div>
+            <span>PostgreSQL Schema v2.4 · API Latency: 42ms</span>
           </div>
         </div>
       </footer>
