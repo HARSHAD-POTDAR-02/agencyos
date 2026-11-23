@@ -649,15 +649,15 @@ function DeliverableDetailContent() {
     : null;
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 bg-[#101014] text-[#F2F0F7] min-h-screen">
+    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 bg-white dark:bg-[#101014] text-[#191919] dark:text-[#F2F0F7] min-h-screen">
       {/* Navigation & Breadcrumbs */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-medium text-[#A3A0B0]">
-          <Link href={backLink.href} className="hover:text-[#F2F0F7] flex items-center gap-1 font-semibold transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5 text-[#A3A0B0]" /> {backLink.label}
+        <div className="flex items-center gap-2 text-xs font-medium text-[#6B6A65] dark:text-[#A3A0B0]">
+          <Link href={backLink.href} className="hover:text-[#191919] dark:hover:text-[#F2F0F7] flex items-center gap-1 font-semibold transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#A3A0B0]" /> {backLink.label}
           </Link>
-          <ChevronRight className="w-3 h-3 text-white/20" />
-          <span className="text-[#F2F0F7] font-heading font-bold truncate max-w-xs">{deliverable.title}</span>
+          <ChevronRight className="w-3 h-3 text-black/20 dark:text-white/20" />
+          <span className="text-[#191919] dark:text-[#F2F0F7] font-heading font-bold truncate max-w-xs">{deliverable.title}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -974,13 +974,13 @@ function DeliverableDetailContent() {
 
       {/* Production Stage & Task Isolation Switcher */}
       {tasksList.length > 0 && (
-        <div className="surface-card rounded-2xl border border-white/[0.08] p-4 space-y-2.5 shadow-xs">
+        <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-4 space-y-2.5 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
-            <span className="text-[11px] font-mono font-medium text-[#F2F0F7] uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <span className="text-[11px] font-mono font-medium text-[#191919] dark:text-[#F2F0F7] uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
               <span>Production Stage &amp; Task Media Scoping</span>
             </span>
-            <span className="text-[11px] text-[#A3A0B0]">
+            <span className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">
               Each task has its own isolated assets so stages don&apos;t mix
             </span>
           </div>
@@ -997,14 +997,14 @@ function DeliverableDetailContent() {
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 selectedTaskId === "all"
-                  ? "bg-[#A78BFA] text-[#101014] font-bold shadow-[0_0_10px_rgba(167,139,250,0.2)]"
-                  : "bg-white/[0.03] text-[#A3A0B0] hover:bg-white/[0.06] hover:text-[#F2F0F7] border border-white/[0.08]"
+                  ? "bg-[#191919] text-white dark:bg-[#A78BFA] dark:text-[#101014] font-bold shadow-xs"
+                  : "bg-[#EFEFED] text-[#6B6A65] hover:bg-[#E5E5E2] hover:text-[#191919] border border-black/[0.08] dark:bg-white/[0.03] dark:text-[#A3A0B0] dark:hover:bg-white/[0.06] dark:hover:text-[#F2F0F7] dark:border-white/[0.08]"
               }`}
             >
               <span>All Versions</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                  selectedTaskId === "all" ? "bg-[#8B5CF6] text-white" : "bg-white/[0.06] text-[#A3A0B0]"
+                  selectedTaskId === "all" ? "bg-white/20 text-white dark:bg-[#8B5CF6] dark:text-white" : "bg-black/[0.06] text-[#6B6A65] dark:bg-white/[0.06] dark:text-[#A3A0B0]"
                 }`}
               >
                 {deliverable.content_versions.length}
@@ -1030,14 +1030,14 @@ function DeliverableDetailContent() {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
-                      ? "bg-[#A78BFA] text-[#101014] font-bold shadow-[0_0_10px_rgba(167,139,250,0.2)]"
-                      : "bg-white/[0.03] text-[#A3A0B0] hover:bg-white/[0.06] hover:text-[#F2F0F7] border border-white/[0.08]"
+                      ? "bg-[#191919] text-white dark:bg-[#A78BFA] dark:text-[#101014] font-bold shadow-xs"
+                      : "bg-[#EFEFED] text-[#6B6A65] hover:bg-[#E5E5E2] hover:text-[#191919] border border-black/[0.08] dark:bg-white/[0.03] dark:text-[#A3A0B0] dark:hover:bg-white/[0.06] dark:hover:text-[#F2F0F7] dark:border-white/[0.08]"
                   }`}
                 >
                   <span className="truncate max-w-[170px]">{t.title.split("(")[0].trim()}</span>
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                      isSelected ? "bg-[#8B5CF6] text-white" : "bg-white/[0.06] text-[#A3A0B0]"
+                      isSelected ? "bg-white/20 text-white dark:bg-[#8B5CF6] dark:text-white" : "bg-black/[0.06] text-[#6B6A65] dark:bg-white/[0.06] dark:text-[#A3A0B0]"
                     }`}
                   >
                     {count}
@@ -1054,20 +1054,20 @@ function DeliverableDetailContent() {
         {/* Left Column (8 cols): Media Player + Caption & Notes */}
         <div className="lg:col-span-8 space-y-6">
           {/* Media Player Card */}
-          <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
+          <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-heading font-bold text-[#F2F0F7] tracking-tight">
+                <span className="text-xs font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                   Media Preview
                 </span>
                 {currentPreviewVersion && (
-                  <span className="text-[11px] font-mono font-medium text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/20 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] font-mono font-medium text-[#2383E2] bg-blue-500/10 border border-[#2383E2]/20 dark:text-[#A78BFA] dark:bg-[#A78BFA]/10 dark:border-[#A78BFA]/20 px-2 py-0.5 rounded-full">
                     v{currentPreviewVersion.version_number}
                     {currentPreviewVersion.id === latestVersion?.id && " (Latest)"}
                   </span>
                 )}
                 {activeTask && (
-                  <span className="text-[10px] font-mono font-medium text-[#A3A0B0] bg-white/[0.04] border border-white/[0.08] px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono font-medium text-[#6B6A65] bg-[#EFEFED] border border-black/[0.08] dark:text-[#A3A0B0] dark:bg-white/[0.04] dark:border-white/[0.08] px-2 py-0.5 rounded-full">
                     Stage: {activeTask.title.split("(")[0].trim()}
                   </span>
                 )}
@@ -1078,7 +1078,7 @@ function DeliverableDetailContent() {
                   href={mediaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#A3A0B0] hover:text-[#A78BFA] flex items-center gap-1 font-medium transition-colors"
+                  className="text-xs text-[#6B6A65] hover:text-[#2383E2] dark:text-[#A3A0B0] dark:hover:text-[#A78BFA] flex items-center gap-1 font-medium transition-colors"
                 >
                   Open Original <ExternalLink className="w-3 h-3" />
                 </a>
@@ -1087,7 +1087,7 @@ function DeliverableDetailContent() {
 
             {/* Actual Player, Document Viewer, Image, or Empty State */}
             {currentPreviewVersion && mediaUrl ? (
-              <div className="relative rounded-2xl overflow-hidden bg-[#0D0D11] border border-white/[0.08] flex items-center justify-center min-h-[380px] max-h-[560px]">
+              <div className="relative rounded-2xl overflow-hidden bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] flex items-center justify-center min-h-[380px] max-h-[560px]">
                 {isVideo ? (
                   <video
                     key={currentPreviewVersion.id}
@@ -1097,17 +1097,17 @@ function DeliverableDetailContent() {
                     className="w-full max-h-[500px] object-contain rounded-xl"
                   />
                 ) : isPdf ? (
-                  <div className="w-full h-[520px] bg-[#0D0D11] rounded-xl overflow-hidden flex flex-col">
-                    <div className="bg-[#17171E] px-4 py-2 flex items-center justify-between text-xs text-[#F2F0F7] border-b border-white/[0.08]">
+                  <div className="w-full h-[520px] bg-[#F7F6F3] dark:bg-[#0D0D11] rounded-xl overflow-hidden flex flex-col">
+                    <div className="bg-[#EFEFED] dark:bg-[#17171E] px-4 py-2 flex items-center justify-between text-xs text-[#191919] dark:text-[#F2F0F7] border-b border-black/[0.08] dark:border-white/[0.08]">
                       <span className="font-semibold truncate flex items-center gap-1.5 font-mono text-xs">
-                        <FileText className="w-4 h-4 text-[#A78BFA]" />
+                        <FileText className="w-4 h-4 text-[#2383E2] dark:text-[#A78BFA]" />
                         {currentPreviewVersion.file_name}
                       </span>
                       <div className="flex items-center gap-2">
                         <a
                           href={mediaUrl}
                           download={currentPreviewVersion.file_name}
-                          className="text-[11px] bg-white/[0.04] hover:bg-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7] font-medium px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-white/[0.08]"
+                          className="text-[11px] bg-white dark:bg-white/[0.04] hover:bg-[#F1F1EF] dark:hover:bg-white/[0.08] text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] font-medium px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-black/[0.08] dark:border-white/[0.08]"
                         >
                           <Download className="w-3 h-3" /> Download
                         </a>
@@ -1115,7 +1115,7 @@ function DeliverableDetailContent() {
                           href={mediaUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                          className="text-[11px] bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
                         >
                           <ExternalLink className="w-3 h-3" /> Open in New Tab
                         </a>
@@ -1128,15 +1128,15 @@ function DeliverableDetailContent() {
                     />
                   </div>
                 ) : isDoc || isTxt ? (
-                  <div className="w-full min-h-[380px] p-8 bg-[#0D0D11] rounded-xl flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-16 h-16 rounded-2xl bg-[#A78BFA]/10 border border-[#A78BFA]/20 flex items-center justify-center text-[#A78BFA] shadow-inner">
+                  <div className="w-full min-h-[380px] p-8 bg-[#F7F6F3] dark:bg-[#0D0D11] rounded-xl flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[#EFEFED] text-[#191919] border border-black/[0.08] dark:bg-[#A78BFA]/10 dark:border-[#A78BFA]/20 dark:text-[#A78BFA] flex items-center justify-center shadow-2xs">
                       <FileText className="w-8 h-8" />
                     </div>
                     <div className="max-w-md space-y-1">
-                      <h4 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-wide truncate">
+                      <h4 className="text-sm font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-wide truncate">
                         {currentPreviewVersion.file_name}
                       </h4>
-                      <p className="text-xs text-[#A3A0B0] font-mono">
+                      <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] font-mono">
                         {isTxt ? "Plain Text Script / Notes" : "Word Document (.docx) Script"} &bull; {formatBytes(currentPreviewVersion.file_size_bytes)}
                       </p>
                     </div>
@@ -1145,7 +1145,7 @@ function DeliverableDetailContent() {
                         href={mediaUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-xl shadow-[0_0_12px_rgba(167,139,250,0.25)] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Open Document</span>
@@ -1153,7 +1153,7 @@ function DeliverableDetailContent() {
                       <a
                         href={mediaUrl}
                         download={currentPreviewVersion.file_name}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] text-xs font-medium rounded-xl transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-white/[0.04] hover:bg-[#F1F1EF] dark:hover:bg-white/[0.08] text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08] text-xs font-medium rounded-xl transition-colors cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Download</span>
@@ -1170,16 +1170,16 @@ function DeliverableDetailContent() {
                 )}
               </div>
             ) : (
-              <div className="border border-dashed border-white/[0.08] rounded-2xl p-10 text-center space-y-3 bg-[#0D0D11]/50">
-                <div className="w-12 h-12 rounded-2xl bg-[#A78BFA]/10 text-[#A78BFA] flex items-center justify-center mx-auto border border-[#A78BFA]/20">
+              <div className="border border-dashed border-black/[0.12] dark:border-white/[0.08] rounded-2xl p-10 text-center space-y-3 bg-[#F7F6F3] dark:bg-[#0D0D11]/50">
+                <div className="w-12 h-12 rounded-2xl bg-[#EFEFED] text-[#191919] border border-black/[0.08] dark:bg-[#A78BFA]/10 dark:text-[#A78BFA] dark:border-[#A78BFA]/20 flex items-center justify-center mx-auto">
                   <Upload className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-heading font-bold text-[#F2F0F7]">
+                <h3 className="text-sm font-heading font-bold text-[#191919] dark:text-[#F2F0F7]">
                   {activeTask
                     ? `No assets uploaded for "${activeTask.title.split("(")[0].trim()}"`
                     : "No assets uploaded yet"}
                 </h3>
-                <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto">
+                <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-sm mx-auto">
                   {activeTask
                     ? `This task has no files attached. Upload a script (.txt/.docx/.pdf) or media asset for the ${activeTask.task_type || "task"} stage.`
                     : "Upload your video cut, script, or creative asset to initiate the review pipeline."}
@@ -1189,7 +1189,7 @@ function DeliverableDetailContent() {
                     setUploadTaskId(selectedTaskId !== "all" ? selectedTaskId : "none");
                     setShowUploadModal(true);
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-xl shadow-[0_0_12px_rgba(167,139,250,0.25)] transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>
@@ -1553,8 +1553,8 @@ function DeliverableDetailContent() {
                       onClick={() => setSelectedVersionId(v.id)}
                       className={`p-3.5 rounded-xl border transition-all cursor-pointer space-y-2 ${
                         isSelected
-                          ? "bg-[#20202A] border-[#A78BFA]/60 ring-1 ring-[#A78BFA]/30 shadow-xs"
-                          : "bg-[#0D0D11]/60 border-white/[0.06] hover:bg-white/[0.03] hover:border-white/[0.12]"
+                          ? "bg-[#F1F1EF] dark:bg-[#20202A] border-[#2383E2] dark:border-[#A78BFA]/60 ring-1 ring-[#2383E2]/20 dark:ring-[#A78BFA]/30 shadow-xs"
+                          : "bg-white dark:bg-[#0D0D11]/60 border-black/[0.08] dark:border-white/[0.06] hover:bg-[#F7F6F3] dark:hover:bg-white/[0.03] hover:border-black/[0.14] dark:hover:border-white/[0.12]"
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -1562,8 +1562,8 @@ function DeliverableDetailContent() {
                           <span
                             className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
                               isSelected
-                                ? "bg-[#A78BFA] text-[#101014]"
-                                : "bg-white/[0.04] text-[#A3A0B0] border border-white/[0.08]"
+                                ? "bg-[#191919] dark:bg-[#A78BFA] text-white dark:text-[#101014]"
+                                : "bg-black/[0.05] dark:bg-white/[0.04] text-[#6B6A65] dark:text-[#A3A0B0] border border-black/[0.08] dark:border-white/[0.08]"
                             }`}
                           >
                             v{v.version_number}

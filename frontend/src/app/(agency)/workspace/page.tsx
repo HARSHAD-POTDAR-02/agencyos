@@ -311,7 +311,7 @@ export default function EmployeeWorkspacePage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
+                <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                   Welcome back, {user?.full_name?.split(" ")[0] || "Specialist"}!
                 </h1>
                 <span className="px-2.5 py-0.5 text-xs font-mono font-bold rounded-full bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 capitalize">
@@ -378,7 +378,7 @@ export default function EmployeeWorkspacePage() {
       </div>
 
       {/* ── 5-Segment Editorial Execution Strip (Linear Telemetry) ── */}
-      <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-xs grid grid-cols-2 sm:grid-cols-5 gap-3 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06]">
+      <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-4 shadow-xs grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-black/[0.08] dark:divide-white/[0.06]">
         {/* Metric 1: To Execute */}
         <div 
           onClick={() => setActiveTab("action_required")}
@@ -386,36 +386,36 @@ export default function EmployeeWorkspacePage() {
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
             activeTab === "action_required"
-              ? "text-[#C4B5FD] font-bold"
+              ? "text-[#2383E2] dark:text-[#C4B5FD] font-bold"
               : activeTab === "all"
-              ? "text-[#A78BFA]/60 group-hover:text-[#A78BFA] font-medium"
-              : "text-[#A78BFA]/20 group-hover:text-[#A78BFA]/60 font-medium"
+              ? "text-[#6B6A65] dark:text-[#A78BFA]/60 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA] font-medium"
+              : "text-[#6B6A65] dark:text-[#A78BFA]/40 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA]/80 font-medium"
           }`}>
             <span>To Execute</span>
             <CheckSquare className={`w-3.5 h-3.5 transition-colors ${
               activeTab === "action_required"
-                ? "text-[#A78BFA]"
+                ? "text-[#2383E2] dark:text-[#A78BFA]"
                 : activeTab === "all"
-                ? "text-[#A78BFA]/60 group-hover:text-[#A78BFA]"
-                : "text-[#A78BFA]/20 group-hover:text-[#A78BFA]/60"
+                ? "text-[#6B6A65] dark:text-[#A78BFA]/60 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA]"
+                : "text-[#6B6A65] dark:text-[#A78BFA]/40 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA]/80"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "action_required"
-                ? "text-3xl font-extrabold text-white drop-shadow-[0_0_12px_rgba(167,139,250,0.4)]"
+                ? "text-3xl font-extrabold text-[#191919] dark:text-white dark:drop-shadow-[0_0_12px_rgba(167,139,250,0.4)]"
                 : activeTab === "all"
-                ? "text-2xl font-bold text-[#A78BFA]/75 group-hover:text-[#A78BFA]"
-                : "text-2xl font-bold text-[#A78BFA]/25 group-hover:text-[#A78BFA]/60"
+                ? "text-2xl font-bold text-[#191919] dark:text-[#A78BFA]/75 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA]"
+                : "text-2xl font-bold text-[#37352F] dark:text-[#A78BFA]/40 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA]/80"
             }`}>
               {activeTasks.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
               activeTab === "action_required"
-                ? "text-[#C4B5FD] font-semibold"
+                ? "text-[#2383E2] dark:text-[#C4B5FD] font-semibold"
                 : activeTab === "all"
-                ? "text-[#A78BFA]/50 group-hover:text-[#A78BFA]/80"
-                : "text-[#A78BFA]/20 group-hover:text-[#A78BFA]/50"
+                ? "text-[#6B6A65] dark:text-[#A78BFA]/50 group-hover:text-[#191919] dark:group-hover:text-[#A78BFA]/80"
+                : "text-[#9B9A97] dark:text-[#A78BFA]/40 group-hover:text-[#6B6A65] dark:group-hover:text-[#A78BFA]/60"
             }`}>
               ready to work
             </span>
@@ -429,36 +429,36 @@ export default function EmployeeWorkspacePage() {
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
             activeTab === "revisions"
-              ? "text-[#FBBF24] font-bold"
+              ? "text-[#9A6700] dark:text-[#FBBF24] font-bold"
               : activeTab === "all"
-              ? "text-[#E5AA58]/60 group-hover:text-[#E5AA58] font-medium"
-              : "text-[#E5AA58]/20 group-hover:text-[#E5AA58]/60 font-medium"
+              ? "text-[#6B6A65] dark:text-[#E5AA58]/60 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58] font-medium"
+              : "text-[#6B6A65] dark:text-[#E5AA58]/40 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58]/80 font-medium"
           }`}>
             <span>Needs Update</span>
             <AlertTriangle className={`w-3.5 h-3.5 transition-colors ${
               activeTab === "revisions"
-                ? "text-[#FBBF24]"
+                ? "text-[#9A6700] dark:text-[#FBBF24]"
                 : activeTab === "all"
-                ? "text-[#E5AA58]/60 group-hover:text-[#E5AA58]"
-                : "text-[#E5AA58]/20 group-hover:text-[#E5AA58]/60"
+                ? "text-[#6B6A65] dark:text-[#E5AA58]/60 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58]"
+                : "text-[#6B6A65] dark:text-[#E5AA58]/40 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58]/80"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "revisions"
-                ? "text-3xl font-extrabold text-[#FDE68A] drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                ? "text-3xl font-extrabold text-[#9A6700] dark:text-[#FDE68A] dark:drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]"
                 : activeTab === "all"
-                ? "text-2xl font-bold text-[#E5AA58]/75 group-hover:text-[#E5AA58]"
-                : "text-2xl font-bold text-[#E5AA58]/25 group-hover:text-[#E5AA58]/60"
+                ? "text-2xl font-bold text-[#191919] dark:text-[#E5AA58]/75 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58]"
+                : "text-2xl font-bold text-[#37352F] dark:text-[#E5AA58]/40 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58]/80"
             }`}>
               {pendingRevisions.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
               activeTab === "revisions"
-                ? "text-[#FBBF24] font-semibold"
+                ? "text-[#9A6700] dark:text-[#FBBF24] font-semibold"
                 : activeTab === "all"
-                ? "text-[#E5AA58]/50 group-hover:text-[#E5AA58]/80"
-                : "text-[#E5AA58]/20 group-hover:text-[#E5AA58]/50"
+                ? "text-[#6B6A65] dark:text-[#E5AA58]/50 group-hover:text-[#9A6700] dark:group-hover:text-[#E5AA58]/80"
+                : "text-[#9B9A97] dark:text-[#E5AA58]/40 group-hover:text-[#6B6A65] dark:group-hover:text-[#E5AA58]/60"
             }`}>
               manager feedback
             </span>
@@ -472,36 +472,36 @@ export default function EmployeeWorkspacePage() {
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
             activeTab === "in_review"
-              ? "text-[#93C5FD] font-bold"
+              ? "text-[#0B6E99] dark:text-[#93C5FD] font-bold"
               : activeTab === "all"
-              ? "text-[#69A9D8]/60 group-hover:text-[#69A9D8] font-medium"
-              : "text-[#69A9D8]/20 group-hover:text-[#69A9D8]/60 font-medium"
+              ? "text-[#6B6A65] dark:text-[#69A9D8]/60 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8] font-medium"
+              : "text-[#6B6A65] dark:text-[#69A9D8]/40 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8]/80 font-medium"
           }`}>
             <span>In Inspection</span>
             <Clock className={`w-3.5 h-3.5 transition-colors ${
               activeTab === "in_review"
-                ? "text-[#93C5FD]"
+                ? "text-[#0B6E99] dark:text-[#93C5FD]"
                 : activeTab === "all"
-                ? "text-[#69A9D8]/60 group-hover:text-[#69A9D8]"
-                : "text-[#69A9D8]/20 group-hover:text-[#69A9D8]/60"
+                ? "text-[#6B6A65] dark:text-[#69A9D8]/60 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8]"
+                : "text-[#6B6A65] dark:text-[#69A9D8]/40 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8]/80"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "in_review"
-                ? "text-3xl font-extrabold text-[#DBEAFE] drop-shadow-[0_0_12px_rgba(147,197,253,0.4)]"
+                ? "text-3xl font-extrabold text-[#0B6E99] dark:text-[#DBEAFE] dark:drop-shadow-[0_0_12px_rgba(147,197,253,0.4)]"
                 : activeTab === "all"
-                ? "text-2xl font-bold text-[#69A9D8]/75 group-hover:text-[#69A9D8]"
-                : "text-2xl font-bold text-[#69A9D8]/25 group-hover:text-[#69A9D8]/60"
+                ? "text-2xl font-bold text-[#191919] dark:text-[#69A9D8]/75 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8]"
+                : "text-2xl font-bold text-[#37352F] dark:text-[#69A9D8]/40 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8]/80"
             }`}>
               {awaitingReview.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
               activeTab === "in_review"
-                ? "text-[#93C5FD] font-semibold"
+                ? "text-[#0B6E99] dark:text-[#93C5FD] font-semibold"
                 : activeTab === "all"
-                ? "text-[#69A9D8]/50 group-hover:text-[#69A9D8]/80"
-                : "text-[#69A9D8]/20 group-hover:text-[#69A9D8]/50"
+                ? "text-[#6B6A65] dark:text-[#69A9D8]/50 group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8]/80"
+                : "text-[#9B9A97] dark:text-[#69A9D8]/40 group-hover:text-[#6B6A65] dark:group-hover:text-[#69A9D8]/60"
             }`}>
               submitted
             </span>
@@ -510,15 +510,15 @@ export default function EmployeeWorkspacePage() {
 
         {/* Metric 4: Deadlines */}
         <div className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 transition-all group">
-          <div className="flex items-center justify-between text-[#E16F7B]/40 group-hover:text-[#E16F7B]/70 text-[11px] font-mono font-medium uppercase tracking-wider transition-colors">
+          <div className="flex items-center justify-between text-[#E03E3E] dark:text-[#E16F7B]/40 group-hover:text-[#E03E3E] dark:group-hover:text-[#E16F7B]/70 text-[11px] font-mono font-medium uppercase tracking-wider transition-colors">
             <span>Deadlines</span>
-            <Calendar className={`w-3.5 h-3.5 transition-colors ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#E16F7B]/40"}`} />
+            <Calendar className={`w-3.5 h-3.5 transition-colors ${overdue.length > 0 ? "text-[#E03E3E] dark:text-[#E16F7B]" : "text-[#E03E3E]/60 dark:text-[#E16F7B]/40"}`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className={`text-2xl font-bold font-mono transition-colors ${overdue.length > 0 ? "text-[#E16F7B]" : "text-[#E16F7B]/35 group-hover:text-[#E16F7B]/60"}`}>
+            <span className={`text-2xl font-bold font-mono transition-colors ${overdue.length > 0 ? "text-[#E03E3E] dark:text-[#E16F7B]" : "text-[#37352F] dark:text-[#E16F7B]/35 group-hover:text-[#E03E3E] dark:group-hover:text-[#E16F7B]/60"}`}>
               {dueToday.length + overdue.length}
             </span>
-            <span className="text-[10px] text-[#E16F7B]/30 group-hover:text-[#E16F7B]/60 font-mono transition-colors">
+            <span className="text-[10px] text-[#6B6A65] dark:text-[#E16F7B]/30 group-hover:text-[#E03E3E] dark:group-hover:text-[#E16F7B]/60 font-mono transition-colors">
               {overdue.length > 0 ? `${overdue.length} overdue` : "on track"}
             </span>
           </div>
@@ -531,36 +531,36 @@ export default function EmployeeWorkspacePage() {
         >
           <div className={`flex items-center justify-between text-[11px] font-mono uppercase tracking-wider transition-colors ${
             activeTab === "completed"
-              ? "text-[#6EE7B7] font-bold"
+              ? "text-[#0F7B6C] dark:text-[#6EE7B7] font-bold"
               : activeTab === "all"
-              ? "text-[#45B88A]/60 group-hover:text-[#45B88A] font-medium"
-              : "text-[#45B88A]/20 group-hover:text-[#45B88A]/60 font-medium"
+              ? "text-[#6B6A65] dark:text-[#45B88A]/60 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A] font-medium"
+              : "text-[#6B6A65] dark:text-[#45B88A]/40 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A]/80 font-medium"
           }`}>
             <span>Passed QA</span>
             <CheckCircle2 className={`w-3.5 h-3.5 transition-colors ${
               activeTab === "completed"
-                ? "text-[#6EE7B7]"
+                ? "text-[#0F7B6C] dark:text-[#6EE7B7]"
                 : activeTab === "all"
-                ? "text-[#45B88A]/60 group-hover:text-[#45B88A]"
-                : "text-[#45B88A]/20 group-hover:text-[#45B88A]/60"
+                ? "text-[#6B6A65] dark:text-[#45B88A]/60 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A]"
+                : "text-[#6B6A65] dark:text-[#45B88A]/40 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A]/80"
             }`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono transition-all ${
               activeTab === "completed"
-                ? "text-3xl font-extrabold text-[#D1FAE5] drop-shadow-[0_0_12px_rgba(110,231,183,0.4)]"
+                ? "text-3xl font-extrabold text-[#0F7B6C] dark:text-[#D1FAE5] dark:drop-shadow-[0_0_12px_rgba(110,231,183,0.4)]"
                 : activeTab === "all"
-                ? "text-2xl font-bold text-[#45B88A]/75 group-hover:text-[#45B88A]"
-                : "text-2xl font-bold text-[#45B88A]/25 group-hover:text-[#45B88A]/60"
+                ? "text-2xl font-bold text-[#191919] dark:text-[#45B88A]/75 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A]"
+                : "text-2xl font-bold text-[#37352F] dark:text-[#45B88A]/40 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A]/80"
             }`}>
               {completed.length}
             </span>
             <span className={`text-[10px] font-mono transition-colors ${
               activeTab === "completed"
-                ? "text-[#6EE7B7] font-semibold"
+                ? "text-[#0F7B6C] dark:text-[#6EE7B7] font-semibold"
                 : activeTab === "all"
-                ? "text-[#45B88A]/50 group-hover:text-[#45B88A]/80"
-                : "text-[#45B88A]/20 group-hover:text-[#45B88A]/50"
+                ? "text-[#6B6A65] dark:text-[#45B88A]/50 group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A]/80"
+                : "text-[#9B9A97] dark:text-[#45B88A]/40 group-hover:text-[#6B6A65] dark:group-hover:text-[#45B88A]/60"
             }`}>
               ready to publish
             </span>
@@ -569,19 +569,19 @@ export default function EmployeeWorkspacePage() {
       </div>
 
       {/* ── Filter and Tab Navigation Bar (Linear Toolstrip) ── */}
-      <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+      <div className="surface-card rounded-xl border border-black/[0.08] dark:border-white/[0.08] p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
         {/* Tab Controls */}
-        <div className="flex items-center gap-1 p-0.5 bg-[#101014] rounded-lg border border-white/[0.08] text-xs font-medium overflow-x-auto">
+        <div className="flex items-center gap-1 p-0.5 bg-[#F7F6F3] dark:bg-[#101014] rounded-lg border border-black/[0.08] dark:border-white/[0.08] text-xs font-medium overflow-x-auto">
           <button
             onClick={() => setActiveTab("action_required")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "action_required"
-                ? "bg-white/[0.08] text-[#A78BFA] font-bold shadow-xs border border-white/[0.08]"
-                : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                ? "bg-white dark:bg-white/[0.08] text-[#2383E2] dark:text-[#A78BFA] font-bold shadow-xs border border-black/[0.08] dark:border-white/[0.08]"
+                : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7]"
             }`}
           >
             <span>Action Required</span>
-            <span className="px-1.5 py-0.2 rounded bg-white/[0.06] text-[10px] font-mono font-bold text-[#A78BFA]">
+            <span className="px-1.5 py-0.2 rounded bg-[#2383E2]/10 text-[#2383E2] dark:bg-white/[0.06] dark:text-[#A78BFA] text-[10px] font-mono font-bold">
               {activeTasks.length + pendingRevisions.length}
             </span>
           </button>
@@ -590,12 +590,12 @@ export default function EmployeeWorkspacePage() {
             onClick={() => setActiveTab("revisions")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "revisions"
-                ? "bg-white/[0.08] text-[#E5AA58] font-bold shadow-xs border border-[#E5AA58]/30"
-                : "text-[#A3A0B0] hover:text-[#E5AA58]"
+                ? "bg-white dark:bg-white/[0.08] text-[#D97706] dark:text-[#E5AA58] font-bold shadow-xs border border-amber-500/30 dark:border-[#E5AA58]/30"
+                : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#D97706] dark:hover:text-[#E5AA58]"
             }`}
           >
             <span>Revisions</span>
-            <span className="px-1.5 py-0.2 rounded bg-[#E5AA58]/10 text-[10px] font-mono font-bold text-[#E5AA58]">
+            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:bg-[#E5AA58]/10 text-[10px] font-mono font-bold dark:text-[#E5AA58]">
               {pendingRevisions.length}
             </span>
           </button>
@@ -604,12 +604,12 @@ export default function EmployeeWorkspacePage() {
             onClick={() => setActiveTab("in_review")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "in_review"
-                ? "bg-white/[0.08] text-[#69A9D8] font-bold shadow-xs border border-[#69A9D8]/30"
-                : "text-[#A3A0B0] hover:text-[#69A9D8]"
+                ? "bg-white dark:bg-white/[0.08] text-[#0B6E99] dark:text-[#69A9D8] font-bold shadow-xs border border-sky-500/30 dark:border-[#69A9D8]/30"
+                : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#0B6E99] dark:hover:text-[#69A9D8]"
             }`}
           >
             <span>In Review</span>
-            <span className="px-1.5 py-0.2 rounded bg-[#69A9D8]/10 text-[10px] font-mono font-bold text-[#69A9D8]">
+            <span className="px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-700 dark:bg-[#69A9D8]/10 text-[10px] font-mono font-bold dark:text-[#69A9D8]">
               {awaitingReview.length}
             </span>
           </button>
@@ -618,12 +618,12 @@ export default function EmployeeWorkspacePage() {
             onClick={() => setActiveTab("completed")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "completed"
-                ? "bg-white/[0.08] text-[#45B88A] font-bold shadow-xs border border-[#45B88A]/30"
-                : "text-[#A3A0B0] hover:text-[#45B88A]"
+                ? "bg-white dark:bg-white/[0.08] text-emerald-700 dark:text-[#45B88A] font-bold shadow-xs border border-emerald-500/30 dark:border-[#45B88A]/30"
+                : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-emerald-700 dark:hover:text-[#45B88A]"
             }`}
           >
             <span>Approved</span>
-            <span className="px-1.5 py-0.2 rounded bg-[#45B88A]/10 text-[10px] font-mono font-bold text-[#45B88A]">
+            <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:bg-[#45B88A]/10 text-[10px] font-mono font-bold dark:text-[#45B88A]">
               {completed.length}
             </span>
           </button>
@@ -632,12 +632,12 @@ export default function EmployeeWorkspacePage() {
             onClick={() => setActiveTab("all")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "all"
-                ? "bg-white/[0.08] text-[#F2F0F7] font-bold shadow-xs border border-white/[0.08]"
-                : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                ? "bg-white dark:bg-white/[0.08] text-[#191919] dark:text-[#F2F0F7] font-bold shadow-xs border border-black/[0.08] dark:border-white/[0.08]"
+                : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7]"
             }`}
           >
             <span>All Assigned</span>
-            <span className="px-1.5 py-0.2 rounded bg-white/[0.06] text-[10px] font-mono font-bold text-[#F2F0F7]">
+            <span className="px-1.5 py-0.2 rounded bg-black/[0.06] text-[#191919] dark:bg-white/[0.06] text-[10px] font-mono font-bold dark:text-[#F2F0F7]">
               {tasks.length}
             </span>
           </button>
@@ -647,19 +647,19 @@ export default function EmployeeWorkspacePage() {
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Search Input */}
           <div className="relative w-48 sm:w-56">
-            <Search className="w-3.5 h-3.5 text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               id="workspace-search-input"
               type="text"
               placeholder="Search tasks... (/)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-8.5 pr-8 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all font-mono"
+              className="w-full bg-[#F7F6F3] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#6B6A65] dark:placeholder:text-[#A3A0B0]/50 pl-8.5 pr-8 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 transition-all font-mono"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A3A0B0] hover:text-[#F2F0F7] cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] cursor-pointer"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -670,7 +670,7 @@ export default function EmployeeWorkspacePage() {
           <select
             value={selectedTaskType}
             onChange={(e) => setSelectedTaskType(e.target.value)}
-            className="bg-[#101014] text-xs font-mono font-medium text-[#F2F0F7] px-2.5 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 transition-all cursor-pointer"
+            className="bg-[#F7F6F3] dark:bg-[#101014] text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] px-2.5 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 transition-all cursor-pointer"
           >
             <option value="all">All Specialties</option>
             <option value="script">Scriptwriting</option>
@@ -680,14 +680,14 @@ export default function EmployeeWorkspacePage() {
           </select>
 
           {/* View Mode Toggle: Cards vs List */}
-          <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08]">
+          <div className="flex items-center bg-[#F7F6F3] dark:bg-[#101014] p-0.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08]">
             <button
               onClick={() => setViewMode("cards")}
               title="Grid Cards View (Shortcut: C)"
               className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === "cards"
-                  ? "bg-white/[0.08] text-[#A78BFA] shadow-xs"
-                  : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                  ? "bg-white dark:bg-white/[0.08] text-[#191919] dark:text-[#A78BFA] shadow-xs"
+                  : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7]"
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -697,8 +697,8 @@ export default function EmployeeWorkspacePage() {
               title="Linear Compact List View (Shortcut: L)"
               className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === "list"
-                  ? "bg-white/[0.08] text-[#A78BFA] shadow-xs"
-                  : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                  ? "bg-white dark:bg-white/[0.08] text-[#191919] dark:text-[#A78BFA] shadow-xs"
+                  : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7]"
               }`}
             >
               <ListIcon className="w-3.5 h-3.5" />
@@ -718,11 +718,11 @@ export default function EmployeeWorkspacePage() {
               onClick={() => setSelectedTaskType(pill.id)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
                 isSelected
-                  ? "bg-[#A78BFA] text-[#101014] font-bold shadow-xs shadow-[#A78BFA]/20"
-                  : "bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.06]"
+                  ? "bg-[#37352F] text-white dark:bg-white/[0.12] dark:text-white font-semibold shadow-2xs"
+                  : "bg-[#F7F6F3] dark:bg-[#17171E] hover:bg-[#EFEFED] dark:hover:bg-[#20202A] text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.06]"
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-[#101014]" : "text-[#A3A0B0]"}`} />
+              <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-white dark:text-[#101014]" : "text-[#6B6A65] dark:text-[#A3A0B0]"}`} />
               <span>{pill.label}</span>
             </button>
           );
@@ -737,12 +737,12 @@ export default function EmployeeWorkspacePage() {
           <p className="text-[11px] text-[#A3A0B0]">Synchronizing production pipeline and delivery queue</p>
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="surface-card rounded-2xl border border-white/[0.08] border-dashed p-12 text-center space-y-3 shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-[#20202A] border border-white/[0.08] flex items-center justify-center mx-auto text-[#45B88A]">
-            <CheckCircle2 className="w-6 h-6 text-[#45B88A]" />
+        <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] border-dashed p-12 text-center space-y-3 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-[#EFEFED] dark:bg-[#20202A] border border-black/[0.08] dark:border-white/[0.08] flex items-center justify-center mx-auto text-emerald-600 dark:text-[#45B88A]">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-[#45B88A]" />
           </div>
-          <h3 className="text-base font-heading font-bold text-[#F2F0F7]">No tasks matching this view</h3>
-          <p className="text-xs text-[#A3A0B0] max-w-md mx-auto leading-relaxed">
+          <h3 className="text-base font-heading font-bold text-[#191919] dark:text-[#F2F0F7]">No tasks matching this view</h3>
+          <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-md mx-auto leading-relaxed">
             {viewScope === "my" && tasks.length === 0 && isManagerOrOwner
               ? "You currently have 0 tasks assigned directly to your account. Switch to 'All Agency Tasks' or assign tasks to yourself on the Kanban board."
               : activeTab === "revisions"
@@ -757,13 +757,13 @@ export default function EmployeeWorkspacePage() {
             <div className="pt-2 flex items-center justify-center gap-3">
               <button
                 onClick={() => setViewScope("all")}
-                className="px-4 py-2 rounded-xl bg-[#20202A] hover:bg-[#262630] text-[#A78BFA] font-semibold text-xs border border-white/[0.08] transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#EFEFED] hover:bg-[#E5E5E2] dark:bg-[#20202A] dark:hover:bg-[#262630] text-[#191919] dark:text-[#A78BFA] font-semibold text-xs border border-black/[0.08] dark:border-white/[0.08] transition-colors cursor-pointer"
               >
                 View All Agency Tasks
               </button>
               <Link
                 href="/tasks"
-                className="px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-bold text-xs transition-colors shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#191919] hover:bg-[#2F2E2B] dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] text-white dark:text-[#101014] font-bold text-xs transition-colors shadow-xs"
               >
                 Go to Kanban Board
               </Link>

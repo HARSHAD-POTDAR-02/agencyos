@@ -350,8 +350,9 @@ function ApprovalsContent() {
             <span className="text-white/[0.2]">/</span>
             <span className="text-[#A78BFA] font-medium">Approvals Queue</span>
           </div>
-          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
-            Approvals & Publishing Queue
+          <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+            <FileCheck2 className="w-6 h-6 text-[#191919] dark:text-white" />
+            <span>Approvals & Publishing Queue</span>
           </h1>
           <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
             Review client feedback, internal inspection queues, and verified live social releases across all agency workspaces.
@@ -368,7 +369,7 @@ function ApprovalsContent() {
               className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-[#A78BFA]" : "text-[#A3A0B0]"}`}
             />
             <span>Refresh</span>
-            <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#71717A]">R</kbd>
+            <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#EFEFED] dark:bg-black/40 text-[#37352F] dark:text-[#71717A] border border-black/[0.08] dark:border-transparent font-semibold">R</kbd>
           </button>
         </div>
       </div>
@@ -478,7 +479,7 @@ function ApprovalsContent() {
           </p>
         </div>
       ) : (
-        <div className="surface-card rounded-2xl border border-white/[0.08] overflow-hidden shadow-xs divide-y divide-white/[0.04]">
+        <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] overflow-hidden shadow-xs divide-y divide-black/[0.08] dark:divide-white/[0.04]">
           {filtered.map((item) => {
             const st = STATUS_CONFIG[item.status] || STATUS_CONFIG["client_review"];
             const StatusIcon = st.icon;
@@ -562,21 +563,21 @@ function ApprovalsContent() {
                   {/* Published Performance Metrics */}
                   {(item.status === "published" || item.status === "partially_published") && (
                     <div className="flex flex-wrap items-center gap-2.5 mt-2 pt-2 border-t border-white/[0.06] text-[11px] font-mono font-semibold">
-                      <span className="flex items-center gap-1 text-[#A3A0B0] bg-[#101014] border border-white/[0.08] px-2 py-0.5 rounded-md">
-                        <Eye className="w-3 h-3 text-[#71717A]" />
+                      <span className="flex items-center gap-1 text-[#6B6A65] dark:text-[#A3A0B0] bg-[#EFEFED] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] px-2 py-0.5 rounded-md">
+                        <Eye className="w-3 h-3 text-[#6B6A65] dark:text-[#71717A]" />
                         <span>{item.views_count?.toLocaleString() || 0} views</span>
                       </span>
-                      <span className="flex items-center gap-1 text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-2 py-0.5 rounded-md">
-                        <Heart className="w-3 h-3 text-[#E16F7B] fill-[#E16F7B]" />
+                      <span className="flex items-center gap-1 text-[#E03E3E] dark:text-[#E16F7B] bg-[#FBE4E4] dark:bg-[#E16F7B]/10 border border-red-200 dark:border-[#E16F7B]/30 px-2 py-0.5 rounded-md">
+                        <Heart className="w-3 h-3 text-[#E03E3E] dark:text-[#E16F7B] fill-[#E03E3E] dark:fill-[#E16F7B]" />
                         <span>{item.likes_count?.toLocaleString() || 0} likes</span>
                       </span>
-                      <span className="flex items-center gap-1 text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2 py-0.5 rounded-md">
-                        <MessageCircle className="w-3 h-3 text-[#69A9D8]" />
+                      <span className="flex items-center gap-1 text-[#0B6E99] dark:text-[#69A9D8] bg-[#DDEBF1] dark:bg-[#69A9D8]/10 border border-sky-200 dark:border-[#69A9D8]/30 px-2 py-0.5 rounded-md">
+                        <MessageCircle className="w-3 h-3 text-[#0B6E99] dark:text-[#69A9D8]" />
                         <span>{item.comments_count?.toLocaleString() || 0} comments</span>
                       </span>
                       {item.shares_count !== undefined && item.shares_count !== null && (
-                        <span className="flex items-center gap-1 text-[#45B88A] bg-[#45B88A]/10 border border-[#45B88A]/30 px-2 py-0.5 rounded-md">
-                          <Share2 className="w-3 h-3 text-[#45B88A]" />
+                        <span className="flex items-center gap-1 text-[#0F7B6C] dark:text-[#45B88A] bg-[#DDEDEA] dark:bg-[#45B88A]/10 border border-emerald-200 dark:border-[#45B88A]/30 px-2 py-0.5 rounded-md">
+                          <Share2 className="w-3 h-3 text-[#0F7B6C] dark:text-[#45B88A]" />
                           <span>{item.shares_count?.toLocaleString() || 0} shares</span>
                         </span>
                       )}

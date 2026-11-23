@@ -4,8 +4,9 @@ import React, { useEffect, useState, useCallback, Suspense, useRef } from "react
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { taskApi, agencyApi, reviewApi, API_BASE, ScriptBlock, TaskChecklistItem } from "@/lib/api";
+import { taskApi, agencyApi, reviewApi, API_BASE, ScriptBlock, TaskChecklistItem, cortexApi } from "@/lib/api";
 import {
+  Brain,
   ArrowLeft,
   Briefcase,
   CheckCircle2,
@@ -321,6 +322,37 @@ function TaskWorkspaceContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+  // Cortex In-Task Compliance State
+  const [auditingCompliance, setAuditingCompliance] = useState(false);
+  const [complianceResult, setComplianceResult] = useState<any | null>(null);
+
+  const handleAuditDraft = async () => {
+    if (!task?.client_id && !task?.deliverable_id) return;
+    const cid = task.client_id;
+    if (!cid) return;
+
+    const draftText = [scriptTitle, hook, scriptBody, caption, notes].filter(Boolean).join("\n\n");
+    if (!draftText.trim()) return;
+
+    setAuditingCompliance(true);
+    try {
+      const res = await cortexApi.auditDraft(
+        {
+          client_id: cid,
+          draft_content: draftText,
+          channel: task.platform || "all",
+          campaign_id: task.campaign_id,
+        },
+        token || ""
+      );
+      setComplianceResult(res);
+    } catch (err: any) {
+      console.error("Cortex draft compliance audit error:", err);
+    } finally {
+      setAuditingCompliance(false);
+    }
+  };
 
   // Review Form State (For Manager)
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -1070,7 +1102,7 @@ function TaskWorkspaceContent() {
             </div>
 
             <div className="flex items-center gap-3 pt-1 flex-wrap">
-              <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
+              <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                 {task.title}
               </h1>
               <span
@@ -1161,7 +1193,7 @@ function TaskWorkspaceContent() {
         )}
 
         {/* ── Linear Lifecycle Progress Stepper ── */}
-        <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-xs">
+        <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-4 shadow-xs bg-white dark:bg-[#13131A]">
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
             {PRODUCTION_STAGES.map((st, idx) => {
               const isPast = currentStageIndex > idx;
@@ -1173,10 +1205,10 @@ function TaskWorkspaceContent() {
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold transition-all ${
                         isPast
-                          ? "bg-[#45B88A] text-[#101014]"
+                          ? "bg-[#45B88A] text-white"
                           : isCurrent
-                          ? "bg-[#A78BFA] text-[#101014] ring-4 ring-[#A78BFA]/20"
-                          : "bg-[#20202A] text-[#71717A] border border-white/[0.08]"
+                          ? "bg-[#191919] text-white ring-4 ring-black/10 dark:bg-white dark:text-[#101014] dark:ring-white/20"
+                          : "bg-[#F1F1EF] text-[#71717A] border border-black/[0.08] dark:bg-[#20202A] dark:text-[#71717A] dark:border-white/[0.08]"
                       }`}
                     >
                       {isPast ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : idx + 1}
@@ -1184,10 +1216,10 @@ function TaskWorkspaceContent() {
                     <span
                       className={`text-xs whitespace-nowrap font-medium ${
                         isCurrent
-                          ? "text-[#F2F0F7] font-semibold"
+                          ? "text-[#191919] dark:text-[#F2F0F7] font-bold"
                           : isPast
-                          ? "text-[#A3A0B0]"
-                          : "text-[#71717A]"
+                          ? "text-[#6B6A65] dark:text-[#A3A0B0]"
+                          : "text-[#9B9A97] dark:text-[#71717A]"
                       }`}
                     >
                       {st.label}
@@ -1196,7 +1228,7 @@ function TaskWorkspaceContent() {
                   {idx < PRODUCTION_STAGES.length - 1 && (
                     <div
                       className={`flex-1 h-[2px] mx-2 rounded-full hidden sm:block ${
-                        isPast ? "bg-[#45B88A]/60" : "bg-white/[0.08]"
+                        isPast ? "bg-[#45B88A]/60" : "bg-black/[0.08] dark:bg-white/[0.08]"
                       }`}
                     />
                   )}
@@ -1381,22 +1413,22 @@ function TaskWorkspaceContent() {
             </div>
 
             {/* ── TRACK 4: VIRAL TELEPROMPTER & SCRIPT PRECISION STUDIO ── */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-5 shadow-xs bg-gradient-to-b from-[#14141A] to-[#101014]">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-5 shadow-xs bg-white dark:bg-[#13131A]">
               {/* Studio Header & Actions */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.06] pb-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center shrink-0">
-                      <Mic className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <div className="w-7 h-7 rounded-lg bg-[#2383E2]/10 dark:bg-[#A78BFA]/10 border border-[#2383E2]/30 dark:border-[#A78BFA]/30 flex items-center justify-center shrink-0">
+                      <Mic className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-heading font-bold text-[#F2F0F7] flex items-center gap-2">
+                      <h3 className="text-sm font-heading font-bold text-[#191919] dark:text-[#F2F0F7] flex items-center gap-2">
                         <span>Viral Teleprompter & Script Studio</span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 uppercase">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#2383E2]/10 text-[#2383E2] border border-[#2383E2]/30 dark:bg-[#A78BFA]/10 dark:text-[#A78BFA] dark:border-[#A78BFA]/30 uppercase">
                           Precision Pacing
                         </span>
                       </h3>
-                      <p className="text-[11px] text-[#A3A0B0]">
+                      <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">
                         Structured scene beats, speaking duration pacing & bi-directional Campaign Studio synchronization.
                       </p>
                     </div>
@@ -1405,18 +1437,18 @@ function TaskWorkspaceContent() {
 
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Target Duration Selector */}
-                  <div className="flex items-center gap-1.5 bg-[#20202A] px-2.5 py-1.5 rounded-xl border border-white/[0.08] text-xs font-mono">
-                    <Timer className="w-3.5 h-3.5 text-[#A3A0B0]" />
-                    <span className="text-[11px] text-[#A3A0B0]">Target:</span>
+                  <div className="flex items-center gap-1.5 bg-[#FBFBFA] dark:bg-[#20202A] px-2.5 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] text-xs font-mono text-[#191919] dark:text-[#F2F0F7]">
+                    <Timer className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#A3A0B0]" />
+                    <span className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">Target:</span>
                     <select
                       value={targetDuration}
                       onChange={(e) => setTargetDuration(Number(e.target.value))}
-                      className="bg-transparent text-[#F2F0F7] font-bold text-xs focus:outline-none cursor-pointer"
+                      className="bg-transparent text-[#191919] dark:text-[#F2F0F7] font-bold text-xs focus:outline-none cursor-pointer"
                     >
-                      <option value={15} className="bg-[#20202A]">15s (Flash)</option>
-                      <option value={30} className="bg-[#20202A]">30s (Standard)</option>
-                      <option value={45} className="bg-[#20202A]">45s (Extended)</option>
-                      <option value={60} className="bg-[#20202A]">60s (Long)</option>
+                      <option value={15} className="bg-white dark:bg-[#20202A] text-[#191919] dark:text-[#F2F0F7]">15s (Flash)</option>
+                      <option value={30} className="bg-white dark:bg-[#20202A] text-[#191919] dark:text-[#F2F0F7]">30s (Standard)</option>
+                      <option value={45} className="bg-white dark:bg-[#20202A] text-[#191919] dark:text-[#F2F0F7]">45s (Extended)</option>
+                      <option value={60} className="bg-white dark:bg-[#20202A] text-[#191919] dark:text-[#F2F0F7]">60s (Long)</option>
                     </select>
                   </div>
 
@@ -1426,10 +1458,10 @@ function TaskWorkspaceContent() {
                       setTeleprompterPlaying(false);
                       setTeleprompterModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#2a2a38] text-[#F2F0F7] text-xs font-semibold border border-white/[0.08] transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#20202A] dark:hover:bg-[#2a2a38] dark:text-[#F2F0F7] text-xs font-semibold border border-black/[0.08] dark:border-white/[0.08] transition-all cursor-pointer shadow-xs"
                     title="Open Fullscreen Teleprompter for Recording"
                   >
-                    <Maximize2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <Maximize2 className="w-3.5 h-3.5 text-white dark:text-[#A78BFA]" />
                     <span>Teleprompter Mode</span>
                   </button>
 
@@ -1437,7 +1469,7 @@ function TaskWorkspaceContent() {
                   <button
                     onClick={handleSyncToStudio}
                     disabled={syncingStudio}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2383E2]/10 hover:bg-[#2383E2]/20 text-[#2383E2] border border-[#2383E2]/30 dark:bg-[#A78BFA]/10 dark:hover:bg-[#A78BFA]/20 dark:text-[#A78BFA] dark:border-[#A78BFA]/30 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                     title="Push updated script & hook back to Campaign Studio plan"
                   >
                     {syncingStudio ? (
@@ -1451,7 +1483,7 @@ function TaskWorkspaceContent() {
                   {/* Copy Scenes to Submission Draft Form */}
                   <button
                     onClick={handleCopyScenesToSubmission}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#20202A] hover:bg-[#2c2c3b] text-[#69A9D8] border border-[#69A9D8]/30 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FBFBFA] hover:bg-[#F1F1EF] text-[#2383E2] border border-[#2383E2]/30 dark:bg-[#20202A] dark:hover:bg-[#2c2c3b] dark:text-[#69A9D8] dark:border-[#69A9D8]/30 text-xs font-semibold transition-all cursor-pointer shadow-xs"
                     title="Populate submission draft form below with current teleprompter scenes"
                   >
                     <CornerDownLeft className="w-3.5 h-3.5" />
@@ -1462,7 +1494,7 @@ function TaskWorkspaceContent() {
                   <button
                     onClick={handleSaveScriptBlocks}
                     disabled={savingScript}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#A78BFA] hover:bg-[#906fe7] text-[#101014] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA] dark:hover:bg-[#906fe7] dark:text-[#101014] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     {savingScript ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1477,44 +1509,44 @@ function TaskWorkspaceContent() {
               {/* ── Live Speaking Duration & Word-Count Meter Bar ── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Total Words & Speaking Speed */}
-                <div className="bg-[#101014] border border-white/[0.06] rounded-xl p-3.5 space-y-1">
-                  <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-mono">
+                <div className="bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.06] dark:border-white/[0.06] rounded-xl p-3.5 space-y-1">
+                  <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-mono">
                     <span>Word Count & Pacing</span>
-                    <span className="text-[#A78BFA] font-bold">~140 WPM</span>
+                    <span className="text-[#2383E2] dark:text-[#A78BFA] font-bold">~140 WPM</span>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-heading font-extrabold text-[#F2F0F7]">{liveTotalWords}</span>
-                    <span className="text-xs text-[#A3A0B0]">spoken words</span>
+                    <span className="text-xl font-heading font-extrabold text-[#191919] dark:text-[#F2F0F7]">{liveTotalWords}</span>
+                    <span className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">spoken words</span>
                   </div>
-                  <p className="text-[10px] text-[#71717A] font-mono">
+                  <p className="text-[10px] text-[#9B9A97] dark:text-[#71717A] font-mono">
                     Standard viral short-form pace: ~2.3 words/sec
                   </p>
                 </div>
 
                 {/* Estimated Duration vs Target Gauge */}
-                <div className="bg-[#101014] border border-white/[0.06] rounded-xl p-3.5 space-y-1.5">
-                  <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-mono">
+                <div className="bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.06] dark:border-white/[0.06] rounded-xl p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-mono">
                     <span>Duration vs Target</span>
                     <span className={`font-bold ${liveSpeakingSec > targetDuration ? "text-[#E16F7B]" : "text-[#45B88A]"}`}>
                       {liveSpeakingSec}s / {targetDuration}s
                     </span>
                   </div>
                   {/* Progress Bar */}
-                  <div className="w-full bg-[#20202A] h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-black/[0.08] dark:bg-[#20202A] h-2 rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${
                         liveSpeakingSec > targetDuration
                           ? "bg-[#E16F7B]"
                           : liveSpeakingSec >= targetDuration * 0.8
                           ? "bg-[#45B88A]"
-                          : "bg-[#69A9D8]"
+                          : "bg-[#2383E2]"
                       }`}
                       style={{ width: `${Math.min(100, targetDuration > 0 ? (liveSpeakingSec / targetDuration) * 100 : 0)}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-[#A3A0B0]">{pacingLabel}</span>
-                    <span className="text-[#71717A]">
+                    <span className="text-[#6B6A65] dark:text-[#A3A0B0]">{pacingLabel}</span>
+                    <span className="text-[#9B9A97] dark:text-[#71717A]">
                       {targetDuration - liveSpeakingSec >= 0 ? `${targetDuration - liveSpeakingSec}s remaining` : `${liveSpeakingSec - targetDuration}s over target`}
                     </span>
                   </div>
@@ -1537,7 +1569,7 @@ function TaskWorkspaceContent() {
                       {liveHookWords} words (Scene 1)
                     </span>
                   </div>
-                  <p className="text-xs font-semibold text-[#F2F0F7] pt-0.5">
+                  <p className="text-xs font-semibold text-[#191919] dark:text-[#F2F0F7] pt-0.5">
                     {liveHookWords === 0
                       ? "No hook written yet"
                       : liveHookWords <= 12
@@ -1546,7 +1578,7 @@ function TaskWorkspaceContent() {
                       ? "⚠ Borderline Retention (12–15 words)"
                       : "🚨 High Drop-Off Risk (>15 words)"}
                   </p>
-                  <p className="text-[10px] text-[#A3A0B0] leading-tight">
+                  <p className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] leading-tight">
                     {liveHookWords <= 12 ? "Viewers make stay/swipe decisions in 1.5s." : "Hooks over 15 words suffer ~40% viewer drop-off."}
                   </p>
                 </div>
@@ -1562,7 +1594,7 @@ function TaskWorkspaceContent() {
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
                     <span className="font-bold block">Hook Length Warning (Viewer Retention Guardrail):</span>
-                    <p className="text-[#F2F0F7] leading-relaxed">{liveHookWarning}</p>
+                    <p className="text-[#191919] dark:text-[#F2F0F7] leading-relaxed">{liveHookWarning}</p>
                   </div>
                 </div>
               )}
@@ -1570,12 +1602,12 @@ function TaskWorkspaceContent() {
               {/* ── Scene-by-Scene Structured Teleprompter Blocks ── */}
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-[#A3A0B0] uppercase tracking-wider">
+                  <span className="text-xs font-mono font-bold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider">
                     Structured Scene Beats ({scriptBlocks.length} Scenes)
                   </span>
                   <button
                     onClick={handleAddScene}
-                    className="inline-flex items-center gap-1 text-[11px] font-mono text-[#A78BFA] hover:text-[#c4b5fd] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-[#2383E2] hover:text-[#1D6FBF] dark:text-[#A78BFA] dark:hover:text-[#c4b5fd] transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Scene Take
                   </button>
@@ -1589,30 +1621,30 @@ function TaskWorkspaceContent() {
                     return (
                       <div
                         key={block.id}
-                        className="bg-[#101014] border border-white/[0.08] hover:border-[#A78BFA]/30 rounded-xl p-4 space-y-3 transition-colors shadow-xs"
+                        className="bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] hover:border-[#2383E2]/40 dark:hover:border-[#A78BFA]/30 rounded-xl p-4 space-y-3 transition-colors shadow-xs"
                       >
                         {/* Scene Header */}
-                        <div className="flex items-center justify-between gap-2 flex-wrap border-b border-white/[0.04] pb-2.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap border-b border-black/[0.06] dark:border-white/[0.04] pb-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-md bg-[#20202A] text-[#A78BFA] font-mono font-bold text-xs flex items-center justify-center border border-white/[0.06]">
+                            <span className="w-6 h-6 rounded-md bg-white dark:bg-[#20202A] text-[#191919] dark:text-[#A78BFA] font-mono font-bold text-xs flex items-center justify-center border border-black/[0.08] dark:border-white/[0.06]">
                               {idx + 1}
                             </span>
                             <input
                               type="text"
                               value={block.title}
                               onChange={(e) => handleUpdateScene(block.id, "title", e.target.value)}
-                              className="bg-transparent text-xs font-bold text-[#F2F0F7] focus:outline-none hover:border-b border-white/[0.2] py-0.5"
+                              className="bg-transparent text-xs font-bold text-[#191919] dark:text-[#F2F0F7] focus:outline-none hover:border-b border-black/[0.2] dark:border-white/[0.2] py-0.5"
                             />
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono text-[#A3A0B0] bg-[#20202A] px-2 py-0.5 rounded-md border border-white/[0.06]">
+                            <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] bg-white dark:bg-[#20202A] px-2 py-0.5 rounded-md border border-black/[0.08] dark:border-white/[0.06]">
                               {sceneWords} words • ~{sceneDuration}s
                             </span>
                             {scriptBlocks.length > 1 && (
                               <button
                                 onClick={() => handleDeleteScene(block.id)}
-                                className="p-1 rounded-md text-[#71717A] hover:text-[#E16F7B] transition-colors cursor-pointer"
+                                className="p-1 rounded-md text-[#9B9A97] dark:text-[#71717A] hover:text-[#E16F7B] transition-colors cursor-pointer"
                                 title="Delete Scene"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1625,8 +1657,8 @@ function TaskWorkspaceContent() {
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                           {/* Spoken Dialogue (Col 7) */}
                           <div className="md:col-span-7 space-y-1">
-                            <label className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
-                              <Mic className="w-3 h-3 text-[#A78BFA]" />
+                            <label className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
+                              <Mic className="w-3 h-3 text-[#2383E2] dark:text-[#A78BFA]" />
                               <span>Spoken Words / Voiceover</span>
                             </label>
                             <textarea
@@ -1634,15 +1666,15 @@ function TaskWorkspaceContent() {
                               value={block.spoken_words}
                               onChange={(e) => handleUpdateScene(block.id, "spoken_words", e.target.value)}
                               placeholder="What the creator / voiceover actually says word-for-word..."
-                              className="w-full bg-[#0D0D12] text-xs text-[#F2F0F7] font-mono p-3 rounded-lg border border-white/[0.08] focus:border-[#A78BFA] focus:outline-none resize-y leading-relaxed placeholder-[#71717A]"
+                              className="w-full bg-white dark:bg-[#0D0D12] text-xs text-[#191919] dark:text-[#F2F0F7] font-mono p-3 rounded-lg border border-black/[0.08] dark:border-white/[0.08] focus:border-[#2383E2] dark:focus:border-[#A78BFA] focus:outline-none resize-y leading-relaxed placeholder-[#9B9A97] dark:placeholder-[#71717A]"
                             />
                           </div>
 
                           {/* Visual Directive & Audio Notes (Col 5) */}
                           <div className="md:col-span-5 space-y-2">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
-                                <Film className="w-3 h-3 text-[#69A9D8]" />
+                              <label className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
+                                <Film className="w-3 h-3 text-[#2383E2] dark:text-[#69A9D8]" />
                                 <span>Visual Cue & B-Roll</span>
                               </label>
                               <input
@@ -1650,12 +1682,12 @@ function TaskWorkspaceContent() {
                                 value={block.visual_cue || ""}
                                 onChange={(e) => handleUpdateScene(block.id, "visual_cue", e.target.value)}
                                 placeholder="Camera angle, split screen, graphic overlay..."
-                                className="w-full bg-[#0D0D12] text-[11px] text-[#F2F0F7] px-3 py-1.5 rounded-lg border border-white/[0.08] focus:border-[#69A9D8] focus:outline-none"
+                                className="w-full bg-white dark:bg-[#0D0D12] text-[11px] text-[#191919] dark:text-[#F2F0F7] px-3 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] focus:border-[#2383E2] dark:focus:border-[#69A9D8] focus:outline-none placeholder-[#9B9A97]"
                               />
                             </div>
 
                             <div className="space-y-1">
-                              <label className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
+                              <label className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] uppercase font-semibold flex items-center gap-1">
                                 <Sparkles className="w-3 h-3 text-[#E5AA58]" />
                                 <span>Audio & SFX Notes</span>
                               </label>
@@ -1664,7 +1696,7 @@ function TaskWorkspaceContent() {
                                 value={block.audio_notes || ""}
                                 onChange={(e) => handleUpdateScene(block.id, "audio_notes", e.target.value)}
                                 placeholder="Tension build, riser, chime, upbeat rhythm..."
-                                className="w-full bg-[#0D0D12] text-[11px] text-[#F2F0F7] px-3 py-1.5 rounded-lg border border-white/[0.08] focus:border-[#E5AA58] focus:outline-none"
+                                className="w-full bg-white dark:bg-[#0D0D12] text-[11px] text-[#191919] dark:text-[#F2F0F7] px-3 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] focus:border-[#E5AA58] focus:outline-none placeholder-[#9B9A97]"
                               />
                             </div>
                           </div>
@@ -2372,13 +2404,106 @@ function TaskWorkspaceContent() {
                   </div>
                 )}
 
+                {/* Cortex In-Task Brand Compliance Copilot Gate */}
+                <div className="pt-2 border-t border-black/[0.08] dark:border-white/[0.06] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
+                      <span className="text-xs font-semibold text-[#191919] dark:text-[#F2F0F7]">
+                        Cortex Brand Compliance Gate
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAuditDraft}
+                      disabled={auditingCompliance || (!scriptBody.trim() && !caption.trim() && !notes.trim())}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-[#EEF3F8] hover:bg-[#E1EDF7] text-[#1E568A] border border-[#C5D8E8] dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-[#A78BFA] dark:border-white/[0.08] transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {auditingCompliance ? (
+                        <RefreshCw className="w-3 h-3 animate-spin text-[#2383E2]" />
+                      ) : (
+                        <ShieldCheck className="w-3 h-3 text-[#2383E2]" />
+                      )}
+                      <span>{auditingCompliance ? "Auditing with Cortex..." : "Check Brand Compliance"}</span>
+                    </button>
+                  </div>
+
+                  {/* Compliance Audit Results Card */}
+                  {complianceResult && (() => {
+                    const isCompliant = Boolean(
+                      complianceResult.is_compliant ??
+                      complianceResult.passed ??
+                      (!complianceResult.violations || complianceResult.violations.length === 0)
+                    );
+                    const hasBlock = complianceResult.violations?.some((v: any) => v.severity?.toLowerCase() === "block");
+                    const score = complianceResult.compliance_score !== undefined
+                      ? Math.round(complianceResult.compliance_score * 100)
+                      : isCompliant
+                      ? 100
+                      : Math.max(0, 100 - (complianceResult.violations?.length || 0) * 25);
+
+                    return (
+                      <div className={`p-3 rounded-xl border transition-all text-xs space-y-2 ${
+                        isCompliant
+                          ? "bg-[#EDF6ED] border-[#CCE3CC] text-[#285E34] dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300"
+                          : hasBlock
+                          ? "bg-[#FAECEC] border-[#E8C2C2] text-[#932F2F] dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300"
+                          : "bg-[#FDF5E8] border-[#F0D5A8] text-[#8F4F00] dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-300"
+                      }`}>
+                        <div className="flex items-center justify-between font-semibold">
+                          <div className="flex items-center gap-1.5">
+                            {isCompliant ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                            )}
+                            <span>
+                              {isCompliant
+                                ? `100% Brand Compliant (${complianceResult.checked_rules_count || 0} Rules Verified)`
+                                : `${complianceResult.violations?.length || 0} Compliance Violation${(complianceResult.violations?.length || 0) > 1 ? "s" : ""} Flagged`}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-bold">
+                            Score: {score}%
+                          </span>
+                        </div>
+
+                      {complianceResult.violations && complianceResult.violations.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          {complianceResult.violations.map((violation: any, idx: number) => (
+                            <div key={idx} className="p-2 rounded-lg bg-white/70 dark:bg-black/30 border border-black/[0.06] dark:border-white/[0.06] space-y-1">
+                              <div className="flex items-center gap-1.5 text-[11px] font-semibold">
+                                <span className={`px-1.5 py-0.2 rounded text-[9.5px] uppercase font-mono ${
+                                  violation.severity === "block"
+                                    ? "bg-rose-500 text-white"
+                                    : "bg-amber-500 text-white"
+                                }`}>
+                                  {violation.severity}
+                                </span>
+                                <span className="truncate">{violation.rule_statement}</span>
+                              </div>
+                              <p className="text-[10.5px] opacity-90">{violation.violation_explanation}</p>
+                              {violation.suggested_fix && (
+                                <p className="text-[10px] text-[#2383E2] dark:text-[#A78BFA] font-medium">
+                                  💡 Fix: {violation.suggested_fix}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
                 <button
                   type="submit"
                   disabled={submitting || task.is_locked || (submissionMode === "media" && !selectedFile)}
                   className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all ${
                     task.is_locked
-                      ? "bg-white/[0.05] text-[#71717A] border border-white/[0.08] cursor-not-allowed opacity-60"
-                      : "bg-[#A78BFA] hover:bg-[#B69BFF] disabled:opacity-40 text-[#101014] cursor-pointer"
+                      ? "bg-black/[0.04] text-[#9B9A97] border border-black/[0.08] dark:bg-white/[0.05] dark:text-[#71717A] dark:border-white/[0.08] cursor-not-allowed opacity-60"
+                      : "bg-[#2383E2] hover:bg-[#1D6FBF] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] disabled:opacity-40 cursor-pointer shadow-2xs"
                   }`}
                 >
                   {submitting ? (
@@ -2829,18 +2954,18 @@ function TaskWorkspaceContent() {
 
         {/* ── FULLSCREEN TELEPROMPTER PRESENTER MODAL ── */}
         {teleprompterModalOpen && (
-          <div className="fixed inset-0 z-50 bg-[#09090D] flex flex-col justify-between p-6 sm:p-10 select-none">
+          <div className="fixed inset-0 z-50 bg-[#FBFBFA] dark:bg-[#09090D] text-[#191919] dark:text-[#F2F0F7] flex flex-col justify-between p-6 sm:p-10 select-none">
             {/* Prompter Controls Header */}
-            <div className="flex items-center justify-between border-b border-white/[0.1] pb-4">
+            <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.1] pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center shrink-0">
-                  <Mic className="w-4 h-4 text-[#A78BFA]" />
+                <div className="w-8 h-8 rounded-xl bg-[#2383E2]/10 dark:bg-[#A78BFA]/10 border border-[#2383E2]/30 dark:border-[#A78BFA]/30 flex items-center justify-center shrink-0">
+                  <Mic className="w-4 h-4 text-[#2383E2] dark:text-[#A78BFA]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-heading font-bold text-[#F2F0F7]">
+                  <h2 className="text-base font-heading font-bold text-[#191919] dark:text-[#F2F0F7]">
                     Presenter Teleprompter Studio
                   </h2>
-                  <p className="text-xs font-mono text-[#A3A0B0]">
+                  <p className="text-xs font-mono text-[#6B6A65] dark:text-[#A3A0B0]">
                     {liveTotalWords} words • ~{liveSpeakingSec}s estimated duration • Target: {targetDuration}s
                   </p>
                 </div>
@@ -2848,16 +2973,16 @@ function TaskWorkspaceContent() {
 
               <div className="flex items-center gap-3">
                 {/* Speed Controls */}
-                <div className="flex items-center gap-2 bg-[#17171E] px-3 py-1.5 rounded-xl border border-white/[0.08] text-xs font-mono">
-                  <span className="text-[#A3A0B0]">Scroll Speed:</span>
+                <div className="flex items-center gap-2 bg-white dark:bg-[#17171E] px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] text-xs font-mono shadow-xs">
+                  <span className="text-[#6B6A65] dark:text-[#A3A0B0]">Scroll Speed:</span>
                   {[0.8, 1.0, 1.25, 1.5].map((spd) => (
                     <button
                       key={spd}
                       onClick={() => setTeleprompterSpeed(spd)}
                       className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
                         teleprompterSpeed === spd
-                          ? "bg-[#A78BFA] text-[#101014] font-bold"
-                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                          ? "bg-[#191919] text-white dark:bg-[#A78BFA] dark:text-[#101014] font-bold shadow-xs"
+                          : "text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7]"
                       }`}
                     >
                       {spd}x
@@ -2871,7 +2996,7 @@ function TaskWorkspaceContent() {
                   className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
                     teleprompterPlaying
                       ? "bg-[#E5AA58] hover:bg-[#d89b47] text-[#101014]"
-                      : "bg-[#45B88A] hover:bg-[#3ca379] text-[#101014]"
+                      : "bg-[#191919] hover:bg-[#2d2d2d] text-white dark:bg-[#45B88A] dark:hover:bg-[#3ca379] dark:text-[#101014]"
                   }`}
                 >
                   {teleprompterPlaying ? (
@@ -2893,7 +3018,7 @@ function TaskWorkspaceContent() {
                     if (teleprompterRef.current) teleprompterRef.current.scrollTop = 0;
                     setTeleprompterPlaying(false);
                   }}
-                  className="p-2 rounded-xl bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-white hover:bg-[#F1F1EF] text-[#6B6A65] hover:text-[#191919] border border-black/[0.08] dark:bg-[#17171E] dark:hover:bg-[#20202A] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] dark:border-white/[0.08] transition-colors cursor-pointer shadow-xs"
                   title="Reset to Top"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -2905,7 +3030,7 @@ function TaskWorkspaceContent() {
                     setTeleprompterPlaying(false);
                     setTeleprompterModalOpen(false);
                   }}
-                  className="p-2 rounded-xl bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-white hover:bg-[#F1F1EF] text-[#6B6A65] hover:text-[#191919] border border-black/[0.08] dark:bg-[#17171E] dark:hover:bg-[#20202A] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] dark:border-white/[0.08] transition-colors cursor-pointer shadow-xs"
                   title="Close Teleprompter"
                 >
                   <Minimize2 className="w-4 h-4" />
@@ -2920,18 +3045,18 @@ function TaskWorkspaceContent() {
             >
               {scriptBlocks.map((block, idx) => (
                 <div key={block.id} className="space-y-4">
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#A78BFA] uppercase tracking-wider">
-                    <span className="w-6 h-6 rounded-md bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#2383E2] dark:text-[#A78BFA] uppercase tracking-wider">
+                    <span className="w-6 h-6 rounded-md bg-[#2383E2]/10 border border-[#2383E2]/30 dark:bg-[#A78BFA]/10 dark:border-[#A78BFA]/30 flex items-center justify-center">
                       {idx + 1}
                     </span>
                     <span>{block.title}</span>
                     {block.visual_cue && (
-                      <span className="text-[#69A9D8] font-normal normal-case">
+                      <span className="text-[#2383E2] dark:text-[#69A9D8] font-normal normal-case">
                         — [🎬 {block.visual_cue}]
                       </span>
                     )}
                   </div>
-                  <p className="text-3xl sm:text-4xl font-heading font-medium text-[#F2F0F7] leading-relaxed tracking-normal select-text">
+                  <p className="text-3xl sm:text-4xl font-heading font-medium text-[#191919] dark:text-[#F2F0F7] leading-relaxed tracking-normal select-text">
                     {block.spoken_words || "(No dialogue written for this scene)"}
                   </p>
                 </div>
@@ -2939,7 +3064,7 @@ function TaskWorkspaceContent() {
             </div>
 
             {/* Prompter Footer Guide */}
-            <div className="border-t border-white/[0.1] pt-3 flex items-center justify-between text-xs font-mono text-[#71717A]">
+            <div className="border-t border-black/[0.08] dark:border-white/[0.1] pt-3 flex items-center justify-between text-xs font-mono text-[#6B6A65] dark:text-[#71717A]">
               <span>💡 Pro Tip: Read at a steady, conversational pace (~140 WPM). Stand 3–5 feet back from camera.</span>
               <span>ESC closes presenter mode</span>
             </div>

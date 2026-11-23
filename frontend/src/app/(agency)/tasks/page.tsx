@@ -666,8 +666,9 @@ function TasksContent() {
             <span className="text-white/[0.2]">/</span>
             <span className="text-[#A78BFA] font-medium">Production Tasks</span>
           </div>
-          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
-            Production Tasks & Pipeline
+          <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+            <CheckCircle2 className="w-6 h-6 text-[#191919] dark:text-white" />
+            <span>Production Tasks & Pipeline</span>
           </h1>
           <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
             Actionable breakdown of all monthly deliverables across Scripting, Footage Prep, Video Editing, and Client Approvals.
@@ -759,28 +760,28 @@ function TasksContent() {
       )}
 
       {/* ── 5-Segment Linear Telemetry Strip ── */}
-      <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-sm grid grid-cols-2 sm:grid-cols-5 gap-3 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06]">
+      <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-4 shadow-sm grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-black/[0.08] dark:divide-white/[0.06]">
         {/* Metric 1 */}
         <div className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3 first:px-0">
-          <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
             <span>Remaining</span>
-            <span className="text-[10px] font-mono text-[#A3A0B0]/60">{totalCount} total</span>
+            <span className="text-[10px] font-mono text-[#9B9A97] dark:text-[#A3A0B0]/60">{totalCount} total</span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{remainingCount}</span>
-            <span className="text-[10px] text-[#A3A0B0] font-mono">in progress</span>
+            <span className="text-2xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7]">{remainingCount}</span>
+            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">in progress</span>
           </div>
         </div>
 
         {/* Metric 2 */}
         <div className="flex flex-col justify-between pt-2 sm:pt-0 sm:px-3">
-          <div className="flex items-center justify-between text-[#A78BFA] text-[11px] font-medium uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[#2383E2] dark:text-[#A78BFA] text-[11px] font-medium uppercase tracking-wider">
             <span>Ready to Script</span>
-            <PenTool className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <PenTool className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#A78BFA]">{todoCount}</span>
-            <span className="text-[10px] text-[#A3A0B0] font-mono">stage: todo</span>
+            <span className="text-2xl font-bold font-mono text-[#2383E2] dark:text-[#A78BFA]">{todoCount}</span>
+            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">stage: todo</span>
           </div>
         </div>
 
@@ -826,14 +827,14 @@ function TasksContent() {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Search Input with Keyboard Shortcut Badge */}
           <div className="relative w-56 sm:w-64">
-            <Search className="w-3.5 h-3.5 text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#A3A0B0] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="Filter tasks... (Press / to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 pl-8.5 pr-8 py-1.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all font-sans"
+              className="w-full bg-[#F7F6F3] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#6B6A65] dark:placeholder:text-[#A3A0B0]/50 pl-8.5 pr-8 py-1.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#2383E2]/20 dark:focus:ring-[#A78BFA]/20 transition-all font-sans"
             />
             {searchQuery ? (
               <button
@@ -1039,7 +1040,7 @@ function TasksContent() {
                     <div className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <h3 className="text-xs font-semibold text-[#F2F0F7] tracking-tight">{col.title}</h3>
                   </div>
-                  <span className="text-[10px] font-mono font-medium text-[#A3A0B0] bg-[#1a1a22] px-1.5 py-0.5 rounded border border-white/[0.06]">
+                  <span className="text-[10px] font-mono font-medium text-[#37352F] dark:text-[#A3A0B0] bg-[#EFEFED] dark:bg-[#1a1a22] px-1.5 py-0.5 rounded border border-black/[0.08] dark:border-white/[0.06]">
                     {colTasks.length}
                   </span>
                 </div>
@@ -1425,19 +1426,19 @@ function TasksContent() {
                   placeholder="e.g. Dynamic Sound Sync & Beat Cutting"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all"
+                  className="w-full bg-[#F7F6F3] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#6B6A65] dark:placeholder:text-[#A3A0B0]/50 px-3.5 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 font-medium transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#A3A0B0] mb-1">
+                <label className="block text-xs font-semibold text-[#6B6A65] dark:text-[#A3A0B0] mb-1">
                   Deliverable Output <span className="text-[#E16F7B]">*</span>
                 </label>
                 <select
                   required
                   value={newDeliverableId}
                   onChange={(e) => setNewDeliverableId(e.target.value)}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
+                  className="w-full bg-[#F7F6F3] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] px-3.5 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 font-medium transition-all cursor-pointer"
                 >
                   <option value="">Select Target Deliverable...</option>
                   {deliverables.map((d) => (
@@ -1544,7 +1545,7 @@ function TasksContent() {
                   placeholder="Guidelines, references, audio sync directions..."
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA]/50 font-medium transition-all leading-relaxed"
+                  className="w-full bg-[#F7F6F3] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#6B6A65] dark:placeholder:text-[#A3A0B0]/50 p-3 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 font-medium transition-all leading-relaxed"
                 />
               </div>
 

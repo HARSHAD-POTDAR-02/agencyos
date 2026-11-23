@@ -31,6 +31,7 @@ from app.routers import (
     review,
     social,
     tasks,
+    cortex,
 )
 
 
@@ -117,6 +118,7 @@ app.include_router(analytics.router)
 app.include_router(engagement.router)
 app.include_router(review.router)
 app.include_router(operational_workflows.router)
+app.include_router(cortex.router)
 
 # ---------------------------------------------------------------------------
 # Static file serving for uploads

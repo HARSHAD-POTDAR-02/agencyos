@@ -186,6 +186,21 @@ export interface NotificationsResponse {
 }
 
 /* ── Client endpoints ── */
+export interface Client {
+  id: string;
+  agency_id: string;
+  business_name: string;
+  industry?: string | null;
+  website?: string | null;
+  location?: string | null;
+  contact_person?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  status?: "active" | "onboarding" | "paused" | "offboarded" | string;
+  created_at?: string;
+  scope_progress?: any;
+}
+
 export const clientApi = {
   create: (agencyId: string, data: Record<string, unknown>, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients`, { method: "POST", body: data, token }),
@@ -215,6 +230,19 @@ export const clientApi = {
     apiFetch<void>(`/agencies/${agencyId}/clients/${clientId}/taste-memory/${ruleId}`, { method: "DELETE", token }),
 };
 
+export interface AutoPopulateBrandProfileResponse {
+  brand_voice: string;
+  tone_examples: string[];
+  content_pillars: string[];
+  target_audience: string[];
+  approved_phrases: string[];
+  prohibited_claims: string[];
+  goals: string[];
+  crawled_pages_count: number;
+  crawled_urls: string[];
+  source_website: string;
+}
+
 /* ── Brand Profile endpoints ── */
 export const brandProfileApi = {
   get: (agencyId: string, clientId: string, token: string) =>
@@ -222,6 +250,12 @@ export const brandProfileApi = {
 
   upsert: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
     apiFetch(`/agencies/${agencyId}/clients/${clientId}/brand-profile`, { method: "PUT", body: data, token }),
+
+  autoPopulate: (agencyId: string, clientId: string, data: { website_url?: string }, token: string) =>
+    apiFetch<AutoPopulateBrandProfileResponse>(
+      `/agencies/${agencyId}/clients/${clientId}/auto-populate-profile`,
+      { method: "POST", body: data, token }
+    ),
 };
 
 /* ── Contract endpoints ── */
@@ -1648,6 +1682,181 @@ export const reviewApi = {
     apiFetch<PublicReviewRoom>(`/public/review/${reviewToken}/decision`, {
       method: "POST",
       body: payload,
+    }),
+};
+
+// ---------------------------------------------------------------------------
+// AgencyOS Cortex (Institutional Memory & Living Brand Vault) API
+// ---------------------------------------------------------------------------
+
+export interface CortexFactItem {
+  id: string;
+  client_id?: string;
+  scope: "agency" | "client" | "campaign";
+  campaign_id?: string;
+  fact_type: "guardrail" | "persona" | "winning_pattern" | "taboo";
+  status: "proposed" | "active" | "superseded" | "archived";
+  statement: string;
+  rationale?: string;
+  channels: string[];
+  confidence_score: number;
+  source_id?: string;
+  provenance_quote?: string;
+  provenance_location?: string;
+  supersedes_fact_id?: string;
+  expires_at?: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_at: string;
+  conflicting_fact?: {
+    id: string;
+    statement: string;
+    rationale?: string;
+    channels: string[];
+    status: string;
+    fact_type: string;
+  };
+}
+
+export interface CortexVaultResponse {
+  client_id: string;
+  client_name: string;
+  compiled_markdown: string;
+  total_active_rules: number;
+  guardrails_count: number;
+  taboos_count: number;
+  personas_count: number;
+  winning_patterns_count: number;
+  last_recompiled_at: string;
+}
+
+export interface CortexAuditViolation {
+  rule_id: string;
+  rule_code: string;
+  fact_type: "guardrail" | "persona" | "winning_pattern" | "taboo";
+  severity: "BLOCK" | "WARN";
+  explanation: string;
+  suggested_fix: string;
+}
+
+export interface CortexAuditResponse {
+  passed: boolean;
+  checked_rules_count: number;
+  violations: CortexAuditViolation[];
+}
+
+export interface CortexAskResponse {
+  answer: string;
+  active_guardrails_applied: string[];
+  cited_sources: Array<{
+    source_id: string;
+    title: string;
+    chunk_type: string;
+    snippet: string;
+    similarity_score: number;
+  }>;
+}
+
+export const cortexApi = {
+  getReviewQueue: (clientId: string, token: string) =>
+    apiFetch<CortexFactItem[]>(`/api/v1/cortex/review-queue?client_id=${clientId}`, { token }),
+
+  reviewFact: (
+    factId: string,
+    decision: {
+      action: "approve" | "supersede_existing" | "reject";
+      target_superseded_fact_id?: string;
+      override_channels?: string[];
+      expires_at?: string;
+      reviewer_notes?: string;
+    },
+    token: string
+  ) =>
+    apiFetch<CortexFactItem>(`/api/v1/cortex/facts/${factId}/review`, {
+      method: "POST",
+      body: decision,
+      token,
+    }),
+
+  getLivingVault: (clientId: string, token: string) =>
+    apiFetch<CortexVaultResponse>(`/api/v1/cortex/vault/${clientId}`, { token }),
+
+  ingestDocument: (
+    payload: {
+      client_id: string;
+      title: string;
+      content: string;
+      metadata?: Record<string, unknown>;
+    },
+    token: string
+  ) =>
+    apiFetch<{ status: string; source_id: string; message: string }>("/api/v1/cortex/ingest/document", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
+
+  ingestTranscript: (
+    payload: {
+      client_id: string;
+      call_title: string;
+      transcript_text: string;
+      call_date?: string;
+      metadata?: Record<string, unknown>;
+    },
+    token: string
+  ) =>
+    apiFetch<{ status: string; source_id: string; message: string }>("/api/v1/cortex/ingest/transcript", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
+
+  ingestRevisionTriple: (
+    payload: {
+      task_id: string;
+      client_id: string;
+      channel: string;
+      rejected_draft_v1: string;
+      revision_feedback: string;
+      approved_draft_v2: string;
+    },
+    token: string
+  ) =>
+    apiFetch<{ status: string; source_id: string; message: string }>("/api/v1/cortex/ingest/revision-triple", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
+
+  auditDraft: (
+    payload: {
+      client_id: string;
+      channel?: string;
+      draft_content: string;
+      campaign_id?: string;
+    },
+    token: string
+  ) =>
+    apiFetch<CortexAuditResponse>("/api/v1/cortex/audit-draft", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
+
+  askBrain: (
+    payload: {
+      client_id: string;
+      query: string;
+      channel?: string;
+      top_k?: number;
+    },
+    token: string
+  ) =>
+    apiFetch<CortexAskResponse>("/api/v1/cortex/ask", {
+      method: "POST",
+      body: payload,
+      token,
     }),
 };
 

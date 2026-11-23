@@ -130,17 +130,10 @@ function PlatformIcon({ platform, className = "w-4 h-4" }: { platform: string; c
       </svg>
     );
   }
-  if (p === "tiktok") {
+  if (p === "facebook") {
     return (
       <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.68 6.34 6.34 0 0 0 9.35 22a6.34 6.34 0 0 0 6.34-6.33V9.28a8.16 8.16 0 0 0 4.9 1.62v-3.5a4.85 4.85 0 0 1-1-.71z" />
-      </svg>
-    );
-  }
-  if (p === "youtube") {
-    return (
-      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
       </svg>
     );
   }
@@ -151,51 +144,62 @@ function PlatformIcon({ platform, className = "w-4 h-4" }: { platform: string; c
       </svg>
     );
   }
-  if (p === "x" || p === "twitter") {
-    return (
-      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
-    );
-  }
-  if (p === "facebook") {
-    return (
-      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-      </svg>
-    );
-  }
   return <Film className={className} />;
 }
 
 function getPlatformBadge(platform: string) {
   const p = (platform || "").toLowerCase();
-  if (p === "instagram") return "bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 text-pink-400 border-pink-500/30";
-  if (p === "tiktok") return "bg-teal-500/10 text-teal-300 border-teal-500/30";
-  if (p === "youtube") return "bg-red-500/10 text-red-400 border-red-500/30";
-  if (p === "linkedin") return "bg-sky-500/10 text-sky-400 border-sky-500/30";
-  if (p === "x" || p === "twitter") return "bg-zinc-700/30 text-zinc-200 border-zinc-600/40";
-  if (p === "facebook") return "bg-blue-600/15 text-blue-400 border-blue-500/30";
-  return "bg-purple-500/10 text-purple-300 border-purple-500/20";
+  if (p === "instagram") return "bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-amber-500/15 text-pink-500 border-pink-500/30";
+  if (p === "facebook") return "bg-blue-600/15 text-blue-500 border-blue-500/30";
+  if (p === "linkedin") return "bg-sky-500/10 text-sky-500 border-sky-500/30";
+  return "bg-black/[0.04] text-[#37352F] border-black/[0.08] dark:bg-white/[0.06] dark:text-[#A3A0B0]";
 }
 
 function getStatusBadge(status: string) {
   switch (status) {
     case "scheduled":
-      return { label: "Scheduled", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" };
+      return {
+        label: "Scheduled",
+        color: "bg-[#EDF6ED] text-[#285E34] border-[#CCE3CC] dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30",
+        dot: "bg-emerald-500",
+      };
     case "published":
-      return { label: "Published", color: "bg-blue-500/10 text-blue-400 border-blue-500/30", dot: "bg-blue-400" };
+      return {
+        label: "Published",
+        color: "bg-[#EEF3F8] text-[#1E568A] border-[#C5D8E8] dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30",
+        dot: "bg-blue-500",
+      };
     case "in_production":
-      return { label: "In Production", color: "bg-amber-500/10 text-amber-400 border-amber-500/30", dot: "bg-amber-400" };
+      return {
+        label: "In Production",
+        color: "bg-[#FDF5E8] text-[#8F4F00] border-[#F0D5A8] dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30",
+        dot: "bg-amber-500",
+      };
     case "internal_review":
     case "client_review":
-      return { label: "Review", color: "bg-purple-500/10 text-purple-400 border-purple-500/30", dot: "bg-purple-400" };
+      return {
+        label: "Review",
+        color: "bg-[#EEF3F8] text-[#1E568A] border-[#C5D8E8] dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/30",
+        dot: "bg-[#2383E2] dark:bg-purple-500",
+      };
     case "changes_requested":
-      return { label: "Changes Req.", color: "bg-rose-500/10 text-rose-400 border-rose-500/30", dot: "bg-rose-400" };
+      return {
+        label: "Changes Req.",
+        color: "bg-[#FAECEC] text-[#932F2F] border-[#E8C2C2] dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30",
+        dot: "bg-rose-500",
+      };
     case "approved":
-      return { label: "Approved", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/25", dot: "bg-emerald-300" };
+      return {
+        label: "Approved",
+        color: "bg-[#EDF6ED] text-[#285E34] border-[#CCE3CC] dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25",
+        dot: "bg-emerald-500",
+      };
     default:
-      return { label: "Draft", color: "bg-zinc-800 text-zinc-400 border-zinc-700", dot: "bg-zinc-500" };
+      return {
+        label: "Draft",
+        color: "bg-[#F1F1EF] text-[#6B6A65] border-black/[0.08] dark:bg-white/[0.06] dark:text-[#A3A0B0] dark:border-white/[0.08]",
+        dot: "bg-[#9B9A97]",
+      };
   }
 }
 
@@ -651,20 +655,20 @@ function CalendarContent() {
       )}
 
       {/* Main Header */}
-      <header className="border-b border-[#262630] bg-[#14141B] px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <header className="border-b border-black/[0.08] dark:border-[#262630] bg-[#F7F6F3] dark:bg-[#14141B] px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-900/20">
-              <CalendarDays className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#191919] dark:bg-[#A78BFA]/15 text-white dark:text-[#A78BFA] flex items-center justify-center shadow-xs shrink-0">
+              <CalendarDays className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
                 Content Calendar
-                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-[#20202B] text-[#A3A0B0] border border-[#2E2E3E]">
-                  Studio v2
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/[0.06] dark:bg-white/[0.06] text-[#191919] dark:text-white border border-black/[0.08] dark:border-white/[0.1] font-bold">
+                  v2.0 Schedule
                 </span>
               </h1>
-              <p className="text-xs text-[#8A8797]">
+              <p className="text-xs text-[#6B6A65] dark:text-[#8A8797] mt-0.5">
                 Visual publishing schedule, multi-platform staging & cross-team pipeline tracking
               </p>
             </div>
@@ -672,33 +676,33 @@ function CalendarContent() {
         </div>
 
         {/* Quick Metrics Bar */}
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
-            <span className="text-[#8A8797]">Total Posts:</span>
-            <span className="font-semibold text-white">{totalDeliverablesCount}</span>
+        <div className="flex items-center gap-2.5 self-start md:self-auto">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-white/[0.04] border border-[#E3E2DE] dark:border-white/[0.08] text-xs shadow-2xs">
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Total Posts:</span>
+            <span className="font-semibold text-[#191919] dark:text-white">{totalDeliverablesCount}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="text-[#8A8797]">Scheduled:</span>
-            <span className="font-semibold text-emerald-400">{scheduledCount}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-white/[0.04] border border-[#E3E2DE] dark:border-white/[0.08] text-xs shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Scheduled:</span>
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">{scheduledCount}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span className="text-[#8A8797]">In Prod:</span>
-            <span className="font-semibold text-amber-400">{inProductionCount}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-white/[0.04] border border-[#E3E2DE] dark:border-white/[0.08] text-xs shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">In Prod:</span>
+            <span className="font-semibold text-amber-700 dark:text-amber-400">{inProductionCount}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
-            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-            <span className="text-[#8A8797]">Review:</span>
-            <span className="font-semibold text-purple-400">{reviewCount}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-white/[0.04] border border-[#E3E2DE] dark:border-white/[0.08] text-xs shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#2383E2] dark:bg-purple-400"></span>
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Review:</span>
+            <span className="font-semibold text-[#2383E2] dark:text-purple-400">{reviewCount}</span>
           </div>
 
           <Link
             href="/campaigns"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-medium shadow-md shadow-purple-900/20 transition-all ml-1"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2383E2] hover:bg-[#1D6FBF] dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] text-white dark:text-[#101014] text-xs font-semibold shadow-2xs transition-all ml-1"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Generate Sprint</span>
@@ -707,34 +711,34 @@ function CalendarContent() {
       </header>
 
       {/* Control and Filter Bar */}
-      <div className="border-b border-[#262630] bg-[#121218] px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="border-b border-black/[0.08] dark:border-[#262630] bg-[#F7F6F3] dark:bg-[#121218] px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Date Navigator & View Switcher */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[#181822] border border-[#2C2C3C] rounded-lg p-0.5">
+          <div className="flex items-center bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg p-0.5">
             <button
               onClick={handlePrev}
               title="Previous"
-              className="p-1.5 hover:bg-[#252535] rounded text-[#A3A0B0] hover:text-white transition-colors"
+              className="p-1.5 hover:bg-black/[0.04] dark:hover:bg-[#252535] rounded text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-white transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={handleToday}
-              className="px-2.5 py-1 text-xs font-medium text-[#D4D4D8] hover:bg-[#252535] rounded transition-colors"
+              className="px-2.5 py-1 text-xs font-medium text-[#37352F] hover:bg-black/[0.04] dark:text-[#D4D4D8] dark:hover:bg-[#252535] rounded transition-colors"
             >
               Today
             </button>
             <button
               onClick={handleNext}
               title="Next"
-              className="p-1.5 hover:bg-[#252535] rounded text-[#A3A0B0] hover:text-white transition-colors"
+              className="p-1.5 hover:bg-black/[0.04] dark:hover:bg-[#252535] rounded text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-white transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Current Period Label */}
-          <div className="text-base font-semibold text-white tracking-tight flex items-center gap-2 min-w-[170px]">
+          <div className="text-base font-semibold text-[#191919] dark:text-white tracking-tight flex items-center gap-2 min-w-[170px]">
             {viewMode === "month" ? (
               currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
             ) : (
@@ -746,11 +750,13 @@ function CalendarContent() {
           </div>
 
           {/* View Toggle */}
-          <div className="flex items-center bg-[#181822] border border-[#2C2C3C] rounded-lg p-0.5 text-xs">
+          <div className="flex items-center bg-[#EFEFED] dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg p-0.5 text-xs">
             <button
               onClick={() => setViewMode("month")}
               className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors font-medium ${
-                viewMode === "month" ? "bg-purple-600/30 text-purple-300 border border-purple-500/30" : "text-[#8A8797] hover:text-white"
+                viewMode === "month"
+                  ? "bg-white dark:bg-purple-600/30 text-[#191919] dark:text-purple-300 border border-black/[0.1] dark:border-purple-500/30 shadow-xs"
+                  : "text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -759,7 +765,9 @@ function CalendarContent() {
             <button
               onClick={() => setViewMode("week")}
               className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors font-medium ${
-                viewMode === "week" ? "bg-purple-600/30 text-purple-300 border border-purple-500/30" : "text-[#8A8797] hover:text-white"
+                viewMode === "week"
+                  ? "bg-white dark:bg-purple-600/30 text-[#191919] dark:text-purple-300 border border-black/[0.1] dark:border-purple-500/30 shadow-xs"
+                  : "text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
               }`}
             >
               <Columns className="w-3.5 h-3.5" />
@@ -778,7 +786,7 @@ function CalendarContent() {
                 setSelectedClientId(e.target.value);
                 setSelectedCampaignId("all");
               }}
-              className="h-8 bg-[#181822] border border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#E4E4E7] focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
+              className="h-8 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#191919] dark:text-[#E4E4E7] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500 appearance-none cursor-pointer"
             >
               <option value="all">All Clients</option>
               {clients.map((c) => (
@@ -787,7 +795,7 @@ function CalendarContent() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
           </div>
 
           {/* Campaign Filter (if client selected) */}
@@ -796,7 +804,7 @@ function CalendarContent() {
               <select
                 value={selectedCampaignId}
                 onChange={(e) => setSelectedCampaignId(e.target.value)}
-                className="h-8 bg-[#181822] border border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#E4E4E7] focus:outline-none focus:border-purple-500 appearance-none cursor-pointer max-w-[160px] truncate"
+                className="h-8 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#191919] dark:text-[#E4E4E7] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500 appearance-none cursor-pointer max-w-[160px] truncate"
               >
                 <option value="all">All Campaigns</option>
                 {campaigns.map((c) => (
@@ -805,20 +813,20 @@ function CalendarContent() {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
             </div>
           )}
 
           {/* Platform Filter Pills */}
-          <div className="flex items-center gap-1 bg-[#181822] border border-[#2C2C3C] rounded-lg p-0.5 text-xs">
-            {["all", "instagram", "tiktok", "youtube", "linkedin"].map((p) => (
+          <div className="flex items-center gap-1 bg-[#EFEFED] dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg p-0.5 text-xs">
+            {["all", "instagram", "facebook", "linkedin"].map((p) => (
               <button
                 key={p}
                 onClick={() => setSelectedPlatform(p)}
                 className={`px-2.5 py-1 rounded capitalize transition-colors font-medium flex items-center gap-1 ${
                   selectedPlatform === p
-                    ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
-                    : "text-[#8A8797] hover:text-white"
+                    ? "bg-white dark:bg-purple-600/30 text-[#191919] dark:text-purple-300 border border-black/[0.1] dark:border-purple-500/30 shadow-xs"
+                    : "text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
                 }`}
               >
                 {p !== "all" && <PlatformIcon platform={p} className="w-3 h-3" />}
@@ -829,13 +837,13 @@ function CalendarContent() {
 
           {/* Search Input */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[#8A8797] absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#8A8797] absolute left-2.5 top-2.5" />
             <input
               type="text"
               placeholder="Search posts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-40 bg-[#181822] border border-[#2C2C3C] rounded-lg pl-8 pr-2.5 text-xs text-white placeholder-[#8A8797] focus:outline-none focus:border-purple-500"
+              className="h-8 w-40 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg pl-8 pr-2.5 text-xs text-[#191919] dark:text-white placeholder:text-[#9B9A97] dark:placeholder-[#8A8797] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500"
             />
           </div>
 
@@ -844,8 +852,8 @@ function CalendarContent() {
             onClick={() => setShowUnscheduledDrawer(!showUnscheduledDrawer)}
             className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors ${
               showUnscheduledDrawer || unscheduledList.length > 0
-                ? "bg-[#1C1C26] border-purple-500/40 text-purple-300"
-                : "bg-[#181822] border-[#2C2C3C] text-[#8A8797] hover:text-white"
+                ? "bg-white dark:bg-[#1C1C26] border-black/[0.15] dark:border-purple-500/40 text-[#191919] dark:text-purple-300 shadow-xs"
+                : "bg-white dark:bg-[#181822] border-black/[0.08] dark:border-[#2C2C3C] text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
@@ -865,18 +873,18 @@ function CalendarContent() {
           /* ============================================================== */
           /*                       MONTH VIEW GRID                          */
           /* ============================================================== */
-          <div className="flex-1 flex flex-col bg-[#14141B] border border-[#262630] rounded-xl overflow-hidden shadow-2xl">
+          <div className="flex-1 flex flex-col bg-white dark:bg-[#14141B] border border-black/[0.08] dark:border-[#262630] rounded-xl overflow-hidden shadow-xs">
             {/* Weekday Names Header */}
-            <div className="grid grid-cols-7 border-b border-[#262630] bg-[#181822] text-xs font-semibold text-[#8A8797]">
+            <div className="grid grid-cols-7 border-b border-black/[0.08] dark:border-[#262630] bg-[#F7F6F3] dark:bg-[#181822] text-xs font-semibold text-[#6B6A65] dark:text-[#8A8797]">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((dayName) => (
-                <div key={dayName} className="py-2.5 px-3 text-center border-r border-[#262630] last:border-r-0">
+                <div key={dayName} className="py-2.5 px-3 text-center border-r border-black/[0.08] dark:border-[#262630] last:border-r-0">
                   {dayName}
                 </div>
               ))}
             </div>
 
             {/* 7-column calendar day grid */}
-            <div className="flex-1 grid grid-cols-7 auto-rows-fr divide-x divide-y divide-[#262630] bg-[#101014]">
+            <div className="flex-1 grid grid-cols-7 auto-rows-fr divide-x divide-y divide-black/[0.08] dark:divide-[#262630] bg-[#F7F6F3] dark:bg-[#101014]">
               {monthDays.map((day) => {
                 const dayDeliverables = scheduledMap.get(day.dateStr) || [];
                 const isDragTarget = dragOverDayStr === day.dateStr;
@@ -888,25 +896,25 @@ function CalendarContent() {
                     onDragLeave={(e) => handleDragLeave(e, day.dateStr)}
                     onDrop={(e) => handleDrop(e, day.dateStr)}
                     className={`min-h-[110px] p-2 flex flex-col transition-colors relative group ${
-                      day.isCurrentMonth ? "bg-[#121217]" : "bg-[#0D0D11]/60 text-zinc-600"
-                    } ${isDragTarget ? "bg-purple-900/25 ring-2 ring-purple-500/80 ring-inset" : ""}`}
+                      day.isCurrentMonth ? "bg-white dark:bg-[#121217]" : "bg-[#F7F6F3]/80 dark:bg-[#0D0D11]/60 text-zinc-400 dark:text-zinc-600"
+                    } ${isDragTarget ? "bg-[#2383E2]/10 ring-2 ring-[#2383E2] dark:bg-purple-900/25 dark:ring-purple-500/80 ring-inset" : ""}`}
                   >
                     {/* Day number header */}
                     <div className="flex items-center justify-between mb-1.5">
                       <span
                         className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
                           day.isToday
-                            ? "bg-purple-600 text-white font-bold shadow-md shadow-purple-900/50"
+                            ? "bg-[#191919] text-white font-bold shadow-xs dark:bg-purple-600 dark:shadow-purple-900/50"
                             : day.isCurrentMonth
-                            ? "text-[#D4D4D8]"
-                            : "text-[#52525B]"
+                            ? "text-[#37352F] dark:text-[#D4D4D8]"
+                            : "text-[#9B9A97] dark:text-[#52525B]"
                         }`}
                       >
                         {day.dayNumber}
                       </span>
 
                       {dayDeliverables.length > 0 && (
-                        <span className="text-[10px] font-medium text-[#71717A] px-1.5 rounded bg-[#1C1C26]">
+                        <span className="text-[10px] font-medium text-[#6B6A65] dark:text-[#71717A] px-1.5 rounded bg-[#EFEFED] dark:bg-[#1C1C26]">
                           {dayDeliverables.length} {dayDeliverables.length === 1 ? "post" : "posts"}
                         </span>
                       )}
@@ -924,7 +932,7 @@ function CalendarContent() {
                             draggable
                             onDragStart={(e) => handleDragStart(e, deliv.id)}
                             onClick={() => setActiveDeliverableId(deliv.id)}
-                            className={`p-2 rounded-lg bg-[#181822] border border-[#2B2B3B] hover:border-purple-500/60 transition-all cursor-pointer shadow-sm hover:shadow-md group/card relative select-none ${
+                            className={`p-2 rounded-lg bg-[#F7F6F3] dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] hover:border-black/[0.2] dark:hover:border-purple-500/60 transition-all cursor-pointer shadow-2xs hover:shadow-xs group/card relative select-none ${
                               draggedDeliverableId === deliv.id ? "opacity-40 scale-95" : ""
                             }`}
                           >
@@ -939,7 +947,7 @@ function CalendarContent() {
                               <div className="flex items-center gap-1">
                                 <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} title={statusStyle.label} />
                                 {deliv.scheduled_at && (
-                                  <span className="text-[10px] text-[#A1A1AA] flex items-center gap-0.5 font-mono">
+                                  <span className="text-[10px] text-[#6B6A65] dark:text-[#A1A1AA] flex items-center gap-0.5 font-mono">
                                     <Clock className="w-2.5 h-2.5" />
                                     {formatTime(deliv.scheduled_at)}
                                   </span>
@@ -947,16 +955,16 @@ function CalendarContent() {
                               </div>
                             </div>
 
-                            <p className="text-xs font-medium text-white line-clamp-1 group-hover/card:text-purple-300 transition-colors">
+                            <p className="text-xs font-medium text-[#191919] dark:text-white line-clamp-1 group-hover/card:text-[#2383E2] dark:group-hover/card:text-purple-300 transition-colors">
                               {deliv.title}
                             </p>
 
-                            <div className="flex items-center justify-between mt-1 text-[10px] text-[#8A8797]">
+                            <div className="flex items-center justify-between mt-1 text-[10px] text-[#6B6A65] dark:text-[#8A8797]">
                               <span className="truncate max-w-[90px]">{deliv.client_name || "Client"}</span>
                               {deliv.tasks_count > 0 && (
                                 <span
                                   className={`flex items-center gap-0.5 ${
-                                    deliv.tasks_completed_count === deliv.tasks_count ? "text-emerald-400" : "text-[#8A8797]"
+                                    deliv.tasks_completed_count === deliv.tasks_count ? "text-emerald-600 dark:text-emerald-400" : "text-[#6B6A65] dark:text-[#8A8797]"
                                   }`}
                                 >
                                   <CheckSquare className="w-2.5 h-2.5" />
@@ -977,20 +985,20 @@ function CalendarContent() {
           /* ============================================================== */
           /*                        WEEK VIEW GRID                          */
           /* ============================================================== */
-          <div className="flex-1 flex flex-col bg-[#14141B] border border-[#262630] rounded-xl overflow-hidden shadow-2xl">
+          <div className="flex-1 flex flex-col bg-white dark:bg-[#14141B] border border-black/[0.08] dark:border-[#262630] rounded-xl overflow-hidden shadow-xs">
             {/* Week Columns Header */}
-            <div className="grid grid-cols-7 border-b border-[#262630] bg-[#181822]">
+            <div className="grid grid-cols-7 border-b border-black/[0.08] dark:border-[#262630] bg-[#F7F6F3] dark:bg-[#181822]">
               {weekDays.map((w) => (
                 <div
                   key={w.dateStr}
-                  className={`py-3 px-3 text-center border-r border-[#262630] last:border-r-0 flex flex-col items-center gap-1 ${
-                    w.isToday ? "bg-purple-950/20" : ""
+                  className={`py-3 px-3 text-center border-r border-black/[0.08] dark:border-[#262630] last:border-r-0 flex flex-col items-center gap-1 ${
+                    w.isToday ? "bg-[#EFEFED] dark:bg-purple-950/20" : ""
                   }`}
                 >
-                  <span className="text-xs font-semibold text-[#8A8797] uppercase tracking-wider">{w.dayName}</span>
+                  <span className="text-xs font-semibold text-[#6B6A65] dark:text-[#8A8797] uppercase tracking-wider">{w.dayName}</span>
                   <span
                     className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${
-                      w.isToday ? "bg-purple-600 text-white shadow-lg shadow-purple-900/50" : "text-white"
+                      w.isToday ? "bg-[#191919] text-white shadow-xs dark:bg-purple-600 dark:shadow-purple-900/50" : "text-[#191919] dark:text-white"
                     }`}
                   >
                     {w.dayNumber}
@@ -1000,7 +1008,7 @@ function CalendarContent() {
             </div>
 
             {/* Week Columns Day Feed */}
-            <div className="flex-1 grid grid-cols-7 divide-x divide-[#262630] bg-[#101014] overflow-y-auto">
+            <div className="flex-1 grid grid-cols-7 divide-x divide-black/[0.08] dark:divide-[#262630] bg-[#F7F6F3] dark:bg-[#101014] overflow-y-auto">
               {weekDays.map((w) => {
                 const dayDeliverables = scheduledMap.get(w.dateStr) || [];
                 const isDragTarget = dragOverDayStr === w.dateStr;
@@ -1012,14 +1020,14 @@ function CalendarContent() {
                     onDragLeave={(e) => handleDragLeave(e, w.dateStr)}
                     onDrop={(e) => handleDrop(e, w.dateStr)}
                     className={`p-3 flex flex-col gap-2.5 transition-colors ${
-                      w.isToday ? "bg-purple-950/10" : "bg-[#121217]"
-                    } ${isDragTarget ? "bg-purple-900/25 ring-2 ring-purple-500/80 ring-inset" : ""}`}
+                      w.isToday ? "bg-white dark:bg-purple-950/10" : "bg-white dark:bg-[#121217]"
+                    } ${isDragTarget ? "bg-[#2383E2]/10 ring-2 ring-[#2383E2] dark:bg-purple-900/25 dark:ring-purple-500/80 ring-inset" : ""}`}
                   >
                     {dayDeliverables.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[#262632] rounded-xl p-4 text-center text-[#52525B]">
+                      <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-black/[0.1] dark:border-[#262632] rounded-xl p-4 text-center text-[#9B9A97] dark:text-[#52525B]">
                         <CalendarIcon className="w-5 h-5 mb-1.5 opacity-40" />
                         <span className="text-xs">No posts scheduled</span>
-                        <span className="text-[10px] mt-0.5 text-[#3F3F46]">Drag a post here</span>
+                        <span className="text-[10px] mt-0.5 text-[#9B9A97] dark:text-[#3F3F46]">Drag a post here</span>
                       </div>
                     ) : (
                       dayDeliverables.map((deliv) => {
@@ -1032,7 +1040,7 @@ function CalendarContent() {
                             draggable
                             onDragStart={(e) => handleDragStart(e, deliv.id)}
                             onClick={() => setActiveDeliverableId(deliv.id)}
-                            className={`p-3.5 rounded-xl bg-[#181822] border border-[#2B2B3B] hover:border-purple-500/60 transition-all cursor-pointer shadow-md hover:shadow-lg flex flex-col gap-2 group/weekcard ${
+                            className={`p-3.5 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] hover:border-black/[0.2] dark:hover:border-purple-500/60 transition-all cursor-pointer shadow-xs hover:shadow-sm flex flex-col gap-2 group/weekcard ${
                               draggedDeliverableId === deliv.id ? "opacity-40 scale-95" : ""
                             }`}
                           >
@@ -1055,38 +1063,38 @@ function CalendarContent() {
 
                             {/* Title & Campaign info */}
                             <div>
-                              <h4 className="text-xs font-semibold text-white group-hover/weekcard:text-purple-300 transition-colors line-clamp-2">
+                              <h4 className="text-xs font-semibold text-[#191919] dark:text-white group-hover/weekcard:text-[#2383E2] dark:group-hover/weekcard:text-purple-300 transition-colors line-clamp-2">
                                 {deliv.title}
                               </h4>
-                              <p className="text-[11px] text-[#8A8797] mt-0.5 truncate">
+                              <p className="text-[11px] text-[#6B6A65] dark:text-[#8A8797] mt-0.5 truncate">
                                 {deliv.client_name} {deliv.campaign_title ? `• ${deliv.campaign_title}` : ""}
                               </p>
                             </div>
 
                             {/* Caption preview snippet */}
                             {deliv.latest_caption && (
-                              <p className="text-[11px] text-[#A1A1AA] line-clamp-2 bg-[#121218] p-2 rounded-lg border border-[#22222E] italic">
+                              <p className="text-[11px] text-[#6B6A65] dark:text-[#A1A1AA] line-clamp-2 bg-[#F7F6F3] dark:bg-[#121218] p-2 rounded-lg border border-black/[0.08] dark:border-[#22222E] italic">
                                 "{deliv.latest_caption}"
                               </p>
                             )}
 
                             {/* Footer: tasks progress & scheduled time */}
-                            <div className="flex items-center justify-between text-[11px] text-[#8A8797] pt-1 border-t border-[#22222E]">
+                            <div className="flex items-center justify-between text-[11px] text-[#6B6A65] dark:text-[#8A8797] pt-1.5 border-t border-black/[0.08] dark:border-[#22222E]">
                               {deliv.tasks_count > 0 ? (
                                 <span
                                   className={`flex items-center gap-1 ${
-                                    deliv.tasks_completed_count === deliv.tasks_count ? "text-emerald-400" : "text-[#8A8797]"
+                                    deliv.tasks_completed_count === deliv.tasks_count ? "text-emerald-600 dark:text-emerald-400" : "text-[#6B6A65] dark:text-[#8A8797]"
                                   }`}
                                 >
                                   <CheckSquare className="w-3 h-3" />
                                   {deliv.tasks_completed_count}/{deliv.tasks_count} tasks
                                 </span>
                               ) : (
-                                <span className="text-[#52525B]">No tasks</span>
+                                <span className="text-[#9B9A97] dark:text-[#52525B]">No tasks</span>
                               )}
 
                               {deliv.scheduled_at && (
-                                <span className="flex items-center gap-1 text-purple-300 font-mono">
+                                <span className="flex items-center gap-1 text-[#6B6A65] dark:text-purple-300 font-mono">
                                   <Clock className="w-3 h-3" />
                                   {formatTime(deliv.scheduled_at)}
                                 </span>
@@ -1140,7 +1148,7 @@ function CalendarContent() {
                       draggable
                       onDragStart={(e) => handleDragStart(e, deliv.id)}
                       onClick={() => setActiveDeliverableId(deliv.id)}
-                      className="min-w-[220px] max-w-[260px] p-3 rounded-xl bg-[#181822] border border-[#2B2B3B] hover:border-purple-500/60 cursor-grab active:cursor-grabbing transition-all flex flex-col gap-1.5 shadow-md group select-none"
+                      className="min-w-[220px] max-w-[260px] p-3 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] hover:border-black/[0.2] dark:hover:border-purple-500/60 cursor-grab active:cursor-grabbing transition-all flex flex-col gap-1.5 shadow-2xs group select-none"
                     >
                       <div className="flex items-center justify-between gap-1">
                         <span
@@ -1149,12 +1157,12 @@ function CalendarContent() {
                           <PlatformIcon platform={deliv.platform} className="w-2.5 h-2.5" />
                           <span className="capitalize">{deliv.deliverable_type || deliv.platform}</span>
                         </span>
-                        <GripVertical className="w-3.5 h-3.5 text-[#52525B] group-hover:text-purple-400" />
+                        <GripVertical className="w-3.5 h-3.5 text-[#9B9A97] dark:text-[#52525B] group-hover:text-[#191919] dark:group-hover:text-purple-400" />
                       </div>
-                      <p className="text-xs font-semibold text-white line-clamp-1 group-hover:text-purple-300">
+                      <p className="text-xs font-semibold text-[#191919] dark:text-white line-clamp-1 group-hover:text-[#2383E2] dark:group-hover:text-purple-300">
                         {deliv.title}
                       </p>
-                      <div className="flex items-center justify-between text-[10px] text-[#8A8797]">
+                      <div className="flex items-center justify-between text-[10px] text-[#6B6A65] dark:text-[#8A8797]">
                         <span className="truncate">{deliv.client_name || "Client"}</span>
                         <span className={`px-1.5 py-0.5 rounded ${statusStyle.color}`}>{statusStyle.label}</span>
                       </div>

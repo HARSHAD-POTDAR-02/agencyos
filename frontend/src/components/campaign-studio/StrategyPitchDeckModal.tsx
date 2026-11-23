@@ -284,33 +284,33 @@ export function StrategyPitchDeckModal({
       </div>
 
       {/* Stat Footer Strip */}
-      <div className="grid grid-cols-4 gap-4 pt-4 border-t border-white/[0.1]">
-        <div className="p-2.5 rounded-xl bg-[#17171E] border border-white/[0.06]">
-          <span className="block text-[10px] font-mono uppercase text-[#A3A0B0] tracking-wider">
+      <div className="grid grid-cols-4 gap-4 pt-4 border-t border-black/[0.08] dark:border-white/[0.1]">
+        <div className="p-2.5 rounded-xl bg-[#F7F6F3] dark:bg-[#17171E] border border-black/[0.08] dark:border-white/[0.06]">
+          <span className="block text-[10px] font-mono uppercase text-[#6B6A65] dark:text-[#A3A0B0] tracking-wider font-semibold">
             Sprint Duration
           </span>
-          <span className="text-sm md:text-base font-bold text-[#F2F0F7] font-heading">
+          <span className="text-sm md:text-base font-bold text-[#191919] dark:text-[#F2F0F7] font-heading">
             {draft?.duration_days || deliverables.length || 30} Days
           </span>
         </div>
-        <div className="p-2.5 rounded-xl bg-[#17171E] border border-white/[0.06]">
-          <span className="block text-[10px] font-mono uppercase text-[#A3A0B0] tracking-wider">
+        <div className="p-2.5 rounded-xl bg-[#F7F6F3] dark:bg-[#17171E] border border-black/[0.08] dark:border-white/[0.06]">
+          <span className="block text-[10px] font-mono uppercase text-[#6B6A65] dark:text-[#A3A0B0] tracking-wider font-semibold">
             Total Deliverables
           </span>
-          <span className="text-sm md:text-base font-bold text-[#A78BFA] font-heading">
+          <span className="text-sm md:text-base font-bold text-[#2383E2] dark:text-[#A78BFA] font-heading">
             {deliverables.length} Planned
           </span>
         </div>
-        <div className="p-2.5 rounded-xl bg-[#17171E] border border-white/[0.06]">
-          <span className="block text-[10px] font-mono uppercase text-[#A3A0B0] tracking-wider">
+        <div className="p-2.5 rounded-xl bg-[#F7F6F3] dark:bg-[#17171E] border border-black/[0.08] dark:border-white/[0.06]">
+          <span className="block text-[10px] font-mono uppercase text-[#6B6A65] dark:text-[#A3A0B0] tracking-wider font-semibold">
             Media Formats
           </span>
-          <span className="text-sm md:text-base font-bold text-[#F2F0F7] font-heading">
+          <span className="text-sm md:text-base font-bold text-[#191919] dark:text-[#F2F0F7] font-heading">
             {reelCount} Reels • {carouselCount} Carousels
           </span>
         </div>
-        <div className="p-2.5 rounded-xl bg-[#17171E] border border-white/[0.06]">
-          <span className="block text-[10px] font-mono uppercase text-[#A3A0B0] tracking-wider">
+        <div className="p-2.5 rounded-xl bg-[#F7F6F3] dark:bg-[#17171E] border border-black/[0.08] dark:border-white/[0.06]">
+          <span className="block text-[10px] font-mono uppercase text-[#6B6A65] dark:text-[#A3A0B0] tracking-wider font-semibold">
             Hero Focus Items
           </span>
           <span className="text-sm md:text-base font-bold text-[#E5AA58] font-heading flex items-center gap-1">
@@ -985,22 +985,22 @@ export function StrategyPitchDeckModal({
       {/* ─────────────────────────────────────────────────────────────
           1. SCREEN ONLY VIEW (Single Slide Interactive Mode)
       ───────────────────────────────────────────────────────────── */}
-      <div className="pitch-deck-screen-view flex flex-col justify-between h-full w-full print:hidden">
+      <div className="pitch-deck-screen-view flex flex-col justify-between h-full w-full print:hidden bg-[#F7F6F3] dark:bg-transparent">
         {/* Top Control Bar */}
-        <header className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-[#101014]/90 backdrop-blur-md shrink-0">
+        <header className="px-6 py-4 border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between gap-4 bg-white/95 dark:bg-[#101014]/90 backdrop-blur-md shrink-0 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/20 flex items-center justify-center text-[#A78BFA]">
+            <div className="w-8 h-8 rounded-xl bg-[#EFEFED] text-[#191919] dark:bg-[#A78BFA]/10 border border-black/[0.08] dark:border-[#A78BFA]/20 flex items-center justify-center dark:text-[#A78BFA]">
               <Presentation className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-[#A3A0B0]">
-                <span className="text-[#A78BFA] font-semibold">{client?.business_name || "Client"}</span>
+              <div className="flex items-center gap-2 text-[11px] font-mono text-[#6B6A65] dark:text-[#A3A0B0]">
+                <span className="text-[#2383E2] dark:text-[#A78BFA] font-semibold">{client?.business_name || "Client"}</span>
                 <span>/</span>
                 <span className="truncate max-w-[220px]">{campaign.name}</span>
               </div>
-              <h1 className="text-sm font-heading font-bold text-[#F2F0F7] flex items-center gap-2">
+              <h1 className="text-sm font-heading font-bold text-[#191919] dark:text-[#F2F0F7] flex items-center gap-2">
                 <span>{slideTitles[currentSlide]}</span>
-                <span className="text-[10px] font-mono text-[#A3A0B0] font-normal">
+                <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] font-normal">
                   ({currentSlide + 1} of {totalSlides})
                 </span>
               </h1>
@@ -1008,7 +1008,7 @@ export function StrategyPitchDeckModal({
           </div>
 
           {/* Slide Progress Dots */}
-          <div className="hidden md:flex items-center gap-1.5 bg-[#17171E] px-3 py-1.5 rounded-full border border-white/[0.06]">
+          <div className="hidden md:flex items-center gap-1.5 bg-[#EFEFED] dark:bg-[#17171E] px-3 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.06]">
             {slideTitles.map((title, idx) => (
               <button
                 key={idx}
@@ -1016,8 +1016,8 @@ export function StrategyPitchDeckModal({
                 title={`${idx + 1}. ${title}`}
                 className={`h-2 rounded-full transition-all cursor-pointer ${
                   idx === currentSlide
-                    ? "w-6 bg-[#A78BFA] shadow-[0_0_8px_rgba(167,139,250,0.5)]"
-                    : "w-2 bg-white/[0.15] hover:bg-white/[0.3]"
+                    ? "w-6 bg-[#191919] dark:bg-[#A78BFA] shadow-xs dark:shadow-[0_0_8px_rgba(167,139,250,0.5)]"
+                    : "w-2 bg-black/[0.15] dark:bg-white/[0.15] hover:bg-black/[0.3] dark:hover:bg-white/[0.3]"
                 }`}
               />
             ))}
@@ -1028,19 +1028,19 @@ export function StrategyPitchDeckModal({
             <div className="relative">
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#A78BFA]/30 bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-xs font-semibold text-[#F2F0F7] transition-all cursor-pointer shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] bg-[#F7F6F3] hover:bg-[#EFEFED] text-[#191919] dark:border-[#A78BFA]/30 dark:bg-[#A78BFA]/10 dark:hover:bg-[#A78BFA]/20 text-xs font-semibold dark:text-[#F2F0F7] transition-all cursor-pointer shadow-xs"
                 title="Export entire 8-slide presentation as PDF"
               >
-                <Printer className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <Printer className="w-3.5 h-3.5 text-[#191919] dark:text-[#A78BFA]" />
                 <span className="hidden sm:inline">Export Full Deck (PDF)</span>
               </button>
 
               {showPrintHint && (
-                <div className="absolute right-0 top-full mt-2 w-72 p-2.5 rounded-xl bg-[#1C1C26] border border-[#A78BFA]/40 shadow-2xl text-[11px] text-[#A3A0B0] z-50 animate-in fade-in duration-150">
+                <div className="absolute right-0 top-full mt-2 w-72 p-2.5 rounded-xl bg-white dark:bg-[#1C1C26] border border-black/[0.1] dark:border-[#A78BFA]/40 shadow-2xl text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] z-50 animate-in fade-in duration-150">
                   <div className="flex items-start gap-2">
-                    <Info className="w-3.5 h-3.5 text-[#A78BFA] shrink-0 mt-0.5" />
+                    <Info className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA] shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-[#F2F0F7] block">Preserve Dark Colors:</strong>
+                      <strong className="text-[#191919] dark:text-[#F2F0F7] block">Preserve Colors:</strong>
                       In the print preview, check <em>&ldquo;Background graphics&rdquo;</em> and select <em>&ldquo;Landscape&rdquo;</em> orientation.
                     </div>
                   </div>
@@ -1050,7 +1050,7 @@ export function StrategyPitchDeckModal({
 
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
-              className="p-2 rounded-xl border border-white/[0.08] bg-[#17171E] hover:bg-[#20202A] text-[#A3A0B0] hover:text-[#F2F0F7] transition-all cursor-pointer shadow-xs"
+              className="p-2 rounded-xl border border-black/[0.08] dark:border-white/[0.08] bg-[#F7F6F3] hover:bg-[#EFEFED] dark:bg-[#17171E] dark:hover:bg-[#20202A] text-[#6B6A65] hover:text-[#191919] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] transition-all cursor-pointer shadow-xs"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {isFullscreen ? (
@@ -1062,7 +1062,7 @@ export function StrategyPitchDeckModal({
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl border border-white/[0.08] bg-[#17171E] hover:bg-[#E16F7B]/10 hover:border-[#E16F7B]/30 text-[#A3A0B0] hover:text-[#E16F7B] transition-all cursor-pointer shadow-xs"
+              className="p-2 rounded-xl border border-black/[0.08] dark:border-white/[0.08] bg-[#F7F6F3] hover:bg-[#E16F7B]/10 hover:border-[#E16F7B]/30 dark:bg-[#17171E] text-[#6B6A65] hover:text-[#E16F7B] dark:text-[#A3A0B0] transition-all cursor-pointer shadow-xs"
               title="Close Presentation (Esc)"
             >
               <X className="w-4 h-4" />
@@ -1072,22 +1072,22 @@ export function StrategyPitchDeckModal({
 
         {/* Main Slide Viewport */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 flex items-center justify-center">
-          <div className="w-full max-w-6xl aspect-[16/9] min-h-[540px] max-h-[85vh] rounded-3xl bg-[#101014] border border-white/[0.1] shadow-[0_12px_48px_rgba(0,0,0,0.6)] p-6 md:p-10 flex flex-col justify-between relative overflow-hidden">
+          <div className="w-full max-w-6xl aspect-[16/9] min-h-[540px] max-h-[85vh] rounded-3xl bg-white dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.1] shadow-xl dark:shadow-[0_12px_48px_rgba(0,0,0,0.6)] p-6 md:p-10 flex flex-col justify-between relative overflow-hidden text-[#37352F] dark:text-[#F2F0F7]">
             {/* Subtle Ambient Brand Glow */}
-            <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#A78BFA]/10 blur-[100px] pointer-events-none" />
-            <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-[#69A9D8]/10 blur-[100px] pointer-events-none" />
+            <div className="hidden dark:block absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#A78BFA]/10 blur-[100px] pointer-events-none" />
+            <div className="hidden dark:block absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-[#69A9D8]/10 blur-[100px] pointer-events-none" />
 
             {renderSlideContent(currentSlide, false)}
           </div>
         </main>
 
         {/* Bottom Controller / Slide Footer */}
-        <footer className="px-6 py-4 border-t border-white/[0.08] flex items-center justify-between gap-4 bg-[#101014]/90 backdrop-blur-md shrink-0">
+        <footer className="px-6 py-4 border-t border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between gap-4 bg-[#F7F6F3] dark:bg-[#101014]/90 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={prevSlide}
               disabled={currentSlide === 0}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/[0.08] bg-[#17171E] hover:bg-[#20202A] text-xs font-semibold text-[#F2F0F7] transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-black/[0.1] dark:border-white/[0.08] bg-white hover:bg-[#EFEFED] dark:bg-[#17171E] dark:hover:bg-[#20202A] text-xs font-semibold text-[#191919] dark:text-[#F2F0F7] transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Previous</span>
@@ -1096,7 +1096,7 @@ export function StrategyPitchDeckModal({
             <button
               onClick={nextSlide}
               disabled={currentSlide === totalSlides - 1}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <span>Next</span>
               <ChevronRight className="w-4 h-4" />
@@ -1104,22 +1104,22 @@ export function StrategyPitchDeckModal({
           </div>
 
           {/* Keyboard Hints */}
-          <div className="hidden sm:flex items-center gap-3 text-[11px] font-mono text-[#A3A0B0]">
+          <div className="hidden sm:flex items-center gap-3 text-[11px] font-mono text-[#6B6A65] dark:text-[#A3A0B0]">
             <span>
-              Use <kbd className="px-1.5 py-0.5 rounded bg-[#17171E] border border-white/[0.1] text-white">←</kbd> /{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-[#17171E] border border-white/[0.1] text-white">→</kbd> to navigate
+              Use <kbd className="px-1.5 py-0.5 rounded bg-[#EFEFED] border border-black/[0.1] text-[#191919] dark:bg-[#17171E] dark:border-white/[0.1] dark:text-white">←</kbd> /{" "}
+              <kbd className="px-1.5 py-0.5 rounded bg-[#EFEFED] border border-black/[0.1] text-[#191919] dark:bg-[#17171E] dark:border-white/[0.1] dark:text-white">→</kbd> to navigate
             </span>
             <span>•</span>
             <span>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#17171E] border border-white/[0.1] text-white">Ctrl+P</kbd> to export full PDF
+              <kbd className="px-1.5 py-0.5 rounded bg-[#EFEFED] border border-black/[0.1] text-[#191919] dark:bg-[#17171E] dark:border-white/[0.1] dark:text-white">Ctrl+P</kbd> to export full PDF
             </span>
             <span>•</span>
             <span>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#17171E] border border-white/[0.1] text-white">Esc</kbd> to exit
+              <kbd className="px-1.5 py-0.5 rounded bg-[#EFEFED] border border-black/[0.1] text-[#191919] dark:bg-[#17171E] dark:border-white/[0.1] dark:text-white">Esc</kbd> to exit
             </span>
           </div>
 
-          <div className="text-right text-xs font-mono text-[#A78BFA] font-bold">
+          <div className="text-right text-xs font-mono text-[#2383E2] dark:text-[#A78BFA] font-bold">
             {Math.round(((currentSlide + 1) / totalSlides) * 100)}% Complete
           </div>
         </footer>

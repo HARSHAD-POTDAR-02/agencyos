@@ -218,6 +218,9 @@ function ClientWorkspaceContent() {
   const [prohibitedClaimsText, setProhibitedClaimsText] = useState("");
   const [approvedPhrasesText, setApprovedPhrasesText] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [autoPopulating, setAutoPopulating] = useState(false);
+  const [crawlUrlInput, setCrawlUrlInput] = useState("");
+  const [lastCrawlInfo, setLastCrawlInfo] = useState<{ pages: number; source: string; urls: string[] } | null>(null);
 
   // Contracts State
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -252,6 +255,9 @@ function ClientWorkspaceContent() {
       // 1. Fetch Client Details
       const c = (await clientApi.get(effectiveAgencyId, clientId, token)) as Client;
       setClient(c);
+      if (c?.website) {
+        setCrawlUrlInput(c.website);
+      }
 
       // 2. Fetch Brand Profile
       try {
@@ -477,6 +483,59 @@ function ClientWorkspaceContent() {
     }
   };
 
+  const handleAutoPopulateProfile = async () => {
+    if (!token || !effectiveAgencyId || !clientId) return;
+    const targetUrl = (crawlUrlInput || client?.website || "").trim();
+    if (!targetUrl) {
+      setNotification({
+        type: "error",
+        text: "Please provide a client website URL to crawl and analyze.",
+      });
+      return;
+    }
+
+    setAutoPopulating(true);
+    setNotification(null);
+
+    try {
+      const res = await brandProfileApi.autoPopulate(
+        effectiveAgencyId,
+        clientId,
+        { website_url: targetUrl },
+        token
+      );
+
+      if (res.brand_voice) setBrandVoice(res.brand_voice);
+      if (res.tone_examples?.length) setToneExamplesText(res.tone_examples.join("\n"));
+      if (res.content_pillars?.length) setContentPillarsText(res.content_pillars.join("\n"));
+      if (res.target_audience?.length) setTargetAudienceText(res.target_audience.join("\n"));
+      if (res.prohibited_claims?.length) setProhibitedClaimsText(res.prohibited_claims.join("\n"));
+      if (res.approved_phrases?.length) setApprovedPhrasesText(res.approved_phrases.join("\n"));
+
+      setLastCrawlInfo({
+        pages: res.crawled_pages_count || 1,
+        source: res.source_website || targetUrl,
+        urls: res.crawled_urls || [],
+      });
+
+      if (!client?.website && targetUrl) {
+        setClient((prev) => (prev ? { ...prev, website: targetUrl } : prev));
+      }
+
+      setNotification({
+        type: "success",
+        text: `✨ Brand Intelligence extracted parameters from ${res.source_website} (${res.crawled_pages_count} pages). Review and edit the guidelines below, then click "Lock & Confirm Guidelines".`,
+      });
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        text: err.message || "Failed to auto-populate brand profile from website.",
+      });
+    } finally {
+      setAutoPopulating(false);
+    }
+  };
+
   const handleSaveBrandProfile = async (confirmProfile = false) => {
     if (!token || !effectiveAgencyId) return;
     setSavingBrand(true);
@@ -658,7 +717,7 @@ function ClientWorkspaceContent() {
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="font-heading text-xl md:text-2xl font-semibold text-[#F2F0F7] tracking-tight">
+                <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                   {client.business_name}
                 </h1>
                 
@@ -731,9 +790,9 @@ function ClientWorkspaceContent() {
             </button>
             <Link
               href={`/campaigns?clientId=${client.id}`}
-              className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] hover:shadow-[0_2px_14px_rgba(167,139,250,0.45)] cursor-pointer"
+              className="inline-flex items-center gap-2 bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#101014]" />
+              <Sparkles className="w-3.5 h-3.5 text-white dark:text-[#101014]" />
               <span>Launch Campaign Studio</span>
             </Link>
           </div>
@@ -928,46 +987,112 @@ function ClientWorkspaceContent() {
       ────────────────────────────────────────────── */}
       {activeTab === "brand" && (
         <div className="space-y-5">
+          {/* Autonomous Brand Intelligence Crawler Card */}
+          <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 md:p-6 bg-white dark:bg-[#13131A] shadow-xs space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#2383E2]/10 dark:bg-[#A78BFA]/10 border border-[#2383E2]/20 dark:border-[#A78BFA]/20 flex items-center justify-center text-[#2383E2] dark:text-[#A78BFA] shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-heading text-xs font-semibold text-[#191919] dark:text-[#F2F0F7]">
+                      Autonomous Brand Intelligence Crawler
+                    </h4>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#45B88A]/10 text-[#45B88A] border border-[#45B88A]/20 font-semibold">
+                      Live Grounding
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-0.5 leading-relaxed">
+                    The Market Research & Brand Intelligence agent crawls the client&apos;s website, extracts brand voice, tone benchmarks, audience segments, and compliance rules, and auto-populates the fields below for your review.
+                  </p>
+                </div>
+              </div>
+
+              {lastCrawlInfo && (
+                <div className="text-right shrink-0">
+                  <span className="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-[#45B88A] bg-[#45B88A]/10 px-2.5 py-1 rounded-lg border border-[#45B88A]/20">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Grounding cached ({lastCrawlInfo.pages} page{lastCrawlInfo.pages > 1 ? "s" : ""})</span>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* URL Input & Trigger Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-3 border-t border-black/[0.06] dark:border-white/[0.06]">
+              <div className="relative flex-1">
+                <Globe className="w-3.5 h-3.5 text-[#9B9A97] dark:text-[#71717A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="url"
+                  value={crawlUrlInput}
+                  onChange={(e) => setCrawlUrlInput(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full pl-9 pr-3.5 py-2 text-xs bg-[#FBFBFA] dark:bg-[#101014] text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] transition-colors"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={autoPopulating}
+                onClick={handleAutoPopulateProfile}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-[#191919] hover:bg-[#2d2d2d] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014]"
+              >
+                {autoPopulating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Crawling & Extracting Brand DNA...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Auto-Populate Brand Profile</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           <div className="bg-[rgba(167,139,250,0.08)] border border-[#A78BFA]/20 rounded-2xl p-4 flex items-start gap-3.5 shadow-inner">
             <Sparkles className="w-4 h-4 text-[#A78BFA] shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-heading text-xs font-semibold text-[#F2F0F7]">
+              <h4 className="font-heading text-xs font-semibold text-[#191919] dark:text-[#F2F0F7]">
                 Multi-Agent Brand Knowledge Injector
               </h4>
-              <p className="text-[11px] text-[#A3A0B0] mt-0.5 leading-relaxed">
+              <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-0.5 leading-relaxed">
                 When locked and confirmed, these parameters are compiled directly into the system prompts of the Multi-Agent Campaign Strategist, Scriptwriter, and Compliance Evaluator. Prohibited claims and off-brand phrasing are automatically blocked during generation.
               </p>
             </div>
           </div>
 
-          <div className="surface-card rounded-2xl border border-white/[0.08] p-5 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)] space-y-6">
+          <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 md:p-6 bg-white dark:bg-[#13131A] shadow-xs space-y-6">
             {/* Brand Voice */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider flex items-center gap-1.5">
-                  <Quote className="w-3 h-3 text-[#A78BFA]" />
+                <label className="text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider flex items-center gap-1.5">
+                  <Quote className="w-3 h-3 text-[#2383E2] dark:text-[#A78BFA]" />
                   <span>Brand Voice & Core Persona *</span>
                 </label>
-                <span className="text-[10px] text-[#A3A0B0]/60 font-mono">System Prompt Core</span>
+                <span className="text-[10px] text-[#9B9A97] dark:text-[#A3A0B0]/60 font-mono">System Prompt Core</span>
               </div>
-              <p className="text-[11px] text-[#A3A0B0] mb-2">
+              <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mb-2">
                 Describe how the brand communicates with its audience (e.g. &quot;Authoritative yet approachable, relatable Hinglish blend, witty hook-driven&quot;).
               </p>
               <textarea
                 rows={3}
                 value={brandVoice}
                 onChange={(e) => setBrandVoice(e.target.value)}
-                placeholder="e.g. Confident, modern Indian conversational tone with smart humor and zero corporate jargon."
-                className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors"
+                placeholder="e.g. Confident, modern conversational tone with smart humor and zero corporate jargon."
+                className="w-full bg-[#FBFBFA] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] transition-colors"
               />
             </div>
 
             {/* Tone Examples */}
             <div>
-              <label className="text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider block mb-1.5">
+              <label className="text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider block mb-1.5">
                 Tone & Copy Benchmarks (1 per line)
               </label>
-              <p className="text-[11px] text-[#A3A0B0] mb-2">
+              <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mb-2">
                 Exemplar sentences or caption hooks that capture the brand vibe perfectly.
               </p>
               <textarea
@@ -975,18 +1100,18 @@ function ClientWorkspaceContent() {
                 value={toneExamplesText}
                 onChange={(e) => setToneExamplesText(e.target.value)}
                 placeholder={"\"Excellence isn't a goal, it's our standard operating procedure.\"\n\"No superficial shortcuts, only verified tangible impact.\""}
-                className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors font-mono"
+                className="w-full bg-[#FBFBFA] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] transition-colors font-mono"
               />
             </div>
 
             {/* 2-Column Grid: Content Pillars & Target Audience */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                  <SlidersHorizontal className="w-3 h-3 text-[#69A9D8]" />
+                <label className="text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3 h-3 text-[#2383E2]" />
                   <span>Content Pillars (1 per line)</span>
                 </label>
-                <p className="text-[11px] text-[#A3A0B0] mb-2">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mb-2">
                   The primary strategic narrative buckets repeated across monthly sprints.
                 </p>
                 <textarea
@@ -994,16 +1119,16 @@ function ClientWorkspaceContent() {
                   value={contentPillarsText}
                   onChange={(e) => setContentPillarsText(e.target.value)}
                   placeholder={"Industry Insights & Busting Myths\nRelatable Work Humor & Trends\nBehind The Scenes\nCustomer Transformation Stories\nQuick Tips & Frameworks"}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors"
+                  className="w-full bg-[#FBFBFA] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <label className="text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
                   <Target className="w-3 h-3 text-[#E5AA58]" />
                   <span>Target Audience & Demographic</span>
                 </label>
-                <p className="text-[11px] text-[#A3A0B0] mb-2">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mb-2">
                   Demographic profiles, geography, and psychographic pain points.
                 </p>
                 <textarea
@@ -1011,7 +1136,7 @@ function ClientWorkspaceContent() {
                   value={targetAudienceText}
                   onChange={(e) => setTargetAudienceText(e.target.value)}
                   placeholder={"Core target demographic, geographic regions, and customer pain points\nKey interests, buying behavior, and motivations\nActive social platforms and preferred content formats"}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] transition-colors"
+                  className="w-full bg-[#FBFBFA] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 p-3.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] transition-colors"
                 />
               </div>
             </div>
@@ -1023,7 +1148,7 @@ function ClientWorkspaceContent() {
                   <ShieldAlert className="w-4 h-4" />
                   <span>Prohibited Claims & Forbidden Words (1 per line)</span>
                 </div>
-                <p className="text-[11px] text-[#A3A0B0] mb-2.5">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mb-2.5">
                   AgencyOS compliance engine will strictly flag and block drafts containing these.
                 </p>
                 <textarea
@@ -1031,7 +1156,7 @@ function ClientWorkspaceContent() {
                   value={prohibitedClaimsText}
                   onChange={(e) => setProhibitedClaimsText(e.target.value)}
                   placeholder={"100% guaranteed results\nCheapest in market\nInstant guaranteed outcome\nUnverified performance claims"}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3 rounded-xl border border-[#E16F7B]/30 focus:outline-none focus:border-[#E16F7B] transition-colors"
+                  className="w-full bg-[#FBFBFA] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 p-3 rounded-xl border border-[#E16F7B]/30 focus:outline-none focus:border-[#E16F7B] transition-colors"
                 />
               </div>
 
@@ -1040,7 +1165,7 @@ function ClientWorkspaceContent() {
                   <CheckCheck className="w-4 h-4" />
                   <span>Approved Taglines & Required Phrases</span>
                 </div>
-                <p className="text-[11px] text-[#A3A0B0] mb-2.5">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mb-2.5">
                   Mandatory slogans, hashtags, or legal disclaimers.
                 </p>
                 <textarea
@@ -1048,22 +1173,22 @@ function ClientWorkspaceContent() {
                   value={approvedPhrasesText}
                   onChange={(e) => setApprovedPhrasesText(e.target.value)}
                   placeholder={"Engineered for Excellence\nAvailable exclusively at official channels\nT&C Apply"}
-                  className="w-full bg-[#101014] text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 p-3 rounded-xl border border-[#45B88A]/30 focus:outline-none focus:border-[#45B88A] transition-colors"
+                  className="w-full bg-[#FBFBFA] dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#9B9A97] dark:placeholder-[#A3A0B0]/40 p-3 rounded-xl border border-[#45B88A]/30 focus:outline-none focus:border-[#45B88A] transition-colors"
                 />
               </div>
             </div>
 
             {/* Save Action Buttons */}
-            <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between gap-4">
+            <div className="pt-4 border-t border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between gap-4">
               <div className="flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   id="confirmCheck"
                   checked={isConfirmed}
                   onChange={(e) => setIsConfirmed(e.target.checked)}
-                  className="rounded border-white/[0.2] bg-[#101014] text-[#A78BFA] focus:ring-[#A78BFA] cursor-pointer"
+                  className="rounded border-black/[0.2] dark:border-white/[0.2] bg-[#FBFBFA] dark:bg-[#101014] text-[#191919] dark:text-[#A78BFA] focus:ring-black dark:focus:ring-[#A78BFA] cursor-pointer"
                 />
-                <label htmlFor="confirmCheck" className="text-xs font-medium text-[#F2F0F7] cursor-pointer">
+                <label htmlFor="confirmCheck" className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] cursor-pointer">
                   Mark as Confirmed & Locked with Client
                 </label>
               </div>
@@ -1073,7 +1198,7 @@ function ClientWorkspaceContent() {
                   type="button"
                   disabled={savingBrand}
                   onClick={() => handleSaveBrandProfile(false)}
-                  className="surface-card surface-card-hover px-4 py-2 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] rounded-xl cursor-pointer"
+                  className="surface-card surface-card-hover px-4 py-2 text-xs font-medium text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7] rounded-xl cursor-pointer border border-black/[0.08] dark:border-white/[0.08]"
                 >
                   Save Draft
                 </button>
@@ -1081,7 +1206,7 @@ function ClientWorkspaceContent() {
                   type="button"
                   disabled={savingBrand}
                   onClick={() => handleSaveBrandProfile(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#191919] hover:bg-[#2e2e2e] dark:text-[#101014] dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] rounded-xl transition-all shadow-xs cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{savingBrand ? "Saving..." : "Lock & Confirm Guidelines"}</span>
@@ -1222,25 +1347,25 @@ function ClientWorkspaceContent() {
             </div>
             <button
               onClick={() => setShowContractModal(true)}
-              className="inline-flex items-center gap-1.5 bg-[rgba(167,139,250,0.12)] hover:bg-[rgba(167,139,250,0.2)] text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-4 py-2 rounded-xl transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA]/10 dark:hover:bg-[#A78BFA]/20 dark:text-[#A78BFA] dark:border dark:border-[#A78BFA]/30 text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-white dark:text-[#A78BFA]" />
               <span>New Retainer Contract</span>
             </button>
           </div>
 
           {contracts.length === 0 ? (
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <Layers className="w-8 h-8 text-[#A3A0B0]/50 mx-auto mb-3" />
-              <h4 className="font-heading text-sm font-semibold text-[#F2F0F7]">No active contracts</h4>
-              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-12 text-center bg-white dark:bg-[#13131A] shadow-xs">
+              <Layers className="w-8 h-8 text-[#9B9A97] dark:text-[#A3A0B0]/50 mx-auto mb-3" />
+              <h4 className="font-heading text-sm font-semibold text-[#191919] dark:text-[#F2F0F7]">No active contracts</h4>
+              <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
                 Create a retainer contract defining the monthly retainer fee and contracted deliverables (e.g. 30 Reels / month).
               </p>
               <button
                 onClick={() => setShowContractModal(true)}
-                className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 text-[#101014]" />
+                <Plus className="w-3.5 h-3.5 text-white dark:text-[#101014]" />
                 <span>Create Contract</span>
               </button>
             </div>
@@ -1397,16 +1522,16 @@ function ClientWorkspaceContent() {
 
           {reviewers.length === 0 ? (
             <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <UserCheck className="w-8 h-8 text-[#A3A0B0]/50 mx-auto mb-3" />
-              <h4 className="font-heading text-sm font-semibold text-[#F2F0F7]">No reviewers yet</h4>
-              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
+              <UserCheck className="w-8 h-8 text-[#9B9A97] dark:text-[#A3A0B0]/50 mx-auto mb-3" />
+              <h4 className="font-heading text-sm font-semibold text-[#191919] dark:text-[#F2F0F7]">No reviewers yet</h4>
+              <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-5">
                 Invite your client point-of-contact to review and approve content in a clean, distraction-free portal.
               </p>
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 text-[#101014]" />
+                <Plus className="w-3.5 h-3.5 text-white dark:text-[#101014]" />
                 <span>Invite First Reviewer</span>
               </button>
             </div>

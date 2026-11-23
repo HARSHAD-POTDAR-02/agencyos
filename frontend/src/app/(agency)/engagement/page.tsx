@@ -478,21 +478,21 @@ function EngagementContent() {
       )}
 
       {/* Main Header */}
-      <header className="border-b border-[#262630] bg-[#14141B] px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <header className="border-b border-black/[0.08] dark:border-[#262630] bg-[#F7F6F3] dark:bg-[#14141B] px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-900/20">
-              <MessagesSquare className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#191919] dark:bg-[#A78BFA]/15 text-white dark:text-[#A78BFA] flex items-center justify-center shadow-xs shrink-0">
+              <MessagesSquare className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
                 Community Engagement
-                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                   Live Inbox
                 </span>
               </h1>
-              <p className="text-xs text-[#8A8797]">
+              <p className="text-xs text-[#6B6A65] dark:text-[#8A8797] mt-0.5">
                 AI-powered comment triage, brand-voice replies & unified Instagram DMs
               </p>
             </div>
@@ -501,33 +501,33 @@ function EngagementContent() {
 
         {/* Quick KPI Stats & Sync Action */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
-            <span className="text-[#8A8797]">Total Comments:</span>
-            <span className="font-semibold text-white">{stats?.total_comments ?? 0}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#EFEFED] dark:bg-[#191922] border border-black/[0.08] dark:border-[#262632] text-xs">
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Total Comments:</span>
+            <span className="font-semibold text-[#191919] dark:text-white">{stats?.total_comments ?? 0}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#EFEFED] dark:bg-[#191922] border border-black/[0.08] dark:border-[#262632] text-xs">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span className="text-[#8A8797]">Needs Reply:</span>
-            <span className="font-semibold text-amber-400">{stats?.pending_comments ?? 0}</span>
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Needs Reply:</span>
+            <span className="font-semibold text-amber-600 dark:text-amber-400">{stats?.pending_comments ?? 0}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#EFEFED] dark:bg-[#191922] border border-black/[0.08] dark:border-[#262632] text-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="text-[#8A8797]">Buying Leads:</span>
-            <span className="font-semibold text-emerald-400">{stats?.leads_count ?? 0}</span>
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Buying Leads:</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{stats?.leads_count ?? 0}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#191922] border border-[#262632] text-xs">
-            <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-[#8A8797]">Positive:</span>
-            <span className="font-semibold text-purple-300">{stats?.positive_sentiment_percent ?? 0}%</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#EFEFED] dark:bg-[#191922] border border-black/[0.08] dark:border-[#262632] text-xs">
+            <TrendingUp className="w-3.5 h-3.5 text-[#2383E2] dark:text-purple-400" />
+            <span className="text-[#6B6A65] dark:text-[#8A8797]">Positive:</span>
+            <span className="font-semibold text-[#2383E2] dark:text-purple-300">{stats?.positive_sentiment_percent ?? 0}%</span>
           </div>
 
           <button
             onClick={handleSyncFeed}
             disabled={syncing}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-medium shadow-md shadow-purple-900/20 transition-all ml-1 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#191919] hover:bg-[#2F2E2B] dark:bg-gradient-to-r dark:from-purple-600 dark:to-indigo-600 dark:hover:from-purple-500 dark:hover:to-indigo-500 text-white text-xs font-medium shadow-xs transition-all ml-1 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
             <span>{syncing ? "Syncing..." : "Sync Live Feed"}</span>
@@ -536,15 +536,15 @@ function EngagementContent() {
       </header>
 
       {/* Stream Mode & Filters Bar */}
-      <div className="border-b border-[#262630] bg-[#121218] px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div className="border-b border-black/[0.08] dark:border-[#262630] bg-[#F7F6F3] dark:bg-[#121218] px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
         {/* Stream Mode Tabs */}
-        <div className="flex items-center bg-[#181822] border border-[#2C2C3C] rounded-lg p-0.5 text-xs">
+        <div className="flex items-center bg-[#EFEFED] dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg p-0.5 text-xs">
           <button
             onClick={() => setStreamMode("comments")}
             className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors font-medium ${
               streamMode === "comments"
-                ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
-                : "text-[#8A8797] hover:text-white"
+                ? "bg-white dark:bg-purple-600/30 text-[#191919] dark:text-purple-300 border border-black/[0.1] dark:border-purple-500/30 shadow-xs"
+                : "text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -554,8 +554,8 @@ function EngagementContent() {
             onClick={() => setStreamMode("dms")}
             className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors font-medium ${
               streamMode === "dms"
-                ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
-                : "text-[#8A8797] hover:text-white"
+                ? "bg-white dark:bg-purple-600/30 text-[#191919] dark:text-purple-300 border border-black/[0.1] dark:border-purple-500/30 shadow-xs"
+                : "text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
             }`}
           >
             <Send className="w-3.5 h-3.5" />
@@ -570,7 +570,7 @@ function EngagementContent() {
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="h-8 bg-[#181822] border border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#E4E4E7] focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
+              className="h-8 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#191919] dark:text-[#E4E4E7] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500 appearance-none cursor-pointer"
             >
               <option value="all">All Clients</option>
               {clients.map((c) => (
@@ -579,12 +579,12 @@ function EngagementContent() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
           </div>
 
           {/* Sentiment Filter (For comments) */}
           {streamMode === "comments" && (
-            <div className="flex items-center gap-1 bg-[#181822] border border-[#2C2C3C] rounded-lg p-0.5 text-xs">
+            <div className="flex items-center gap-1 bg-[#EFEFED] dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg p-0.5 text-xs">
               {[
                 { id: "all", label: "All" },
                 { id: "inquiry", label: "Leads" },
@@ -597,8 +597,8 @@ function EngagementContent() {
                   onClick={() => setSelectedSentiment(s.id)}
                   className={`px-2.5 py-1 rounded transition-colors font-medium ${
                     selectedSentiment === s.id
-                      ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
-                      : "text-[#8A8797] hover:text-white"
+                      ? "bg-white dark:bg-purple-600/30 text-[#191919] dark:text-purple-300 border border-black/[0.1] dark:border-purple-500/30 shadow-xs"
+                      : "text-[#6B6A65] dark:text-[#8A8797] hover:text-[#191919] dark:hover:text-white"
                   }`}
                 >
                   {s.label}
@@ -612,47 +612,47 @@ function EngagementContent() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-8 bg-[#181822] border border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#E4E4E7] focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
+              className="h-8 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg px-2.5 pr-7 text-xs text-[#191919] dark:text-[#E4E4E7] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500 appearance-none cursor-pointer"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Needs Reply</option>
               <option value="replied">Replied</option>
               <option value="hidden">Hidden</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#8A8797] absolute right-2 top-2.5 pointer-events-none" />
           </div>
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[#8A8797] absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-[#6B6A65] dark:text-[#8A8797] absolute left-2.5 top-2.5" />
             <input
               type="text"
               placeholder="Search feed..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-44 bg-[#181822] border border-[#2C2C3C] rounded-lg pl-8 pr-2.5 text-xs text-white placeholder-[#8A8797] focus:outline-none focus:border-purple-500"
+              className="h-8 w-44 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2C2C3C] rounded-lg pl-8 pr-2.5 text-xs text-[#191919] dark:text-white placeholder:text-[#9B9A97] dark:placeholder-[#8A8797] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500"
             />
           </div>
         </div>
       </div>
 
       {/* 3-Pane Main Body */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[#262630] overflow-hidden bg-[#101014]">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-black/[0.08] dark:divide-[#262630] overflow-hidden bg-[#F7F6F3] dark:bg-[#101014]">
         {/* ============================================================== */}
         {/*             LEFT PANE: FEED STREAM (4 COLS)                    */}
         {/* ============================================================== */}
-        <div className="md:col-span-4 flex flex-col bg-[#121218] overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-thin">
+        <div className="md:col-span-4 flex flex-col bg-white dark:bg-[#121218] overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-thin">
           {loading ? (
-            <div className="p-8 flex flex-col items-center justify-center gap-2 text-[#8A8797]">
-              <RefreshCw className="w-5 h-5 animate-spin text-purple-400" />
+            <div className="p-8 flex flex-col items-center justify-center gap-2 text-[#6B6A65] dark:text-[#8A8797]">
+              <RefreshCw className="w-5 h-5 animate-spin text-[#191919] dark:text-purple-400" />
               <span className="text-xs">Loading feed...</span>
             </div>
           ) : streamMode === "comments" ? (
             comments.length === 0 ? (
-              <div className="p-8 text-center text-[#71717A] text-xs flex flex-col items-center gap-2">
-                <Inbox className="w-8 h-8 opacity-30 text-purple-400" />
+              <div className="p-8 text-center text-[#6B6A65] dark:text-[#71717A] text-xs flex flex-col items-center gap-2">
+                <Inbox className="w-8 h-8 opacity-30 text-[#191919] dark:text-purple-400" />
                 <p>No comments found for this filter.</p>
-                <p className="text-[11px] text-[#52525B]">Click "Sync Live Feed" to import latest comments.</p>
+                <p className="text-[11px] text-[#9B9A97] dark:text-[#52525B]">Click "Sync Live Feed" to import latest comments.</p>
               </div>
             ) : (
               comments.map((c) => {
@@ -663,28 +663,28 @@ function EngagementContent() {
                   <div
                     key={c.id}
                     onClick={() => setSelectedCommentId(c.id)}
-                    className={`p-3.5 border-b border-[#20202B] cursor-pointer transition-all flex flex-col gap-2 hover:bg-[#181822] ${
-                      isSelected ? "bg-[#181824] border-l-4 border-l-purple-500" : ""
+                    className={`p-3.5 border-b border-black/[0.06] dark:border-[#20202B] cursor-pointer transition-all flex flex-col gap-2 hover:bg-[#F7F6F3] dark:hover:bg-[#181822] ${
+                      isSelected ? "bg-[#F7F6F3] dark:bg-[#181824] border-l-4 border-l-[#2383E2] dark:border-l-purple-500 shadow-2xs" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow">
+                        <div className="w-7 h-7 rounded-full bg-[#EFEFED] text-[#37352F] border border-black/[0.1] dark:border-transparent dark:bg-gradient-to-tr dark:from-purple-500 dark:to-indigo-500 dark:text-white flex items-center justify-center text-[10px] font-bold shadow-2xs">
                           {c.author_username.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-white flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-[#191919] dark:text-white flex items-center gap-1.5">
                             @{c.author_username}
-                            <PlatformIcon platform={c.platform} className="w-3 h-3 text-[#A1A1AA]" />
+                            <PlatformIcon platform={c.platform} className="w-3 h-3 text-[#6B6A65] dark:text-[#A1A1AA]" />
                           </p>
-                          <p className="text-[10px] text-[#71717A] truncate max-w-[120px]">
+                          <p className="text-[10px] text-[#6B6A65] dark:text-[#71717A] truncate max-w-[120px]">
                             {c.client_name || "Client"}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] text-[#71717A]">{formatRelativeTime(c.commented_at)}</span>
+                        <span className="text-[10px] text-[#6B6A65] dark:text-[#71717A]">{formatRelativeTime(c.commented_at)}</span>
                         <span
                           className={`text-[9px] font-medium px-1.5 py-0.5 rounded border flex items-center gap-1 ${sentimentBadge.style}`}
                         >
@@ -694,20 +694,20 @@ function EngagementContent() {
                       </div>
                     </div>
 
-                    <p className="text-xs text-[#D4D4D8] line-clamp-2 leading-relaxed">{c.comment_text}</p>
+                    <p className="text-xs text-[#37352F] dark:text-[#D4D4D8] line-clamp-2 leading-relaxed">{c.comment_text}</p>
 
-                    <div className="flex items-center justify-between text-[10px] text-[#71717A] pt-1">
+                    <div className="flex items-center justify-between text-[10px] text-[#6B6A65] dark:text-[#71717A] pt-1">
                       <span className="flex items-center gap-1">
                         <Heart className="w-2.5 h-2.5" />
                         {c.like_count}
                       </span>
 
                       {c.status === "replied" ? (
-                        <span className="text-emerald-400 font-medium flex items-center gap-0.5">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-0.5">
                           <CheckCircle2 className="w-3 h-3" /> Replied
                         </span>
                       ) : (
-                        <span className="text-amber-400 font-medium flex items-center gap-0.5">
+                        <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-0.5">
                           <Clock className="w-3 h-3" /> Needs reply
                         </span>
                       )}
@@ -748,28 +748,28 @@ function EngagementContent() {
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConvId(conv.id)}
-                    className={`p-3.5 border-b border-[#20202B] cursor-pointer transition-all flex flex-col gap-2 hover:bg-[#181822] ${
-                      isSelected ? "bg-[#181824] border-l-4 border-l-purple-500" : ""
+                    className={`p-3.5 border-b border-black/[0.08] dark:border-[#20202B] cursor-pointer transition-all flex flex-col gap-2 hover:bg-[#F7F6F3] dark:hover:bg-[#181822] ${
+                      isSelected ? "bg-[#F7F6F3] dark:bg-[#181824] border-l-4 border-l-[#191919] dark:border-l-purple-500 shadow-2xs" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow">
+                        <div className="w-7 h-7 rounded-full bg-[#EFEFED] text-[#37352F] border border-black/[0.08] dark:bg-white/[0.08] dark:text-[#F2F0F7] dark:border-white/[0.08] flex items-center justify-center text-[10px] font-bold shadow-2xs">
                           {conv.participant_username.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-white flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-[#191919] dark:text-white flex items-center gap-1.5">
                             @{conv.participant_username}
-                            <PlatformIcon platform={conv.platform} className="w-3 h-3 text-[#A1A1AA]" />
+                            <PlatformIcon platform={conv.platform} className="w-3 h-3 text-[#6B6A65] dark:text-[#A1A1AA]" />
                           </p>
-                          <p className="text-[10px] text-[#71717A]">{conv.client_name || "Client"}</p>
+                          <p className="text-[10px] text-[#6B6A65] dark:text-[#71717A]">{conv.client_name || "Client"}</p>
                         </div>
                       </div>
 
-                      <span className="text-[10px] text-[#71717A]">{formatRelativeTime(conv.last_message_at)}</span>
+                      <span className="text-[10px] text-[#6B6A65] dark:text-[#71717A]">{formatRelativeTime(conv.last_message_at)}</span>
                     </div>
 
-                    <p className="text-xs text-[#D4D4D8] line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#37352F] dark:text-[#D4D4D8] line-clamp-2 leading-relaxed">
                       {conv.last_message_text || "Started a direct message thread"}
                     </p>
                   </div>
@@ -782,30 +782,30 @@ function EngagementContent() {
         {/* ============================================================== */}
         {/*         CENTER PANE: THREAD CONVERSATION & AI COMPOSER (5 COLS)*/}
         {/* ============================================================== */}
-        <div className="md:col-span-5 flex flex-col bg-[#14141B] overflow-y-auto max-h-[calc(100vh-140px)] p-6 gap-5">
+        <div className="md:col-span-5 flex flex-col bg-[#F7F6F3] dark:bg-[#14141B] overflow-y-auto max-h-[calc(100vh-140px)] p-6 gap-5">
           {streamMode === "comments" ? (
             activeComment ? (
               <>
                 {/* Linked Post Context Banner */}
-                <div className="p-3.5 rounded-xl bg-[#181824] border border-[#262638] flex items-center justify-between gap-3 shadow-md">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-[#181824] border border-black/[0.08] dark:border-[#262638] flex items-center justify-between gap-3 shadow-xs">
                   <div className="flex items-center gap-3">
                     {activeComment.media_thumbnail_url ? (
                       <img
                         src={activeComment.media_thumbnail_url}
                         alt="Post media"
-                        className="w-12 h-12 rounded-lg object-cover border border-[#2E2E3E]"
+                        className="w-12 h-12 rounded-lg object-cover border border-black/[0.08] dark:border-[#2E2E3E]"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-lg bg-[#20202B] flex items-center justify-center text-purple-400">
+                      <div className="w-12 h-12 rounded-lg bg-[#EFEFED] dark:bg-[#20202B] flex items-center justify-center text-[#2383E2] dark:text-purple-400">
                         <PlatformIcon platform={activeComment.platform} className="w-6 h-6" />
                       </div>
                     )}
 
                     <div>
-                      <p className="text-xs font-semibold text-white line-clamp-1">
+                      <p className="text-xs font-semibold text-[#191919] dark:text-white line-clamp-1">
                         {activeComment.deliverable_title || activeComment.media_caption || "Instagram Reel / Post"}
                       </p>
-                      <p className="text-[11px] text-[#8A8797] mt-0.5">
+                      <p className="text-[11px] text-[#6B6A65] dark:text-[#8A8797] mt-0.5">
                         Post ID: {activeComment.external_media_id} • {activeComment.client_name || "Client"}
                       </p>
                     </div>
@@ -816,7 +816,7 @@ function EngagementContent() {
                       href={activeComment.media_permalink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-[#8A8797] hover:text-white hover:bg-[#252535] transition-colors"
+                      className="p-1.5 rounded-lg text-[#6B6A65] hover:text-[#191919] hover:bg-black/[0.04] dark:text-[#8A8797] dark:hover:text-white dark:hover:bg-[#252535] transition-colors"
                       title="View live post on Instagram"
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -825,15 +825,15 @@ function EngagementContent() {
                 </div>
 
                 {/* Customer Comment Bubble */}
-                <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex flex-col gap-3 shadow-sm">
+                <div className="p-4 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] flex flex-col gap-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                      <div className="w-8 h-8 rounded-full bg-[#EFEFED] text-[#37352F] border border-black/[0.1] dark:border-transparent dark:bg-gradient-to-tr dark:from-purple-500 dark:to-indigo-500 dark:text-white flex items-center justify-center text-xs font-bold shadow-2xs">
                         {activeComment.author_username.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="text-xs font-semibold text-white">@{activeComment.author_username}</h3>
-                        <p className="text-[10px] text-[#71717A]">{formatRelativeTime(activeComment.commented_at)}</p>
+                        <h3 className="text-xs font-semibold text-[#191919] dark:text-white">@{activeComment.author_username}</h3>
+                        <p className="text-[10px] text-[#6B6A65] dark:text-[#71717A]">{formatRelativeTime(activeComment.commented_at)}</p>
                       </div>
                     </div>
 
@@ -842,8 +842,8 @@ function EngagementContent() {
                         onClick={handleLikeComment}
                         className={`p-1.5 rounded-lg border text-xs font-medium flex items-center gap-1 transition-colors ${
                           activeComment.is_liked_by_brand
-                            ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
-                            : "bg-[#20202B] border-[#2C2C3C] text-[#8A8797] hover:text-white"
+                            ? "bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400"
+                            : "bg-[#EFEFED] hover:bg-[#E5E5E2] border-black/[0.08] text-[#37352F] dark:bg-[#20202B] dark:border-[#2C2C3C] dark:text-[#8A8797] dark:hover:text-white"
                         }`}
                         title="Like comment as brand"
                       >
@@ -855,8 +855,8 @@ function EngagementContent() {
                         onClick={handleHideComment}
                         className={`p-1.5 rounded-lg border text-xs font-medium flex items-center gap-1 transition-colors ${
                           activeComment.is_hidden
-                            ? "bg-amber-500/15 border-amber-500/30 text-amber-400"
-                            : "bg-[#20202B] border-[#2C2C3C] text-[#8A8797] hover:text-white"
+                            ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                            : "bg-[#EFEFED] hover:bg-[#E5E5E2] border-black/[0.08] text-[#37352F] dark:bg-[#20202B] dark:border-[#2C2C3C] dark:text-[#8A8797] dark:hover:text-white"
                         }`}
                         title="Hide comment on Instagram"
                       >
@@ -865,38 +865,38 @@ function EngagementContent() {
                     </div>
                   </div>
 
-                  <p className="text-sm text-white font-normal leading-relaxed">{activeComment.comment_text}</p>
+                  <p className="text-sm text-[#191919] dark:text-white font-normal leading-relaxed">{activeComment.comment_text}</p>
                 </div>
 
                 {/* Brand Reply Status (if already answered) */}
                 {activeComment.reply_text && (
-                  <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/30 flex flex-col gap-1.5">
+                  <div className="p-3.5 rounded-xl bg-[#E8F3FC] dark:bg-purple-950/20 border border-[#2383E2]/30 dark:border-purple-500/30 flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-purple-300 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-[#2383E2] dark:text-purple-300 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         Brand Reply Published
                       </span>
                       {activeComment.replied_at && (
-                        <span className="text-[10px] text-[#8A8797]">{formatRelativeTime(activeComment.replied_at)}</span>
+                        <span className="text-[10px] text-[#6B6A65] dark:text-[#8A8797]">{formatRelativeTime(activeComment.replied_at)}</span>
                       )}
                     </div>
-                    <p className="text-xs text-[#D4D4D8] leading-relaxed italic">"{activeComment.reply_text}"</p>
+                    <p className="text-xs text-[#37352F] dark:text-[#D4D4D8] leading-relaxed italic">"{activeComment.reply_text}"</p>
                   </div>
                 )}
 
                 {/* AI Reply Suggestions */}
-                <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex flex-col gap-3">
+                <div className="p-4 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] flex flex-col gap-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
+                      <Sparkles className="w-4 h-4 text-[#2383E2] dark:text-purple-400" />
+                      <h4 className="text-xs font-semibold text-[#191919] dark:text-white uppercase tracking-wider">
                         AI Suggested Replies
                       </h4>
                     </div>
                     <button
                       onClick={handleTriggerAIAssist}
                       disabled={generatingAI}
-                      className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium disabled:opacity-50"
+                      className="text-[11px] text-[#2383E2] dark:text-purple-400 hover:underline flex items-center gap-1 font-medium disabled:opacity-50"
                     >
                       <RefreshCw className={`w-3 h-3 ${generatingAI ? "animate-spin" : ""}`} />
                       Regenerate
@@ -904,8 +904,8 @@ function EngagementContent() {
                   </div>
 
                   {generatingAI ? (
-                    <div className="py-4 flex items-center justify-center text-xs text-[#8A8797] gap-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
+                    <div className="py-4 flex items-center justify-center text-xs text-[#6B6A65] dark:text-[#8A8797] gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#2383E2] dark:text-purple-400" />
                       Generating AI reply suggestions...
                     </div>
                   ) : aiSuggestions.length > 0 ? (
@@ -914,30 +914,30 @@ function EngagementContent() {
                         <div
                           key={idx}
                           onClick={() => setReplyText(opt.reply)}
-                          className="p-2.5 rounded-lg bg-[#121218] border border-[#262634] hover:border-purple-500/50 cursor-pointer transition-all flex flex-col gap-1 group"
+                          className="p-2.5 rounded-lg bg-[#F7F6F3] dark:bg-[#121218] border border-black/[0.08] dark:border-[#262634] hover:border-[#2383E2] dark:hover:border-purple-500/50 cursor-pointer transition-all flex flex-col gap-1 group"
                         >
                           <div className="flex items-center justify-between text-[10px]">
-                            <span className="font-semibold text-purple-300 uppercase tracking-wider">{opt.title}</span>
-                            <span className="text-xs text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                            <span className="font-semibold text-[#2383E2] dark:text-purple-300 uppercase tracking-wider">{opt.title}</span>
+                            <span className="text-xs text-[#2383E2] dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                               Use this reply →
                             </span>
                           </div>
-                          <p className="text-xs text-[#D4D4D8] leading-relaxed">{opt.reply}</p>
+                          <p className="text-xs text-[#37352F] dark:text-[#D4D4D8] leading-relaxed">{opt.reply}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-[#71717A] italic">
+                    <p className="text-xs text-[#6B6A65] dark:text-[#71717A] italic">
                       Click "Regenerate" to generate 3 tailored brand replies with AI.
                     </p>
                   )}
                 </div>
 
                 {/* Reply Composer */}
-                <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex flex-col gap-3">
+                <div className="p-4 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] flex flex-col gap-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-white">Reply as Brand</span>
-                    <span className="text-[10px] text-[#71717A]">{replyText.length}/2200 characters</span>
+                    <span className="text-xs font-semibold text-[#191919] dark:text-white">Reply as Brand</span>
+                    <span className="text-[10px] text-[#6B6A65] dark:text-[#71717A]">{replyText.length}/2200 characters</span>
                   </div>
 
                   <textarea
@@ -945,14 +945,14 @@ function EngagementContent() {
                     placeholder="Type brand reply to user..."
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    className="w-full bg-[#121218] border border-[#2B2B3B] rounded-xl p-3 text-xs text-white placeholder-[#71717A] focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
+                    className="w-full bg-[#F7F6F3] dark:bg-[#121218] border border-black/[0.08] dark:border-[#2B2B3B] rounded-xl p-3 text-xs text-[#191919] dark:text-white placeholder:text-[#9B9A97] dark:placeholder-[#71717A] focus:outline-none focus:border-[#2383E2] dark:focus:border-purple-500 resize-none leading-relaxed"
                   />
 
                   <div className="flex justify-end">
                     <button
                       onClick={handleSendCommentReply}
                       disabled={sendingReply || !replyText.trim()}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-md shadow-purple-900/20 disabled:opacity-50 transition-all"
+                      className="px-4 py-2 rounded-lg bg-[#191919] hover:bg-[#2F2E2B] dark:bg-gradient-to-r dark:from-purple-600 dark:to-indigo-600 dark:hover:from-purple-500 dark:hover:to-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>{sendingReply ? "Publishing to Instagram..." : "Publish Reply to Instagram"}</span>
@@ -961,7 +961,7 @@ function EngagementContent() {
                 </div>
               </>
             ) : (
-              <div className="p-12 text-center text-[#71717A] text-xs">
+              <div className="p-12 text-center text-[#6B6A65] dark:text-[#71717A] text-xs">
                 Select a comment from the left feed to view details and reply.
               </div>
             )
@@ -969,14 +969,14 @@ function EngagementContent() {
             /* Direct Messages Thread View */
             activeConversation ? (
               <>
-                <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] flex items-center justify-between shadow-xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                    <div className="w-8 h-8 rounded-full bg-[#EFEFED] text-[#37352F] border border-black/[0.08] dark:bg-white/[0.08] dark:text-[#F2F0F7] dark:border-white/[0.08] flex items-center justify-center text-xs font-bold shadow-2xs">
                       {activeConversation.participant_username.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="text-xs font-semibold text-white">@{activeConversation.participant_username}</h3>
-                      <p className="text-[10px] text-[#71717A]">
+                      <h3 className="text-xs font-semibold text-[#191919] dark:text-white">@{activeConversation.participant_username}</h3>
+                      <p className="text-[10px] text-[#6B6A65] dark:text-[#71717A]">
                         Instagram DM Thread • Human Agent 7-Day Window Active
                       </p>
                     </div>
@@ -997,24 +997,24 @@ function EngagementContent() {
                           <div
                             className={`p-3 rounded-2xl text-xs leading-relaxed ${
                               m.is_from_brand
-                                ? "bg-purple-600 text-white rounded-br-none"
-                                : "bg-[#181822] border border-[#2B2B3B] text-[#D4D4D8] rounded-bl-none"
+                                ? "bg-[#191919] text-white dark:bg-purple-600 rounded-br-none"
+                                : "bg-[#EFEFED] text-[#37352F] border border-black/[0.08] dark:bg-[#181822] dark:border-[#2B2B3B] dark:text-[#D4D4D8] rounded-bl-none"
                             }`}
                           >
                             {m.message_text}
                           </div>
-                          <span className="text-[9px] text-[#71717A] mt-1 px-1">{formatRelativeTime(m.sent_at)}</span>
+                          <span className="text-[9px] text-[#6B6A65] dark:text-[#71717A] mt-1 px-1">{formatRelativeTime(m.sent_at)}</span>
                         </div>
                       ))}
                       <div ref={messagesEndRef} />
                     </>
                   ) : (
-                    <div className="p-6 text-center text-xs text-[#71717A] italic">No prior messages recorded.</div>
+                    <div className="p-6 text-center text-xs text-[#6B6A65] dark:text-[#71717A] italic">No prior messages recorded.</div>
                   )}
                 </div>
 
                 {/* DM Composer */}
-                <div className="p-3 bg-[#181822] border border-[#2B2B3B] rounded-xl flex items-center gap-2">
+                <div className="p-3 bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] rounded-xl flex items-center gap-2 shadow-xs">
                   <input
                     type="text"
                     placeholder="Type direct message..."
@@ -1026,12 +1026,12 @@ function EngagementContent() {
                         handleSendDm();
                       }
                     }}
-                    className="flex-1 bg-transparent text-xs text-white placeholder-[#71717A] focus:outline-none px-2"
+                    className="flex-1 bg-transparent text-xs text-[#191919] dark:text-white placeholder-[#9B9A97] dark:placeholder-[#71717A] focus:outline-none px-2"
                   />
                   <button
                     onClick={handleSendDm}
                     disabled={sendingReply || !dmText.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1 disabled:opacity-50 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-purple-600 dark:hover:bg-purple-500 text-xs font-medium flex items-center gap-1 disabled:opacity-50 transition-colors shadow-xs"
                   >
                     <Send className="w-3 h-3" />
                     <span>Send DM</span>
@@ -1039,7 +1039,7 @@ function EngagementContent() {
                 </div>
               </>
             ) : (
-              <div className="p-12 text-center text-[#71717A] text-xs">Select a DM conversation from the left feed.</div>
+              <div className="p-12 text-center text-[#6B6A65] dark:text-[#71717A] text-xs">Select a DM conversation from the left feed.</div>
             )
           )}
         </div>
@@ -1047,102 +1047,102 @@ function EngagementContent() {
         {/* ============================================================== */}
         {/*    RIGHT PANE: AUTHOR INTEL & META TOKEN HEALTH (3 COLS)       */}
         {/* ============================================================== */}
-        <div className="md:col-span-3 flex flex-col bg-[#121218] p-5 gap-5 overflow-y-auto max-h-[calc(100vh-140px)]">
+        <div className="md:col-span-3 flex flex-col bg-[#F7F6F3] dark:bg-[#121218] p-5 gap-5 overflow-y-auto max-h-[calc(100vh-140px)]">
           {/* Author Card */}
-          <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex flex-col gap-3">
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-purple-400" />
+          <div className="p-4 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] flex flex-col gap-3 shadow-xs">
+            <h4 className="text-xs font-semibold text-[#191919] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-[#2383E2] dark:text-purple-400" />
               Community Member
             </h4>
 
             {activeComment ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-sm font-bold text-white shadow">
+                  <div className="w-10 h-10 rounded-full bg-[#EFEFED] text-[#37352F] border border-black/[0.1] dark:border-transparent dark:bg-gradient-to-tr dark:from-purple-500 dark:to-indigo-500 dark:text-white flex items-center justify-center text-sm font-bold shadow-2xs">
                     {activeComment.author_username.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h5 className="text-xs font-semibold text-white">@{activeComment.author_username}</h5>
-                    <p className="text-[10px] text-purple-300 capitalize">{activeComment.platform} User</p>
+                    <h5 className="text-xs font-semibold text-[#191919] dark:text-white">@{activeComment.author_username}</h5>
+                    <p className="text-[10px] text-[#2383E2] dark:text-purple-300 capitalize">{activeComment.platform} User</p>
                   </div>
                 </div>
 
-                <div className="mt-2 pt-2 border-t border-[#242430] flex flex-col gap-1.5 text-xs">
-                  <div className="flex justify-between text-[#8A8797]">
+                <div className="mt-2 pt-2 border-t border-black/[0.06] dark:border-[#242430] flex flex-col gap-1.5 text-xs">
+                  <div className="flex justify-between text-[#6B6A65] dark:text-[#8A8797]">
                     <span>Detected Intent:</span>
-                    <span className="font-semibold text-white capitalize">
+                    <span className="font-semibold text-[#191919] dark:text-white capitalize">
                       {activeComment.intent_category || "General"}
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-[#8A8797]">
+                  <div className="flex justify-between text-[#6B6A65] dark:text-[#8A8797]">
                     <span>Triage Urgency:</span>
                     <span
                       className={`font-semibold capitalize ${
                         activeComment.urgency === "high" || activeComment.urgency === "urgent"
-                          ? "text-rose-400"
-                          : "text-zinc-300"
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-[#37352F] dark:text-zinc-300"
                       }`}
                     >
                       {activeComment.urgency}
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-[#8A8797]">
+                  <div className="flex justify-between text-[#6B6A65] dark:text-[#8A8797]">
                     <span>Status:</span>
-                    <span className="font-semibold capitalize text-emerald-400">{activeComment.status}</span>
+                    <span className="font-semibold capitalize text-emerald-600 dark:text-emerald-400">{activeComment.status}</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-[#71717A] italic">No active commenter selected.</p>
+              <p className="text-xs text-[#6B6A65] dark:text-[#71717A] italic">No active commenter selected.</p>
             )}
           </div>
 
           {/* Meta Live Token Health & Scopes Card */}
-          <div className="p-4 rounded-xl bg-[#181822] border border-[#2B2B3B] flex flex-col gap-3">
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="p-4 rounded-xl bg-white dark:bg-[#181822] border border-black/[0.08] dark:border-[#2B2B3B] flex flex-col gap-3 shadow-xs">
+            <h4 className="text-xs font-semibold text-[#191919] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               Meta App Permissions Status
             </h4>
 
             <div className="flex flex-col gap-2 text-xs">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-[#121218] border border-[#242430]">
-                <span className="text-[#A1A1AA] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#F7F6F3] dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430]">
+                <span className="text-[#37352F] dark:text-[#A1A1AA] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Instagram Comments
                 </span>
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                   Active
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg bg-[#121218] border border-[#242430]">
-                <span className="text-[#A1A1AA] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#F7F6F3] dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430]">
+                <span className="text-[#37352F] dark:text-[#A1A1AA] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Direct Messages (DMs)
                 </span>
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                   Active
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg bg-[#121218] border border-[#242430]">
-                <span className="text-[#A1A1AA] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#F7F6F3] dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430]">
+                <span className="text-[#37352F] dark:text-[#A1A1AA] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Human Agent 7-Day Window
                 </span>
-                <span className="text-[10px] font-semibold text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                <span className="text-[10px] font-semibold text-[#2383E2] dark:text-purple-300 bg-blue-500/10 dark:bg-purple-500/10 px-2 py-0.5 rounded border border-[#2383E2]/20 dark:border-purple-500/20">
                   Ready
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg bg-[#121218] border border-[#242430]">
-                <span className="text-[#A1A1AA] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#F7F6F3] dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430]">
+                <span className="text-[#37352F] dark:text-[#A1A1AA] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Comment / Reel Liking
                 </span>
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                   Active
                 </span>
               </div>

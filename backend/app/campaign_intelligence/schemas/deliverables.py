@@ -82,7 +82,7 @@ class DeliverablePlan(BaseModel):
     slot_index: int = Field(default=0, ge=0, description="0-indexed sequence position matching DeliverableSlot")
     title: str = Field(min_length=3)
     deliverable_type: str = Field(description="reel, carousel, static_graphic, text_post")
-    platform: str = Field(description="instagram, linkedin, twitter, facebook, youtube")
+    platform: str = Field(description="instagram, facebook, linkedin")
     planned_week: int = Field(default=1, ge=1, le=5)
     planned_day: int = Field(default=1, ge=1, description="Day number of the sprint (e.g. 1 for Day 1, 2 for Day 2)")
     scheduled_date: str | None = Field(default=None, description="Exact calendar date (YYYY-MM-DD)")

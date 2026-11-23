@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.contract import ContractStatus
 
@@ -49,6 +49,23 @@ class BrandProfileOut(BaseModel):
     content_pillars: Any | None
     goals: Any | None
     created_at: datetime
+
+
+class AutoPopulateBrandProfileRequest(BaseModel):
+    website_url: str | None = None
+
+
+class AutoPopulateBrandProfileResponse(BaseModel):
+    brand_voice: str
+    tone_examples: list[str]
+    content_pillars: list[str]
+    target_audience: list[str]
+    approved_phrases: list[str]
+    prohibited_claims: list[str]
+    goals: list[str] = Field(default_factory=list)
+    crawled_pages_count: int = 0
+    crawled_urls: list[str] = Field(default_factory=list)
+    source_website: str
 
 
 # ── Scope Item Schemas ──

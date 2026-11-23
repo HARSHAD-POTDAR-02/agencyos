@@ -326,17 +326,18 @@ export default function TeamManagementPage() {
   return (
     <main className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* ── Editorial Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-black/[0.08] dark:border-white/[0.06]">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-mono text-[#A3A0B0]">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#6B6A65] dark:text-[#A3A0B0]">
             <span>Organization</span>
-            <span className="text-white/[0.2]">/</span>
-            <span className="text-[#A78BFA] font-medium">Specialist Roster</span>
+            <span className="text-black/[0.2] dark:text-white/[0.2]">/</span>
+            <span className="text-[#2383E2] dark:text-[#A78BFA] font-medium">Specialist Roster</span>
           </div>
-          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
-            Team & Production Specialists
+          <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+            <Users className="w-6 h-6 text-[#191919] dark:text-white" />
+            <span>Team & Production Specialists</span>
           </h1>
-          <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
+          <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-2xl leading-relaxed">
             Manage your scriptwriters, video editors, and designers. When AI generates campaign deliverables, tasks are automatically routed directly to the designated specialist.
           </p>
         </div>
@@ -349,38 +350,38 @@ export default function TeamManagementPage() {
               setShowAddModal(true);
             }}
             title="Add specialist (Press C)"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] rounded-xl text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] rounded-xl text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Add Specialist</span>
-            <kbd className="text-[9px] font-mono px-1 rounded bg-black/40 text-[#101014]">C</kbd>
+            <kbd className="text-[9px] font-mono px-1 rounded bg-white/20 text-white dark:bg-black/40 dark:text-[#101014]">C</kbd>
           </button>
         )}
       </div>
 
       {/* ── Linear 4-Segment Telemetry Strip ── */}
-      <div className="surface-card rounded-2xl border border-white/[0.08] p-4 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/[0.06]">
+      <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-4 shadow-sm grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#E5E5E2] dark:divide-white/[0.06]">
         {/* Metric 1 */}
         <div className="flex flex-col justify-between pt-2 md:pt-0 md:px-3 first:px-0">
-          <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-semibold uppercase tracking-wider">
             <span>Total Members</span>
-            <Users className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <Users className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{members.length}</span>
-            <span className="text-[11px] text-[#A3A0B0] font-mono">active roster</span>
+            <span className="text-2xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7]">{members.length}</span>
+            <span className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] font-sans">active roster</span>
           </div>
         </div>
 
         {/* Metric 2 */}
         <div className="flex flex-col justify-between pt-2 md:pt-0 md:px-4">
-          <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-semibold uppercase tracking-wider">
             <span>Specialists</span>
-            <Sparkles className="w-3.5 h-3.5 text-[#69A9D8]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#0B6E99] dark:text-[#69A9D8]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{specialistsCount}</span>
-            <span className="text-[11px] text-[#69A9D8] font-mono font-medium">
+            <span className="text-2xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7]">{specialistsCount}</span>
+            <span className="text-[11px] text-[#0B6E99] dark:text-[#69A9D8] font-sans font-medium">
               Writers, Editors & Designers
             </span>
           </div>
@@ -388,13 +389,13 @@ export default function TeamManagementPage() {
 
         {/* Metric 3 */}
         <div className="flex flex-col justify-between pt-2 md:pt-0 md:px-4">
-          <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-semibold uppercase tracking-wider">
             <span>Management</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-[#45B88A]" />
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0F7B6C] dark:text-[#45B88A]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#F2F0F7]">{managersCount}</span>
-            <span className="text-[11px] text-[#45B88A] font-mono font-medium">
+            <span className="text-2xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7]">{managersCount}</span>
+            <span className="text-[11px] text-[#0F7B6C] dark:text-[#45B88A] font-sans font-medium">
               Supervision & Strategy
             </span>
           </div>
@@ -402,39 +403,39 @@ export default function TeamManagementPage() {
 
         {/* Metric 4 */}
         <div className="flex flex-col justify-between pt-2 md:pt-0 md:px-4">
-          <div className="flex items-center justify-between text-[#A3A0B0] text-[11px] font-medium uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-semibold uppercase tracking-wider">
             <span>Auto-Routing</span>
-            <span className="w-2 h-2 rounded-full bg-[#45B88A] ring-2 ring-[#45B88A]/20 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 animate-pulse" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xs font-semibold text-[#45B88A] font-mono">ACTIVE</span>
-            <span className="text-[11px] text-[#A3A0B0] font-mono">LangGraph pipeline sync</span>
+            <span className="text-xs font-semibold text-[#0F7B6C] dark:text-[#45B88A] font-mono">ACTIVE</span>
+            <span className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] font-sans">LangGraph pipeline sync</span>
           </div>
         </div>
       </div>
 
       {/* ── Filter & Search Toolstrip (Linear Style) ── */}
-      <div className="surface-card rounded-xl border border-white/[0.08] p-2.5 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
+      <div className="surface-card rounded-xl border border-black/[0.08] dark:border-white/[0.08] p-2.5 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
         {/* Search Input with / Shortcut */}
         <div className="relative w-full md:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#A3A0B0] pointer-events-none" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B6A65] dark:text-[#A3A0B0] pointer-events-none" />
           <input
             ref={searchInputRef}
             type="text"
             placeholder="Filter specialists... (Press / to focus)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#101014] border border-white/[0.08] rounded-lg pl-8.5 pr-8 py-1.5 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/50 focus:outline-none focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 transition-all font-sans"
+            className="w-full bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-lg pl-8.5 pr-8 py-1.5 text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#9B9A97] dark:placeholder-[#A3A0B0]/50 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#2383E2]/20 dark:focus:ring-[#A78BFA]/20 transition-all font-sans"
           />
           {searchQuery ? (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#F2F0F7] cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#191919] dark:hover:text-[#F2F0F7] cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           ) : (
-            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono px-1 py-0.5 rounded bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08] pointer-events-none">
+            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono px-1 py-0.5 rounded bg-black/[0.06] dark:bg-white/[0.06] text-[#6B6A65] dark:text-[#A3A0B0] border border-black/[0.08] dark:border-white/[0.08] pointer-events-none">
               /
             </kbd>
           )}
@@ -467,12 +468,18 @@ export default function TeamManagementPage() {
               onClick={() => setRoleFilter(tab.id)}
               className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                 roleFilter === tab.id
-                  ? "bg-white/[0.08] text-[#F2F0F7] shadow-xs font-semibold"
-                  : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.03]"
+                  ? "bg-[#191919] text-white dark:bg-white/[0.08] dark:text-[#F2F0F7] shadow-xs font-semibold"
+                  : "text-[#6B6A65] hover:text-[#191919] hover:bg-black/[0.04] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] dark:hover:bg-white/[0.03]"
               }`}
             >
               <span>{tab.label}</span>
-              <span className="text-[10px] font-mono px-1 rounded bg-black/40 text-[#71717A]">
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
+                  roleFilter === tab.id
+                    ? "bg-white/20 text-white dark:bg-black/40 dark:text-[#71717A]"
+                    : "bg-black/[0.06] text-[#37352F] dark:bg-black/40 dark:text-[#71717A]"
+                }`}
+              >
                 {tab.count}
               </span>
             </button>
@@ -481,7 +488,7 @@ export default function TeamManagementPage() {
       </div>
 
       {/* ── Team Members Table (Linear Density 38-40px rows) ── */}
-      <div className="surface-card rounded-2xl border border-white/[0.08] shadow-xs overflow-hidden">
+      <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] shadow-xs overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-[#A3A0B0] text-xs font-mono">
             <RefreshCw className="w-5 h-5 text-[#A78BFA] animate-spin mx-auto mb-2" />
@@ -511,7 +518,7 @@ export default function TeamManagementPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#121217] border-b border-white/[0.08] text-[#A3A0B0] font-mono text-[10px] uppercase tracking-wider">
+              <thead className="bg-[#F7F6F3] dark:bg-[#121217] border-b border-black/[0.08] dark:border-white/[0.08] text-[#6B6A65] dark:text-[#A3A0B0] font-mono text-[10px] uppercase tracking-wider">
                 <tr>
                   <th className="py-2.5 px-4 font-medium">Member</th>
                   <th className="py-2.5 px-4 font-medium">Role & Specialization</th>
@@ -521,39 +528,39 @@ export default function TeamManagementPage() {
                   {isManagerOrOwner && <th className="py-2.5 px-4 text-right font-medium">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-black/[0.08] dark:divide-white/[0.04]">
                 {filteredMembers.map((m) => {
                   const roleMeta = ROLE_CONFIG[m.role] || {
                     label: m.role,
                     description: "Agency Team Member",
                     icon: User,
-                    color: "text-[#A3A0B0]",
-                    bg: "bg-[#20202A] border-white/[0.08]",
+                    color: "text-[#6B6A65] dark:text-[#A3A0B0]",
+                    bg: "bg-[#EFEFED] text-[#37352F] border-black/[0.08] dark:bg-[#20202A] dark:border-white/[0.08]",
                   };
                   const RoleIcon = roleMeta.icon;
                   const isSelf = user?.email === m.user_email;
                   const activeTasks = taskCountsByMember[m.user_id] || 0;
 
                   return (
-                    <tr key={m.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <tr key={m.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
                       {/* Name & Email */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-[#20202A] border border-white/[0.08] flex items-center justify-center text-[#A78BFA] font-bold text-xs shrink-0 font-mono">
+                          <div className="w-7 h-7 rounded-lg bg-[#EFEFED] text-[#191919] border border-black/[0.08] dark:bg-[#20202A] dark:border-white/[0.08] dark:text-[#A78BFA] flex items-center justify-center font-bold text-xs shrink-0 font-mono">
                             {getMonogram(m.user_full_name, m.user_email)}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-medium text-[#F2F0F7] truncate">
+                              <span className="font-medium text-[#191919] dark:text-[#F2F0F7] truncate">
                                 {m.user_full_name || m.user_email?.split("@")[0]}
                               </span>
                               {isSelf && (
-                                <span className="px-1.5 py-0.2 rounded bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 text-[9px] font-mono font-bold uppercase">
+                                <span className="px-1.5 py-0.2 rounded bg-[#2383E2]/10 text-[#2383E2] border border-[#2383E2]/30 dark:bg-[#A78BFA]/10 dark:text-[#A78BFA] dark:border-[#A78BFA]/30 text-[9px] font-mono font-bold uppercase">
                                   You
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-[#A3A0B0] font-mono truncate block">
+                            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono truncate block">
                               {m.user_email}
                             </span>
                           </div>
@@ -567,7 +574,7 @@ export default function TeamManagementPage() {
                             <select
                               value={m.role}
                               onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                              className={`text-[11px] font-medium px-2 py-1 rounded-lg border border-white/[0.08] bg-[#101014] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50 transition-colors ${roleMeta.color}`}
+                              className={`text-[11px] font-medium px-2 py-1 rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-[#F7F6F3] dark:bg-[#101014] text-[#191919] dark:text-[#F2F0F7] cursor-pointer focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 transition-colors ${roleMeta.color}`}
                             >
                               <option value="editor">Video Editor</option>
                               <option value="writer">Scriptwriter / Copywriter</option>
@@ -592,10 +599,10 @@ export default function TeamManagementPage() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
                             activeTasks > 5
-                              ? "bg-[#E5AA58]/10 text-[#E5AA58] border border-[#E5AA58]/30"
+                              ? "bg-amber-500/10 text-amber-700 dark:text-[#E5AA58] border border-amber-500/30"
                               : activeTasks > 0
-                              ? "bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30"
-                              : "bg-white/[0.04] text-[#71717A] border border-white/[0.06]"
+                              ? "bg-blue-500/10 text-blue-700 dark:text-[#69A9D8] border border-blue-500/30"
+                              : "bg-[#EFEFED] text-[#6B6A65] border border-black/[0.08] dark:bg-white/[0.04] dark:text-[#71717A] dark:border-white/[0.06]"
                           }`}
                         >
                           <Activity className="w-2.5 h-2.5" />
@@ -607,13 +614,13 @@ export default function TeamManagementPage() {
 
                       {/* Auto Assignment Description */}
                       <td className="py-3 px-4">
-                        <span className="text-[#A3A0B0] text-xs leading-relaxed block max-w-xs truncate">
+                        <span className="text-[#6B6A65] dark:text-[#A3A0B0] text-xs leading-relaxed block max-w-xs truncate">
                           {roleMeta.description}
                         </span>
                       </td>
 
                       {/* Joined Date */}
-                      <td className="py-3 px-4 text-[#A3A0B0] text-[11px] font-mono">
+                      <td className="py-3 px-4 text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] font-mono">
                         {new Date(m.created_at).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
@@ -627,7 +634,7 @@ export default function TeamManagementPage() {
                           {!isSelf && m.role !== "owner" && (
                             <button
                               onClick={() => handleRemoveMember(m.id, m.user_email || "member")}
-                              className="p-1.5 rounded-lg text-[#A3A0B0] hover:text-[#E16F7B] hover:bg-[#E16F7B]/10 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#E16F7B] hover:bg-[#E16F7B]/10 transition-colors cursor-pointer"
                               title="Remove from agency"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -645,40 +652,40 @@ export default function TeamManagementPage() {
       </div>
 
       {/* ── Automatic Specialist Routing Guide (Cohesive Architecture Reference) ── */}
-      <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+      <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3 shadow-xs">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
-          <h2 className="text-xs font-heading font-semibold text-[#F2F0F7] uppercase tracking-wider">
+          <Sparkles className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
+          <h2 className="text-xs font-heading font-semibold text-[#191919] dark:text-[#F2F0F7] uppercase tracking-wider">
             Automatic Specialist Routing Architecture
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          <div className="p-3.5 rounded-xl bg-[#101014] border border-white/[0.06] space-y-1">
-            <div className="flex items-center gap-2 font-medium text-[#A78BFA]">
-              <PenTool className="w-3.5 h-3.5 text-[#A78BFA]" />
+          <div className="p-3.5 rounded-xl bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.06] space-y-1">
+            <div className="flex items-center gap-2 font-medium text-[#2383E2] dark:text-[#A78BFA]">
+              <PenTool className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
               <span>Scriptwriter (`writer`)</span>
             </div>
-            <p className="text-[#A3A0B0] text-[11px] leading-relaxed">
+            <p className="text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] leading-relaxed">
               When campaigns are approved, <strong>Scripting</strong> and <strong>Hook development</strong> tasks are routed directly to the writer with brand guidelines pre-attached.
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#101014] border border-white/[0.06] space-y-1">
-            <div className="flex items-center gap-2 font-medium text-[#69A9D8]">
-              <Video className="w-3.5 h-3.5 text-[#69A9D8]" />
+          <div className="p-3.5 rounded-xl bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.06] space-y-1">
+            <div className="flex items-center gap-2 font-medium text-[#0B6E99] dark:text-[#69A9D8]">
+              <Video className="w-3.5 h-3.5 text-[#0B6E99] dark:text-[#69A9D8]" />
               <span>Video Editor (`editor`)</span>
             </div>
-            <p className="text-[#A3A0B0] text-[11px] leading-relaxed">
+            <p className="text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] leading-relaxed">
               All <strong>Video Editing</strong>, pacing, audio sync, and <strong>Filming</strong> tasks are routed to the editor with visual storyboards and camera cues.
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#101014] border border-white/[0.06] space-y-1">
-            <div className="flex items-center gap-2 font-medium text-[#45B88A]">
-              <Palette className="w-3.5 h-3.5 text-[#45B88A]" />
+          <div className="p-3.5 rounded-xl bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.06] space-y-1">
+            <div className="flex items-center gap-2 font-medium text-[#0F7B6C] dark:text-[#45B88A]">
+              <Palette className="w-3.5 h-3.5 text-[#0F7B6C] dark:text-[#45B88A]" />
               <span>Graphic Designer (`designer`)</span>
             </div>
-            <p className="text-[#A3A0B0] text-[11px] leading-relaxed">
+            <p className="text-[#6B6A65] dark:text-[#A3A0B0] text-[11px] leading-relaxed">
               Thumbnails, carousel slides, static banner ads, and visual overlays route directly to the designer with aspect ratios locked.
             </p>
           </div>

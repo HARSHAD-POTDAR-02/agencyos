@@ -254,7 +254,8 @@ export default function ClientsPage() {
               Client Directory
             </span>
           </div>
-          <h1 className="font-heading text-xl md:text-2xl font-semibold text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+            <Building2 className="w-6 h-6 text-[#191919] dark:text-white" />
             <span>Client Workspaces</span>
             <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-md bg-[rgba(167,139,250,0.12)] text-[#A78BFA] border border-[#A78BFA]/25 shadow-xs">
               {statusFilter === "offboarded" ? `${offboardedClientsCount} Archived` : `${activeClientsCount} Active`}
@@ -267,11 +268,11 @@ export default function ClientsPage() {
 
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] hover:shadow-[0_2px_14px_rgba(167,139,250,0.45)] cursor-pointer shrink-0"
+          className="inline-flex items-center gap-2 bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
         >
-          <Plus className="w-3.5 h-3.5 text-[#101014]" />
+          <Plus className="w-3.5 h-3.5 text-white dark:text-[#101014]" />
           <span>Onboard Client</span>
-          <span className="kbd-pill text-[9px] bg-[#101014]/20 text-[#101014] border-black/20 hidden sm:inline-flex">C</span>
+          <span className="kbd-pill text-[9px] bg-white/20 text-white dark:bg-[#101014]/20 dark:text-[#101014] border-white/20 dark:border-black/20 hidden sm:inline-flex">C</span>
         </button>
       </div>
 
@@ -381,9 +382,9 @@ export default function ClientsPage() {
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_10px_rgba(167,139,250,0.3)] cursor-pointer"
+            className="inline-flex items-center gap-1.5 bg-[#191919] hover:bg-[#2e2e2e] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 text-[#101014]" />
+            <Plus className="w-3.5 h-3.5 text-white dark:text-[#101014]" />
             <span>Onboard First Client</span>
           </button>
         </div>
@@ -436,10 +437,10 @@ export default function ClientsPage() {
                       </td>
 
                       {/* Industry / Location */}
-                      <td className="py-3 px-4 text-[#A3A0B0]">
-                        <div className="font-medium text-[#F2F0F7]/90 text-xs">{client.industry || "General Industry"}</div>
-                        <div className="text-[10.5px] text-[#A3A0B0] flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-2.5 h-2.5 text-[#A3A0B0]/60 shrink-0" />
+                      <td className="py-3 px-4 text-[#6B6A65] dark:text-[#A3A0B0]">
+                        <div className="font-medium text-[#37352F] dark:text-[#F2F0F7]/90 text-xs">{client.industry || "General Industry"}</div>
+                        <div className="text-[10.5px] text-[#6B6A65] dark:text-[#A3A0B0] flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-2.5 h-2.5 text-[#6B6A65] dark:text-[#A3A0B0]/60 shrink-0" />
                           <span>{client.location || "Location unassigned"}</span>
                         </div>
                       </td>

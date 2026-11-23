@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,8 @@ from app.schemas.campaign import QuotaSummaryOut
 from app.schemas.client import ClientCreate, ClientListItem, ClientOut, ClientUpdate
 from app.schemas.portal import ClientReviewerCreate, ClientReviewerOut
 from app.schemas.contract import (
+    AutoPopulateBrandProfileRequest,
+    AutoPopulateBrandProfileResponse,
     BrandProfileOut,
     BrandProfileUpdate,
     ContractCreate,
@@ -33,6 +36,10 @@ from app.schemas.contract import (
 )
 from app.services.quota_service import get_monthly_quota_summary, get_clients_scope_progress
 from app.services.tenant_service import get_client_for_agency
+from app.campaign_intelligence.tools.brand_tools import crawl_client_website
+from app.core.llm import invoke_structured_llm
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agencies/{agency_id}/clients", tags=["clients"])
 
@@ -242,6 +249,169 @@ async def upsert_brand_profile(
     await db.commit()
     await db.refresh(profile)
     return BrandProfileOut.model_validate(profile)
+
+
+class BrandGuidelinesExtraction(BaseModel):
+    brand_voice: str = Field(description="Comprehensive analysis of brand voice, communication style, core persona, and emotional baseline")
+    tone_examples: list[str] = Field(description="3-4 exemplar on-brand sentences or hooks representing their voice, strictly grounded in actual offerings")
+    content_pillars: list[str] = Field(description="4-6 strategic content pillars and core topics emphasized by the brand")
+    target_audience: list[str] = Field(description="3-5 audience demographics, personas, or buyer pain points")
+    approved_phrases: list[str] = Field(
+        default_factory=list,
+        description="VERBATIM taglines, slogans, or registered mottos from the website ONLY. DO NOT invent or fabricate slogans. If none or few exist, return only the verified ones."
+    )
+    prohibited_claims: list[str] = Field(description="3-5 industry-specific compliance risks, false claim guardrails, and overpromises to avoid")
+    goals: list[str] = Field(default_factory=list, description="2-4 marketing or commercial objectives")
+
+
+@router.post("/{client_id}/auto-populate-profile", response_model=AutoPopulateBrandProfileResponse)
+async def auto_populate_brand_profile(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    payload: AutoPopulateBrandProfileRequest = Body(default_factory=AutoPopulateBrandProfileRequest),
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> AutoPopulateBrandProfileResponse:
+    """
+    Brand Intelligence Web Crawler & Synthesis Engine:
+    Crawls client website (SSRF-safe with 7-day DB caching)
+    and uses structured LLM reasoning to extract brand voice, tone benchmarks,
+    content pillars, target audience, approved taglines, and prohibited claims.
+    """
+    client = await get_client_for_agency(client_id, agency_id, db)
+    req_website = (payload.website_url if payload else None) or client.website or ""
+    target_url = req_website.strip()
+    if not target_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please provide a valid website URL for this client.",
+        )
+
+    # Persist website on client if not already set
+    if not client.website and target_url:
+        client.website = target_url
+
+    # Fetch existing profile for caching
+    result = await db.execute(
+        select(BrandProfile)
+        .where(BrandProfile.client_id == client_id)
+        .order_by(BrandProfile.version.desc())
+    )
+    brand_profile = result.scalars().first()
+
+    # 1. Crawl website
+    crawled_data = await crawl_client_website(
+        target_url,
+        max_pages=4,
+        db=db,
+        brand_profile=brand_profile,
+    )
+    await db.commit()
+
+    crawled_text = (crawled_data.get("combined_text") or "").strip()
+    crawled_pages = crawled_data.get("pages") or []
+    crawled_urls = [
+        p.get("url") for p in crawled_pages if isinstance(p, dict) and p.get("url")
+    ]
+    if not crawled_urls and target_url:
+        crawled_urls = [target_url]
+
+    # 2. Extract brand parameters with LLM
+    prompt = f"""
+You are the Brand Intelligence & Market Research Director for AgencyOS.
+Your objective is to deeply extract, structure, and ground the authentic brand guidelines for this client based on their website content and business profile.
+
+Business Name: {client.business_name}
+Industry: {client.industry or 'General Commerce / Industry Services'}
+Location: {client.location or 'Global'}
+Website URL: {target_url}
+Crawled Pages: {len(crawled_pages)}
+Urls Visited: {', '.join(crawled_urls)}
+
+Website Crawl Extract:
+\"\"\"
+{crawled_text[:10000] if crawled_text else 'Note: Website crawl returned minimal plain text. Infer highly realistic, production-ready brand guidelines based on the client name, industry, and location.'}
+\"\"\"
+
+STRICT GROUNDING & ZERO-HALLUCINATION RULES:
+1. approved_phrases:
+   - ONLY extract literal, verbatim taglines, slogans, mottos, or official brand statements explicitly printed in the website crawl extract.
+   - STRICT PROHIBITION: DO NOT invent, hallucinate, or creatively brainstorm slogans (e.g. do NOT fabricate phrases like "Where flavors meet friends" or "Your community, your cuisine").
+   - If the website only has 1 or 2 authentic taglines (e.g. "Country's first-ever restro-bar" or "6 cities. 8 outlets. Infinite memories"), return ONLY those 1 or 2. If none exist verbatim on the website, return an empty list [].
+
+2. brand_voice:
+   - Provide a vivid, accurate 2-3 sentence description of their authentic communication style, emotional baseline, and personality derived from their real website copy.
+
+3. tone_examples:
+   - Provide 3-4 exemplar copy hooks that illustrate their voice. They must be strictly consistent with the client's actual offerings, format, and ambiance (do not mention items or services the brand does not offer).
+
+4. content_pillars:
+   - Extract 4-6 strategic narrative buckets that reflect their actual offerings, programs, and value propositions (e.g. signature offerings, community events, location highlights, craftsmanship).
+
+5. target_audience:
+   - Provide 3-5 grounded buyer personas, demographics, and psychographic segments based on the client's actual pricing, location, and concept.
+
+6. prohibited_claims:
+   - Identify 3-5 realistic compliance risk boundaries, false claim guardrails, and regulatory overpromises relevant to this specific industry and client (e.g. for restaurants/wellness: unverified health/cure/weight-loss claims, uncertified 100% organic claims, or false superlative "#1 in the country" claims without proof).
+
+7. goals:
+   - Extract 2-4 pragmatic marketing and commercial goals based on their business model.
+"""
+
+    try:
+        extraction = await invoke_structured_llm(
+            prompt=prompt,
+            schema_class=BrandGuidelinesExtraction,
+            temperature=0.2,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Auto-populate LLM synthesis failed, using grounded fallback: %s",
+            exc,
+        )
+        extraction = BrandGuidelinesExtraction(
+            brand_voice=f"Authoritative, approachable, and transparent voice tailored for {client.business_name}.",
+            tone_examples=[
+                f"Excellence and precision are the benchmark at {client.business_name}.",
+                "Measurable outcomes, zero unnecessary friction.",
+                "Crafted for longevity and real-world performance.",
+            ],
+            content_pillars=[
+                "Industry Insights & Analysis",
+                "Behind The Scenes & Craftsmanship",
+                "Customer Success & Tangible Impact",
+                "Actionable Tips & Best Practices",
+            ],
+            target_audience=[
+                f"Discerning clients and customers seeking quality {client.industry or 'solutions'}",
+                "Value-conscious decision makers looking for proven expertise",
+                "Modern audiences who prioritize reliability and transparency",
+            ],
+            approved_phrases=[],
+            prohibited_claims=[
+                "100% unconditional results without qualification",
+                "Cheapest in the market",
+                "Unverified competitor comparisons",
+                "Instant overnight transformations",
+            ],
+            goals=[
+                "Establish industry authority and trust",
+                "Drive high-intent inquiries and engagement",
+            ],
+        )
+
+    return AutoPopulateBrandProfileResponse(
+        brand_voice=extraction.brand_voice,
+        tone_examples=extraction.tone_examples,
+        content_pillars=extraction.content_pillars,
+        target_audience=extraction.target_audience,
+        approved_phrases=extraction.approved_phrases,
+        prohibited_claims=extraction.prohibited_claims,
+        goals=extraction.goals,
+        crawled_pages_count=len(crawled_pages),
+        crawled_urls=crawled_urls,
+        source_website=target_url,
+    )
 
 
 # ── Contract & Retainer Quota Endpoints ──

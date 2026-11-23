@@ -193,6 +193,30 @@ class BrandIntelligenceAgent:
         if verified_offers:
             confirmed_facts.append(f"Verified offers found in database: {', '.join([o.name for o in verified_offers])}")
 
+        # 2a. Deterministically load active Cortex BrandFacts (Guardrails, Taboos, Personas)
+        try:
+            from app.services.cortex_service import cortex_service
+            cortex_rules = await cortex_service.get_deterministic_rules(
+                db=db,
+                client_id=brief.client_id,
+                channel="all",
+            )
+            for g in cortex_rules.get("guardrails", []):
+                db_confirmed_facts.append(f"[CORTEX GUARDRAIL] {g.statement}")
+                tone_examples.append(g.statement)
+            for t in cortex_rules.get("taboos", []):
+                prohibited_terms.append(ProhibitedTerm(term=t.statement, is_exact_match=False))
+                prohibited_claims.append(ProhibitedClaim(claim=t.statement, reason=t.rationale or "Cortex Active Taboo"))
+                prohibited_concepts.append(t.statement)
+            for p in cortex_rules.get("personas", []):
+                target_audience.append(f"[CORTEX AUDIENCE PERSONA] {p.statement}")
+            logger.info(
+                f"Grounding BrandIntelligence with Cortex Memory: {len(cortex_rules.get('guardrails', []))} guardrails, "
+                f"{len(cortex_rules.get('taboos', []))} taboos, {len(cortex_rules.get('personas', []))} personas."
+            )
+        except Exception as cortex_err:
+            logger.warning(f"Could not load Cortex Memory into BrandIntelligenceAgent: {cortex_err}")
+
         # 2b. Trigger Website Crawler if client.website is set AND profile is missing key fields
         crawled_website_data: dict[str, Any] = {}
         should_crawl = bool(

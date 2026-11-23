@@ -578,7 +578,7 @@ function ItemizedFinancialReceipt({ report }: { report: MonthlyReport }) {
               <td className="py-2.5 text-[#A3A0B0]">₹15.00 / verified subscriber</td>
               <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(roi.total_audience * 15, roi.currency)}</td>
             </tr>
-            <tr className="border-t border-white/[0.1] bg-[#101014]/60 font-bold">
+            <tr className="border-t border-black/[0.08] dark:border-white/[0.1] bg-[#F7F6F3] dark:bg-[#101014]/60 font-bold">
               <td className="py-3 text-[#F2F0F7]" colSpan={2}>
                 Total Generated Earned Media Value (EMV)
               </td>
@@ -852,8 +852,9 @@ function ReportsContent() {
               Meta Live Graph API v22.0
             </span>
           </div>
-          <h1 className="text-2xl font-heading font-bold text-[#F2F0F7] tracking-tight">
-            Performance, Charts & ROI Reports
+          <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+            <BarChart3 className="w-6 h-6 text-[#191919] dark:text-white" />
+            <span>Performance, Charts & ROI Reports</span>
           </h1>
           <p className="text-xs text-[#A3A0B0] max-w-2xl leading-relaxed">
             Audit contract retainer SLA delivery, interactive engagement velocity curves, format effectiveness, and itemized Earned Media Value (EMV).
@@ -1487,13 +1488,13 @@ function ReportsContent() {
                 )}
 
                 {activeTab !== "benchmarks" && (
-                  <div className="flex items-center bg-[#101014] p-0.5 rounded-lg border border-white/[0.08] text-xs">
+                  <div className="flex items-center bg-[#F7F6F3] dark:bg-[#101014] p-0.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08] text-xs">
                     <button
                       onClick={() => setPlatformFilter("all")}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
                         platformFilter === "all"
-                          ? "bg-white/[0.08] text-[#F2F0F7] font-bold shadow-xs"
-                          : "text-[#A3A0B0] hover:text-[#F2F0F7]"
+                          ? "bg-white text-[#191919] font-bold shadow-xs dark:bg-white/[0.08] dark:text-[#F2F0F7]"
+                          : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7]"
                       }`}
                     >
                       All
@@ -1502,8 +1503,8 @@ function ReportsContent() {
                       onClick={() => setPlatformFilter("instagram")}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
                         platformFilter === "instagram"
-                          ? "bg-[#E16F7B]/20 text-[#E16F7B] font-bold border border-[#E16F7B]/30 shadow-xs"
-                          : "text-[#A3A0B0] hover:text-[#E16F7B]"
+                          ? "bg-[#E16F7B]/15 text-[#E16F7B] font-bold border border-[#E16F7B]/30 shadow-xs"
+                          : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#E16F7B]"
                       }`}
                     >
                       Instagram ({instagramCount})
@@ -1512,8 +1513,8 @@ function ReportsContent() {
                       onClick={() => setPlatformFilter("facebook")}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
                         platformFilter === "facebook"
-                          ? "bg-[#69A9D8]/20 text-[#69A9D8] font-bold border border-[#69A9D8]/30 shadow-xs"
-                          : "text-[#A3A0B0] hover:text-[#69A9D8]"
+                          ? "bg-[#69A9D8]/15 text-[#69A9D8] font-bold border border-[#69A9D8]/30 shadow-xs"
+                          : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#69A9D8]"
                       }`}
                     >
                       Facebook ({facebookCount})
@@ -1522,17 +1523,17 @@ function ReportsContent() {
                 )}
 
                 {activeTab === "deliverables" && (
-                  <div className="flex items-center gap-1.5 bg-[#101014] px-2.5 py-1 rounded-lg border border-white/[0.08] text-xs">
-                    <ArrowUpDown className="w-3 h-3 text-[#A3A0B0]" />
+                  <div className="flex items-center gap-1.5 bg-[#F7F6F3] dark:bg-[#101014] px-2.5 py-1 rounded-lg border border-black/[0.08] dark:border-white/[0.08] text-xs">
+                    <ArrowUpDown className="w-3 h-3 text-[#6B6A65] dark:text-[#A3A0B0]" />
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as any)}
-                      className="bg-transparent text-xs text-[#F2F0F7] font-mono focus:outline-none cursor-pointer"
+                      className="bg-transparent text-xs text-[#191919] dark:text-[#F2F0F7] font-mono focus:outline-none cursor-pointer"
                     >
-                      <option value="views" className="bg-[#17171E]">By Views</option>
-                      <option value="likes" className="bg-[#17171E]">By Likes</option>
-                      <option value="comments" className="bg-[#17171E]">By Comments</option>
-                      <option value="engagement" className="bg-[#17171E]">By Engagement Rate</option>
+                      <option value="views" className="bg-white dark:bg-[#17171E] text-[#191919] dark:text-white">By Views</option>
+                      <option value="likes" className="bg-white dark:bg-[#17171E] text-[#191919] dark:text-white">By Likes</option>
+                      <option value="comments" className="bg-white dark:bg-[#17171E] text-[#191919] dark:text-white">By Comments</option>
+                      <option value="engagement" className="bg-white dark:bg-[#17171E] text-[#191919] dark:text-white">By Engagement Rate</option>
                     </select>
                   </div>
                 )}
@@ -1552,7 +1553,7 @@ function ReportsContent() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-white/[0.06]">
+                <div className="divide-y divide-black/[0.08] dark:divide-white/[0.06]">
                   {filteredDeliverables.map((item, idx) => {
                     const isVideo = item.deliverable_type?.toLowerCase().includes("video") || item.deliverable_type?.toLowerCase().includes("reel");
                     const platformStr = (item.platform || "").trim().toLowerCase();
@@ -1573,34 +1574,30 @@ function ReportsContent() {
                     return (
                       <div
                         key={item.id}
-                        className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#20202A]/40 transition-colors"
+                        className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#F7F6F3] dark:hover:bg-[#20202A]/40 transition-colors"
                       >
                         <div className="flex items-start sm:items-center gap-3.5 min-w-0">
                           {/* Rank Badge */}
                           <div
                             className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
                               idx === 0
-                                ? "bg-[#E5AA58]/20 text-[#E5AA58] border border-[#E5AA58]/40 shadow-xs"
-                                : idx === 1
-                                ? "bg-white/[0.1] text-[#F2F0F7] border border-white/[0.15]"
-                                : idx === 2
-                                ? "bg-[#20202A] text-[#A3A0B0] border border-white/[0.08]"
-                                : "bg-[#101014] text-[#A3A0B0]/70 border border-white/[0.04]"
+                                ? "bg-amber-500/15 text-amber-700 border border-amber-500/30 dark:bg-[#E5AA58]/20 dark:text-[#E5AA58] dark:border-[#E5AA58]/40 shadow-xs"
+                                : "bg-[#EFEFED] text-[#37352F] border border-black/[0.08] dark:bg-[#20202A] dark:text-[#A3A0B0] dark:border-white/[0.08]"
                             }`}
                           >
                             #{idx + 1}
                           </div>
 
                           {/* Format icon */}
-                          <div className="w-9 h-9 rounded-xl bg-[#20202A] border border-white/[0.08] text-[#A78BFA] flex items-center justify-center shrink-0">
-                            {isVideo ? <Film className="w-4 h-4 text-[#A78BFA]" /> : <ImageIcon className="w-4 h-4 text-[#A78BFA]" />}
+                          <div className="w-9 h-9 rounded-xl bg-[#EFEFED] border border-black/[0.08] text-[#2383E2] dark:bg-[#20202A] dark:border-white/[0.08] dark:text-[#A78BFA] flex items-center justify-center shrink-0">
+                            {isVideo ? <Film className="w-4 h-4 text-[#2383E2] dark:text-[#A78BFA]" /> : <ImageIcon className="w-4 h-4 text-[#2383E2] dark:text-[#A78BFA]" />}
                           </div>
 
                           {/* Title and tags */}
                           <div className="min-w-0">
                             <Link
                               href={`/deliverables/${item.id}`}
-                              className="text-sm font-semibold text-[#F2F0F7] hover:text-[#A78BFA] truncate block max-w-md group transition-colors"
+                              className="text-sm font-semibold text-[#191919] hover:text-[#2383E2] dark:text-[#F2F0F7] dark:hover:text-[#A78BFA] truncate block max-w-md group transition-colors"
                             >
                               <span className="group-hover:underline">{item.title}</span>
                             </Link>
@@ -1611,16 +1608,16 @@ function ReportsContent() {
                                     ? "bg-[#E16F7B]/10 text-[#E16F7B] border-[#E16F7B]/30"
                                     : isFacebook
                                     ? "bg-[#69A9D8]/10 text-[#69A9D8] border-[#69A9D8]/30"
-                                    : "bg-[#20202A] text-[#A3A0B0] border-white/[0.08]"
+                                    : "bg-[#EFEFED] text-[#6B6A65] border-black/[0.08] dark:bg-[#20202A] dark:text-[#A3A0B0] dark:border-white/[0.08]"
                                 }`}
                               >
                                 {item.platform}
                               </span>
-                              <span className="capitalize text-[#A3A0B0] font-medium bg-[#101014] border border-white/[0.08] px-2 py-0.5 rounded-md font-mono text-[10px]">
+                              <span className="capitalize text-[#37352F] font-medium bg-[#EFEFED] border border-black/[0.08] dark:text-[#A3A0B0] dark:bg-[#101014] dark:border-white/[0.08] px-2 py-0.5 rounded-md font-mono text-[10px]">
                                 {item.deliverable_type}
                               </span>
-                              <span className="text-[#A3A0B0] font-mono text-[10px]">
-                                Engagement: <strong className="text-[#A78BFA]">{postEngagementRate}%</strong>
+                              <span className="text-[#6B6A65] dark:text-[#A3A0B0] font-mono text-[10px]">
+                                Engagement: <strong className="text-[#2383E2] dark:text-[#A78BFA]">{postEngagementRate}%</strong>
                               </span>
                             </div>
                           </div>
@@ -1629,27 +1626,27 @@ function ReportsContent() {
                         {/* Performance stats row */}
                         <div className="flex items-center gap-4 sm:gap-6 self-end sm:self-auto font-mono">
                           <div className="text-right">
-                            <div className="flex items-center gap-1.5 text-[#F2F0F7] text-xs font-bold justify-end">
-                              <Eye className="w-3.5 h-3.5 text-[#69A9D8]" />
+                            <div className="flex items-center gap-1.5 text-[#191919] dark:text-[#F2F0F7] text-xs font-bold justify-end">
+                              <Eye className="w-3.5 h-3.5 text-[#0B6E99] dark:text-[#69A9D8]" />
                               <span>{item.views_count.toLocaleString()}</span>
                             </div>
-                            <span className="text-[10px] text-[#A3A0B0] font-medium">Views</span>
+                            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-medium">Views</span>
                           </div>
 
                           <div className="text-right">
-                            <div className="flex items-center gap-1.5 text-[#F2F0F7] text-xs font-bold justify-end">
+                            <div className="flex items-center gap-1.5 text-[#191919] dark:text-[#F2F0F7] text-xs font-bold justify-end">
                               <Heart className="w-3.5 h-3.5 text-[#E16F7B]" />
                               <span>{item.likes_count.toLocaleString()}</span>
                             </div>
-                            <span className="text-[10px] text-[#A3A0B0] font-medium">Likes</span>
+                            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-medium">Likes</span>
                           </div>
 
                           <div className="text-right">
-                            <div className="flex items-center gap-1.5 text-[#F2F0F7] text-xs font-bold justify-end">
-                              <MessageCircle className="w-3.5 h-3.5 text-[#69A9D8]" />
+                            <div className="flex items-center gap-1.5 text-[#191919] dark:text-[#F2F0F7] text-xs font-bold justify-end">
+                              <MessageCircle className="w-3.5 h-3.5 text-[#0B6E99] dark:text-[#69A9D8]" />
                               <span>{item.comments_count.toLocaleString()}</span>
                             </div>
-                            <span className="text-[10px] text-[#A3A0B0] font-medium">Comments</span>
+                            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-medium">Comments</span>
                           </div>
 
                           {/* Action buttons */}
@@ -1659,18 +1656,18 @@ function ReportsContent() {
                                 href={liveUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs transition-all active:scale-[0.98]"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#37352F] hover:text-[#191919] bg-[#FFFFFF] hover:bg-[#F1F1EF] border border-[#E3E2DE] dark:border-white/[0.08] dark:text-[#F2F0F7] dark:bg-white/[0.06] dark:hover:bg-white/[0.1] rounded-lg shadow-2xs transition-all active:scale-[0.98]"
                               >
                                 <span>Live</span>
-                                <ExternalLink className="w-3 h-3" />
+                                <ExternalLink className="w-3 h-3 text-[#6B6A65] dark:text-[#A3A0B0]" />
                               </a>
                             ) : (
                               <Link
                                 href={`/deliverables/${item.id}`}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#A78BFA] bg-[#20202A] hover:bg-[#262630] border border-white/[0.08] rounded-xl transition-all active:scale-[0.98]"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#37352F] hover:text-[#191919] bg-[#FFFFFF] hover:bg-[#F1F1EF] border border-[#E3E2DE] dark:border-white/[0.08] dark:text-[#F2F0F7] dark:bg-white/[0.06] dark:hover:bg-white/[0.1] rounded-lg shadow-2xs transition-all active:scale-[0.98]"
                               >
                                 <span>Inspect</span>
-                                <ChevronRight className="w-3 h-3" />
+                                <ChevronRight className="w-3 h-3 text-[#6B6A65] dark:text-[#A3A0B0]" />
                               </Link>
                             )}
                           </div>

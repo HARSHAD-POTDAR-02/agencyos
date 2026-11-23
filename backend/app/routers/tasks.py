@@ -1297,6 +1297,65 @@ async def review_task_work(
         )
         db.add(comment)
 
+        # Cortex Institutional Memory: Auto-capture full Revision Triple (v1 -> feedback -> v2)
+        try:
+            target_client_id = (
+                deliverable.campaign.client_id
+                if deliverable and deliverable.campaign
+                else task.client_id
+            )
+            if target_client_id and latest_cv and latest_cv.version_number > 1:
+                prev_cv = await db.scalar(
+                    select(ContentVersion)
+                    .where(
+                        ContentVersion.deliverable_id == (deliverable.id if deliverable else None),
+                        ContentVersion.version_number == latest_cv.version_number - 1,
+                    )
+                )
+                if prev_cv:
+                    prev_comment = await db.scalar(
+                        select(DeliverableComment)
+                        .where(
+                            DeliverableComment.task_id == task.id,
+                            DeliverableComment.message.like("[Revision Requested]:%"),
+                        )
+                        .order_by(DeliverableComment.created_at.desc())
+                    )
+                    v1_text = prev_cv.caption or prev_cv.notes or prev_cv.file_name or ""
+                    feedback_text = prev_comment.message if prev_comment else (payload.feedback_notes or "Revisions applied.")
+                    v2_text = latest_cv.caption or latest_cv.notes or latest_cv.file_name or ""
+
+                    if v1_text and v2_text:
+                        from app.services.cortex_service import cortex_service
+                        from app.schemas.cortex import RevisionTriplePayload
+                        triple_payload = RevisionTriplePayload(
+                            task_id=task.id,
+                            client_id=target_client_id,
+                            channel=deliverable.platform if deliverable and deliverable.platform else "all",
+                            rejected_draft_v1=v1_text,
+                            revision_feedback=feedback_text,
+                            approved_draft_v2=v2_text,
+                        )
+                        raw_content = (
+                            f"TASK ID: {task.id}\n"
+                            f"CHANNEL: {triple_payload.channel}\n"
+                            f"--- REJECTED DRAFT (V1) ---\n{triple_payload.rejected_draft_v1}\n\n"
+                            f"--- REVISION FEEDBACK ---\n{triple_payload.revision_feedback}\n\n"
+                            f"--- APPROVED DRAFT (V2) ---\n{triple_payload.approved_draft_v2}"
+                        )
+                        await cortex_service.ingest_source_and_create_chunks(
+                            db=db,
+                            client_id=target_client_id,
+                            source_type="revision_triple",
+                            title=f"Revision Triple: Task {task.title}",
+                            raw_content=raw_content,
+                            metadata={"task_id": str(task.id), "channel": triple_payload.channel},
+                            channels=[triple_payload.channel],
+                        )
+                        logger.info(f"Cortex Revision Triple ingested successfully for Task {task.id}")
+        except Exception as triple_err:
+            logger.warning(f"Failed to auto-ingest Cortex Revision Triple: {triple_err}")
+
         if deliverable:
             # Downstream task unlocking logic
             await _unlock_downstream_tasks(task, deliverable.id, db)

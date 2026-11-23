@@ -24,7 +24,8 @@ import {
   ChevronsUpDown,
   GitFork,
   Layers,
-  MessagesSquare
+  MessagesSquare,
+  Brain
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -243,6 +244,12 @@ export function Sidebar() {
               href: "/campaigns",
               icon: Sparkles,
               badge: "AI",
+            },
+            {
+              name: "Cortex Memory",
+              href: "/cortex",
+              icon: Brain,
+              badge: "v2",
             },
             {
               name: "Content Calendar",
@@ -507,19 +514,19 @@ export function Sidebar() {
       </nav>
 
       {/* ── Quick Command Menu Launcher (Raycast Style) ── */}
-      <div className="px-2.5 py-2 border-t border-white/[0.06] bg-[#101014]/40">
+      <div className="px-2.5 py-2 border-t border-black/[0.08] dark:border-white/[0.06] bg-[#F7F6F3] dark:bg-[#101014]/40">
         <button
           onClick={openCommandPalette}
           title="Search resources & commands (⌘K)"
           className={cn(
-            "w-full flex items-center rounded-lg surface-card surface-card-hover border border-white/[0.08] text-xs transition-colors group cursor-pointer",
+            "w-full flex items-center rounded-lg surface-card surface-card-hover border border-black/[0.08] dark:border-white/[0.08] text-xs transition-colors group cursor-pointer",
             isCollapsed ? "justify-center p-2" : "justify-between px-2.5 py-1.5"
           )}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <Command className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+            <Command className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA] shrink-0" />
             {!isCollapsed && (
-              <span className="font-medium text-[#F2F0F7] truncate text-[11px]">Command Menu</span>
+              <span className="font-medium text-[#37352F] dark:text-[#F2F0F7] truncate text-[11px]">Command Menu</span>
             )}
           </div>
           {!isCollapsed && <span className="kbd-pill text-[9px]">⌘K</span>}
@@ -527,7 +534,7 @@ export function Sidebar() {
       </div>
 
       {/* ── User Profile & Sign Out Footer ── */}
-      <div className={cn("border-t border-white/[0.08] bg-[#14141A]/60 p-2", isCollapsed ? "flex flex-col items-center" : "")}>
+      <div className={cn("border-t border-black/[0.08] dark:border-white/[0.08] bg-[#F7F6F3] dark:bg-[#14141A]/60 p-2", isCollapsed ? "flex flex-col items-center" : "")}>
         {user ? (
           <div className={cn("flex items-center rounded-lg p-1 transition-colors w-full", isCollapsed ? "justify-center" : "justify-between gap-2 hover:bg-white/[0.03]")}>
             <div className="flex items-center gap-2 min-w-0">

@@ -43,6 +43,7 @@ import {
   GitFork,
   Plus,
   History,
+  Brain,
 } from "lucide-react";
 
 interface Client {
@@ -2630,17 +2631,17 @@ function CampaignStudioContent() {
       <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-white/[0.08] shrink-0">
         {/* Left: Studio Brand & Client Selector */}
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 flex items-center justify-center shadow-[0_0_12px_rgba(167,139,250,0.2)]">
-              <Sparkles className="w-4 h-4" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-[#191919] dark:bg-[#A78BFA]/15 text-white dark:text-[#A78BFA] flex items-center justify-center shadow-xs shrink-0">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#A78BFA] block text-[9px] -mb-0.5">
-                Flagship Studio
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#6B6A65] dark:text-[#A78BFA] block -mb-0.5">
+                Multi-Agent Architect
               </span>
-              <span className="text-sm font-semibold tracking-tight text-[#F2F0F7] hidden sm:inline">
+              <h1 className="text-xl sm:text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                 Campaign Studio
-              </span>
+              </h1>
             </div>
           </div>
 
@@ -2748,7 +2749,7 @@ function CampaignStudioContent() {
             type="button"
             onClick={() => createNewChatSession()}
             title="Start a new isolated chat session"
-            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-500 text-white shadow-xs transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-[#2383E2] hover:bg-[#1D6FBF] dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] text-white dark:text-[#101014] shadow-2xs transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Chat</span>
@@ -2759,9 +2760,9 @@ function CampaignStudioContent() {
             type="button"
             onClick={() => setIsChatHistoryOpen(true)}
             title="View chat history and switch conversations"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg surface-card text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.08] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-white hover:bg-[#F1F1EF] text-[#37352F] hover:text-[#191919] border border-[#E3E2DE] dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] dark:border-white/[0.08] transition-colors cursor-pointer shadow-2xs"
           >
-            <History className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <History className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
             <span className="hidden sm:inline text-[11px]">History ({chatSessions.length})</span>
           </button>
 
@@ -2770,10 +2771,10 @@ function CampaignStudioContent() {
             <button
               type="button"
               onClick={() => setIsPitchDeckModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#20202A] hover:bg-[#282836] text-[#F2F0F7] border border-white/[0.08] transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-white hover:bg-[#F1F1EF] text-[#37352F] hover:text-[#191919] border border-[#E3E2DE] dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-[#F2F0F7] dark:border-white/[0.08] transition-all cursor-pointer shadow-2xs"
               title="Present Executive Strategy Pitch Deck (Fullscreen & Print PDF)"
             >
-              <Presentation className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <Presentation className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
               <span className="hidden md:inline text-[11px]">Pitch Deck 🎬</span>
             </button>
           )}
@@ -2817,23 +2818,23 @@ function CampaignStudioContent() {
       <div className="flex-1 flex min-h-0 overflow-hidden pt-2 gap-2.5">
         {/* ── LEFT/CENTRE REGION: Primary Creative Workspace & Contextual Canvas ── */}
         <main
-          className={`flex-1 min-w-0 flex flex-col h-full bg-[#101014] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xs ${
+          className={`flex-1 min-w-0 flex flex-col h-full bg-white dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl overflow-hidden shadow-xs ${
             mobileTab === "canvas" ? "flex" : "hidden lg:flex"
           }`}
         >
           {/* ── DEDICATED ARTIFACTS & VERSIONS WORKSTATION BAR ── */}
-          <div className="px-3.5 py-2.5 bg-[#14141B] border-b border-white/[0.08] flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
+          <div className="px-3.5 py-2.5 bg-[#F7F6F3] dark:bg-[#14141B] border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono uppercase text-[#A3A0B0] font-semibold shrink-0">
-                <Layers2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#EFEFED] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.06] text-[10px] font-mono uppercase text-[#37352F] dark:text-[#A3A0B0] font-semibold shrink-0">
+                <Layers2 className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
                 <span>Artifacts</span>
-                <span className="px-1.5 py-0.2 rounded bg-[#A78BFA]/15 text-[#A78BFA] font-bold">
+                <span className="px-1.5 py-0.2 rounded bg-black/[0.06] dark:bg-[#A78BFA]/15 text-[#191919] dark:text-[#A78BFA] font-bold">
                   {studioArtifacts.length}
                 </span>
               </div>
 
               {studioArtifacts.length === 0 ? (
-                <span className="text-[11px] text-[#A3A0B0]/70 italic px-2">
+                <span className="text-[11px] text-[#9B9A97] dark:text-[#A3A0B0]/70 italic px-2">
                   No artifacts generated yet — launch the engine or request drafts from Director
                 </span>
               ) : (
@@ -2848,8 +2849,8 @@ function CampaignStudioContent() {
                         onClick={() => handleViewOnCanvas(art)}
                         className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer border ${
                           isActive
-                            ? "bg-[#20202A] border-[#A78BFA] text-[#F2F0F7] shadow-[0_0_12px_rgba(167,139,250,0.18)] font-semibold"
-                            : "bg-[#101014] border-white/[0.06] text-[#A3A0B0] hover:text-[#F2F0F7] hover:border-white/[0.12] hover:bg-white/[0.03]"
+                            ? "bg-[#191919] text-white border-transparent dark:bg-[#20202A] dark:border-[#A78BFA] dark:text-[#F2F0F7] shadow-xs font-semibold"
+                            : "bg-white dark:bg-[#101014] border-black/[0.08] dark:border-white/[0.06] text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7] hover:border-black/[0.15] dark:hover:border-white/[0.12] hover:bg-[#F7F6F3] dark:hover:bg-white/[0.03]"
                         }`}
                       >
                         <span className="text-xs">
@@ -2881,8 +2882,8 @@ function CampaignStudioContent() {
                         <span
                           className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                             isActive
-                              ? "bg-[#A78BFA]/20 text-[#A78BFA] border-[#A78BFA]/30"
-                              : "bg-white/[0.04] text-[#A3A0B0] border-white/[0.06] group-hover:text-[#F2F0F7]"
+                              ? "bg-white/20 text-white border-white/30 dark:bg-[#A78BFA]/20 dark:text-[#A78BFA] dark:border-[#A78BFA]/30"
+                              : "bg-black/[0.04] dark:bg-white/[0.04] text-[#6B6A65] dark:text-[#A3A0B0] border-black/[0.06] dark:border-white/[0.06] group-hover:text-[#191919] dark:group-hover:text-[#F2F0F7]"
                           }`}
                         >
                           v{art.version}
@@ -2904,11 +2905,11 @@ function CampaignStudioContent() {
 
             {/* Version Switcher for Active Artifact */}
             {activeArtifact && activeArtifactVersions && activeArtifactVersions.length > 1 && (
-              <div className="flex items-center gap-1.5 pl-3 border-l border-white/[0.08] shrink-0">
-                <span className="text-[10px] font-mono text-[#A3A0B0] uppercase font-semibold">
+              <div className="flex items-center gap-1.5 pl-3 border-l border-black/[0.08] dark:border-white/[0.08] shrink-0">
+                <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] uppercase font-semibold">
                   Versions:
                 </span>
-                <div className="flex items-center gap-1 bg-[#101014] p-0.5 rounded-lg border border-white/[0.08]">
+                <div className="flex items-center gap-1 bg-[#F1F1EF] dark:bg-[#101014] p-0.5 rounded-lg border border-black/[0.08] dark:border-white/[0.08]">
                   {activeArtifactVersions.map((v: any) => {
                     const isCur = v.version_number === activeArtifact.version;
                     return (
@@ -2932,8 +2933,8 @@ function CampaignStudioContent() {
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
                           isCur
-                            ? "bg-violet-600 text-white shadow-xs"
-                            : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04]"
+                            ? "bg-[#2383E2] text-white shadow-xs"
+                            : "text-[#6B6A65] hover:text-[#191919] hover:bg-black/[0.04] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] dark:hover:bg-white/[0.04]"
                         }`}
                       >
                         v{v.version_number}
@@ -3042,25 +3043,33 @@ function CampaignStudioContent() {
         {/* ── RIGHT REGION: Contextual Intelligence & Agent Stream ── */}
         {(isRightIntelOpen || mobileTab === "intel") && (
           <aside
-            className={`w-full lg:w-96 xl:w-[420px] shrink-0 flex flex-col h-full surface-card rounded-2xl border border-white/[0.08] overflow-hidden ${
+            className={`w-full lg:w-96 xl:w-[420px] shrink-0 flex flex-col h-full bg-white dark:bg-[#17171E] rounded-2xl border border-black/[0.08] dark:border-white/[0.08] overflow-hidden ${
               mobileTab === "intel" ? "flex" : "hidden lg:flex"
             }`}
           >
             {/* Intelligence & Specialist Copilot Header */}
-            <div className="p-3 border-b border-white/[0.06] bg-[#101014]/60 shrink-0 space-y-2">
+            <div className="p-3 border-b border-black/[0.08] dark:border-white/[0.06] bg-[#F7F6F3] dark:bg-[#101014]/60 shrink-0 space-y-2">
               {/* Campaign Director Copilot Banner */}
-              <div className="flex items-center justify-between p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-violet-500/10 border border-black/[0.08] dark:border-violet-500/20 text-xs shadow-2xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-6 h-6 rounded-lg bg-[#EFEFED] text-[#191919] dark:bg-violet-500/20 dark:text-violet-400 flex items-center justify-center font-bold shrink-0">
                     <Sparkles className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[#F2F0F7] text-[11px] font-heading">Campaign Director</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-[#191919] dark:text-[#F2F0F7] text-[11px] font-heading">Campaign Director</span>
+                      <Link
+                        href="/cortex"
+                        className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#EDF6ED] text-[#285E34] border border-[#CCE3CC] dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 flex items-center gap-0.5 hover:underline"
+                        title="Grounded with Cortex Institutional Memory"
+                      >
+                        <Brain className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Cortex Active</span>
+                      </Link>
                       <button
                         type="button"
                         onClick={() => setIsChatHistoryOpen(true)}
-                        className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 border border-violet-500/20 transition cursor-pointer"
+                        className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-[#EFEFED] text-[#37352F] hover:bg-[#E5E5E2] dark:bg-violet-500/15 dark:text-violet-300 dark:hover:bg-violet-500/25 border border-black/[0.08] dark:border-violet-500/20 transition cursor-pointer"
                         title="View and switch conversations"
                       >
                         Chats ({chatSessions.length})
@@ -3068,7 +3077,7 @@ function CampaignStudioContent() {
                     </div>
                     <div
                       onClick={() => setIsChatHistoryOpen(true)}
-                      className="text-[9.5px] font-mono text-[#A3A0B0] truncate cursor-pointer hover:text-violet-300 transition-colors"
+                      className="text-[9.5px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] truncate cursor-pointer hover:text-[#191919] dark:hover:text-violet-300 transition-colors"
                       title={chatSessions.find((s) => s.id === activeChatId)?.title || "Active Chat"}
                     >
                       💬 {chatSessions.find((s) => s.id === activeChatId)?.title || "Active Chat"}
@@ -3079,20 +3088,20 @@ function CampaignStudioContent() {
                   <button
                     type="button"
                     onClick={() => createNewChatSession()}
-                    className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[#A3A0B0] hover:text-[#F2F0F7] border border-white/[0.06] transition cursor-pointer"
+                    className="p-1 rounded-lg bg-[#EFEFED] hover:bg-[#E5E5E2] dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-[#37352F] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.06] transition cursor-pointer"
                     title="Start new conversation"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
                   {isPipelineRunning ? (
-                    <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium flex items-center gap-1">
+                    <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-[#EFEFED] text-[#191919] dark:bg-violet-500/20 dark:text-violet-300 font-medium flex items-center gap-1">
                       <Loader2 className="w-2.5 h-2.5 animate-spin" /> Engine Active
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setShowGenerateConfirmModal(true)}
-                      className="text-[10.5px] font-semibold px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white flex items-center gap-1 transition shadow-xs cursor-pointer"
+                      className="text-[10.5px] font-semibold px-2.5 py-1 rounded-lg bg-[#2383E2] hover:bg-[#1D6FBF] dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] text-white dark:text-[#101014] flex items-center gap-1 transition shadow-2xs cursor-pointer"
                       title="Run the 14-task operational multi-agent DAG"
                     >
                       <Sparkles className="w-3 h-3" />
@@ -3109,11 +3118,11 @@ function CampaignStudioContent() {
                   onClick={() => setStudioMode("workflow")}
                   className={`px-2.5 py-1 rounded-md text-[10.5px] font-medium transition cursor-pointer flex items-center gap-1 shrink-0 ${
                     studioMode === "workflow"
-                      ? "bg-violet-600 text-white font-semibold shadow-xs"
-                      : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.04]"
+                      ? "bg-[#37352F] dark:bg-white/[0.12] text-white font-semibold shadow-2xs"
+                      : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
                   }`}
                 >
-                  <Sparkles className="w-3 h-3 text-[#A78BFA]" />
+                  <Sparkles className="w-3 h-3 text-[#2383E2] dark:text-[#A78BFA]" />
                   <span>Director</span>
                 </button>
                 {SPECIALIST_AGENTS.map((item) => (
@@ -3126,8 +3135,8 @@ function CampaignStudioContent() {
                     }}
                     className={`px-2.5 py-1 rounded-md text-[10.5px] font-medium transition cursor-pointer shrink-0 ${
                       activeSpecialistId === item.id && studioMode === "specialists"
-                        ? "bg-white/[0.12] text-[#F2F0F7] font-semibold border border-white/[0.15]"
-                        : "text-[#A3A0B0] hover:text-[#F2F0F7] hover:bg-white/[0.03]"
+                        ? "bg-[#191919] dark:bg-white/[0.12] text-white dark:text-[#F2F0F7] font-semibold border border-transparent dark:border-white/[0.15]"
+                        : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.03]"
                     }`}
                   >
                     {item.shortName}
@@ -3151,7 +3160,7 @@ function CampaignStudioContent() {
                   >
                     {!isUser && (
                       <div
-                        className="w-6 h-6 rounded-full border border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 bg-[#20202A] text-[#A78BFA] shadow-xs"
+                        className="w-6 h-6 rounded-full border border-black/[0.08] dark:border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 bg-[#EFEFED] text-[#191919] dark:bg-[#20202A] dark:text-[#A78BFA] shadow-xs"
                         title={agentInfo.name}
                       >
                         <AgentIcon className="w-3 h-3" />
@@ -3161,7 +3170,7 @@ function CampaignStudioContent() {
                     <div className="max-w-[88%] space-y-1">
                       {!isUser && (
                         <div className="flex items-center gap-1.5 pl-1">
-                          <span className="text-[10px] font-bold text-[#A78BFA] tracking-tight">
+                          <span className="text-[10px] font-bold text-[#2383E2] dark:text-[#A78BFA] tracking-tight">
                             {msg.agent_name || agentInfo.name}
                           </span>
                         </div>
@@ -3169,7 +3178,7 @@ function CampaignStudioContent() {
 
                       {/* Streaming status pill */}
                       {msg.streamingStatus && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#A78BFA]/10 border border-[#A78BFA]/30 text-[11px] text-[#A78BFA] animate-pulse mb-1 w-fit shadow-[0_0_8px_rgba(167,139,250,0.15)]">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#2383E2]/10 border border-[#2383E2]/30 text-[11px] text-[#2383E2] dark:bg-[#A78BFA]/10 dark:border-[#A78BFA]/30 dark:text-[#A78BFA] animate-pulse mb-1 w-fit shadow-xs">
                           <Loader2 className="w-3 h-3 animate-spin shrink-0" />
                           <span>{msg.streamingStatus}</span>
                         </div>
@@ -3179,19 +3188,19 @@ function CampaignStudioContent() {
                       <div
                         className={`px-3.5 py-2.5 rounded-xl text-xs leading-relaxed ${
                           isUser
-                            ? "bg-[#20202A] text-[#F2F0F7] border border-white/[0.08] rounded-br-xs shadow-xs"
-                            : "surface-card text-[#F2F0F7] border border-white/[0.08] rounded-bl-xs shadow-xs"
+                            ? "bg-[#191919] text-white dark:bg-[#20202A] dark:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08] rounded-br-xs shadow-xs"
+                            : "bg-white text-[#191919] dark:bg-[#17171E] dark:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08] rounded-bl-xs shadow-xs"
                         }`}
                       >
                         <div className="whitespace-pre-wrap">
                           {msg.content || (msg.isStreaming ? (
-                            <span className="text-[#A3A0B0] italic text-[11px] flex items-center gap-1.5 py-0.5">
-                              <Sparkles className="w-3 h-3 text-[#A78BFA] animate-pulse shrink-0" />
+                            <span className="text-[#6B6A65] dark:text-[#A3A0B0] italic text-[11px] flex items-center gap-1.5 py-0.5">
+                              <Sparkles className="w-3 h-3 text-[#2383E2] dark:text-[#A78BFA] animate-pulse shrink-0" />
                               <span>Gathering intelligence & synthesizing...</span>
                             </span>
                           ) : null)}
                         </div>
-                        <span className={`block mt-1 text-[9px] font-mono ${isUser ? "text-[#A3A0B0] text-right" : "text-[#A3A0B0]"}`}>
+                        <span className={`block mt-1 text-[9px] font-mono ${isUser ? "text-white/60 dark:text-[#A3A0B0] text-right" : "text-[#6B6A65] dark:text-[#A3A0B0]"}`}>
                           {msg.timestamp}
                         </span>
                       </div>
@@ -3207,14 +3216,14 @@ function CampaignStudioContent() {
                                 key={i}
                                 className={`flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-md border w-fit max-w-full truncate ${
                                   isPending
-                                    ? "bg-[#E5AA58]/10 border-[#E5AA58]/30 text-[#E5AA58] animate-pulse"
-                                    : "bg-[#101014] border-white/[0.06] text-[#A3A0B0]"
+                                    ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:bg-[#E5AA58]/10 dark:border-[#E5AA58]/30 dark:text-[#E5AA58] animate-pulse"
+                                    : "bg-[#EFEFED] text-[#6B6A65] border-black/[0.08] dark:bg-[#101014] dark:border-white/[0.06] dark:text-[#A3A0B0]"
                                 }`}
                               >
                                 {isPending ? (
-                                  <Loader2 className="w-2.5 h-2.5 text-[#E5AA58] animate-spin shrink-0" />
+                                  <Loader2 className="w-2.5 h-2.5 text-amber-600 dark:text-[#E5AA58] animate-spin shrink-0" />
                                 ) : (
-                                  <Sparkles className="w-2.5 h-2.5 text-[#A78BFA] shrink-0" />
+                                  <Sparkles className="w-2.5 h-2.5 text-[#2383E2] dark:text-[#A78BFA] shrink-0" />
                                 )}
                                 <span className="truncate">{logText.replace(/^⏳\s*/, "")}</span>
                               </div>
@@ -3320,15 +3329,15 @@ function CampaignStudioContent() {
             </div>
 
             {/* Prompt Starters */}
-            <div className="p-2 border-t border-white/[0.06] bg-[#101014]/60 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-              <span className="text-[10px] font-mono text-[#A3A0B0] shrink-0 flex items-center gap-1 px-1">
+            <div className="p-2 border-t border-black/[0.08] dark:border-white/[0.06] bg-[#F7F6F3] dark:bg-[#101014]/60 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+              <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] shrink-0 flex items-center gap-1 px-1">
                 <Flame className="w-3 h-3 text-[#E5AA58]" />
               </span>
               {currentAgent.starters.map((starter, i) => (
                 <button
                   key={i}
                   onClick={() => handleSendMessage(starter)}
-                  className="text-[11px] px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/[0.12] text-[#F2F0F7] transition-all shrink-0 whitespace-nowrap cursor-pointer shadow-2xs"
+                  className="text-[11px] px-2.5 py-1 rounded-lg bg-white hover:bg-[#EFEFED] border border-black/[0.08] dark:bg-white/[0.04] dark:hover:bg-white/[0.08] dark:border-white/[0.06] text-[#37352F] dark:text-[#F2F0F7] transition-all shrink-0 whitespace-nowrap cursor-pointer shadow-2xs"
                 >
                   {starter}
                 </button>
@@ -3337,10 +3346,10 @@ function CampaignStudioContent() {
 
             {/* Strategy Evolving Bar & Generate Action */}
             {(suggestedObjective || isReadyToGenerate) && (
-              <div className="p-2.5 bg-[#A78BFA]/10 border-t border-[#A78BFA]/20 flex items-center justify-between gap-2 shrink-0 text-xs shadow-inner">
+              <div className="p-2.5 bg-[#F7F6F3] dark:bg-[#A78BFA]/10 border-t border-black/[0.08] dark:border-[#A78BFA]/20 flex items-center justify-between gap-2 shrink-0 text-xs shadow-xs">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <Sparkles className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
-                  <p className="text-[11px] text-[#F2F0F7] truncate font-medium">
+                  <Sparkles className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA] shrink-0" />
+                  <p className="text-[11px] text-[#191919] dark:text-[#F2F0F7] truncate font-medium">
                     {durationDays ? `${durationDays}-Day Sprint:` : "Strategy:"} {suggestedObjective || suggestedCustomBrief}
                   </p>
                 </div>
@@ -3350,7 +3359,7 @@ function CampaignStudioContent() {
                       <button
                         type="button"
                         onClick={handleCancelGenerationSuggestion}
-                        className="px-2.5 py-1 rounded-lg border border-white/[0.08] hover:bg-white/[0.06] text-[#A3A0B0] hover:text-[#F2F0F7] text-[11px] font-medium transition-colors cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg border border-black/[0.08] dark:border-white/[0.08] hover:bg-[#EFEFED] dark:hover:bg-white/[0.06] text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-[#F2F0F7] text-[11px] font-medium transition-colors cursor-pointer"
                         title="Dismiss campaign creation suggestion"
                       >
                         Cancel
@@ -3358,15 +3367,15 @@ function CampaignStudioContent() {
                       <button
                         type="button"
                         onClick={() => setShowGenerateConfirmModal(true)}
-                        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-[11px] shadow-[0_1px_8px_rgba(167,139,250,0.3)] cursor-pointer transition-all"
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#2383E2] hover:bg-[#1D6FBF] dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] text-white dark:text-[#101014] font-semibold text-[11px] shadow-2xs cursor-pointer transition-all"
                       >
-                        <Sparkles className="w-3 h-3" />
+                        <Sparkles className="w-3 h-3 text-white dark:text-inherit" />
                         <span>Generate Sprint ✨</span>
                       </button>
                     </>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 text-[11px] font-mono text-[#A78BFA]">
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-[#2383E2] dark:text-[#A78BFA]">
                         <Loader2 className="w-3 h-3 animate-spin" />
                         <span>Running...</span>
                       </div>
@@ -3386,7 +3395,7 @@ function CampaignStudioContent() {
             )}
 
             {/* Input Box Footer (Raycast-Style Floating Command Bar) */}
-            <footer className="p-2.5 border-t border-white/[0.06] bg-[#101014]/70 shrink-0">
+            <footer className="p-2.5 border-t border-black/[0.08] dark:border-white/[0.06] bg-[#F7F6F3] dark:bg-[#101014]/70 shrink-0">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -3407,16 +3416,16 @@ function CampaignStudioContent() {
                       ? `${currentAgent.name} is thinking...`
                       : `Message ${currentAgent.shortName}...`
                   }
-                  className="w-full bg-[#101014] border border-white/[0.08] focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#A78BFA]/20 rounded-xl px-3.5 py-2.5 pr-20 text-xs text-[#F2F0F7] placeholder:text-[#A3A0B0]/60 focus:outline-none disabled:opacity-50 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                  className="w-full bg-white dark:bg-[#101014] border border-black/[0.1] dark:border-white/[0.08] focus:border-[#2383E2] dark:focus:border-[#A78BFA]/50 focus:ring-1 focus:ring-[#2383E2]/20 dark:focus:ring-[#A78BFA]/20 rounded-xl px-3.5 py-2.5 pr-20 text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#9B9A97] dark:placeholder:text-[#A3A0B0]/60 focus:outline-none disabled:opacity-50 transition-all shadow-2xs"
                   autoFocus
                 />
 
                 <div className="absolute right-2 flex items-center gap-1.5">
-                  <span className="kbd-pill hidden sm:inline-flex text-[10px]">↵</span>
+                  <span className="kbd-pill hidden sm:inline-flex text-[10px] bg-[#EFEFED] text-[#6B6A65] border border-black/[0.08] dark:bg-white/[0.06] dark:text-[#A3A0B0] dark:border-white/[0.08]">↵</span>
                   <button
                     type="submit"
                     disabled={!chatInput.trim() || isChatLoading || isPipelineRunning}
-                    className="px-2.5 py-1 rounded-lg bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] font-semibold text-xs flex items-center gap-1 disabled:opacity-40 transition-opacity cursor-pointer shadow-[0_1px_6px_rgba(167,139,250,0.3)]"
+                    className="px-2.5 py-1 rounded-lg bg-[#2383E2] hover:bg-[#1D6FBF] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] font-semibold text-xs flex items-center gap-1 disabled:opacity-40 transition-opacity cursor-pointer shadow-2xs"
                   >
                     {isChatLoading ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -3588,11 +3597,11 @@ function CampaignStudioContent() {
             </div>
 
             {/* New Chat Primary Button */}
-            <div className="p-3 border-b border-white/[0.06] bg-[#14141B]">
+            <div className="p-3 border-b border-black/[0.08] dark:border-white/[0.06] bg-[#F7F6F3] dark:bg-[#14141B]">
               <button
                 type="button"
                 onClick={() => createNewChatSession()}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs shadow-md shadow-violet-600/20 transition cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#191919] hover:bg-[#2F2E2B] dark:bg-violet-600 dark:hover:bg-violet-500 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Start New Chat</span>

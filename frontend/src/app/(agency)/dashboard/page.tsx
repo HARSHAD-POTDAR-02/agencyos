@@ -199,7 +199,8 @@ export default function DashboardPage() {
               Live Operations
             </span>
           </div>
-          <h1 className="font-heading text-xl md:text-2xl font-semibold text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight flex items-center gap-2.5">
+            <Activity className="w-6 h-6 text-[#191919] dark:text-white" />
             <span>Agency Command Centre</span>
           </h1>
           <p className="text-xs text-[#A3A0B0] mt-0.5">
@@ -250,28 +251,28 @@ export default function DashboardPage() {
           2. Linear Coherent Telemetry Strip
              Single unified surface with hairline dividers
       ────────────────────────────────────────────── */}
-      <div className="surface-card rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+      <div className="surface-card rounded-2xl overflow-hidden border border-black/[0.08] dark:border-white/[0.08] divide-y sm:divide-y-0 sm:divide-x divide-[#E5E5E2] dark:divide-white/[0.06] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
         {/* Metric 1: Active Retainers */}
         <Link 
           href="/clients"
-          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
+          className="p-4.5 hover:bg-black/[0.02] dark:hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#A78BFA] transition-colors flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] group-hover:text-[#2383E2] dark:group-hover:text-[#A78BFA] transition-colors flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
               Active Retainers
             </span>
-            <span className="text-[9px] font-mono text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/25 px-1.5 py-0.5 rounded font-semibold">
+            <span className="text-[9px] font-mono text-emerald-700 bg-emerald-500/10 border border-emerald-500/25 dark:text-[#45B88A] dark:bg-[rgba(69,184,138,0.12)] px-1.5 py-0.5 rounded font-semibold">
               100% SLA
             </span>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+            <span className="text-2xl md:text-3xl font-semibold text-[#191919] dark:text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : (stats?.clients_active ?? 0)}
             </span>
-            <span className="text-xs text-[#A3A0B0]">Accounts</span>
+            <span className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">Accounts</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate">
+          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1.5 truncate">
             {loading ? "Loading clients..." : `${stats?.clients_onboarding ?? 0} onboarding · ${stats?.clients_offboarded ?? 0} offboarded`}
           </p>
         </Link>
@@ -279,28 +280,28 @@ export default function DashboardPage() {
         {/* Metric 2: Production Pipeline */}
         <Link
           href="/tasks"
-          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
+          className="p-4.5 hover:bg-black/[0.02] dark:hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#69A9D8] transition-colors flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#69A9D8]" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] group-hover:text-[#0B6E99] dark:group-hover:text-[#69A9D8] transition-colors flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#0B6E99] dark:text-[#69A9D8]" />
               Production Pipeline
             </span>
             <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold border ${
               (stats?.tasks_high_priority ?? 0) > 0 
-                ? "text-[#E16F7B] bg-[rgba(225,111,123,0.12)] border-[#E16F7B]/30" 
-                : "text-[#45B88A] bg-[rgba(69,184,138,0.12)] border-[#45B88A]/25"
+                ? "text-rose-700 bg-rose-500/10 border-rose-500/30 dark:text-[#E16F7B] dark:bg-[rgba(225,111,123,0.12)]" 
+                : "text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-[#45B88A] dark:bg-[rgba(69,184,138,0.12)]"
             }`}>
               {loading ? "—" : `${stats?.tasks_high_priority ?? 0} Urgent`}
             </span>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+            <span className="text-2xl md:text-3xl font-semibold text-[#191919] dark:text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : (stats?.tasks_remaining ?? 0)}
             </span>
-            <span className="text-xs text-[#A3A0B0]">Active tasks</span>
+            <span className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">Active tasks</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate">
+          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1.5 truncate">
             {loading ? "Calculating..." : `${stats?.tasks_in_review ?? 0} in review · ${stats?.tasks_todo ?? 0} backlog`}
           </p>
         </Link>
@@ -308,24 +309,24 @@ export default function DashboardPage() {
         {/* Metric 3: Pending Approvals */}
         <Link
           href="/approvals"
-          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
+          className="p-4.5 hover:bg-black/[0.02] dark:hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#E5AA58] transition-colors flex items-center gap-1.5">
-              <FileCheck className="w-3.5 h-3.5 text-[#E5AA58]" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] group-hover:text-[#D97706] dark:group-hover:text-[#E5AA58] transition-colors flex items-center gap-1.5">
+              <FileCheck className="w-3.5 h-3.5 text-[#D97706] dark:text-[#E5AA58]" />
               Review Queue
             </span>
-            <span className="text-[9px] font-mono text-[#A78BFA] bg-[rgba(167,139,250,0.12)] border border-[#A78BFA]/25 px-1.5 py-0.5 rounded font-semibold">
+            <span className="text-[9px] font-mono text-[#191919] bg-black/[0.06] border border-black/[0.08] dark:text-[#A78BFA] dark:bg-[rgba(167,139,250,0.12)] dark:border-[#A78BFA]/25 px-1.5 py-0.5 rounded font-semibold">
               Quality Gate
             </span>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+            <span className="text-2xl md:text-3xl font-semibold text-[#191919] dark:text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : ((stats?.deliverables_by_status?.client_review ?? 0) + (stats?.deliverables_by_status?.internal_review ?? 0) + (stats?.deliverables_by_status?.changes_requested ?? 0))}
             </span>
-            <span className="text-xs text-[#A3A0B0]">In review</span>
+            <span className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">In review</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate">
+          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1.5 truncate">
             {loading ? "Loading queue..." : `${stats?.deliverables_by_status?.changes_requested ?? 0} changes requested · ${stats?.deliverables_by_status?.client_review ?? 0} client sign-off`}
           </p>
         </Link>
@@ -333,24 +334,24 @@ export default function DashboardPage() {
         {/* Metric 4: Scheduled Releases & MRR */}
         <Link
           href="/reports"
-          className="p-4.5 hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
+          className="p-4.5 hover:bg-black/[0.02] dark:hover:bg-white/[0.025] transition-all duration-150 block group cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#A3A0B0] group-hover:text-[#45B88A] transition-colors flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-[#45B88A]" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] group-hover:text-[#0F7B6C] dark:group-hover:text-[#45B88A] transition-colors flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-[#0F7B6C] dark:text-[#45B88A]" />
               Monthly Delivery
             </span>
-            <span className="text-[9px] font-mono text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/25 px-1.5 py-0.5 rounded font-semibold">
+            <span className="text-[9px] font-mono text-emerald-700 bg-emerald-500/10 border border-emerald-500/25 dark:text-[#45B88A] dark:bg-[rgba(69,184,138,0.12)] px-1.5 py-0.5 rounded font-semibold">
               {deliverablePercent}% Target
             </span>
           </div>
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-semibold text-[#F2F0F7] tracking-tight tabular-nums font-mono">
+            <span className="text-2xl md:text-3xl font-semibold text-[#191919] dark:text-[#F2F0F7] tracking-tight tabular-nums font-mono">
               {loading ? "—" : `${stats?.deliverables_done ?? 0}/${stats?.deliverables_total ?? 0}`}
             </span>
-            <span className="text-xs text-[#A3A0B0]">Delivered</span>
+            <span className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">Delivered</span>
           </div>
-          <p className="text-[11px] text-[#A3A0B0] mt-1.5 truncate font-mono">
+          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1.5 truncate font-mono">
             {loading ? "Fetching MRR..." : `${formatCurrencyINR(stats?.total_monthly_retainer_inr ?? 0)}/mo contracted`}
           </p>
         </Link>
@@ -453,7 +454,7 @@ export default function DashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-white/[0.08] bg-[#121217]/90 text-[#A3A0B0] text-[10.5px] font-mono uppercase tracking-wider">
+                    <tr className="border-b border-black/[0.08] dark:border-white/[0.08] bg-[#F7F6F3] dark:bg-[#121217]/90 text-[#6B6A65] dark:text-[#A3A0B0] text-[10.5px] font-mono uppercase tracking-wider">
                       <th className="py-2.5 px-4 font-semibold">Deliverable / Task</th>
                       <th className="py-2.5 px-4 font-semibold">Client</th>
                       <th className="py-2.5 px-4 font-semibold">Assignee</th>
@@ -463,7 +464,7 @@ export default function DashboardPage() {
                       <th className="py-2.5 px-4 text-right font-semibold">Open</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.05]">
+                  <tbody className="divide-y divide-black/[0.08] dark:divide-white/[0.05]">
                     {filteredTasks.slice(0, 10).map((t) => {
                       const isDone = t.status === "done" || t.status === "approved";
                       const isReview = t.status === "client_review" || t.status === "internal_review" || t.status === "changes_requested";
@@ -473,28 +474,28 @@ export default function DashboardPage() {
                       return (
                         <tr 
                           key={t.id}
-                          className="hover:bg-white/[0.035] transition-colors group cursor-pointer h-10"
+                          className="hover:bg-black/[0.02] dark:hover:bg-white/[0.035] transition-colors group cursor-pointer h-10"
                         >
                           {/* Task / Deliverable Title */}
                           <td className="py-2.5 px-4">
                             <Link href={`/tasks/${t.id}`} className="flex items-center gap-2.5 min-w-0">
                               {t.task_type === "video_editing" ? (
-                                <Film className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+                                <Film className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA] shrink-0" />
                               ) : t.task_type === "scriptwriting" ? (
-                                <PenTool className="w-3.5 h-3.5 text-[#69A9D8] shrink-0" />
+                                <PenTool className="w-3.5 h-3.5 text-[#0B6E99] dark:text-[#69A9D8] shrink-0" />
                               ) : (
-                                <Layers className="w-3.5 h-3.5 text-[#45B88A] shrink-0" />
+                                <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-[#45B88A] shrink-0" />
                               )}
-                              <span className="font-medium text-[#F2F0F7] group-hover:text-[#A78BFA] transition-colors truncate max-w-[200px] sm:max-w-[260px]">
+                              <span className="font-medium text-[#191919] dark:text-[#F2F0F7] group-hover:text-[#2383E2] dark:group-hover:text-[#A78BFA] transition-colors truncate max-w-[200px] sm:max-w-[260px]">
                                 {t.title}
                               </span>
                             </Link>
                           </td>
 
                           {/* Client */}
-                          <td className="py-2.5 px-4 text-[11px] text-[#A3A0B0] truncate max-w-[120px]">
+                          <td className="py-2.5 px-4 text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] truncate max-w-[120px]">
                             <span className="inline-flex items-center gap-1.5 truncate">
-                              <span className="w-3.5 h-3.5 rounded bg-white/[0.06] text-[9px] font-mono font-semibold flex items-center justify-center shrink-0 text-[#F2F0F7]">
+                              <span className="w-3.5 h-3.5 rounded bg-black/[0.06] dark:bg-white/[0.06] text-[9px] font-mono font-semibold flex items-center justify-center shrink-0 text-[#191919] dark:text-[#F2F0F7]">
                                 {(clientsMap[t.client_id] || "C").charAt(0).toUpperCase()}
                               </span>
                               <span className="truncate">{clientsMap[t.client_id] || "Client Account"}</span>
