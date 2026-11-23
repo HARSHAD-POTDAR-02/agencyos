@@ -13,6 +13,7 @@ from app.models.cortex import BrandFact, FactAuditLog, KnowledgeChunk, MemorySou
 from app.models.client import Client
 from app.schemas.cortex import (
     AgentCortexContext,
+    BrandFactResponse,
     FactReviewDecision,
     FactStatus,
     FactType,
@@ -371,63 +372,63 @@ class CortexService:
         personas = [f for f in facts if f.fact_type == "persona"]
         winning_patterns = [f for f in facts if f.fact_type == "winning_pattern"]
 
-        # Build Markdown
+        # Build Markdown with clean, executive typography (zero tacky emojis)
         md = []
         md.append(f"# {client_name} — Living Brand Vault")
-        md.append(f"**Last Compiled:** `{now.strftime('%Y-%m-%d %H:%M:%S UTC')}` | **Active Institutional Facts:** `{len(facts)}`\n")
-        md.append("> *This document is strictly compiled from verified, human-approved institutional memory rules. It is loaded deterministically into AgencyOS AI pipelines to guarantee zero brand drift.*")
+        md.append(f"Last Compiled: {now.strftime('%Y-%m-%d %H:%M:%S UTC')} | Active Institutional Facts: {len(facts)}\n")
+        md.append("> Institutional memory rules verified and approved by agency leadership. Loaded deterministically into AgencyOS AI pipelines to guarantee zero brand drift.")
         md.append("\n---\n")
 
-        # 1. Negative Taboos
-        md.append("## 🚫 Negative Taboos & Hard Boundaries (Deterministic Enforcement)")
+        # 1. Negative Boundaries & Taboos
+        md.append("## Negative Boundaries & Hard Taboos")
         if not taboos:
-            md.append("*No active negative taboos recorded.*")
+            md.append("No active negative taboos recorded.")
         else:
             for t in taboos:
                 chan_str = ", ".join(t.channels or ["all"])
-                md.append(f"### 🛑 Rule `{str(t.id)[:8]}`: {t.statement}")
+                md.append(f"### Rule [{str(t.id)[:8]}]: {t.statement}")
                 if t.rationale:
-                    md.append(f"- **Rationale:** {t.rationale}")
-                md.append(f"- **Enforced Channels:** `{chan_str}`")
+                    md.append(f"- Rationale: {t.rationale}")
+                md.append(f"- Enforced Channels: {chan_str}")
                 if t.provenance_quote:
-                    md.append(f"- **Provenance Quote:** *\"{t.provenance_quote}\"* ({t.provenance_location or 'N/A'})")
+                    md.append(f"- Verified Citation: \"{t.provenance_quote}\" ({t.provenance_location or 'Client Direct'})")
                 md.append("")
 
-        # 2. Guardrails
-        md.append("\n## 🛡️ Active Brand Guardrails & Quality Standards")
+        # 2. Quality Standards & Guardrails
+        md.append("\n## Quality Standards & Brand Guardrails")
         if not guardrails:
-            md.append("*No active guardrails recorded.*")
+            md.append("No active guardrails recorded.")
         else:
             for g in guardrails:
                 chan_str = ", ".join(g.channels or ["all"])
-                md.append(f"### ✦ Rule `{str(g.id)[:8]}`: {g.statement}")
+                md.append(f"### Rule [{str(g.id)[:8]}]: {g.statement}")
                 if g.rationale:
-                    md.append(f"- **Rationale:** {g.rationale}")
-                md.append(f"- **Applicable Channels:** `{chan_str}`")
+                    md.append(f"- Rationale: {g.rationale}")
+                md.append(f"- Applicable Channels: {chan_str}")
                 if g.provenance_quote:
-                    md.append(f"- **Provenance:** *\"{g.provenance_quote}\"* ({g.provenance_location or 'N/A'})")
+                    md.append(f"- Verified Citation: \"{g.provenance_quote}\" ({g.provenance_location or 'Client Direct'})")
                 md.append("")
 
         # 3. Personas
-        md.append("\n## 🎯 Target Audience Personas")
+        md.append("\n## Target Audience Personas")
         if not personas:
-            md.append("*No active personas recorded.*")
+            md.append("No active personas recorded.")
         else:
             for p in personas:
-                md.append(f"### 👤 {p.statement}")
+                md.append(f"### Persona: {p.statement}")
                 if p.rationale:
-                    md.append(f"- **Profile Detail:** {p.rationale}")
+                    md.append(f"- Profile Detail: {p.rationale}")
                 md.append("")
 
         # 4. Winning Patterns
-        md.append("\n## 🏆 Proven Winning Patterns & Playbooks")
+        md.append("\n## Verified Winning Patterns & Playbooks")
         if not winning_patterns:
-            md.append("*No active winning patterns recorded.*")
+            md.append("No active winning patterns recorded.")
         else:
             for w in winning_patterns:
-                md.append(f"### 📈 {w.statement}")
+                md.append(f"### Playbook: {w.statement}")
                 if w.rationale:
-                    md.append(f"- **Mechanics:** {w.rationale}")
+                    md.append(f"- Execution Mechanics: {w.rationale}")
                 md.append("")
 
         compiled_text = "\n".join(md)
@@ -442,6 +443,7 @@ class CortexService:
             personas_count=len(personas),
             winning_patterns_count=len(winning_patterns),
             last_recompiled_at=now,
+            active_facts=[BrandFactResponse.model_validate(f) for f in facts],
         )
 
 

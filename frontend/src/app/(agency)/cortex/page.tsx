@@ -32,7 +32,9 @@ import {
   UserCheck,
   Flame,
   MessageSquare,
+  LayoutGrid,
 } from "lucide-react";
+import { MarkdownRenderer } from "@/components/common/MarkdownRenderer";
 
 export default function CortexMemoryPage() {
   const { token, activeAgencyId, agencies } = useAuth();
@@ -48,6 +50,7 @@ export default function CortexMemoryPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [vaultViewMode, setVaultViewMode] = useState<"cards" | "document">("cards");
 
   // Ingestion form state
   const [ingestMode, setIngestMode] = useState<"document" | "transcript">("document");
@@ -102,6 +105,22 @@ export default function CortexMemoryPage() {
       setLoading(false);
     }
   };
+
+  const taboos = useMemo(() => {
+    return (vaultData?.active_facts || []).filter((f) => f.fact_type === "taboo");
+  }, [vaultData]);
+
+  const guardrails = useMemo(() => {
+    return (vaultData?.active_facts || []).filter((f) => f.fact_type === "guardrail");
+  }, [vaultData]);
+
+  const personas = useMemo(() => {
+    return (vaultData?.active_facts || []).filter((f) => f.fact_type === "persona");
+  }, [vaultData]);
+
+  const winningPatterns = useMemo(() => {
+    return (vaultData?.active_facts || []).filter((f) => f.fact_type === "winning_pattern");
+  }, [vaultData]);
 
   const handleReviewDecision = async (
     factId: string,
@@ -520,7 +539,7 @@ export default function CortexMemoryPage() {
                   Living Brand Document
                 </span>
                 <span className="text-sm font-bold text-[#191919] dark:text-white">
-                  {selectedClient?.business_name || "Brand Brain"}
+                  {selectedClient?.business_name || vaultData?.client_name || "Brand Brain"}
                 </span>
               </div>
 
@@ -533,30 +552,380 @@ export default function CortexMemoryPage() {
                 <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-mono font-bold">
                   {vaultData?.guardrails_count || 0} Guardrails
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs font-mono font-bold">
                   {vaultData?.personas_count || 0} Personas
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold">
                   {vaultData?.winning_patterns_count || 0} Patterns
                 </span>
               </div>
             </div>
 
-            <button
-              onClick={handleCopyVault}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFEFED] hover:bg-[#E5E5E2] text-[#191919] text-xs font-medium border border-black/[0.08] dark:bg-[#181822] dark:hover:bg-[#20202B] dark:text-white dark:border-white/[0.08] transition cursor-pointer"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? "Copied Markdown" : "Copy Compiled Vault"}</span>
-            </button>
+            <div className="flex items-center gap-2.5">
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 p-1 bg-[#F7F6F3] dark:bg-[#101014] rounded-xl border border-black/[0.08] dark:border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setVaultViewMode("cards")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                    vaultViewMode === "cards"
+                      ? "bg-white dark:bg-[#181822] text-[#191919] dark:text-white shadow-xs font-semibold"
+                      : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-white"
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Interactive Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVaultViewMode("document")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                    vaultViewMode === "document"
+                      ? "bg-white dark:bg-[#181822] text-[#191919] dark:text-white shadow-xs font-semibold"
+                      : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-[#191919] dark:hover:text-white"
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Clean Document</span>
+                </button>
+              </div>
+
+              <button
+                onClick={handleCopyVault}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFEFED] hover:bg-[#E5E5E2] text-[#191919] text-xs font-medium border border-black/[0.08] dark:bg-[#181822] dark:hover:bg-[#20202B] dark:text-white dark:border-white/[0.08] transition cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? "Copied Markdown" : "Copy Vault"}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Compiled Markdown Surface */}
-          <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-6 shadow-xs prose prose-sm max-w-none dark:prose-invert font-sans">
-            <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#191919] dark:text-[#F2F0F7] bg-transparent p-0 m-0 border-0">
-              {vaultData?.compiled_markdown || "No active institutional facts recorded for this brand yet."}
-            </pre>
-          </div>
+          {/* VIEW MODE: DOCUMENT */}
+          {vaultViewMode === "document" && (
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-8 shadow-xs space-y-4">
+              <div className="flex flex-wrap items-center justify-between pb-4 border-b border-black/[0.06] dark:border-white/[0.06] text-xs text-[#6B6A65] dark:text-[#A3A0B0]">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#2383E2]" />
+                  <span>Executive Compiled Brief — Loaded deterministically into all AI generation pipelines</span>
+                </div>
+                <span className="font-mono text-[11px] text-[#8C8B85] dark:text-[#8E8B9E]">
+                  Last compiled: {vaultData?.last_recompiled_at ? new Date(vaultData.last_recompiled_at).toLocaleString() : "Just now"}
+                </span>
+              </div>
+              <MarkdownRenderer content={vaultData?.compiled_markdown || "No active institutional facts recorded for this brand yet."} />
+            </div>
+          )}
+
+          {/* VIEW MODE: INTERACTIVE CARDS */}
+          {vaultViewMode === "cards" && (
+            <>
+              {(!vaultData || vaultData.total_active_rules === 0) ? (
+                <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-12 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-xl bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center mx-auto text-[#6B6A65] dark:text-[#A3A0B0]">
+                    <Brain className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#191919] dark:text-white">
+                    No Active Institutional Rules Yet
+                  </h3>
+                  <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-md mx-auto">
+                    Ingest meeting transcripts or brand documents in the &ldquo;Ingest Knowledge&rdquo; tab and approve proposed facts in the &ldquo;Review Queue&rdquo; to populate the Living Brand Vault.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Category 1: Negative Boundaries & Hard Taboos */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                          <ShieldAlert className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#191919] dark:text-white">
+                            Negative Boundaries & Hard Taboos
+                          </h3>
+                          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">
+                            Deterministic hard constraints enforced to prevent legal risk and brand drift
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400 text-xs font-mono font-bold">
+                        {taboos.length} Rules Enforced
+                      </span>
+                    </div>
+
+                    {taboos.length === 0 ? (
+                      <p className="text-xs text-[#8C8B85] dark:text-[#8E8B9E] italic py-2">
+                        No active negative boundaries recorded.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {taboos.map((fact) => (
+                          <div
+                            key={fact.id}
+                            className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/[0.02] dark:bg-rose-500/[0.04] dark:border-rose-500/30 space-y-2.5 flex flex-col justify-between"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                                  Rule {fact.id.slice(0, 8)}
+                                </span>
+                                {fact.channels && fact.channels.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {fact.channels.map((ch, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/[0.05] dark:bg-white/[0.08] text-[#4A4944] dark:text-[#D1CFD7]"
+                                      >
+                                        {ch}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <p className="text-xs font-semibold text-[#191919] dark:text-white leading-relaxed">
+                                {fact.statement}
+                              </p>
+
+                              {fact.rationale && (
+                                <div className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] flex items-start gap-1.5">
+                                  <span className="font-semibold text-[#191919] dark:text-white shrink-0">Rationale:</span>
+                                  <span>{fact.rationale}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {fact.provenance_quote && (
+                              <div className="text-[11px] italic bg-white/70 dark:bg-black/30 p-2.5 rounded-lg border-l-2 border-rose-500 text-[#4A4944] dark:text-[#D1CFD7] mt-2">
+                                &ldquo;{fact.provenance_quote}&rdquo;
+                                {fact.provenance_location && (
+                                  <span className="block mt-1 not-italic font-mono text-[9px] text-[#8C8B85] dark:text-[#8E8B9E]">
+                                    Verified Citation: {fact.provenance_location}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category 2: Brand Guardrails & Quality Standards */}
+                  <div className="space-y-3 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#191919] dark:text-white">
+                            Active Brand Guardrails & Quality Standards
+                          </h3>
+                          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">
+                            Prescribed brand voice guidelines, performance metrics, and messaging standards
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-mono font-bold">
+                        {guardrails.length} Standards Active
+                      </span>
+                    </div>
+
+                    {guardrails.length === 0 ? (
+                      <p className="text-xs text-[#8C8B85] dark:text-[#8E8B9E] italic py-2">
+                        No active guardrails recorded.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {guardrails.map((fact) => (
+                          <div
+                            key={fact.id}
+                            className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/[0.02] dark:bg-blue-500/[0.04] dark:border-blue-500/30 space-y-2.5 flex flex-col justify-between"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300">
+                                  Rule {fact.id.slice(0, 8)}
+                                </span>
+                                {fact.channels && fact.channels.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {fact.channels.map((ch, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/[0.05] dark:bg-white/[0.08] text-[#4A4944] dark:text-[#D1CFD7]"
+                                      >
+                                        {ch}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <p className="text-xs font-semibold text-[#191919] dark:text-white leading-relaxed">
+                                {fact.statement}
+                              </p>
+
+                              {fact.rationale && (
+                                <div className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] flex items-start gap-1.5">
+                                  <span className="font-semibold text-[#191919] dark:text-white shrink-0">Rationale:</span>
+                                  <span>{fact.rationale}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {fact.provenance_quote && (
+                              <div className="text-[11px] italic bg-white/70 dark:bg-black/30 p-2.5 rounded-lg border-l-2 border-blue-500 text-[#4A4944] dark:text-[#D1CFD7] mt-2">
+                                &ldquo;{fact.provenance_quote}&rdquo;
+                                {fact.provenance_location && (
+                                  <span className="block mt-1 not-italic font-mono text-[9px] text-[#8C8B85] dark:text-[#8E8B9E]">
+                                    Verified Citation: {fact.provenance_location}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category 3: Target Audience Personas */}
+                  <div className="space-y-3 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                          <UserCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#191919] dark:text-white">
+                            Target Audience Personas
+                          </h3>
+                          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">
+                            Verified buyer roles, decision-maker profiles, and ICP criteria
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400 text-xs font-mono font-bold">
+                        {personas.length} Personas
+                      </span>
+                    </div>
+
+                    {personas.length === 0 ? (
+                      <p className="text-xs text-[#8C8B85] dark:text-[#8E8B9E] italic py-2">
+                        No active personas recorded.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {personas.map((fact) => (
+                          <div
+                            key={fact.id}
+                            className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/[0.02] dark:bg-purple-500/[0.04] dark:border-purple-500/30 space-y-2.5"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300">
+                                Persona {fact.id.slice(0, 8)}
+                              </span>
+                              {fact.channels && fact.channels.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {fact.channels.map((ch, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/[0.05] dark:bg-white/[0.08] text-[#4A4944] dark:text-[#D1CFD7]"
+                                    >
+                                      {ch}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-semibold text-[#191919] dark:text-white leading-relaxed">
+                              {fact.statement}
+                            </p>
+
+                            {fact.rationale && (
+                              <div className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] flex items-start gap-1.5">
+                                <span className="font-semibold text-[#191919] dark:text-white shrink-0">Profile Detail:</span>
+                                <span>{fact.rationale}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category 4: Proven Winning Patterns & Playbooks */}
+                  <div className="space-y-3 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#191919] dark:text-white">
+                            Proven Winning Patterns & Playbooks
+                          </h3>
+                          <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0]">
+                            Validated high-converting messaging frameworks and channel strategies
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-mono font-bold">
+                        {winningPatterns.length} Playbooks
+                      </span>
+                    </div>
+
+                    {winningPatterns.length === 0 ? (
+                      <p className="text-xs text-[#8C8B85] dark:text-[#8E8B9E] italic py-2">
+                        No active winning patterns recorded.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {winningPatterns.map((fact) => (
+                          <div
+                            key={fact.id}
+                            className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] dark:bg-emerald-500/[0.04] dark:border-emerald-500/30 space-y-2.5"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                                Playbook {fact.id.slice(0, 8)}
+                              </span>
+                              {fact.channels && fact.channels.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {fact.channels.map((ch, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/[0.05] dark:bg-white/[0.08] text-[#4A4944] dark:text-[#D1CFD7]"
+                                    >
+                                      {ch}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-semibold text-[#191919] dark:text-white leading-relaxed">
+                              {fact.statement}
+                            </p>
+
+                            {fact.rationale && (
+                              <div className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] flex items-start gap-1.5">
+                                <span className="font-semibold text-[#191919] dark:text-white shrink-0">Mechanics:</span>
+                                <span>{fact.rationale}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -716,8 +1085,8 @@ export default function CortexMemoryPage() {
                 <h3 className="text-xs font-mono uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] mb-2">
                   Institutional Answer
                 </h3>
-                <div className="p-4 rounded-xl bg-[#F7F6F3] dark:bg-[#14141B] border border-black/[0.06] dark:border-white/[0.04] text-xs leading-relaxed text-[#191919] dark:text-[#F2F0F7] whitespace-pre-wrap">
-                  {askResult.answer}
+                <div className="p-4 rounded-xl bg-[#F7F6F3] dark:bg-[#14141B] border border-black/[0.06] dark:border-white/[0.04] text-xs">
+                  <MarkdownRenderer content={askResult.answer} />
                 </div>
               </div>
 

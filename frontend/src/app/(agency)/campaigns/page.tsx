@@ -9,6 +9,7 @@ import { ContextualCanvas } from "@/components/campaign-studio/ContextualCanvas"
 import { ExportPreviewModal } from "@/components/campaign-studio/ExportPreviewModal";
 import { StrategyPitchDeckModal } from "@/components/campaign-studio/StrategyPitchDeckModal";
 import { ActiveArtifactData } from "@/components/campaign-studio/types";
+import { MarkdownRenderer } from "@/components/common/MarkdownRenderer";
 import {
   Sparkles,
   Send,
@@ -3192,14 +3193,18 @@ function CampaignStudioContent() {
                             : "bg-white text-[#191919] dark:bg-[#17171E] dark:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08] rounded-bl-xs shadow-xs"
                         }`}
                       >
-                        <div className="whitespace-pre-wrap">
-                          {msg.content || (msg.isStreaming ? (
-                            <span className="text-[#6B6A65] dark:text-[#A3A0B0] italic text-[11px] flex items-center gap-1.5 py-0.5">
-                              <Sparkles className="w-3 h-3 text-[#2383E2] dark:text-[#A78BFA] animate-pulse shrink-0" />
-                              <span>Gathering intelligence & synthesizing...</span>
-                            </span>
-                          ) : null)}
-                        </div>
+                        {msg.content ? (
+                          isUser ? (
+                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                          ) : (
+                            <MarkdownRenderer content={msg.content} isUser={false} />
+                          )
+                        ) : msg.isStreaming ? (
+                          <span className="text-[#6B6A65] dark:text-[#A3A0B0] italic text-[11px] flex items-center gap-1.5 py-0.5">
+                            <Sparkles className="w-3 h-3 text-[#2383E2] dark:text-[#A78BFA] animate-pulse shrink-0" />
+                            <span>Gathering intelligence & synthesizing...</span>
+                          </span>
+                        ) : null}
                         <span className={`block mt-1 text-[9px] font-mono ${isUser ? "text-white/60 dark:text-[#A3A0B0] text-right" : "text-[#6B6A65] dark:text-[#A3A0B0]"}`}>
                           {msg.timestamp}
                         </span>

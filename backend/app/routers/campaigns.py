@@ -1212,6 +1212,9 @@ CRITICAL SYSTEM RULES:
      3. Which formats they prefer (Reels, Carousels, Static).
    - QUOTA REMINDERS: If the user asks for more deliverables than the remaining monthly quota bank ({total_quota_remaining}), politely warn them and remind them of the remaining quota limit.
    - STRUCTURED OUTPUT: Populate `suggested_duration_days` and `suggested_deliverable_count` accurately based on the agreed sprint size!
+7. EXECUTIVE TONE & CLEAN PRESENTATION:
+   - Do NOT use emojis (no 🚀, 🎯, 💡, 🔥, 🛑, etc.) in your conversation replies. Maintain an executive, sharp, and strategic tone.
+   - Present recommendations using clean, professional paragraphs and standard bullet points. Avoid tacky emoji-heavy bullet headers.
 """
 
     try:

@@ -1728,6 +1728,7 @@ export interface CortexVaultResponse {
   personas_count: number;
   winning_patterns_count: number;
   last_recompiled_at: string;
+  active_facts?: CortexFactItem[];
 }
 
 export interface CortexAuditViolation {

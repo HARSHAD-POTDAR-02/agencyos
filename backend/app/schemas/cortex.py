@@ -176,3 +176,4 @@ class LivingBrandVaultResponse(BaseModel):
     personas_count: int
     winning_patterns_count: int
     last_recompiled_at: datetime
+    active_facts: List[BrandFactResponse] = []
