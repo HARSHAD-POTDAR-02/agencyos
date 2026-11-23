@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useAgencyWebSocket } from "@/lib/websocket-context";
 import { engagementApi, clientApi, API_BASE } from "@/lib/api";
 import {
   MessagesSquare,
@@ -242,9 +243,9 @@ function EngagementContent() {
   }, [effectiveAgencyId, token]);
 
   // Fetch Feed Data (Comments or DMs) & Stats
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isSilent: boolean = false) => {
     if (!effectiveAgencyId || !token) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
 
     try {
       const statsData = await engagementApi.stats(
@@ -280,15 +281,30 @@ function EngagementContent() {
       }
     } catch (err: any) {
       console.error("Error fetching engagement feed:", err);
-      showToast(err.message || "Failed to load engagement feed", "error");
+      if (!isSilent) {
+        showToast(err.message || "Failed to load engagement feed", "error");
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [effectiveAgencyId, token, streamMode, selectedClientId, selectedSentiment, selectedStatus, searchQuery, selectedCommentId, selectedConvId, showToast]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const reloadEngagementSilently = useCallback(() => {
+    fetchData(true);
+  }, [fetchData]);
+
+  // Real-Time WebSocket subscription: instant update when social comments or DMs arrive/update
+  useAgencyWebSocket(
+    "ENGAGEMENT_ACTIVITY",
+    (envelope) => {
+      reloadEngagementSilently();
+    },
+    reloadEngagementSilently
+  );
 
   // Active selected comment or conversation
   const activeComment = useMemo(() => {

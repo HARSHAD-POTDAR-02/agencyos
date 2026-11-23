@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime, timezone
 from sqlalchemy import select
 
-from app.core.database import AsyncSessionLocal
+from tests.conftest import TestSessionLocal
 from app.models.cortex import BrandFact, FactAuditLog, KnowledgeChunk, MemorySource
 from app.models.client import Client
 from app.models.agency import Agency
@@ -17,7 +17,7 @@ async def test_deterministic_sql_rule_loading():
     Test deterministic SQL rule loading:
     Verifies that active guardrails, taboos, and personas are loaded via pure SQL with 100% recall.
     """
-    async with AsyncSessionLocal() as db_session:
+    async with TestSessionLocal() as db_session:
         # 1. Create a test agency and client
         unique_id = uuid.uuid4()
         agency = Agency(
@@ -99,8 +99,24 @@ async def test_document_ingestion_and_chunking():
     """
     Test document ingestion, chunking, and pgvector embedding storage.
     """
-    async with AsyncSessionLocal() as db_session:
+    async with TestSessionLocal() as db_session:
+        unique_id = uuid.uuid4()
+        agency = Agency(
+            id=unique_id,
+            name="Cortex Ingest Agency",
+            slug=f"ingest-{unique_id.hex[:8]}",
+        )
+        db_session.add(agency)
         client_id = uuid.uuid4()
+        client = Client(
+            id=client_id,
+            agency_id=unique_id,
+            business_name="Vertex Tech",
+            industry="Cloud",
+        )
+        db_session.add(client)
+        await db_session.flush()
+
         doc_content = (
             "Vertex Cloud Technologies delivers high-throughput streaming compute for distributed systems. "
             "Our target audience consists of VP of Infrastructure and Chief Technology Officers. "
@@ -120,7 +136,7 @@ async def test_document_ingestion_and_chunking():
         assert source.id is not None
         assert source.title == "Vertex Brand Positioning Guide v1"
 
-        # Verify chunks exist in pgvector knowledge_chunks table
+        # Verify chunks exist in knowledge_chunks table
         res = await db_session.execute(
             select(KnowledgeChunk).where(KnowledgeChunk.source_id == source.id)
         )
@@ -134,8 +150,24 @@ async def test_rule_lifecycle_and_conflict_superseding():
     """
     Test rule lifecycle (proposed -> active -> superseded) and audit trail.
     """
-    async with AsyncSessionLocal() as db_session:
+    async with TestSessionLocal() as db_session:
+        unique_id = uuid.uuid4()
+        agency = Agency(
+            id=unique_id,
+            name="Cortex Lifecycle Agency",
+            slug=f"life-{unique_id.hex[:8]}",
+        )
+        db_session.add(agency)
         client_id = uuid.uuid4()
+        client = Client(
+            id=client_id,
+            agency_id=unique_id,
+            business_name="Rule Client",
+            industry="E-Commerce",
+        )
+        db_session.add(client)
+        await db_session.flush()
+
         actor_id = uuid.uuid4()
 
         # Create active rule
@@ -197,7 +229,7 @@ async def test_living_brand_vault_compilation():
     """
     Test dynamic compilation of the read-only Living Brand Document.
     """
-    async with AsyncSessionLocal() as db_session:
+    async with TestSessionLocal() as db_session:
         unique_id = uuid.uuid4()
         agency = Agency(
             id=unique_id,

@@ -10,8 +10,16 @@ from typing import Any, Dict, Optional, Set
 import uuid
 
 from fastapi import WebSocket
-import redis.asyncio as aioredis
-from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
+
+try:
+    import redis.asyncio as aioredis
+    from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
+    HAS_REDIS = True
+except ImportError:
+    aioredis = None  # type: ignore
+    RedisConnectionError = Exception  # type: ignore
+    RedisError = Exception  # type: ignore
+    HAS_REDIS = False
 
 from app.core.config import settings
 
@@ -56,26 +64,34 @@ class WebSocketManager:
         # Format: ticket_str -> (value_str, expires_at_float)
         self._fallback_tickets: Dict[str, tuple[str, float]] = {}
 
-        # Redis connection handle
+        # Redis connection handle & fast-fail probe throttle
         self._redis: Optional[aioredis.Redis] = None
         self._redis_available: bool = False
+        self._last_probe_time: float = 0.0
+        self._probe_cooldown_seconds: float = 30.0
 
     async def get_redis(self) -> Optional[aioredis.Redis]:
-        """Lazy-initialize and return async Redis client if reachable."""
+        """Lazy-initialize and return async Redis client if reachable (with zero-lag cooldown fallback)."""
+        if not HAS_REDIS or not settings.REDIS_URL:
+            return None
+
         if self._redis is not None:
             return self._redis
 
-        if not settings.REDIS_URL:
+        now = time.time()
+        # If Redis recently failed to connect, instantly use local in-memory fallback without blocking 2s!
+        if not self._redis_available and (now - self._last_probe_time < self._probe_cooldown_seconds):
             return None
 
+        self._last_probe_time = now
         try:
             client = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
-                socket_timeout=2.0,
-                socket_connect_timeout=2.0,
+                socket_timeout=0.3,
+                socket_connect_timeout=0.3,
             )
-            # Ping to verify reachability
+            # Fast ping probe
             await client.ping()
             self._redis = client
             self._redis_available = True
@@ -84,7 +100,7 @@ class WebSocketManager:
         except (RedisConnectionError, OSError, Exception) as e:
             self._redis = None
             self._redis_available = False
-            logger.warning("Redis is unreachable (%s). WebSocketManager running in local in-memory fallback mode.", e)
+            logger.info("Redis is not running (%s). WebSocketManager running in local in-memory fallback mode.", e)
             return None
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -256,12 +272,18 @@ class WebSocketManager:
         Subscribes to 'agency_ws:*' and dispatches received messages locally.
         """
         logger.info("Starting Redis WebSocket Pub/Sub listener task...")
+        if not HAS_REDIS:
+            logger.info("Redis package not installed. Skipping Redis Pub/Sub listener task.")
+            return
         while not stop_event.is_set():
             try:
                 redis_client = await self.get_redis()
                 if not redis_client:
-                    # Redis not available yet, wait and retry
-                    await asyncio.sleep(2.0)
+                    # Redis not available yet, wait 30s before probing again
+                    try:
+                        await asyncio.sleep(30.0)
+                    except asyncio.CancelledError:
+                        break
                     continue
 
                 pubsub = redis_client.pubsub()

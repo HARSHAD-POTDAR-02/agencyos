@@ -649,6 +649,24 @@ async def create_task(
     await db.commit()
     await _sync_deliverable_status(deliverable_id, db)
     await db.refresh(task)
+
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.TASK_UPDATED,
+            data={
+                "task_id": str(task.id),
+                "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                "title": task.title,
+                "status": task.status.value if hasattr(task.status, "value") else str(task.status),
+                "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
+                "assignee_id": str(task.assignee_id) if task.assignee_id else None,
+            },
+        )
+    except Exception as ws_err:
+        logger.warning(f"Failed to broadcast TASK_UPDATED on create: {ws_err}")
+
     return TaskOut.model_validate(task)
 
 
@@ -709,6 +727,24 @@ async def create_agency_task(
     if payload.deliverable_id:
         await _sync_deliverable_status(payload.deliverable_id, db)
     await db.refresh(task)
+
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.TASK_UPDATED,
+            data={
+                "task_id": str(task.id),
+                "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                "title": task.title,
+                "status": task.status.value if hasattr(task.status, "value") else str(task.status),
+                "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
+                "assignee_id": str(task.assignee_id) if task.assignee_id else None,
+            },
+        )
+    except Exception as ws_err:
+        logger.warning(f"Failed to broadcast TASK_UPDATED on create_agency_task: {ws_err}")
+
     return TaskOut.model_validate(task)
 
 
@@ -1600,6 +1636,20 @@ async def delete_task(
     # Resynchronize parent deliverable status
     await _sync_deliverable_status(deliverable_id, db)
     await db.commit()
+
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.TASK_UPDATED,
+            data={
+                "task_id": str(task_id),
+                "deleted": True,
+            },
+        )
+    except Exception as ws_err:
+        logger.warning(f"Failed to broadcast TASK_UPDATED on delete: {ws_err}")
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

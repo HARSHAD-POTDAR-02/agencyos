@@ -200,6 +200,33 @@ async def sync_engagement_feed(
             if res.get("dm_warning"):
                 dm_warning = res["dm_warning"]
 
+    if total_comments > 0 or total_convs > 0:
+        try:
+            from app.core.websockets import ws_manager, AgencyWSEvent
+            await ws_manager.broadcast_to_agency(
+                agency_id=agency_id,
+                event=AgencyWSEvent.ENGAGEMENT_ACTIVITY,
+                data={
+                    "comments_synced": total_comments,
+                    "conversations_synced": total_convs,
+                    "client_id": str(client_id) if client_id else None,
+                },
+            )
+            await ws_manager.broadcast_to_agency(
+                agency_id=agency_id,
+                event=AgencyWSEvent.NOTIFICATION_CREATED,
+                data={
+                    "id": f"sync-{int(datetime.now(timezone.utc).timestamp())}",
+                    "category": "engagement",
+                    "title": f"Community Inbox: {total_comments} New Comment{'s' if total_comments != 1 else ''}",
+                    "description": f"Synced {total_comments} comments and {total_convs} DMs from Instagram.",
+                    "url": "/engagement",
+                    "is_urgent": False,
+                },
+            )
+        except Exception as ws_err:
+            logger.warning(f"Failed to broadcast engagement sync: {ws_err}")
+
     return EngagementSyncResponse(
         comments_synced=total_comments,
         conversations_synced=total_convs,
@@ -251,6 +278,20 @@ async def reply_to_comment(
 
     await db.commit()
     await db.refresh(comment)
+
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.ENGAGEMENT_ACTIVITY,
+            data={
+                "type": "comment_replied",
+                "comment_id": str(comment.id),
+                "reply_text": payload.message,
+            },
+        )
+    except Exception as ws_err:
+        logger.warning(f"Failed to broadcast comment reply: {ws_err}")
 
     out = SocialCommentOut.model_validate(comment)
     if comment.client:
@@ -332,6 +373,20 @@ async def hide_comment(
     comment.status = EngagementStatus.hidden
     await db.commit()
     await db.refresh(comment)
+
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.ENGAGEMENT_ACTIVITY,
+            data={
+                "type": "comment_replied",
+                "comment_id": str(comment.id),
+                "reply_text": payload.message,
+            },
+        )
+    except Exception as ws_err:
+        logger.warning(f"Failed to broadcast comment reply: {ws_err}")
 
     out = SocialCommentOut.model_validate(comment)
     if comment.client:

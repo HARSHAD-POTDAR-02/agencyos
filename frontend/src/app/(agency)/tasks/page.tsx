@@ -307,21 +307,62 @@ function TasksContent() {
     loadData();
   }, [loadData]);
 
-  // Real-Time WebSocket subscription for instant Kanban updates & dependency unlocking
+  // Silent background reload of tasks without unmounting or triggering full-page spinner
+  const reloadTasksSilently = useCallback(async () => {
+    if (!token || !effectiveAgencyId) return;
+    try {
+      const params: Record<string, string> = { limit: "200" };
+      if (selectedClientId !== "all") {
+        params.client_id = selectedClientId;
+      }
+      const data = (await taskApi.list(effectiveAgencyId, token, params)) as Task[];
+      setTasks(data || []);
+    } catch (err) {
+      console.error("Silent task reload failed:", err);
+    }
+  }, [token, effectiveAgencyId, selectedClientId]);
+
+  // Real-Time WebSocket subscription: instant in-memory patch (<16ms) + silent background re-sync
   useAgencyWebSocket(
     "*",
     (envelope) => {
-      if (
+      if (envelope.event === "TASK_UPDATED" && envelope.data?.task_id) {
+        const { task_id, status: newStatus, priority, assignee_id, title, deleted } = envelope.data;
+        if (deleted) {
+          setTasks((prev) => prev.filter((t) => t.id !== task_id));
+          return;
+        }
+        setTasks((prev) => {
+          const exists = prev.some((t) => t.id === task_id);
+          if (exists) {
+            return prev.map((t) =>
+              t.id === task_id
+                ? {
+                    ...t,
+                    status: newStatus || t.status,
+                    title: title || t.title,
+                    priority: priority || t.priority,
+                    assignee_id: assignee_id !== undefined ? assignee_id : t.assignee_id,
+                  }
+                : t
+            );
+          } else {
+            // Newly created task from another client or worker -> silent background reload
+            reloadTasksSilently();
+            return prev;
+          }
+        });
+      } else if (
         [
-          "TASK_UPDATED",
           "PIPELINE_STAGE_UNLOCKED",
           "DELIVERABLE_REVIEW_DECISION",
+          "DELIVERABLE_STATUS_CHANGED",
         ].includes(envelope.event)
       ) {
-        loadData();
+        reloadTasksSilently();
       }
     },
-    loadData
+    reloadTasksSilently
   );
 
   // Create manual task
