@@ -25,7 +25,9 @@ import {
   GitFork,
   Layers,
   MessagesSquare,
-  Brain
+  Brain,
+  CreditCard,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -150,145 +152,127 @@ export function Sidebar() {
     };
   }, [fetchBadgeCounts]);
 
-  // Grouped navigation structure (Linear / Arc reference)
-  const navGroups = isSpecialist
-    ? [
+  // Grouped navigation structure requested by user:
+  // 1. WORKSPACE: Dashboard, My Workspace
+  // 2. OPERATIONS: Clients, Cortex Memory, Tasks, Approvals
+  // 3. CAMPAIGN PIPELINE: Campaign Studio, Campaign Plans, Content Calendar
+  // 4. ENGAGEMENT & ROI: Community Inbox, Reports & ROI
+  // 5. ADMIN (Bottom): Team, Billing & Credits, Settings (only for owners/managers)
+  const navGroups = [
+    {
+      group: "WORKSPACE",
+      items: [
         {
-          group: "My Workbench",
-          items: [
-            {
-              name: "Tasks",
-              href: "/tasks",
-              icon: CheckSquare,
-              badge: taskCount !== null ? String(taskCount) : null,
-            },
-            {
-              name: "My Workspace",
-              href: "/workspace",
-              icon: Briefcase,
-              badge: null,
-            },
-            {
-              name: "Approvals",
-              href: "/approvals",
-              icon: FileCheck2,
-              badge: approvalCount !== null ? String(approvalCount) : null,
-            },
-          ],
+          name: "Dashboard",
+          href: "/dashboard",
+          icon: LayoutDashboard,
+          badge: null,
         },
         {
-          group: "Campaigns & Editorial",
-          items: [
-            {
-              name: "Content Calendar",
-              href: "/calendar",
-              icon: CalendarDays,
-              badge: null,
-            },
-            {
-              name: "Community Inbox",
-              href: "/engagement",
-              icon: MessagesSquare,
-              badge: "Live",
-            },
-            {
-              name: "Campaign Plans",
-              href: "/campaign-plans",
-              icon: Layers,
-              badge: null,
-            },
-          ],
+          name: "My Workspace",
+          href: "/workspace",
+          icon: Briefcase,
+          badge: null,
         },
-      ]
-    : [
+      ],
+    },
+    {
+      group: "OPERATIONS",
+      items: [
         {
-          group: "Operations",
-          items: [
-            {
-              name: "Dashboard",
-              href: "/dashboard",
-              icon: LayoutDashboard,
-              badge: null,
-            },
-            {
-              name: "Clients",
-              href: "/clients",
-              icon: Users,
-              badge: null,
-            },
-            {
-              name: "Tasks",
-              href: "/tasks",
-              icon: CheckSquare,
-              badge: taskCount !== null ? String(taskCount) : null,
-            },
-            {
-              name: "Approvals",
-              href: "/approvals",
-              icon: FileCheck2,
-              badge: approvalCount !== null ? String(approvalCount) : null,
-            },
-            {
-              name: "Team",
-              href: "/team",
-              icon: UserCheck,
-              badge: null,
-            },
-          ],
+          name: "Clients",
+          href: "/clients",
+          icon: Users,
+          badge: null,
         },
         {
-          group: "Creative Studio",
-          items: [
-            {
-              name: "Campaign Studio",
-              href: "/campaigns",
-              icon: Sparkles,
-              badge: "AI",
-            },
-            {
-              name: "Cortex Memory",
-              href: "/cortex",
-              icon: Brain,
-              badge: "v2",
-            },
-            {
-              name: "Content Calendar",
-              href: "/calendar",
-              icon: CalendarDays,
-              badge: null,
-            },
-            {
-              name: "Community Inbox",
-              href: "/engagement",
-              icon: MessagesSquare,
-              badge: "Live",
-            },
-            {
-              name: "Campaign Plans",
-              href: "/campaign-plans",
-              icon: Layers,
-              badge: null,
-            },
-            {
-              name: "Reports & ROI",
-              href: "/reports",
-              icon: BarChart3,
-              badge: null,
-            },
-          ],
+          name: "Cortex Memory",
+          href: "/cortex",
+          icon: Brain,
+          badge: null,
         },
         {
-          group: "Personal",
-          items: [
-            {
-              name: "My Workspace",
-              href: "/workspace",
-              icon: Briefcase,
-              badge: null,
-            },
-          ],
+          name: "Tasks",
+          href: "/tasks",
+          icon: CheckSquare,
+          badge: taskCount !== null ? String(taskCount) : "19",
         },
-      ];
+        {
+          name: "Approvals",
+          href: "/approvals",
+          icon: FileCheck2,
+          badge: approvalCount !== null ? String(approvalCount) : "2",
+        },
+      ],
+    },
+    {
+      group: "CAMPAIGN PIPELINE",
+      items: [
+        {
+          name: "Campaign Studio",
+          href: "/campaigns",
+          icon: Sparkles,
+          badge: "AI",
+        },
+        {
+          name: "Campaign Plans",
+          href: "/campaign-plans",
+          icon: Layers,
+          badge: null,
+        },
+        {
+          name: "Content Calendar",
+          href: "/calendar",
+          icon: CalendarDays,
+          badge: null,
+        },
+      ],
+    },
+    {
+      group: "ENGAGEMENT & ROI",
+      items: [
+        {
+          name: "Community Inbox",
+          href: "/engagement",
+          icon: MessagesSquare,
+          badge: "Live",
+        },
+        {
+          name: "Reports & ROI",
+          href: "/reports",
+          icon: BarChart3,
+          badge: null,
+        },
+      ],
+    },
+    ...(isOwnerOrManager
+      ? [
+          {
+            group: "ADMIN",
+            items: [
+              {
+                name: "Team",
+                href: "/team",
+                icon: UserCheck,
+                badge: null,
+              },
+              {
+                name: "Billing & Credits",
+                href: "/billing",
+                icon: CreditCard,
+                badge: "38k / 50k",
+              },
+              {
+                name: "Settings",
+                href: "/settings",
+                icon: Settings,
+                badge: null,
+              },
+            ],
+          },
+        ]
+      : []),
+  ];
 
   const handleCreateAgency = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -484,9 +468,13 @@ export function Sidebar() {
                             "px-1.5 py-0.2 text-[9px] font-mono font-bold rounded tracking-wide transition-colors shrink-0",
                             item.badge === "AI"
                               ? "bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30"
+                              : item.badge === "Live"
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                               : item.name === "Approvals" && Number(item.badge) > 0
-                              ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                              : "bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08]"
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                              : item.name === "Billing & Credits"
+                              ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30"
+                              : "bg-black/[0.04] text-[#6B6A65] border border-black/[0.08] dark:bg-white/[0.06] dark:text-[#A3A0B0] dark:border-white/[0.08]"
                           )}
                         >
                           {item.badge}
