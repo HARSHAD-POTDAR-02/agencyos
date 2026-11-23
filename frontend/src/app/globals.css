@@ -921,4 +921,102 @@ html:not(.dark) .pitch-deck-screen-view footer kbd {
   border-color: rgba(55, 53, 47, 0.14) !important;
 }
 
+/* ── Zocket-Inspired Enterprise Motion & Visual Utilities ── */
+
+@keyframes zkRadarSweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes zkPulseRing {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.15;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+}
+
+@keyframes zkTravelLineH {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes zkTravelLineV {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(300%);
+  }
+}
+
+@keyframes zkDrift {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes zkMarquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-radar-sweep {
+  animation: zkRadarSweep 8s linear infinite;
+  transform-origin: center center;
+}
+
+.animate-pulse-ring-1 {
+  animation: zkPulseRing 3.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.animate-pulse-ring-2 {
+  animation: zkPulseRing 3.5s cubic-bezier(0.16, 1, 0.3, 1) 1.2s infinite;
+}
+
+.animate-pulse-ring-3 {
+  animation: zkPulseRing 3.5s cubic-bezier(0.16, 1, 0.3, 1) 2.4s infinite;
+}
+
+.animate-drift {
+  animation: zkDrift 4.5s ease-in-out infinite;
+}
+
+.animate-drift-delayed {
+  animation: zkDrift 5s ease-in-out 1.8s infinite;
+}
+
+.animate-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: zkMarquee 35s linear infinite;
+}
+
+.animate-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+
 
