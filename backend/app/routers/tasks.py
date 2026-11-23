@@ -1401,6 +1401,36 @@ async def review_task_work(
                 await _sync_deliverable_status(deliverable.id, db)
 
     await db.commit()
+
+    # Real-Time WebSocket broadcast strictly after DB commit
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.TASK_UPDATED,
+            data={
+                "task_id": str(task.id),
+                "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                "title": task.title,
+                "status": task.status.value,
+                "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
+                "assignee_id": str(task.assignee_id) if task.assignee_id else None,
+            },
+        )
+        if target_status in (TaskStatus.approved, TaskStatus.done):
+            await ws_manager.broadcast_to_agency(
+                agency_id=agency_id,
+                event=AgencyWSEvent.PIPELINE_STAGE_UNLOCKED,
+                data={
+                    "task_id": str(task.id),
+                    "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                    "title": task.title,
+                    "unlocked_by": str(task.id),
+                },
+            )
+    except Exception as ws_err:
+        logger.warning(f"WebSocket task update broadcast failed gracefully: {ws_err}")
+
     return await _build_task_detail(agency_id, task.id, db)
 
 
@@ -1472,6 +1502,35 @@ async def update_task(
 
     await db.commit()
     await db.refresh(task)
+
+    # Real-Time WebSocket broadcast strictly after DB commit
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.TASK_UPDATED,
+            data={
+                "task_id": str(task.id),
+                "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                "title": task.title,
+                "status": task.status.value,
+                "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
+                "assignee_id": str(task.assignee_id) if task.assignee_id else None,
+            },
+        )
+        if "status" in update_data and update_data["status"] in (TaskStatus.approved, TaskStatus.done):
+            await ws_manager.broadcast_to_agency(
+                agency_id=agency_id,
+                event=AgencyWSEvent.PIPELINE_STAGE_UNLOCKED,
+                data={
+                    "task_id": str(task.id),
+                    "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                    "title": task.title,
+                    "unlocked_by": str(task.id),
+                },
+            )
+    except Exception as ws_err:
+        logger.warning(f"WebSocket task update broadcast failed gracefully: {ws_err}")
     
     out = TaskOut.model_validate(task)
     blocks = list(task.script_blocks or [])
@@ -1750,6 +1809,35 @@ async def sync_task_to_campaign_studio(
 
     await db.commit()
     await db.refresh(task)
+
+    # Real-Time WebSocket broadcast strictly after DB commit
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=agency_id,
+            event=AgencyWSEvent.TASK_UPDATED,
+            data={
+                "task_id": str(task.id),
+                "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                "title": task.title,
+                "status": task.status.value,
+                "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
+                "assignee_id": str(task.assignee_id) if task.assignee_id else None,
+            },
+        )
+        if "status" in update_data and update_data["status"] in (TaskStatus.approved, TaskStatus.done):
+            await ws_manager.broadcast_to_agency(
+                agency_id=agency_id,
+                event=AgencyWSEvent.PIPELINE_STAGE_UNLOCKED,
+                data={
+                    "task_id": str(task.id),
+                    "deliverable_id": str(task.deliverable_id) if task.deliverable_id else None,
+                    "title": task.title,
+                    "unlocked_by": str(task.id),
+                },
+            )
+    except Exception as ws_err:
+        logger.warning(f"WebSocket task update broadcast failed gracefully: {ws_err}")
 
     return TaskStudioSyncResponse(
         success=True,

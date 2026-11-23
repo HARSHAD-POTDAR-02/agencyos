@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { useAgencyWebSocket } from "@/lib/websocket-context";
 import { agencyApi, SearchItem, NotificationItem } from "@/lib/api";
 
 const MONTH_NAMES = [
@@ -310,16 +311,36 @@ export function Header() {
     }
   }, [token, effectiveAgencyId]);
 
+  // Real-Time WebSocket subscription for notifications (eliminates 20s polling)
+  const { isConnected: isWsConnected } = useAgencyWebSocket(
+    "*",
+    (envelope) => {
+      // Refresh notifications immediately on actionable server push events
+      if (
+        [
+          "NOTIFICATION_CREATED",
+          "DELIVERABLE_REVIEW_DECISION",
+          "PUBLICATION_COMPLETED",
+          "TASK_UPDATED",
+          "MEMORY_REVIEW_QUEUED",
+          "PIPELINE_STAGE_UNLOCKED",
+        ].includes(envelope.event)
+      ) {
+        fetchNotifications();
+      }
+    },
+    // Reconnection re-sync: if connection was lost/reconnected (e.g. laptop wake from sleep), refetch
+    fetchNotifications
+  );
+
   useEffect(() => {
     fetchNotifications();
 
     const handleRefresh = () => fetchNotifications();
     window.addEventListener("agencyos:badge-refresh", handleRefresh);
-    const interval = setInterval(fetchNotifications, 20000);
 
     return () => {
       window.removeEventListener("agencyos:badge-refresh", handleRefresh);
-      clearInterval(interval);
     };
   }, [fetchNotifications]);
 
@@ -635,7 +656,16 @@ export function Header() {
             <div className="absolute right-0 mt-2 w-88 sm:w-96 surface-card rounded-2xl shadow-2xl border border-white/[0.1] p-4 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-[#F2F0F7]">Activity Notifications</span>
+                  <span className="text-xs font-semibold text-[#F2F0F7] flex items-center gap-1.5">
+                    Activity Notifications
+                    <span
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full inline-block",
+                        isWsConnected ? "bg-[#45B88A]" : "bg-[#A3A0B0]/40"
+                      )}
+                      title={isWsConnected ? "Real-time stream active" : "Connecting real-time stream"}
+                    />
+                  </span>
                   {unreadCount > 0 && (
                     <span className="text-[10px] font-semibold bg-[#A78BFA]/15 text-[#A78BFA] px-1.5 py-0.2 rounded font-mono">
                       {unreadCount} new

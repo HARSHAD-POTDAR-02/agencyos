@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useAgencyWebSocket } from "@/lib/websocket-context";
 import { taskApi, clientApi, agencyApi, deliverableApi } from "@/lib/api";
 import {
   Kanban,
@@ -305,6 +306,23 @@ function TasksContent() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Real-Time WebSocket subscription for instant Kanban updates & dependency unlocking
+  useAgencyWebSocket(
+    "*",
+    (envelope) => {
+      if (
+        [
+          "TASK_UPDATED",
+          "PIPELINE_STAGE_UNLOCKED",
+          "DELIVERABLE_REVIEW_DECISION",
+        ].includes(envelope.event)
+      ) {
+        loadData();
+      }
+    },
+    loadData
+  );
 
   // Create manual task
   const handleCreateTask = async (e: React.FormEvent) => {

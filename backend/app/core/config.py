@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     # File storage (local filesystem fallback/cache)
     UPLOAD_DIR: str = "uploads"
 
+    # Redis Pub/Sub & Real-Time Cache
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     # App
     APP_ENV: str = "development"
     FRONTEND_URL: str = "http://localhost:3000"

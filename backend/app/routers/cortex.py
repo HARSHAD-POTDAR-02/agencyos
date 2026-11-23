@@ -70,7 +70,30 @@ async def run_cortex_extraction_background(
             "persisted_proposed_ids": [],
         }
 
-        await cortex_ingestion_graph.ainvoke(initial_state)
+        result = await cortex_ingestion_graph.ainvoke(initial_state)
+        persisted_ids = result.get("persisted_proposed_ids", []) if isinstance(result, dict) else []
+        if persisted_ids:
+            try:
+                from app.core.database import AsyncSessionLocal
+                from app.models.client import Client
+                from app.core.websockets import ws_manager, AgencyWSEvent
+                async with AsyncSessionLocal() as db_session:
+                    c_res = await db_session.execute(select(Client).where(Client.id == client_id))
+                    client_obj = c_res.scalar_one_or_none()
+                    if client_obj:
+                        await ws_manager.broadcast_to_agency(
+                            agency_id=client_obj.agency_id,
+                            event=AgencyWSEvent.MEMORY_REVIEW_QUEUED,
+                            data={
+                                "client_id": str(client_id),
+                                "client_name": client_obj.business_name,
+                                "source_id": str(source_id),
+                                "proposed_count": len(persisted_ids),
+                            },
+                        )
+            except Exception as ws_err:
+                logger.warning(f"Failed to broadcast MEMORY_REVIEW_QUEUED: {ws_err}")
+
         logger.info(f"Cortex ingestion completed for source {source_id} (Client {client_id})")
     except Exception as e:
         logger.error(f"Error in background cortex extraction: {e}")

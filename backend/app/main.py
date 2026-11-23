@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.core.database import async_engine, Base, AsyncSessionLocal
+from app.core.websockets import ws_manager
 from app.services.scheduler_coordinator import run_scheduler_worker
 from app.routers import (
     agencies,
@@ -32,6 +33,7 @@ from app.routers import (
     social,
     tasks,
     cortex,
+    websockets,
 )
 
 
@@ -54,7 +56,23 @@ async def lifespan(app: FastAPI):
     app.state.scheduler_task = scheduler_task
     app.state.scheduler_stop_event = scheduler_stop_event
 
+    # Start background Redis WebSocket pub/sub listener worker
+    ws_stop_event = asyncio.Event()
+    ws_task = asyncio.create_task(
+        ws_manager.run_redis_listener(stop_event=ws_stop_event)
+    )
+    app.state.ws_task = ws_task
+    app.state.ws_stop_event = ws_stop_event
+
     yield
+
+    # Stop WebSocket background listener worker
+    ws_stop_event.set()
+    ws_task.cancel()
+    try:
+        await ws_task
+    except (asyncio.CancelledError, Exception):
+        pass
 
     # Stop scheduler background worker on shutdown
     scheduler_stop_event.set()
@@ -119,6 +137,7 @@ app.include_router(engagement.router)
 app.include_router(review.router)
 app.include_router(operational_workflows.router)
 app.include_router(cortex.router)
+app.include_router(websockets.router)
 
 # ---------------------------------------------------------------------------
 # Static file serving for uploads

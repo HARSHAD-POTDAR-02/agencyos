@@ -287,6 +287,48 @@ async def execute_publication_job(
         )
         await db.commit()
 
+        # Real-Time WebSocket broadcast strictly after DB commit
+        try:
+            from app.models.deliverable import Deliverable
+            from app.models.campaign import Campaign
+            from app.models.client import Client
+            deliv_res = await db.execute(
+                select(Deliverable, Client.agency_id)
+                .join(Campaign, Deliverable.campaign_id == Campaign.id)
+                .join(Client, Campaign.client_id == Client.id)
+                .where(Deliverable.id == job.deliverable_id)
+            )
+            row = deliv_res.first()
+            if row:
+                deliv_obj, agency_id = row
+                from app.core.websockets import ws_manager, AgencyWSEvent
+                await ws_manager.broadcast_to_agency(
+                    agency_id=agency_id,
+                    event=AgencyWSEvent.PUBLICATION_COMPLETED,
+                    data={
+                        "job_id": str(job.id),
+                        "deliverable_id": str(job.deliverable_id),
+                        "platform": job.platform,
+                        "external_post_id": post_id,
+                        "live_post_url": permalink,
+                        "title": deliv_obj.title,
+                    },
+                )
+                await ws_manager.broadcast_to_agency(
+                    agency_id=agency_id,
+                    event=AgencyWSEvent.NOTIFICATION_CREATED,
+                    data={
+                        "id": f"pub-{job.id}",
+                        "category": "publish",
+                        "title": f"Live on {job.platform.title()} 🚀",
+                        "description": f'"{deliv_obj.title}" was successfully published live.',
+                        "url": f"/deliverables/{job.deliverable_id}",
+                        "is_urgent": False,
+                    },
+                )
+        except Exception as ws_err:
+            logger.warning(f"WebSocket publication broadcast failed gracefully: {ws_err}")
+
         logger.info(f"Successfully published job {job.id} on {job.platform}. Post ID: {post_id}")
         return True
 

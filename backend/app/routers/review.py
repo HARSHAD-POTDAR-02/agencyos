@@ -555,4 +555,35 @@ async def submit_public_review_decision(
 
     await db.commit()
 
+    # Real-Time WebSocket broadcast to agency team strictly after DB commit
+    try:
+        from app.core.websockets import ws_manager, AgencyWSEvent
+        await ws_manager.broadcast_to_agency(
+            agency_id=client.agency_id,
+            event=AgencyWSEvent.DELIVERABLE_REVIEW_DECISION,
+            data={
+                "deliverable_id": str(deliverable.id),
+                "title": deliverable.title,
+                "status": deliverable.status.value,
+                "client_id": str(client.id),
+                "client_name": client.business_name,
+                "reviewer_name": reviewer_name,
+                "feedback_notes": payload.feedback_notes or None,
+            },
+        )
+        await ws_manager.broadcast_to_agency(
+            agency_id=client.agency_id,
+            event=AgencyWSEvent.NOTIFICATION_CREATED,
+            data={
+                "id": f"deliv-{deliverable.id}",
+                "category": "approval",
+                "title": f"{client.business_name}: {'Content Approved' if payload.decision == 'approved' else 'Changes Requested'}",
+                "description": f'"{deliverable.title}" decision received from {reviewer_name}.',
+                "url": f"/deliverables/{deliverable.id}",
+                "is_urgent": payload.decision != "approved",
+            },
+        )
+    except Exception as ws_err:
+        logger.warning(f"WebSocket review decision broadcast failed gracefully: {ws_err}")
+
     return await get_public_review_room(token, db)

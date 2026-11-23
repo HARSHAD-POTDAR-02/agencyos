@@ -1860,3 +1860,13 @@ export const cortexApi = {
     }),
 };
 
+// ── Real-Time WebSockets & Single-Use Ticket Hub ──
+export const wsApi = {
+  getTicket: (agencyId: string, token: string) =>
+    apiFetch<{ ticket: string; expires_in: number }>("/ws/ticket", {
+      method: "POST",
+      body: { agency_id: agencyId },
+      token,
+    }),
+};
+
