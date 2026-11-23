@@ -94,6 +94,8 @@ class Settings(BaseSettings):
     META_GRAPH_API_VERSION: str = "v22.0"
     META_APP_ID: str = "573556449081156"
     META_APP_SECRET: str = ""
+    META_WEBHOOK_VERIFY_TOKEN: str = "agencyos_meta_webhook_secret_2026"
+    METRICS_SYNC_INTERVAL_MINUTES: int = 15
 
 
 settings = Settings()

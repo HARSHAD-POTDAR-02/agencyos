@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.database import async_engine, Base, AsyncSessionLocal
 from app.core.websockets import ws_manager
 from app.services.scheduler_coordinator import run_scheduler_worker
+from app.services.metrics_worker import run_social_metrics_worker
 from app.routers import (
     agencies,
     analytics,
@@ -34,6 +35,7 @@ from app.routers import (
     tasks,
     cortex,
     websockets,
+    webhooks,
 )
 
 
@@ -64,7 +66,23 @@ async def lifespan(app: FastAPI):
     app.state.ws_task = ws_task
     app.state.ws_stop_event = ws_stop_event
 
+    # Start background social metrics worker (periodic Meta Insights & comments backup poller)
+    metrics_stop_event = asyncio.Event()
+    metrics_task = asyncio.create_task(
+        run_social_metrics_worker(AsyncSessionLocal, stop_event=metrics_stop_event)
+    )
+    app.state.metrics_task = metrics_task
+    app.state.metrics_stop_event = metrics_stop_event
+
     yield
+
+    # Stop metrics background worker on shutdown
+    metrics_stop_event.set()
+    metrics_task.cancel()
+    try:
+        await metrics_task
+    except (asyncio.CancelledError, Exception):
+        pass
 
     # Stop WebSocket background listener worker
     ws_stop_event.set()
@@ -138,6 +156,7 @@ app.include_router(review.router)
 app.include_router(operational_workflows.router)
 app.include_router(cortex.router)
 app.include_router(websockets.router)
+app.include_router(webhooks.router)
 
 # ---------------------------------------------------------------------------
 # Static file serving for uploads
