@@ -1273,11 +1273,11 @@ function DeliverableDetailContent() {
             </div>
 
             {currentPreviewVersion?.caption ? (
-              <div className="bg-[#0D0D11] rounded-xl p-4 border border-white/[0.08] text-xs text-[#F2F0F7] font-mono whitespace-pre-wrap leading-relaxed">
+              <div className="bg-[#F7F6F3] dark:bg-[#0D0D11] rounded-xl p-4 border border-black/[0.08] dark:border-white/[0.08] text-xs text-[#191919] dark:text-[#F2F0F7] font-mono whitespace-pre-wrap leading-relaxed">
                 {currentPreviewVersion.caption}
               </div>
             ) : (
-              <div className="text-xs text-[#A3A0B0] italic py-2">
+              <div className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] italic py-2">
                 No caption has been entered for this version yet.
               </div>
             )}
@@ -1296,23 +1296,23 @@ function DeliverableDetailContent() {
           </div>
 
           {/* Feedback & Collaboration Thread Card */}
-          <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
+          <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-white/[0.04] text-[#A78BFA] border border-white/[0.08]">
+                <span className="p-1.5 rounded-lg bg-[#EFEFED] dark:bg-white/[0.04] text-[#2383E2] dark:text-[#A78BFA] border border-black/[0.08] dark:border-white/[0.08]">
                   <MessageSquare className="w-4 h-4" />
                 </span>
-                <h3 className="text-xs font-heading font-bold text-[#F2F0F7] tracking-tight">
+                <h3 className="text-xs font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                   Client &amp; Team Feedback
                 </h3>
               </div>
-              <span className="text-[11px] font-mono font-medium text-[#A3A0B0] bg-white/[0.04] border border-white/[0.08] px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-mono font-medium text-[#6B6A65] dark:text-[#A3A0B0] bg-[#EFEFED] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] px-2 py-0.5 rounded-full">
                 {deliverable.comments?.length || 0}
               </span>
             </div>
 
             {(!deliverable.comments || deliverable.comments.length === 0) ? (
-              <p className="text-xs text-[#A3A0B0] italic text-center py-4">
+              <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] italic text-center py-4">
                 No feedback recorded yet. Client review comments and revisions will appear here.
               </p>
             ) : (
@@ -1324,31 +1324,31 @@ function DeliverableDetailContent() {
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-mono font-bold shrink-0 ${
                           isClient
-                            ? "bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30"
-                            : "bg-white/[0.06] text-[#A3A0B0] border border-white/[0.08]"
+                            ? "bg-[#2383E2]/10 text-[#2383E2] border border-[#2383E2]/20 dark:bg-[#A78BFA]/20 dark:text-[#A78BFA] dark:border-[#A78BFA]/30"
+                            : "bg-[#EFEFED] text-[#6B6A65] border border-black/[0.08] dark:bg-white/[0.06] dark:text-[#A3A0B0] dark:border-white/[0.08]"
                         }`}
                       >
                         {(c.author_name || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-semibold text-[#F2F0F7]">
+                          <span className="text-[11px] font-semibold text-[#191919] dark:text-[#F2F0F7]">
                             {c.author_name || "Reviewer"}
                           </span>
                           <span
                             className={`text-[9px] font-mono font-medium px-1.5 py-0.2 rounded-md uppercase ${
                               isClient
-                                ? "bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20"
-                                : "bg-white/[0.04] text-[#A3A0B0] border border-white/[0.08]"
+                                ? "bg-[#2383E2]/10 text-[#2383E2] border border-[#2383E2]/20 dark:bg-[#A78BFA]/10 dark:text-[#A78BFA] dark:border-[#A78BFA]/20"
+                                : "bg-[#EFEFED] text-[#6B6A65] border border-black/[0.08] dark:bg-white/[0.04] dark:text-[#A3A0B0] dark:border-white/[0.08]"
                             }`}
                           >
                             {isClient ? "Client" : "Agency Team"}
                           </span>
-                          <span className="text-[10px] text-[#A3A0B0] font-mono">
+                          <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">
                             {formatDate(c.created_at)}
                           </span>
                         </div>
-                        <div className="text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 leading-relaxed mt-0.5">
+                        <div className="text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 leading-relaxed mt-0.5">
                           {c.message}
                         </div>
                       </div>
@@ -1359,19 +1359,19 @@ function DeliverableDetailContent() {
             )}
 
             {/* Post comment */}
-            <form onSubmit={handlePostComment} className="pt-2 border-t border-white/[0.08] flex gap-2">
+            <form onSubmit={handlePostComment} className="pt-2 border-t border-black/[0.08] dark:border-white/[0.08] flex gap-2">
               <input
                 ref={commentInputRef}
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Reply to client or add internal note..."
-                className="flex-1 text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] placeholder-[#A3A0B0]/60"
+                className="flex-1 text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] placeholder-[#6B6A65]/60 dark:placeholder-[#A3A0B0]/60"
               />
               <button
                 type="submit"
                 disabled={submittingComment || !newComment.trim()}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-xl shadow-[0_0_10px_rgba(167,139,250,0.25)] disabled:opacity-40 transition-colors cursor-pointer"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-[#191919] hover:bg-[#2F2E2B] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] text-xs font-semibold rounded-xl disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Reply</span>
@@ -1383,22 +1383,22 @@ function DeliverableDetailContent() {
         {/* Right Column (4 cols): Version History Timeline & Review Decision */}
         <div className="lg:col-span-4 space-y-6">
           {/* Approval / Review Action Card */}
-          <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-4 shadow-xs">
+          <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
+              <span className="p-1.5 rounded-lg bg-blue-500/10 text-[#2383E2] border border-[#2383E2]/20 dark:bg-[#A78BFA]/10 dark:text-[#A78BFA] dark:border-[#A78BFA]/20">
                 <ShieldCheck className="w-4 h-4" />
               </span>
-              <h3 className="text-xs font-heading font-bold text-[#F2F0F7] tracking-tight">
+              <h3 className="text-xs font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                 Review & Approvals
               </h3>
             </div>
 
-            <p className="text-xs text-[#A3A0B0] leading-relaxed">
-              Verify video pacing, audio loudness, color grading, brand tone, and Indian market suitability before client presentation.
+            <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] leading-relaxed">
+              Verify video pacing, audio loudness, color grading, brand tone, and market suitability before client presentation.
             </p>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-mono font-medium text-[#F2F0F7] block">
+              <label className="text-[11px] font-mono font-medium text-[#191919] dark:text-[#F2F0F7] block">
                 Review Feedback / Revision Notes
               </label>
               <textarea
@@ -1406,7 +1406,7 @@ function DeliverableDetailContent() {
                 onChange={(e) => setReviewComment(e.target.value)}
                 placeholder="Optional feedback: e.g. 'Hook looks great! Increase music volume slightly in first 3s.'"
                 rows={2}
-                className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] placeholder-[#A3A0B0]/60"
+                className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] placeholder-[#6B6A65]/60 dark:placeholder-[#A3A0B0]/60"
               />
             </div>
 
@@ -1482,12 +1482,12 @@ function DeliverableDetailContent() {
                     Queued
                   </span>
                 </div>
-                <div className="p-2.5 bg-[#0D0D11] rounded-xl border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
+                <div className="p-2.5 bg-indigo-50/80 dark:bg-[#0D0D11] rounded-xl border border-indigo-500/20 dark:border-indigo-500/30 text-xs text-indigo-900 dark:text-indigo-200 space-y-1">
                   <div className="font-mono font-bold flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     <span>{deliverable.scheduled_at ? formatDate(deliverable.scheduled_at) : "Target time set"}</span>
                   </div>
-                  <div className="text-[10px] text-[#A3A0B0] font-mono">
+                  <div className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">
                     Timezone: {deliverable.scheduled_timezone || "UTC"}
                   </div>
                 </div>
@@ -1620,7 +1620,7 @@ function DeliverableDetailContent() {
                       </div>
 
                       {v.notes && (
-                        <p className="text-[11px] text-[#A3A0B0] line-clamp-2 italic bg-[#0D0D11] p-1.5 rounded border border-white/[0.06] font-mono">
+                        <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] line-clamp-2 italic bg-[#F7F6F3] dark:bg-[#0D0D11] p-1.5 rounded border border-black/[0.06] dark:border-white/[0.06] font-mono">
                           &ldquo;{v.notes}&rdquo;
                         </p>
                       )}
@@ -1671,13 +1671,13 @@ function DeliverableDetailContent() {
             <form onSubmit={handleUploadVersion} className="space-y-4">
               {/* Task Scope Selector */}
               <div>
-                <label className="text-xs font-mono font-medium text-[#F2F0F7] block mb-1.5">
+                <label className="text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1.5">
                   Attach to Stage / Task (optional)
                 </label>
                 <select
                   value={uploadTaskId}
                   onChange={(e) => setUploadTaskId(e.target.value)}
-                  className="w-full text-xs font-mono font-medium text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#A78BFA] cursor-pointer"
+                  className="w-full text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] cursor-pointer"
                 >
                   <option value="none">Deliverable Master Asset (General)</option>
                   {tasksList.map((t) => (
@@ -1686,14 +1686,14 @@ function DeliverableDetailContent() {
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-[#A3A0B0] mt-1">
+                <p className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1">
                   Tagging a specific task isolates this media to that stage so other tasks won&apos;t share it.
                 </p>
               </div>
 
               {/* File Dropzone / Picker */}
               <div>
-                <label className="text-xs font-mono font-medium text-[#F2F0F7] block mb-1.5">
+                <label className="text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1.5">
                   Select Reel File, Script, or Creative Asset *
                 </label>
                 <input
@@ -1711,32 +1711,32 @@ function DeliverableDetailContent() {
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
                     uploadFile
-                      ? "border-[#A78BFA] bg-[#A78BFA]/10"
-                      : "border-white/[0.12] hover:border-[#A78BFA]/60 bg-[#0D0D11]/60"
+                      ? "border-[#2383E2] dark:border-[#A78BFA] bg-blue-500/10 dark:bg-[#A78BFA]/10"
+                      : "border-black/[0.12] dark:border-white/[0.12] hover:border-[#2383E2]/60 dark:hover:border-[#A78BFA]/60 bg-[#F7F6F3] dark:bg-[#0D0D11]/60"
                   }`}
                 >
                   {uploadFile ? (
                     <div className="space-y-1">
                       {uploadFile.name.match(/\.(pdf|docx|doc|txt)$/i) || uploadFile.type.startsWith("text/") || uploadFile.type.includes("pdf") || uploadFile.type.includes("word") ? (
-                        <FileText className="w-6 h-6 text-[#A78BFA] mx-auto" />
+                        <FileText className="w-6 h-6 text-[#2383E2] dark:text-[#A78BFA] mx-auto" />
                       ) : uploadFile.type.startsWith("image/") || uploadFile.name.match(/\.(png|jpe?g|webp|gif)$/i) ? (
-                        <FileImage className="w-6 h-6 text-[#A78BFA] mx-auto" />
+                        <FileImage className="w-6 h-6 text-[#2383E2] dark:text-[#A78BFA] mx-auto" />
                       ) : (
-                        <FileVideo className="w-6 h-6 text-[#A78BFA] mx-auto" />
+                        <FileVideo className="w-6 h-6 text-[#2383E2] dark:text-[#A78BFA] mx-auto" />
                       )}
-                      <p className="text-xs font-mono font-bold text-[#F2F0F7]">{uploadFile.name}</p>
-                      <p className="text-[11px] text-[#A3A0B0] font-mono">{formatBytes(uploadFile.size)}</p>
-                      <span className="text-[10px] text-[#A78BFA] font-medium underline block pt-1">
+                      <p className="text-xs font-mono font-bold text-[#191919] dark:text-[#F2F0F7]">{uploadFile.name}</p>
+                      <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">{formatBytes(uploadFile.size)}</p>
+                      <span className="text-[10px] text-[#2383E2] dark:text-[#A78BFA] font-medium underline block pt-1">
                         Click to change file
                       </span>
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <Upload className="w-6 h-6 text-[#A3A0B0] mx-auto" />
-                      <p className="text-xs font-medium text-[#F2F0F7]">
+                      <Upload className="w-6 h-6 text-[#6B6A65] dark:text-[#A3A0B0] mx-auto" />
+                      <p className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7]">
                         Click to browse or drop file here
                       </p>
-                      <p className="text-[11px] text-[#A3A0B0] font-mono">
+                      <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">
                         Supports MP4, MOV, WEBM, PNG, JPG, PDF, DOCX, TXT (up to 500MB)
                       </p>
                     </div>
@@ -1746,7 +1746,7 @@ function DeliverableDetailContent() {
 
               {/* Caption */}
               <div>
-                <label className="text-xs font-mono font-medium text-[#F2F0F7] block mb-1.5">
+                <label className="text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1.5">
                   Caption &amp; Hashtags (optional)
                 </label>
                 <textarea
@@ -1754,13 +1754,13 @@ function DeliverableDetailContent() {
                   value={uploadCaption}
                   onChange={(e) => setUploadCaption(e.target.value)}
                   placeholder="Paste Instagram/YouTube caption, hooks, and hashtags..."
-                  className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl p-3 focus:outline-none focus:border-[#A78BFA] font-mono placeholder-[#A3A0B0]/60"
+                  className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-3 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] font-mono placeholder-[#6B6A65]/60 dark:placeholder-[#A3A0B0]/60"
                 />
               </div>
 
               {/* Revision Notes */}
               <div>
-                <label className="text-xs font-mono font-medium text-[#F2F0F7] block mb-1.5">
+                <label className="text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1.5">
                   Revision Notes (optional)
                 </label>
                 <input
@@ -1768,7 +1768,7 @@ function DeliverableDetailContent() {
                   value={uploadNotes}
                   onChange={(e) => setUploadNotes(e.target.value)}
                   placeholder="e.g. 'Trimmed hook, added Marathi subtitle track and upbeat BGM'"
-                  className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] placeholder-[#A3A0B0]/60 font-mono"
+                  className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] placeholder-[#6B6A65]/60 dark:placeholder-[#A3A0B0]/60 font-mono"
                 />
               </div>
 
@@ -1825,7 +1825,7 @@ function DeliverableDetailContent() {
             <form onSubmit={handleSaveMetrics} className="space-y-4">
               <div className="grid grid-cols-2 gap-3 font-mono">
                 <div>
-                  <label className="text-xs font-medium text-[#F2F0F7] block mb-1">
+                  <label className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1">
                     Views / Impressions
                   </label>
                   <input
@@ -1833,11 +1833,11 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsViews}
                     onChange={(e) => setMetricsViews(Number(e.target.value))}
-                    className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
+                    className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-[#F2F0F7] block mb-1">
+                  <label className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1">
                     Likes
                   </label>
                   <input
@@ -1845,11 +1845,11 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsLikes}
                     onChange={(e) => setMetricsLikes(Number(e.target.value))}
-                    className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
+                    className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-[#F2F0F7] block mb-1">
+                  <label className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1">
                     Comments
                   </label>
                   <input
@@ -1857,11 +1857,11 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsComments}
                     onChange={(e) => setMetricsComments(Number(e.target.value))}
-                    className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
+                    className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-[#F2F0F7] block mb-1">
+                  <label className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1">
                     Shares
                   </label>
                   <input
@@ -1869,7 +1869,7 @@ function DeliverableDetailContent() {
                     min="0"
                     value={metricsShares}
                     onChange={(e) => setMetricsShares(Number(e.target.value))}
-                    className="w-full text-xs text-[#F2F0F7] bg-[#0D0D11] border border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#A78BFA] font-bold"
+                    className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#0D0D11] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-3 py-2 focus:outline-none focus:border-[#2383E2] dark:focus:border-[#A78BFA] font-bold"
                   />
                 </div>
               </div>

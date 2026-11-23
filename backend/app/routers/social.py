@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
@@ -40,6 +41,59 @@ router = APIRouter(
 )
 
 
+def compute_token_health(account: ClientSocialAccount) -> tuple[str, int | None, bool, str, datetime | None]:
+    """Compute active, expiring_soon, or expired status and days remaining for Meta OAuth token."""
+    now = datetime.now(timezone.utc)
+    expires_at = account.token_expires_at
+    if not expires_at:
+        # Standard Meta long-lived tokens have a 60-day shelf life from last update
+        base_time = account.updated_at or account.created_at or now
+        expires_at = base_time + timedelta(days=60)
+
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    delta = expires_at - now
+    days = int(delta.total_seconds() // 86400)
+
+    if delta.total_seconds() <= 0:
+        return (
+            "expired",
+            0,
+            True,
+            "Token expired — Reconnect to resume scheduled publishing",
+            expires_at,
+        )
+    elif days <= 14:
+        msg = f"Token expiring in {max(1, days)} day{'s' if days != 1 else ''} — Reconnect soon"
+        return (
+            "expiring_soon",
+            max(0, days),
+            False,
+            msg,
+            expires_at,
+        )
+    else:
+        return (
+            "active",
+            days,
+            False,
+            f"Token active (valid for {days} days)",
+            expires_at,
+        )
+
+
+def format_social_account_out(account: ClientSocialAccount) -> ClientSocialAccountOut:
+    status_str, days_rem, is_exp, msg, exp_date = compute_token_health(account)
+    out = ClientSocialAccountOut.model_validate(account)
+    out.token_status = status_str
+    out.days_remaining = days_rem
+    out.is_expired = is_exp
+    out.health_message = msg
+    out.token_expires_at = exp_date or account.token_expires_at
+    return out
+
+
 @router.get("", response_model=list[ClientSocialAccountOut])
 async def list_client_social_accounts(
     agency_id: uuid.UUID,
@@ -47,7 +101,7 @@ async def list_client_social_accounts(
     _: Membership = Depends(require_agency_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[ClientSocialAccountOut]:
-    """List all connected social accounts for a specific client."""
+    """List all connected social accounts for a specific client with computed token health."""
     await get_client_for_agency(client_id, agency_id, db)
     result = await db.execute(
         select(ClientSocialAccount)
@@ -55,7 +109,29 @@ async def list_client_social_accounts(
         .order_by(ClientSocialAccount.created_at.desc())
     )
     accounts = result.scalars().all()
-    return [ClientSocialAccountOut.model_validate(a) for a in accounts]
+    return [format_social_account_out(a) for a in accounts]
+
+
+@router.get("/{account_id}/health", response_model=ClientSocialAccountOut)
+async def check_social_account_health(
+    agency_id: uuid.UUID,
+    client_id: uuid.UUID,
+    account_id: uuid.UUID,
+    _: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> ClientSocialAccountOut:
+    """Check health and expiration status for a specific connected social account."""
+    await get_client_for_agency(client_id, agency_id, db)
+    result = await db.execute(
+        select(ClientSocialAccount).where(
+            ClientSocialAccount.id == account_id,
+            ClientSocialAccount.client_id == client_id,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    return format_social_account_out(account)
 
 
 @router.post("", response_model=ClientSocialAccountOut, status_code=status.HTTP_201_CREATED)
@@ -95,13 +171,14 @@ async def create_or_update_client_social_account(
     )
     account = existing.scalar_one_or_none()
 
+    token_exp = payload.token_expires_at or (datetime.now(timezone.utc) + timedelta(days=60))
     if account is not None:
         account.account_name = name or account.account_name
         account.account_handle = handle or account.account_handle
         account.instagram_business_id = payload.instagram_business_id or account.instagram_business_id
         account.facebook_page_id = payload.facebook_page_id or account.facebook_page_id
         account.access_token = payload.access_token
-        account.token_expires_at = payload.token_expires_at
+        account.token_expires_at = token_exp
         account.is_active = True
     else:
         account = ClientSocialAccount(
@@ -113,7 +190,7 @@ async def create_or_update_client_social_account(
             instagram_business_id=payload.instagram_business_id,
             facebook_page_id=payload.facebook_page_id,
             access_token=payload.access_token,
-            token_expires_at=payload.token_expires_at,
+            token_expires_at=token_exp,
             is_active=True,
         )
         db.add(account)
@@ -129,7 +206,7 @@ async def create_or_update_client_social_account(
     except Exception:
         pass
 
-    return ClientSocialAccountOut.model_validate(account)
+    return format_social_account_out(account)
 
 
 @router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
@@ -321,6 +398,8 @@ async def connect_selected_meta_accounts(
     client = await get_client_for_agency(client_id, agency_id, db)
     saved_accounts: list[ClientSocialAccount] = []
     
+    default_expiry = datetime.now(timezone.utc) + timedelta(days=60)
+
     # 1. Connect Facebook Page if requested
     if payload.connect_facebook and payload.page_id:
         fb_existing = await db.execute(
@@ -334,6 +413,7 @@ async def connect_selected_meta_accounts(
             fb_acc.account_name = payload.page_name
             fb_acc.facebook_page_id = payload.page_id
             fb_acc.access_token = payload.page_access_token
+            fb_acc.token_expires_at = default_expiry
             fb_acc.is_active = True
         else:
             fb_acc = ClientSocialAccount(
@@ -343,6 +423,7 @@ async def connect_selected_meta_accounts(
                 account_name=payload.page_name,
                 facebook_page_id=payload.page_id,
                 access_token=payload.page_access_token,
+                token_expires_at=default_expiry,
                 is_active=True,
             )
             db.add(fb_acc)
@@ -364,6 +445,7 @@ async def connect_selected_meta_accounts(
             ig_acc.instagram_business_id = payload.instagram_business_id
             ig_acc.facebook_page_id = payload.page_id
             ig_acc.access_token = payload.page_access_token
+            ig_acc.token_expires_at = default_expiry
             ig_acc.is_active = True
         else:
             ig_acc = ClientSocialAccount(
@@ -375,6 +457,7 @@ async def connect_selected_meta_accounts(
                 instagram_business_id=payload.instagram_business_id,
                 facebook_page_id=payload.page_id,
                 access_token=payload.page_access_token,
+                token_expires_at=default_expiry,
                 is_active=True,
             )
             db.add(ig_acc)
@@ -392,5 +475,5 @@ async def connect_selected_meta_accounts(
     except Exception:
         pass
 
-    return [ClientSocialAccountOut.model_validate(a) for a in saved_accounts]
+    return [format_social_account_out(a) for a in saved_accounts]
 

@@ -833,12 +833,20 @@ export interface SocialAccount {
   facebook_page_id: string | null;
   is_active: boolean;
   token_expires_at: string | null;
+  token_status?: "active" | "expiring_soon" | "expired";
+  days_remaining?: number | null;
+  is_expired?: boolean;
+  health_message?: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export const socialApi = {
   list: (agencyId: string, clientId: string, token: string) =>
     apiFetch<SocialAccount[]>(`/agencies/${agencyId}/clients/${clientId}/social-accounts`, { token }),
+
+  getHealth: (agencyId: string, clientId: string, accountId: string, token: string) =>
+    apiFetch<SocialAccount>(`/agencies/${agencyId}/clients/${clientId}/social-accounts/${accountId}/health`, { token }),
 
   connect: (agencyId: string, clientId: string, data: Record<string, unknown>, token: string) =>
     apiFetch<SocialAccount>(`/agencies/${agencyId}/clients/${clientId}/social-accounts`, {

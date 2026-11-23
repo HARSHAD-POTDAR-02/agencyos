@@ -56,6 +56,7 @@ import {
   Share2,
   MessageSquare,
 } from "lucide-react";
+import { MarkdownRenderer } from "@/components/common/MarkdownRenderer";
 
 interface SubmissionVersion {
   id: string;
@@ -1373,24 +1374,24 @@ function TaskWorkspaceContent() {
             </div>
 
             {/* Storyboard & Work Instructions Card */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] pb-3">
                 <div className="flex items-center gap-2">
-                  <Film className="w-3.5 h-3.5 text-[#A78BFA]" />
-                  <span className="text-xs font-semibold text-[#F2F0F7] uppercase tracking-wider">
-                    Storyboard & Script Directions
+                  <Film className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
+                  <span className="text-xs font-semibold text-[#191919] dark:text-[#F2F0F7] uppercase tracking-wider">
+                    Storyboard &amp; Script Directions
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-[#A3A0B0]">Architect Specs</span>
+                  <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0]">Architect Specs</span>
                   {task.storyboard_text && (
                     <button
                       onClick={() => copyToClipboard(task.storyboard_text || "", "storyboard")}
-                      className="p-1 rounded-md text-[#71717A] hover:text-[#F2F0F7] transition-colors"
+                      className="p-1 rounded-md text-[#6B6A65] hover:text-[#191919] dark:text-[#71717A] dark:hover:text-[#F2F0F7] transition-colors"
                       title="Copy storyboard"
                     >
                       {copiedStoryboard ? (
-                        <Check className="w-3.5 h-3.5 text-[#45B88A]" />
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-[#45B88A]" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
@@ -1401,12 +1402,12 @@ function TaskWorkspaceContent() {
 
               {task.storyboard_text ? (
                 <div className="space-y-2">
-                  <div className="max-h-[380px] overflow-y-auto bg-[#0D0D12] p-4 rounded-xl border border-white/[0.08] font-mono text-xs text-[#F2F0F7] leading-relaxed whitespace-pre-wrap select-text shadow-inner">
-                    {task.storyboard_text}
+                  <div className="max-h-[380px] overflow-y-auto bg-[#F7F6F3] dark:bg-[#0D0D12] p-4 rounded-xl border border-black/[0.08] dark:border-white/[0.08] text-xs leading-relaxed select-text shadow-inner">
+                    <MarkdownRenderer content={task.storyboard_text} />
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-[#71717A] italic py-3 font-mono">
+                <p className="text-xs text-[#6B6A65] dark:text-[#71717A] italic py-3 font-mono">
                   No formal storyboard attached to this deliverable.
                 </p>
               )}
@@ -1967,7 +1968,7 @@ function TaskWorkspaceContent() {
                     />
                   </div>
                 ) : previewContent ? (
-                  <div className="max-h-[320px] overflow-y-auto bg-[#0D0D12] p-4 rounded-xl border border-white/[0.08] font-mono text-xs text-[#F2F0F7] whitespace-pre-wrap leading-relaxed select-text shadow-inner">
+                  <div className="max-h-[320px] overflow-y-auto bg-[#F7F6F3] dark:bg-[#0D0D12] p-4 rounded-xl border border-black/[0.08] dark:border-white/[0.08] font-mono text-xs text-[#191919] dark:text-[#F2F0F7] whitespace-pre-wrap leading-relaxed select-text shadow-inner">
                     {previewContent}
                   </div>
                 ) : (
@@ -2186,23 +2187,23 @@ function TaskWorkspaceContent() {
 
                       {/* Recommended Script */}
                       {aiResult.recommended_script && (
-                        <div className="bg-[#101014] p-3 rounded-xl border border-white/[0.08] space-y-2">
+                        <div className="bg-[#F7F6F3] dark:bg-[#101014] p-3 rounded-xl border border-black/[0.08] dark:border-white/[0.08] space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono font-bold text-[#69A9D8] uppercase">
-                              Recommended Dialogue & Scene Breakdown
+                            <span className="text-[10px] font-mono font-bold text-[#2383E2] dark:text-[#69A9D8] uppercase">
+                              Recommended Dialogue &amp; Scene Breakdown
                             </span>
                             <button
                               type="button"
                               onClick={() => handleApplyScript(aiResult.recommended_script)}
-                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#69A9D8]/10 hover:bg-[#69A9D8]/20 text-[#69A9D8] border border-[#69A9D8]/30 text-[11px] font-semibold transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-[#2383E2] dark:bg-[#69A9D8]/10 dark:hover:bg-[#69A9D8]/20 dark:text-[#69A9D8] border border-blue-500/20 dark:border-[#69A9D8]/30 text-[11px] font-semibold transition-all cursor-pointer"
                             >
                               <CornerDownLeft className="w-3 h-3" />
                               <span>Insert Script</span>
                             </button>
                           </div>
-                          <pre className="text-xs text-[#F2F0F7] font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto bg-[#0d0d12] p-2.5 rounded-lg border border-white/[0.04]">
-                            {aiResult.recommended_script}
-                          </pre>
+                          <div className="text-xs max-h-60 overflow-y-auto bg-white dark:bg-[#0d0d12] p-3 rounded-lg border border-black/[0.06] dark:border-white/[0.04]">
+                            <MarkdownRenderer content={aiResult.recommended_script} />
+                          </div>
                         </div>
                       )}
                     </div>

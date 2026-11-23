@@ -1579,16 +1579,69 @@ function ClientWorkspaceContent() {
       ────────────────────────────────────────────── */}
       {activeTab === "social" && (
         <div className="space-y-5">
-          <div className="bg-[rgba(167,139,250,0.08)] border border-[#A78BFA]/20 rounded-2xl p-4 flex items-start justify-between gap-4 shadow-inner">
+          {/* Proactive Token Health Warnings */}
+          {socialAccounts.some((a) => a.token_status === "expired" || a.is_expired) && (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-700 dark:text-rose-400 shadow-xs animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                <div>
+                  <h4 className="font-heading text-xs font-bold text-rose-800 dark:text-rose-300">
+                    Meta OAuth Token Expired — Action Required
+                  </h4>
+                  <p className="text-[11px] text-rose-700/90 dark:text-rose-400/90 mt-0.5 leading-relaxed">
+                    One or more connected social accounts have expired. Scheduled publishing and automated comment replies are paused until you re-authorize the account.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={connectingViaMeta}
+                onClick={handleMetaOAuthRedirect}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${connectingViaMeta ? "animate-spin" : ""}`} />
+                <span>{connectingViaMeta ? "Connecting..." : "Reconnect Meta Now"}</span>
+              </button>
+            </div>
+          )}
+
+          {!socialAccounts.some((a) => a.token_status === "expired" || a.is_expired) &&
+            socialAccounts.some((a) => a.token_status === "expiring_soon") && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-800 dark:text-amber-400 shadow-xs animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div>
+                    <h4 className="font-heading text-xs font-bold text-amber-900 dark:text-amber-300">
+                      Meta OAuth Token Expiring Soon (Within 14 Days)
+                    </h4>
+                    <p className="text-[11px] text-amber-800/90 dark:text-amber-400/90 mt-0.5 leading-relaxed">
+                      Your 60-day Meta token will expire shortly. Re-authorizing now avoids any interruptions to queued deliverables and performance telemetry.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={connectingViaMeta}
+                  onClick={handleMetaOAuthRedirect}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${connectingViaMeta ? "animate-spin" : ""}`} />
+                  <span>{connectingViaMeta ? "Connecting..." : "Renew Token Authorization"}</span>
+                </button>
+              </div>
+            )}
+
+          {/* Integration Banner */}
+          <div className="bg-[#2383E2]/10 dark:bg-[rgba(167,139,250,0.08)] border border-[#2383E2]/20 dark:border-[#A78BFA]/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4 shadow-xs">
             <div className="flex items-start gap-3">
-              <Share2 className="w-4 h-4 text-[#A78BFA] shrink-0 mt-0.5" />
+              <Share2 className="w-4 h-4 text-[#2383E2] dark:text-[#A78BFA] shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-heading text-xs font-semibold text-[#F2F0F7]">
+                <h4 className="font-heading text-xs font-semibold text-[#191919] dark:text-[#F2F0F7]">
                   Multi-Client Social Publishing Integration
                 </h4>
-                <p className="text-[11px] text-[#A3A0B0] mt-0.5 leading-relaxed">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-0.5 leading-relaxed">
                   Connect Instagram Business and Facebook accounts strictly for <strong>{client?.business_name}</strong>.
-                  All credentials and access tokens are isolated per client.
+                  All credentials and access tokens are isolated per client with proactive 60-day expiration tracking.
                 </p>
               </div>
             </div>
@@ -1598,7 +1651,7 @@ function ClientWorkspaceContent() {
                 type="button"
                 disabled={connectingViaMeta}
                 onClick={handleMetaOAuthRedirect}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 hover:from-blue-500 hover:via-indigo-500 hover:to-pink-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_1px_12px_rgba(99,102,241,0.4)] cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 hover:from-blue-500 hover:via-indigo-500 hover:to-pink-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{connectingViaMeta ? "Opening Meta..." : "Connect with Meta"}</span>
@@ -1609,7 +1662,7 @@ function ClientWorkspaceContent() {
                   setVerifyResult(null);
                   setShowConnectModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/30 text-xs font-medium px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-black/[0.04] hover:bg-black/[0.08] text-[#191919] dark:bg-[#A78BFA]/10 dark:hover:bg-[#A78BFA]/20 dark:text-[#A78BFA] border border-black/[0.08] dark:border-[#A78BFA]/30 text-xs font-medium px-3.5 py-2 rounded-xl transition-all cursor-pointer"
                 title="Manual token configuration"
               >
                 <span>Manual Token</span>
@@ -1618,14 +1671,14 @@ function ClientWorkspaceContent() {
           </div>
 
           {socialAccounts.length === 0 ? (
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <div className="flex items-center justify-center gap-2 mb-3 text-[#A3A0B0]/60">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-12 text-center shadow-xs bg-white dark:bg-[#17171E]">
+              <div className="flex items-center justify-center gap-2 mb-3 text-[#6B6A65] dark:text-[#A3A0B0]/60">
                 <FacebookIcon className="w-7 h-7 text-blue-500" />
-                <span className="text-xl font-light text-slate-600">+</span>
+                <span className="text-xl font-light text-slate-400">+</span>
                 <InstagramIcon className="w-7 h-7 text-pink-500" />
               </div>
-              <h4 className="font-heading text-sm font-semibold text-[#F2F0F7]">No Social Accounts Connected</h4>
-              <p className="text-xs text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-6">
+              <h4 className="font-heading text-sm font-semibold text-[#191919] dark:text-[#F2F0F7]">No Social Accounts Connected</h4>
+              <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] max-w-sm mx-auto mt-1 mb-6">
                 Connect {client?.business_name}&apos;s Instagram Business Account or Facebook Page for automated 1-click publishing.
               </p>
               <div className="flex items-center justify-center gap-3">
@@ -1633,7 +1686,7 @@ function ClientWorkspaceContent() {
                   type="button"
                   disabled={connectingViaMeta}
                   onClick={handleMetaOAuthRedirect}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 hover:from-blue-500 hover:via-indigo-500 hover:to-pink-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-[0_2px_16px_rgba(99,102,241,0.4)] cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 hover:from-blue-500 hover:via-indigo-500 hover:to-pink-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{connectingViaMeta ? "Redirecting to Meta..." : "1-Click Connect with Meta"}</span>
@@ -1644,7 +1697,7 @@ function ClientWorkspaceContent() {
                     setVerifyResult(null);
                     setShowConnectModal(true);
                   }}
-                  className="inline-flex items-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 border border-white/[0.08] text-xs font-medium px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-black/[0.04] hover:bg-black/[0.08] text-[#191919] border border-black/[0.08] dark:bg-white/[0.04] dark:hover:bg-white/[0.08] dark:text-slate-400 dark:border-white/[0.08] text-xs font-medium px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
                 >
                   <span>Manual Setup</span>
                 </button>
@@ -1654,8 +1707,11 @@ function ClientWorkspaceContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {socialAccounts.map((account) => {
                 const isIg = account.platform === "instagram";
+                const isExpired = account.token_status === "expired" || account.is_expired;
+                const isExpiringSoon = !isExpired && account.token_status === "expiring_soon";
+
                 return (
-                  <div key={account.id} className="surface-card rounded-2xl border border-white/[0.08] p-5 flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+                  <div key={account.id} className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 flex flex-col justify-between shadow-xs bg-white dark:bg-[#17171E] text-[#191919] dark:text-[#F2F0F7]">
                     <div>
                       <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-3">
@@ -1665,48 +1721,85 @@ function ClientWorkspaceContent() {
                             {isIg ? <InstagramIcon className="w-4 h-4" /> : <FacebookIcon className="w-4 h-4" />}
                           </div>
                           <div>
-                            <h4 className="text-xs font-semibold text-[#F2F0F7] flex items-center gap-1.5">
+                            <h4 className="text-xs font-semibold text-[#191919] dark:text-[#F2F0F7] flex items-center gap-1.5">
                               {account.account_handle || account.account_name || "Connected Profile"}
-                              <CheckCircle2 className="w-3.5 h-3.5 text-[#45B88A]" />
+                              {!isExpired && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                             </h4>
-                            <p className="text-[10px] text-[#A3A0B0] capitalize font-mono">
+                            <p className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] capitalize font-mono">
                               {account.platform} Business Account
                             </p>
                           </div>
                         </div>
 
-                        <span className="text-[9.5px] font-mono font-semibold text-[#45B88A] bg-[rgba(69,184,138,0.12)] border border-[#45B88A]/20 px-2 py-0.5 rounded uppercase">
-                          Active
-                        </span>
+                        {/* Token Health Badge */}
+                        {isExpired ? (
+                          <span className="text-[9.5px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Expired</span>
+                          </span>
+                        ) : isExpiringSoon ? (
+                          <span className="text-[9.5px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{account.days_remaining}d Left</span>
+                          </span>
+                        ) : (
+                          <span className="text-[9.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Active ({account.days_remaining ?? 60}d)</span>
+                          </span>
+                        )}
                       </div>
 
-                      <div className="space-y-1.5 text-xs text-[#A3A0B0] pt-3 border-t border-white/[0.06]">
+                      <div className="space-y-1.5 text-xs text-[#6B6A65] dark:text-[#A3A0B0] pt-3 border-t border-black/[0.06] dark:border-white/[0.06]">
                         {account.instagram_business_id && (
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[#A3A0B0]/70">Instagram Business ID:</span>
-                            <span className="font-mono text-[#F2F0F7]">{account.instagram_business_id}</span>
+                            <span className="text-[#6B6A65] dark:text-[#A3A0B0]/70">Instagram Business ID:</span>
+                            <span className="font-mono text-[#191919] dark:text-[#F2F0F7]">{account.instagram_business_id}</span>
                           </div>
                         )}
                         {account.facebook_page_id && (
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[#A3A0B0]/70">Facebook Page ID:</span>
-                            <span className="font-mono text-[#F2F0F7]">{account.facebook_page_id}</span>
+                            <span className="text-[#6B6A65] dark:text-[#A3A0B0]/70">Facebook Page ID:</span>
+                            <span className="font-mono text-[#191919] dark:text-[#F2F0F7]">{account.facebook_page_id}</span>
                           </div>
                         )}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-[#A3A0B0]/70">Tenant Workspace:</span>
-                          <span className="text-[#A78BFA] font-medium">{client?.business_name}</span>
+                          <span className="text-[#6B6A65] dark:text-[#A3A0B0]/70">Token Status:</span>
+                          <span className={`font-mono text-[11px] font-medium ${
+                            isExpired
+                              ? "text-rose-600 dark:text-rose-400 font-bold"
+                              : isExpiringSoon
+                              ? "text-amber-600 dark:text-amber-400 font-semibold"
+                              : "text-emerald-600 dark:text-emerald-400"
+                          }`}>
+                            {account.health_message || (account.days_remaining !== undefined && account.days_remaining !== null ? `${account.days_remaining} days remaining` : "Token Active")}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#6B6A65] dark:text-[#A3A0B0]/70">Tenant Workspace:</span>
+                          <span className="text-purple-600 dark:text-[#A78BFA] font-medium">{client?.business_name}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-3 mt-4 border-t border-white/[0.06] flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-[#A3A0B0]">
-                        Token securely stored
-                      </span>
+                    <div className="pt-3 mt-4 border-t border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between">
+                      {isExpired || isExpiringSoon ? (
+                        <button
+                          type="button"
+                          onClick={handleMetaOAuthRedirect}
+                          className="text-xs font-semibold text-purple-600 dark:text-[#A78BFA] hover:underline flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>{isExpired ? "Reconnect Account" : "Renew Authorization"}</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0]">
+                          Meta OAuth 2.0 Secure
+                        </span>
+                      )}
                       <button
                         onClick={() => handleDeleteSocial(account.id)}
-                        className="text-xs font-medium text-[#E16F7B] hover:underline cursor-pointer"
+                        className="text-xs font-medium text-rose-500 hover:text-rose-600 dark:text-[#E16F7B] hover:underline cursor-pointer"
                       >
                         Disconnect
                       </button>
@@ -1888,24 +1981,24 @@ function ClientWorkspaceContent() {
       {/* CONNECT SOCIAL ACCOUNT MODAL */}
       {showConnectModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-[#17171E] rounded-2xl border border-white/[0.1] shadow-[0_24px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto scale-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-5">
+          <div className="bg-white dark:bg-[#17171E] rounded-2xl border border-black/[0.08] dark:border-white/[0.1] shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto scale-in-95 duration-150 text-[#191919] dark:text-[#F2F0F7]">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] dark:border-white/[0.08] mb-5">
               <div>
-                <h3 className="font-heading text-sm font-semibold text-[#F2F0F7]">Connect Social Account</h3>
-                <p className="text-xs text-[#A3A0B0]">Configure Meta Graph API credentials for {client?.business_name}.</p>
+                <h3 className="font-heading text-sm font-semibold text-[#191919] dark:text-[#F2F0F7]">Connect Social Account</h3>
+                <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">Configure Meta Graph API credentials for {client?.business_name}.</p>
               </div>
-              <button onClick={() => setShowConnectModal(false)} className="text-[#A3A0B0] hover:text-[#F2F0F7] p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer">
+              <button onClick={() => setShowConnectModal(false)} className="text-[#6B6A65] hover:text-[#191919] hover:bg-black/[0.04] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] p-1.5 rounded-lg dark:hover:bg-white/[0.06] transition-colors cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleConnectSocial} className="space-y-4">
               <div>
-                <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">Platform</label>
+                <label className="block text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider mb-1.5">Platform</label>
                 <select
                   value={socialPlatform}
                   onChange={(e) => setSocialPlatform(e.target.value as "instagram" | "facebook")}
-                  className="w-full text-xs text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-xl p-2.5 cursor-pointer focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                  className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-2.5 cursor-pointer focus:outline-none focus:border-[#A78BFA]"
                 >
                   <option value="instagram">Instagram Professional / Business</option>
                   <option value="facebook">Facebook Page</option>
@@ -1913,19 +2006,19 @@ function ClientWorkspaceContent() {
               </div>
 
               <div>
-                <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">Account Handle / Name</label>
+                <label className="block text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider mb-1.5">Account Handle / Name</label>
                 <input
                   type="text"
                   value={socialHandle}
                   onChange={(e) => setSocialHandle(e.target.value)}
                   placeholder="@hotelshauryawada"
-                  className="w-full text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 bg-[#101014] border border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                  className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#6B6A65]/40 dark:placeholder-[#A3A0B0]/40 bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA]"
                 />
               </div>
 
               {socialPlatform === "instagram" ? (
                 <div>
-                  <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider mb-1.5">
                     Instagram Business Account ID *
                   </label>
                   <input
@@ -1934,13 +2027,13 @@ function ClientWorkspaceContent() {
                     value={igBusinessId}
                     onChange={(e) => setIgBusinessId(e.target.value)}
                     placeholder="e.g. 17841400012345"
-                    className="w-full text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 bg-[#101014] border border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                    className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#6B6A65]/40 dark:placeholder-[#A3A0B0]/40 bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono"
                   />
-                  <p className="text-[10px] text-[#A3A0B0] mt-1">Found in your Meta App Dashboard or Graph API Explorer.</p>
+                  <p className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1">Found in your Meta App Dashboard or Graph API Explorer.</p>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider mb-1.5">
                     Facebook Page ID *
                   </label>
                   <input
@@ -1949,18 +2042,18 @@ function ClientWorkspaceContent() {
                     value={fbPageId}
                     onChange={(e) => setFbPageId(e.target.value)}
                     placeholder="e.g. 1052300012345"
-                    className="w-full text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 bg-[#101014] border border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                    className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#6B6A65]/40 dark:placeholder-[#A3A0B0]/40 bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono"
                   />
                 </div>
               )}
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[10.5px] font-mono font-semibold text-[#A3A0B0] uppercase tracking-wider">Access Token (User or Page) *</label>
+                  <label className="text-[10.5px] font-mono font-semibold text-[#6B6A65] dark:text-[#A3A0B0] uppercase tracking-wider">Access Token (User or Page) *</label>
                   <button
                     type="button"
                     onClick={() => setShowTokenHelper(!showTokenHelper)}
-                    className="text-[11px] text-[#A78BFA] hover:text-[#B69BFF] font-medium"
+                    className="text-[11px] text-[#2383E2] dark:text-[#A78BFA] hover:underline font-medium"
                   >
                     {showTokenHelper ? "Hide Token Helper" : "Generate 60-Day Token?"}
                   </button>
@@ -1971,15 +2064,15 @@ function ClientWorkspaceContent() {
                   value={socialAccessToken}
                   onChange={(e) => setSocialAccessToken(e.target.value)}
                   placeholder="Paste Meta Access Token (EAAG...)"
-                  className="w-full text-xs text-[#F2F0F7] placeholder-[#A3A0B0]/40 bg-[#101014] border border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono resize-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+                  className="w-full text-xs text-[#191919] dark:text-[#F2F0F7] placeholder-[#6B6A65]/40 dark:placeholder-[#A3A0B0]/40 bg-[#FBFBFA] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-2.5 focus:outline-none focus:border-[#A78BFA] font-mono resize-none"
                 />
               </div>
 
               {/* 60-Day Token Exchange Accordion */}
               {showTokenHelper && (
-                <div className="p-3.5 rounded-xl bg-[#20202A] border border-white/[0.08] space-y-2.5 shadow-inner">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#F2F0F7]">
-                    <Key className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <div className="p-3.5 rounded-xl bg-[#F7F6F3] dark:bg-[#20202A] border border-black/[0.08] dark:border-white/[0.08] space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#191919] dark:text-[#F2F0F7]">
+                    <Key className="w-3.5 h-3.5 text-[#2383E2] dark:text-[#A78BFA]" />
                     <span>60-Day Long-Lived Token Exchange</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1988,14 +2081,14 @@ function ClientWorkspaceContent() {
                       placeholder="Meta App ID"
                       value={appId}
                       onChange={(e) => setAppId(e.target.value)}
-                      className="text-xs p-2 rounded-lg bg-[#101014] text-[#F2F0F7] border border-white/[0.08]"
+                      className="text-xs p-2 rounded-lg bg-white dark:bg-[#101014] text-[#191919] dark:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08]"
                     />
                     <input
                       type="password"
                       placeholder="Meta App Secret"
                       value={appSecret}
                       onChange={(e) => setAppSecret(e.target.value)}
-                      className="text-xs p-2 rounded-lg bg-[#101014] text-[#F2F0F7] border border-white/[0.08]"
+                      className="text-xs p-2 rounded-lg bg-white dark:bg-[#101014] text-[#191919] dark:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08]"
                     />
                   </div>
                   <input
@@ -2003,13 +2096,13 @@ function ClientWorkspaceContent() {
                     placeholder="Short-Lived User Token (from Graph API Explorer)"
                     value={shortToken}
                     onChange={(e) => setShortToken(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg bg-[#101014] text-[#F2F0F7] border border-white/[0.08] font-mono"
+                    className="w-full text-xs p-2 rounded-lg bg-white dark:bg-[#101014] text-[#191919] dark:text-[#F2F0F7] border border-black/[0.08] dark:border-white/[0.08] font-mono"
                   />
                   <button
                     type="button"
                     onClick={handleExchangeToken}
                     disabled={exchangingToken}
-                    className="w-full py-1.5 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                    className="w-full py-1.5 bg-[#2383E2] dark:bg-[#A78BFA] hover:bg-[#1D6FBF] dark:hover:bg-[#B69BFF] text-white dark:text-[#101014] text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                   >
                     {exchangingToken ? "Exchanging..." : "Exchange for 60-Day Token"}
                   </button>
@@ -2023,13 +2116,13 @@ function ClientWorkspaceContent() {
                     type="button"
                     onClick={handleVerifySocial}
                     disabled={verifyingToken}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A78BFA] surface-card surface-card-hover px-3 py-1.5 rounded-xl border border-white/[0.08] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#2383E2] dark:text-[#A78BFA] bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.04] dark:hover:bg-white/[0.08] px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08] transition-colors cursor-pointer"
                   >
                     <RefreshCw className={`w-3 h-3 ${verifyingToken ? "animate-spin" : ""}`} />
                     <span>Test & Verify with Meta</span>
                   </button>
                   {verifyResult && (
-                    <span className="text-[11px] font-medium text-[#45B88A] flex items-center gap-1">
+                    <span className="text-[11px] font-medium text-emerald-600 dark:text-[#45B88A] flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Verified @{verifyResult.username}
                     </span>
@@ -2037,18 +2130,18 @@ function ClientWorkspaceContent() {
                 </div>
               )}
 
-              <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-2.5">
+              <div className="pt-4 border-t border-black/[0.08] dark:border-white/[0.08] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowConnectModal(false)}
-                  className="surface-card surface-card-hover px-3.5 py-1.5 text-xs font-medium text-[#A3A0B0] hover:text-[#F2F0F7] rounded-xl cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#6B6A65] hover:text-[#191919] hover:bg-black/[0.04] dark:text-[#A3A0B0] dark:hover:text-[#F2F0F7] rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={connectingSocial}
-                  className="px-4 py-1.5 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-xs cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white dark:text-[#101014] bg-[#2383E2] dark:bg-[#A78BFA] hover:bg-[#1D6FBF] dark:hover:bg-[#B69BFF] rounded-xl shadow-xs cursor-pointer"
                 >
                   {connectingSocial ? "Saving..." : "Save Account"}
                 </button>

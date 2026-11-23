@@ -1180,18 +1180,18 @@ function CalendarContent() {
       {/* ============================================================== */}
       {activeDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#14141B] border border-[#2E2E3E] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-[#14141B] border border-black/[0.08] dark:border-[#2E2E3E] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Top Bar */}
-            <div className="px-6 py-4 border-b border-[#262630] flex items-center justify-between bg-[#181822]">
+            <div className="px-6 py-4 border-b border-black/[0.08] dark:border-[#262630] flex items-center justify-between bg-[#F7F6F3] dark:bg-[#181822]">
               <div className="flex items-center gap-3">
                 <span className={`p-2 rounded-lg border ${getPlatformBadge(activeDetail.platform)}`}>
                   <PlatformIcon platform={activeDetail.platform} className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-[#191919] dark:text-white flex items-center gap-2">
                     {activeDetail.title}
                   </h3>
-                  <p className="text-xs text-[#8A8797]">
+                  <p className="text-xs text-[#6B6A65] dark:text-[#8A8797]">
                     {activeDetail.client_name || "Client"} • {activeDetail.campaign_title || "Campaign"}
                   </p>
                 </div>
@@ -1200,14 +1200,14 @@ function CalendarContent() {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/deliverables/${activeDetail.id}`}
-                  className="px-3 py-1.5 rounded-lg bg-[#22222E] hover:bg-[#2C2C3C] text-xs font-medium text-white flex items-center gap-1.5 transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-black/[0.05] hover:bg-black/[0.1] dark:bg-[#22222E] dark:hover:bg-[#2C2C3C] text-xs font-medium text-[#191919] dark:text-white flex items-center gap-1.5 transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Open Deliverable Studio</span>
                 </Link>
                 <button
                   onClick={() => setActiveDeliverableId(null)}
-                  className="p-1.5 rounded-lg text-[#8A8797] hover:text-white hover:bg-[#22222E] transition-colors"
+                  className="p-1.5 rounded-lg text-[#6B6A65] hover:text-[#191919] hover:bg-black/[0.05] dark:text-[#8A8797] dark:hover:text-white dark:hover:bg-[#22222E] transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1217,7 +1217,7 @@ function CalendarContent() {
             {/* Modal Body: Phone Mockup (Left) + Operational Inspector (Right) */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-y-auto">
               {/* Left Column: Social Device Mockup (5 cols) */}
-              <div className="md:col-span-5 bg-[#0D0D12] p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#262630]">
+              <div className="md:col-span-5 bg-[#F7F6F3] dark:bg-[#0D0D12] p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black/[0.08] dark:border-[#262630]">
                 {/* Smartphone Device Frame */}
                 <div className="w-[280px] rounded-[36px] border-4 border-[#2C2C3C] bg-[#09090C] overflow-hidden shadow-2xl flex flex-col">
                   {/* Dynamic Island / Notch */}
@@ -1295,31 +1295,31 @@ function CalendarContent() {
               </div>
 
               {/* Right Column: Operational Controls & Tasks (7 cols) */}
-              <div className="md:col-span-7 p-6 flex flex-col gap-5 bg-[#14141B]">
+              <div className="md:col-span-7 p-6 flex flex-col gap-5 bg-white dark:bg-[#14141B]">
                 {/* Reschedule & Status Controls */}
-                <div className="bg-[#181822] border border-[#262632] rounded-xl p-4 flex flex-col gap-3">
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <CalendarIcon className="w-3.5 h-3.5 text-purple-400" />
+                <div className="bg-[#F7F6F3] dark:bg-[#181822] border border-black/[0.08] dark:border-[#262632] rounded-xl p-4 flex flex-col gap-3">
+                  <h4 className="text-xs font-semibold text-[#191919] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <CalendarIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                     Publishing Schedule & Workflow Stage
                   </h4>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] text-[#8A8797] font-medium block mb-1">Planned Date</label>
+                      <label className="text-[11px] text-[#6B6A65] dark:text-[#8A8797] font-medium block mb-1">Planned Date</label>
                       <input
                         type="date"
                         value={editPlannedDate}
                         onChange={(e) => setEditPlannedDate(e.target.value)}
-                        className="w-full h-8 bg-[#121218] border border-[#2B2B3B] rounded-lg px-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                        className="w-full h-8 bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-[#2B2B3B] rounded-lg px-2.5 text-xs text-[#191919] dark:text-white focus:outline-none focus:border-purple-500"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#8A8797] font-medium block mb-1">Status</label>
+                      <label className="text-[11px] text-[#6B6A65] dark:text-[#8A8797] font-medium block mb-1">Status</label>
                       <select
                         value={editStatus}
                         onChange={(e) => setEditStatus(e.target.value)}
-                        className="w-full h-8 bg-[#121218] border border-[#2B2B3B] rounded-lg px-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                        className="w-full h-8 bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-[#2B2B3B] rounded-lg px-2.5 text-xs text-[#191919] dark:text-white focus:outline-none focus:border-purple-500"
                       >
                         <option value="not_started">Draft / Not Started</option>
                         <option value="in_production">In Production</option>
@@ -1337,7 +1337,7 @@ function CalendarContent() {
                     <button
                       onClick={handleSaveModalChanges}
                       disabled={savingModalChanges}
-                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs"
                     >
                       {savingModalChanges ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                       Save Updates
@@ -1346,16 +1346,16 @@ function CalendarContent() {
                 </div>
 
                 {/* Caption Inspector & Copy */}
-                <div className="bg-[#181822] border border-[#262632] rounded-xl p-4 flex flex-col gap-2.5">
+                <div className="bg-[#F7F6F3] dark:bg-[#181822] border border-black/[0.08] dark:border-[#262632] rounded-xl p-4 flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <FileVideo className="w-3.5 h-3.5 text-purple-400" />
+                    <h4 className="text-xs font-semibold text-[#191919] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <FileVideo className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                       Social Caption & Hashtags
                     </h4>
                     {activeDetail.latest_caption && (
                       <button
                         onClick={() => handleCopyCaption(activeDetail.latest_caption || "")}
-                        className="text-[11px] font-medium text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                        className="text-[11px] font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 flex items-center gap-1"
                       >
                         {copiedCaption ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                         {copiedCaption ? "Copied!" : "Copy Caption"}
@@ -1363,11 +1363,11 @@ function CalendarContent() {
                     )}
                   </div>
 
-                  <div className="p-3 rounded-lg bg-[#121218] border border-[#242430] text-xs text-[#D4D4D8] leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap">
+                  <div className="p-3 rounded-lg bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430] text-xs text-[#37352F] dark:text-[#D4D4D8] leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap">
                     {activeDetail.latest_caption ? (
                       activeDetail.latest_caption.split(" ").map((word, idx) =>
                         word.startsWith("#") ? (
-                          <span key={idx} className="text-purple-400 font-medium">
+                          <span key={idx} className="text-purple-600 dark:text-purple-400 font-medium">
                             {word}{" "}
                           </span>
                         ) : (
@@ -1375,7 +1375,7 @@ function CalendarContent() {
                         )
                       )
                     ) : (
-                      <span className="text-[#52525B] italic">
+                      <span className="text-[#8A8797] italic">
                         No caption has been generated or uploaded for this deliverable yet.
                       </span>
                     )}
@@ -1383,16 +1383,16 @@ function CalendarContent() {
                 </div>
 
                 {/* Pipeline Tasks Checklist */}
-                <div className="bg-[#181822] border border-[#262632] rounded-xl p-4 flex flex-col gap-2.5 flex-1">
+                <div className="bg-[#F7F6F3] dark:bg-[#181822] border border-black/[0.08] dark:border-[#262632] rounded-xl p-4 flex flex-col gap-2.5 flex-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <CheckSquare className="w-3.5 h-3.5 text-purple-400" />
+                    <h4 className="text-xs font-semibold text-[#191919] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                       Pipeline Tasks & Deadlines (
                       {activeDetail.tasks_completed_count || 0}/{activeDetail.tasks_count || 0})
                     </h4>
                     <Link
                       href="/tasks"
-                      className="text-[11px] text-[#8A8797] hover:text-purple-300 flex items-center gap-1"
+                      className="text-[11px] text-[#6B6A65] dark:text-[#8A8797] hover:text-purple-600 dark:hover:text-purple-300 flex items-center gap-1"
                     >
                       <span>Task Board</span>
                       <ArrowRight className="w-3 h-3" />
@@ -1400,7 +1400,7 @@ function CalendarContent() {
                   </div>
 
                   {loadingDetail ? (
-                    <div className="py-4 flex items-center justify-center text-xs text-[#8A8797] gap-2">
+                    <div className="py-4 flex items-center justify-center text-xs text-[#6B6A65] dark:text-[#8A8797] gap-2">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       Loading linked pipeline tasks...
                     </div>
@@ -1411,25 +1411,25 @@ function CalendarContent() {
                         return (
                           <div
                             key={task.id}
-                            className="p-2 rounded-lg bg-[#121218] border border-[#242430] flex items-center justify-between text-xs"
+                            className="p-2 rounded-lg bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430] flex items-center justify-between text-xs"
                           >
                             <div className="flex items-center gap-2">
                               {isDone ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                               ) : (
-                                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                               )}
-                              <span className={isDone ? "text-[#71717A] line-through" : "text-white font-medium"}>
+                              <span className={isDone ? "text-[#8A8797] line-through" : "text-[#191919] dark:text-white font-medium"}>
                                 {task.title}
                               </span>
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-[#8A8797] capitalize px-1.5 py-0.5 rounded bg-[#1C1C26]">
+                              <span className="text-[10px] text-[#6B6A65] dark:text-[#8A8797] capitalize px-1.5 py-0.5 rounded bg-black/[0.04] dark:bg-[#1C1C26]">
                                 {task.task_type || "task"}
                               </span>
                               {task.due_date && (
-                                <span className="text-[10px] font-mono text-[#A1A1AA]">
+                                <span className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A1A1AA]">
                                   {formatCleanDate(task.due_date)}
                                 </span>
                               )}
@@ -1439,7 +1439,7 @@ function CalendarContent() {
                       })}
                     </div>
                   ) : (
-                    <div className="p-3 rounded-lg bg-[#121218] border border-[#242430] text-xs text-[#71717A] italic text-center">
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-[#242430] text-xs text-[#8A8797] italic text-center">
                       No discrete sub-tasks linked yet. Tasks can be generated via Campaign Studio.
                     </div>
                   )}

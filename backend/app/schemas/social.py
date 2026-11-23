@@ -28,8 +28,12 @@ class ClientSocialAccountOut(BaseModel):
     facebook_page_id: str | None
     is_active: bool
     token_expires_at: datetime | None
-    created_at: datetime
-    updated_at: datetime
+    token_status: str = "active"  # "active", "expiring_soon", "expired"
+    days_remaining: int | None = None
+    is_expired: bool = False
+    health_message: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class VerifyAccountRequest(BaseModel):
