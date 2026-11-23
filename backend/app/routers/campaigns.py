@@ -495,7 +495,14 @@ async def generate_plan_endpoint(
 
 
 class ChatBriefLLMOutput(BaseModel):
-    reply: str
+    reply: str = Field(
+        ...,
+        description=(
+            "Executive conversational response formatted like ChatGPT/Gemini with clean paragraphs, "
+            "blank lines between sections, and numbered or bulleted lists on separate lines. "
+            "Must NOT be a single unbroken paragraph. Strictly DO NOT use asterisks (**) or hashtags (#) or emojis."
+        ),
+    )
     suggested_objective: str | None = None
     suggested_custom_brief: str | None = None
     suggested_deliverable_preferences: list[str] | None = None
@@ -691,6 +698,71 @@ def extract_candidate_entities(
         if 3 <= len(s) <= 40 and s not in cleaned and not s.startswith("http"):
             cleaned.append(s)
     return cleaned[:15]
+
+
+def format_executive_reply(text: str) -> str:
+    """Format AI chat responses with executive presentation quality (ChatGPT/Gemini style).
+
+    - Removes tacky emojis.
+    - Strips raw markdown hashtags (#, ##, ###) and asterisks (**, *).
+    - Expands squashed inline concepts, numbered lists, and sections into clean, readable paragraphs with blank lines.
+    - Preserves clean numbered lists and bullet points on separate lines.
+    """
+    if not text:
+        return text
+
+    # 1. Strip tacky emojis
+    emoji_pattern = re.compile(
+        r"[\U0001F600-\U0001F64F"
+        r"\U0001F300-\U0001F5FF"
+        r"\U0001F680-\U0001F6FF"
+        r"\U0001F1E0-\U0001F1FF"
+        r"\U00002702-\U000027B0"
+        r"\U000024C2-\U0001F251"
+        r"\U0001F900-\U0001F9FF"
+        r"\U0001FA70-\U0001FAFF"
+        r"\u2600-\u26FF"
+        r"\u2700-\u27BF]"
+    )
+    text = emoji_pattern.sub("", text)
+
+    # 2. Strip markdown hashtags and asterisks
+    text = re.sub(r"^[ \t]*#{1,6}[ \t]*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\*{1,3}([^*]+)\*{1,3}", r"\1", text)
+    text = text.replace("*", "")
+
+    # 3. Expand squashed major section headers onto new paragraphs
+    headers = [
+        r"Concept",
+        r"Carousel Concept",
+        r"Reel Concept",
+        r"Visual [Ss]tyle",
+        r"Creative [Dd]irection",
+        r"Key [Nn]otes",
+        r"Next [Ss]teps",
+        r"Deliverables",
+        r"Strategic [Aa]ngle",
+        r"Execution [Pp]lan",
+        r"Call[- ]to[- ][Aa]ction",
+        r"Compliance",
+        r"Brand [Vv]oice",
+        r"Audience [Ff]ocus",
+        r"Goal",
+    ]
+    for h in headers:
+        text = re.sub(rf"(?<=[.!?\w])\s*(?:[–—\-]\s*)?({h}:)", r"\n\n\1", text)
+
+    # 4. Expand squashed numbered lists like ' – 1) Hook:' or '. 1) Hook:' or ' 1) '
+    text = re.sub(r"(?<=[.!?\w:])\s*(?:[–—\-]\s*)?1[\)\.](?:\s+|$)", r"\n\n1. ", text)
+    for i in range(2, 11):
+        text = re.sub(rf"(?<=[.!?\w\)])\s*(?:[–—\-]\s*)?{i}[\)\.](?:\s+|$)", rf"\n{i}. ", text)
+
+    # 5. Expand trailing boundary or compliance statements
+    text = re.sub(r"(?<=[.!?])\s+(This stays within[^\n]*)", r"\n\n\1", text)
+
+    # 6. Normalize multiple blank lines to at most 2 newlines
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 async def execute_chat_turn(
@@ -1034,7 +1106,7 @@ async def execute_chat_turn(
         )
 
         return ChatBriefResponse(
-            reply=specialist_res.reply,
+            reply=format_executive_reply(specialist_res.reply),
             agent_id=target_agent_id,
             agent_name=specialist_res.specialist_name,
             campaign_id=target_campaign_id,
@@ -1212,9 +1284,25 @@ CRITICAL SYSTEM RULES:
      3. Which formats they prefer (Reels, Carousels, Static).
    - QUOTA REMINDERS: If the user asks for more deliverables than the remaining monthly quota bank ({total_quota_remaining}), politely warn them and remind them of the remaining quota limit.
    - STRUCTURED OUTPUT: Populate `suggested_duration_days` and `suggested_deliverable_count` accurately based on the agreed sprint size!
-7. EXECUTIVE TONE & CLEAN PRESENTATION:
-   - Do NOT use emojis (no 🚀, 🎯, 💡, 🔥, 🛑, etc.) in your conversation replies. Maintain an executive, sharp, and strategic tone.
-   - Present recommendations using clean, professional paragraphs and standard bullet points. Avoid tacky emoji-heavy bullet headers.
+7. EXECUTIVE PRESENTATION & STRUCTURE (CHATGPT / GEMINI QUALITY):
+   - ABSOLUTELY NO DENSE RUN-ON PARAGRAPHS: Never dump multiple concepts, slide breakdowns, or guidelines into a single continuous paragraph or wall of text.
+   - ZERO ASTERISKS & ZERO HASHTAGS POLICY: Strictly DO NOT use markdown hashtags (#, ##, ###) or markdown asterisks (**, *) in your reply text. Present headings and bold text cleanly without asterisk or hashtag symbols.
+   - ZERO EMOJIS: Do NOT use any emojis (no 🚀, 🎯, 💡, 🔥, 🛑, etc.).
+   - PROPER FORMATTING STRUCTURE:
+     * Open with a crisp 1-2 sentence executive summary of the sprint or recommendation.
+     * Use blank lines to clearly separate distinct thoughts and sections.
+     * Place concept titles or section headers on their own line (e.g. 'Carousel Concept (5 Slides):', 'Creative & Visual Direction:', 'Next Steps:').
+     * Break down slides, scenes, or steps into numbered lists with EACH item on its own new line:
+       1. Hook: ...
+       2. Pain: ...
+       3. Solution: ...
+       4. Benefit: ...
+       5. Call-to-action: ...
+     * Format creative styling notes, format rules, or parameters as bullet points with each item on its own line:
+       - Minimalist architecture diagrams
+       - Authoritative enterprise tone
+       - Brand color accents
+     * End with a clear, professional question or proposed action for the user.
 """
 
     try:
@@ -1260,7 +1348,7 @@ CRITICAL SYSTEM RULES:
             extracted_fmts or output.suggested_deliverable_preferences or None
         )
 
-        reply_text = output.reply
+        reply_text = format_executive_reply(output.reply)
         if not has_explicit_year and ref_year >= 2026:
             reply_text = re.sub(r"\b202[0-5]\b", str(ref_year), reply_text)
 
@@ -1348,7 +1436,7 @@ CRITICAL SYSTEM RULES:
             )
 
         return ChatBriefResponse(
-            reply=fallback_reply,
+            reply=format_executive_reply(fallback_reply),
             agent_id=target_agent_id,
             agent_name=agent_spec["name"],
             campaign_id=target_campaign_id,
@@ -1418,22 +1506,28 @@ async def chat_brief_stream_endpoint(
                     on_event=push_event,
                 )
 
+                # Format reply to guarantee clean executive structure and zero markdown artifacts
+                formatted_reply = format_executive_reply(resp.reply)
+                resp.reply = formatted_reply
+
                 # Stream the reply text in natural token chunks for live typing animation
-                words = resp.reply.split(" ")
+                tokens = re.findall(r"\S+\s*", formatted_reply)
+                if not tokens and formatted_reply:
+                    tokens = [formatted_reply]
                 chunk: list[str] = []
-                for word in words:
-                    chunk.append(word)
+                for token in tokens:
+                    chunk.append(token)
                     if len(chunk) >= 4:
                         await push_event({
                             "type": "token",
-                            "content": " ".join(chunk) + " ",
+                            "content": "".join(chunk),
                         })
                         await asyncio.sleep(0.015)
                         chunk = []
                 if chunk:
                     await push_event({
                         "type": "token",
-                        "content": " ".join(chunk),
+                        "content": "".join(chunk),
                     })
 
                 # Emit final done event with complete response payload

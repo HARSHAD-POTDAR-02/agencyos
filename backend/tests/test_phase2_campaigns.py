@@ -167,3 +167,32 @@ async def test_brand_profile_and_contracts(
     assert conv_data["deliverables_created"] > 0
     assert conv_data["tasks_created"] > 0
     assert conv_data["status"] == "converted_to_production"
+
+
+def test_format_executive_reply_user_case():
+    from app.routers.campaigns import format_executive_reply
+
+    raw_user_example = (
+        "Your 1‑day LinkedIn sprint will spotlight cross‑region egress cost predictability with a single high‑impact carousel post. "
+        "Concept: 5‑slide carousel – 1) Hook: “Stop guessing your egress bill across regions”. "
+        "2) Pain: Real‑world cost variance example (anonymous). 3) Solution: Vertex Cloud’s predictive cost model (technical snapshot). "
+        "4) Benefit: 20% more budgeting confidence (data‑driven). 5) Call‑to‑action: “Download the free cost‑predictability guide”. "
+        "Visual style: minimalist diagrams, authoritative tone, brand colors. This stays within the brand voice and avoids prohibited claims."
+    )
+
+    formatted = format_executive_reply(raw_user_example)
+
+    # Must NOT have asterisks or hashtags
+    assert "*" not in formatted
+    assert "#" not in formatted
+
+    # Must be broken into clean multi-line paragraphs and numbered items
+    assert "\n\n" in formatted
+    assert "1. Hook:" in formatted
+    assert "\n2. Pain:" in formatted
+    assert "\n3. Solution:" in formatted
+    assert "\n4. Benefit:" in formatted
+    assert "\n5. Call‑to‑action:" in formatted
+    assert "\n\nVisual style:" in formatted
+    assert "\n\nThis stays within" in formatted
+
