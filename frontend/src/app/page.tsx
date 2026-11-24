@@ -36,51 +36,51 @@ const STONE_GRAIN_STYLE: React.CSSProperties = {
 const AGENT_PIPELINE = [
   {
     num: "01",
-    role: "Strategy Agent",
-    tag: "Positioning & Hooks",
-    desc: "Analyzes seasonal client briefs, audience segment insights, and conversion angles.",
-    solisOutput: "Angle: Artisanal Friday rarity (30 portions nightly). Target: Private dining & culinary patrons.",
-    lindenOutput: "Angle: Clean moisture barrier calm. Target: Sensitive-skin ritual buyers seeking gentle botanicals.",
+    role: "Brand Intelligence",
+    tag: "Guidelines & Taboos",
+    desc: "Reads Cortex guidelines, verified offers, prohibited health claims, and voice rules.",
+    solisOutput: "Enforced TABOO-01 (No therapeutic claims) and RULE-04 (Zero discounts on hearth plates).",
+    lindenOutput: "Enforced TABOO-02 (No synthetic disparagement) and RULE-05 (Amber glass sustainability mandate).",
   },
   {
     num: "02",
-    role: "Content Architect",
-    tag: "Carousels & Scripts",
-    desc: "Drafts 5-slide visual carousel narratives, caption hooks, and scene-timed reel scripts.",
-    solisOutput: "Slide 1 Hook: 'Shaved black winter truffles over handmade burrata gnocchi—thirty tables only.'",
-    lindenOutput: "Slide 1 Hook: 'Three cold-pressed drops over damp linen-toweled skin. Formulated for reactive barriers.'",
+    role: "Market & Trend Research",
+    tag: "Hooks & Benchmarks",
+    desc: "Scans live category trends, visual hook structures, and format retention benchmarks.",
+    solisOutput: "Benchmarked high-saving dinner table reveals (0–3s tabletop truffle shave retention hook).",
+    lindenOutput: "Benchmarked calm morning-light tactile ritual pours vs clinical dermatology reels.",
   },
   {
     num: "03",
-    role: "Compliance Evaluator",
-    tag: "Cortex Gatekeeper",
-    desc: "Audits every draft word-for-word against Cortex taboos, provenance rules, and legal boundaries.",
-    solisOutput: "Passed TABOO-01 (No health claims) and RULE-04 (Zero discount percentages on hearth menu).",
-    lindenOutput: "Passed TABOO-02 (No synthetic disparagement) and RULE-05 (Recyclable amber glass callout present).",
+    role: "Historical Performance",
+    tag: "Retention & Lift",
+    desc: "Audits prior post retention, format fatigue drop-offs, and optimal publish cadence.",
+    solisOutput: "Recommended 4:5 editorial carousel + Friday evening reveal (6.8% historical save rate).",
+    lindenOutput: "Recommended 3-drop ritual reel + carousel FAQ pair (8.2% historical save velocity).",
   },
   {
     num: "04",
-    role: "Publishing Agent",
-    tag: "Channel Formatting",
-    desc: "Formats 4:5 portrait crops, 9:16 reel safe zones, hashtag sets, and optimal dispatch windows.",
-    solisOutput: "Crops locked to 4:5 safe area · Scheduled for Friday 18:00 Instagram Carousel + Facebook Reel.",
-    lindenOutput: "Crops locked to 4:5 safe area · Scheduled for Thursday 17:30 Instagram Ritual + LinkedIn Note.",
+    role: "Campaign Strategist",
+    tag: "Master Pacing",
+    desc: "Synthesizes campaign theme, content pillars, Hero Entity focus, and rollout pacing.",
+    solisOutput: "Locked Winter Truffle & Aperitivo Wave · 30 Friday tasting covers anchored cleanly.",
+    lindenOutput: "Locked Batch 09 Barrier Ritual Wave · Refillable apothecary story across 14 days.",
   },
   {
     num: "05",
-    role: "Analytics Agent",
-    tag: "Historical Lift",
-    desc: "Reads past post engagement data to calibrate hook pacing, format mix, and retainer cadence.",
-    solisOutput: "Projected Save Rate: 6.8% based on prior 90-day candlelit culinary carousels.",
-    lindenOutput: "Projected Save Rate: 8.2% based on prior ingredient-education botanical reels.",
+    role: "Content Architect",
+    tag: "Carousels & Reels",
+    desc: "Drafts polymorphic deliverables with teleprompter director beats and 5-slide copy.",
+    solisOutput: "Slide 1 Hook: 'Shaved black winter truffles over handmade burrata gnocchi—thirty tables only.'",
+    lindenOutput: "Slide 1 Hook: 'Three cold-pressed drops over damp linen-toweled skin. Pour-verified.'",
   },
   {
     num: "06",
-    role: "Orchestrator",
-    tag: "Artifact Assembly",
-    desc: "Bundles approved outputs into structured Campaign Plans ready for client sign-off and scheduling.",
-    solisOutput: "Artifact Locked -> Pushed to Winter Tasting Campaign Plan & Magic-Link Review Queue.",
-    lindenOutput: "Artifact Locked -> Pushed to Batch 09 Launch Plan & Mobile Sign-Off Room.",
+    role: "Quality Evaluator & Gate",
+    tag: "Compliance Lock",
+    desc: "Executes final deterministic compliance and quota audit before routing to client review.",
+    solisOutput: "100% Compliance Verified -> Pushed to Winter Tasting Plan & Magic-Link Queue.",
+    lindenOutput: "100% Compliance Verified -> Pushed to Batch 09 Launch Plan & Mobile Sign-Off.",
   },
 ];
 
@@ -342,6 +342,7 @@ export default function LandingPage() {
           <InteractiveWorkspace
             externalRoute={workspaceRoute}
             externalClient={workspaceClient}
+            onTriggerCommandPalette={() => setIsCommandPaletteOpen(true)}
           />
         </section>
 

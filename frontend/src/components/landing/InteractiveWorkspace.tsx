@@ -22,11 +22,37 @@ import {
   Unlock,
   AlertCircle,
   Copy,
-  ChevronDown,
+  ChevronsUpDown,
+  PanelLeftClose,
+  Command,
+  Search,
+  Calendar,
+  Bell,
+  Activity,
+  RefreshCw,
+  Plus,
+  Clock,
+  CheckCircle2,
+  TrendingUp,
+  FileCheck,
+  ShieldAlert,
+  ShieldCheck,
+  UploadCloud,
+  Cpu,
+  Layers2,
+  ArrowRight,
+  ChevronRight,
+  Film,
+  Image as ImageIcon,
+  MessageSquare,
+  Send,
+  LogOut,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { TeleprompterPreview, TeleprompterClientKey } from "./TeleprompterPreview";
 
-type WorkspaceRoute =
+export type WorkspaceRoute =
   | "dashboard"
   | "workspace"
   | "clients"
@@ -47,49 +73,67 @@ export type ClientKey = TeleprompterClientKey;
 interface InteractiveWorkspaceProps {
   externalRoute?: WorkspaceRoute;
   externalClient?: ClientKey;
+  onTriggerCommandPalette?: () => void;
 }
 
+const ROUTE_TITLES: Record<WorkspaceRoute, string> = {
+  dashboard: "Dashboard",
+  workspace: "Workspace",
+  clients: "Clients",
+  cortex: "Cortex Memory",
+  tasks: "Tasks",
+  approvals: "Approvals",
+  studio: "Campaign Studio",
+  plans: "Campaign Plans",
+  calendar: "Content Calendar",
+  inbox: "Community Inbox",
+  reports: "Analytics",
+  team: "Team",
+  billing: "Billing & Credits",
+  settings: "Settings",
+};
+
 const NAV_GROUPS: {
-  tier: string;
-  items: { id: WorkspaceRoute; label: string; icon: "dashboard" | "workspace" | "clients" | "cortex" | "tasks" | "approvals" | "studio" | "plans" | "calendar" | "inbox" | "reports" | "team" | "billing" | "settings" }[];
+  group: string;
+  items: { id: WorkspaceRoute; name: string }[];
 }[] = [
   {
-    tier: "WORKSPACE",
+    group: "WORKSPACE",
     items: [
-      { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-      { id: "workspace", label: "My Workspace", icon: "workspace" },
+      { id: "dashboard", name: "Dashboard" },
+      { id: "workspace", name: "My Workspace" },
     ],
   },
   {
-    tier: "OPERATIONS",
+    group: "OPERATIONS",
     items: [
-      { id: "clients", label: "Clients", icon: "clients" },
-      { id: "cortex", label: "Cortex Memory", icon: "cortex" },
-      { id: "tasks", label: "Tasks", icon: "tasks" },
-      { id: "approvals", label: "Approvals", icon: "approvals" },
+      { id: "clients", name: "Clients" },
+      { id: "cortex", name: "Cortex Memory" },
+      { id: "tasks", name: "Tasks" },
+      { id: "approvals", name: "Approvals" },
     ],
   },
   {
-    tier: "CAMPAIGN PIPELINE",
+    group: "CAMPAIGN PIPELINE",
     items: [
-      { id: "studio", label: "Campaign Studio", icon: "studio" },
-      { id: "plans", label: "Campaign Plans", icon: "plans" },
-      { id: "calendar", label: "Content Calendar", icon: "calendar" },
+      { id: "studio", name: "Campaign Studio" },
+      { id: "plans", name: "Campaign Plans" },
+      { id: "calendar", name: "Content Calendar" },
     ],
   },
   {
-    tier: "ENGAGEMENT & ROI",
+    group: "ENGAGEMENT & ROI",
     items: [
-      { id: "inbox", label: "Community Inbox", icon: "inbox" },
-      { id: "reports", label: "Reports & ROI", icon: "reports" },
+      { id: "inbox", name: "Community Inbox" },
+      { id: "reports", name: "Reports & ROI" },
     ],
   },
   {
-    tier: "ADMIN",
+    group: "ADMIN",
     items: [
-      { id: "team", label: "Team", icon: "team" },
-      { id: "billing", label: "Billing & Credits", icon: "billing" },
-      { id: "settings", label: "Settings", icon: "settings" },
+      { id: "team", name: "Team" },
+      { id: "billing", name: "Billing & Credits" },
+      { id: "settings", name: "Settings" },
     ],
   },
 ];
@@ -97,6 +141,7 @@ const NAV_GROUPS: {
 export function InteractiveWorkspace({
   externalRoute,
   externalClient,
+  onTriggerCommandPalette,
 }: InteractiveWorkspaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -107,28 +152,56 @@ export function InteractiveWorkspace({
 
   const [activeRoute, setActiveRoute] = useState<WorkspaceRoute>("dashboard");
   const [selectedClient, setSelectedClient] = useState<ClientKey>("solis");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+
+  // Dashboard interactive filter
+  const [dashTaskFilter, setDashTaskFilter] = useState<"all" | "review" | "in_progress" | "done">("all");
+
+  // Cortex interactive state (mirrors cortex/page.tsx tabs + view mode)
+  const [cortexTab, setCortexTab] = useState<"queue" | "vault" | "ingest" | "ask">("vault");
   const [cortexViewMode, setCortexViewMode] = useState<"cards" | "document">("cards");
   const [cortexQueueCount, setCortexQueueCount] = useState<number>(3);
-  const [studioTab, setStudioTab] = useState<"carousel" | "teleprompter">("carousel");
+
+  // Studio interactive state (mirrors campaigns/page.tsx + ContextualCanvas)
+  const [studioTab, setStudioTab] = useState<"carousel" | "storyboard" | "compliance">("carousel");
+  const [pinnedEntities, setPinnedEntities] = useState<string[]>([
+    "Winter Truffle Gnocchi",
+    "Chef Table (30 Guests)",
+  ]);
+
+  // Approvals interactive filter (mirrors approvals/page.tsx filter toolstrip)
+  const [approvalFilter, setApprovalFilter] = useState<"all" | "client_review" | "approved" | "published">("all");
   const [approvalStatus, setApprovalStatus] = useState<"pending" | "approved">("pending");
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Engagement interactive state (mirrors engagement/page.tsx)
+  const [engagementStream, setEngagementStream] = useState<"comments" | "dms">("comments");
   const [replyPublished, setReplyPublished] = useState(false);
-  const [clientMenuOpen, setClientMenuOpen] = useState(false);
+
+  // Workspace checklist
   const [completedChecklist, setCompletedChecklist] = useState<Record<string, boolean>>({
     c1: true,
     c2: false,
     c3: false,
   });
 
+  // Preview dark/light chrome toggle matching real Header.tsx sun/moon switcher (zero purple)
+  const [appDarkChrome, setAppDarkChrome] = useState(false);
+
   useEffect(() => {
-    if (externalRoute) {
-      setActiveRoute(externalRoute);
-    }
+    if (externalRoute) setActiveRoute(externalRoute);
   }, [externalRoute]);
 
   useEffect(() => {
     if (externalClient) {
       setSelectedClient(externalClient);
+      if (externalClient === "solis") {
+        setPinnedEntities(["Winter Truffle Gnocchi", "Chef Table (30 Guests)"]);
+      } else if (externalClient === "linden") {
+        setPinnedEntities(["Cold-Pressed Squalane", "Recyclable Amber Glass"]);
+      } else {
+        setPinnedEntities(["1,900m Washed Micro-Lot", "48h Post-Roast Shipping"]);
+      }
     }
   }, [externalClient]);
 
@@ -145,9 +218,12 @@ export function InteractiveWorkspace({
       initial: "O",
       name: "Osteria Solis",
       industry: "Wood-Fired Hospitality",
-      activeBrands: "8 Retainers",
-      scheduledPosts: "32 Scheduled",
-      complianceScore: "100%",
+      activeAccounts: 8,
+      activeTasks: 19,
+      reviewQueue: 2,
+      deliveredRatio: "28/32",
+      deliveredPercent: 88,
+      mrr: "$38,400/mo",
       engagementLift: "+44%",
       saveRate: "6.8%",
       hoursReclaimed: "18.5 hrs",
@@ -160,6 +236,12 @@ export function InteractiveWorkspace({
       swatches: ["#1C1917", "#9A6700", "#D6CFC2"],
       inboundComment: "Do you take private dining group bookings for 28 guests next Friday evening?",
       draftReply: "We would be delighted to host your party at Osteria Solis. Our private hearth dining room is open next Friday—our concierge just sent our seasonal group menu via direct message.",
+      pipelineRows: [
+        { title: "Winter Truffle 5-Slide Carousel", client: "Osteria Solis", assignee: "M. Kapoor", status: "review", priority: "high", due: "Today" },
+        { title: "Hearth Chef Reel Teleprompter Cut", client: "Osteria Solis", assignee: "E. Vance", status: "in_progress", priority: "medium", due: "Tomorrow" },
+        { title: "Aperitivo Cocktail Pour Copy", client: "Osteria Solis", assignee: "A. Nair", status: "done", priority: "medium", due: "Done" },
+        { title: "Sunday Supper Cellar Newsletter", client: "Osteria Solis", assignee: "M. Kapoor", status: "review", priority: "high", due: "In 2d" },
+      ],
       rules: [
         {
           id: "TABOO-01",
@@ -184,19 +266,22 @@ export function InteractiveWorkspace({
         },
       ],
       schedule: [
-        { day: "Thu · 18:00", net: "Instagram", title: "Truffle Hearth Teaser Reel", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
-        { day: "Fri · 12:00", net: "Instagram", title: "Handmade Burrata 5-Slide Carousel", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
-        { day: "Sat · 10:00", net: "LinkedIn", title: "Executive Chef Seasonal Essay", tag: "bg-[#F3F1EC] text-[#6B6A65]" },
-        { day: "Sun · 16:00", net: "Facebook", title: "Sunday Supper Cellar Pairings", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
+        { day: "Thu · Nov 26", net: "Instagram", title: "Truffle Hearth Teaser Reel", status: "Scheduled" },
+        { day: "Fri · Nov 27", net: "Instagram", title: "Handmade Burrata Carousel", status: "Approved" },
+        { day: "Sat · Nov 28", net: "LinkedIn", title: "Executive Chef Seasonal Essay", status: "Review" },
+        { day: "Sun · Nov 29", net: "Facebook", title: "Sunday Supper Cellar Pairings", status: "In Production" },
       ],
     },
     linden: {
       initial: "L",
       name: "Linden & Clay",
       industry: "D2C Botanical Skincare",
-      activeBrands: "6 Retainers",
-      scheduledPosts: "24 Scheduled",
-      complianceScore: "100%",
+      activeAccounts: 6,
+      activeTasks: 14,
+      reviewQueue: 1,
+      deliveredRatio: "21/24",
+      deliveredPercent: 87,
+      mrr: "$26,200/mo",
       engagementLift: "+39%",
       saveRate: "8.2%",
       hoursReclaimed: "14.2 hrs",
@@ -209,6 +294,12 @@ export function InteractiveWorkspace({
       swatches: ["#2D4A3E", "#C8B8A2", "#F3F1EC"],
       inboundComment: "Is the wild rosemary nectar formulated cleanly for ultra-sensitive skin barriers?",
       draftReply: "Yes. Our bio-fermented squalane nectar is 100% plant-derived, essential-oil-free, and clinically patch-tested for reactive skin barriers. We always recommend testing on the inner wrist for 24 hours first.",
+      pipelineRows: [
+        { title: "Botanical Elixir Batch 09 Carousel", client: "Linden & Clay", assignee: "R. Verma", status: "review", priority: "high", due: "Today" },
+        { title: "3-Drop Morning Ritual Teleprompter", client: "Linden & Clay", assignee: "E. Vance", status: "in_progress", priority: "high", due: "Tomorrow" },
+        { title: "Recyclable Amber Glass Sustainability Slide", client: "Linden & Clay", assignee: "A. Nair", status: "done", priority: "medium", due: "Done" },
+        { title: "Sensitive Skin FAQ Story Sequence", client: "Linden & Clay", assignee: "R. Verma", status: "in_progress", priority: "medium", due: "In 3d" },
+      ],
       rules: [
         {
           id: "TABOO-02",
@@ -228,24 +319,27 @@ export function InteractiveWorkspace({
           id: "RULE-06",
           type: "Visual Guideline",
           title: "Natural travertine, raw linen shadows, and warm directional morning sun.",
-          rationale: "Maintains calm Nordic-inspired visual restraint across social feeds.",
+          rationale: "Maintains calm minimalist aesthetic across social feeds.",
           provenance: "Art Direction Spec: Leave generous linen margin around serif overlays.",
         },
       ],
       schedule: [
-        { day: "Thu · 17:30", net: "Instagram", title: "3-Drop Morning Ritual Reel", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
-        { day: "Fri · 11:00", net: "Instagram", title: "Squalane Lipid Barrier Carousel", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
-        { day: "Sat · 09:30", net: "LinkedIn", title: "Amber Glass Refill Engineering", tag: "bg-[#F3F1EC] text-[#6B6A65]" },
-        { day: "Sun · 18:00", net: "Facebook", title: "Batch 09 Apothecary Restock Alert", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
+        { day: "Thu · Nov 26", net: "Instagram", title: "3-Drop Morning Ritual Reel", status: "Scheduled" },
+        { day: "Fri · Nov 27", net: "Instagram", title: "Squalane Lipid Barrier Carousel", status: "Approved" },
+        { day: "Sat · Nov 28", net: "LinkedIn", title: "Amber Glass Refill Engineering", status: "Review" },
+        { day: "Sun · Nov 29", net: "Facebook", title: "Batch 09 Apothecary Restock", status: "In Production" },
       ],
     },
     cairn: {
       initial: "C",
       name: "Cairn Roasters",
       industry: "Specialty Micro-Lot Coffee",
-      activeBrands: "4 Retainers",
-      scheduledPosts: "20 Scheduled",
-      complianceScore: "100%",
+      activeAccounts: 4,
+      activeTasks: 11,
+      reviewQueue: 1,
+      deliveredRatio: "18/20",
+      deliveredPercent: 90,
+      mrr: "$17,800/mo",
       engagementLift: "+51%",
       saveRate: "7.4%",
       hoursReclaimed: "11.8 hrs",
@@ -256,8 +350,14 @@ export function InteractiveWorkspace({
       deliverable: "Highland Harvest Micro-Lot Deliverable",
       image: "/landing/cairn-coffee.jpg",
       swatches: ["#3B2820", "#8C7A6B", "#FAF9F6"],
-      inboundComment: "Do you offer a whole-bean bi-weekly cadence for commercial La Marzocco bars?",
+      inboundComment: "Do you offer a whole-bean bi-weekly cadence for commercial espresso bars?",
       draftReply: "We do. Cairn wholesale partners receive dialed-in single-origin drums roasted to order every Tuesday morning. Our roastery coordinator just sent wholesale minimums to your inbox.",
+      pipelineRows: [
+        { title: "1,900m Cooperative Origin Carousel", client: "Cairn Roasters", assignee: "M. Kapoor", status: "review", priority: "high", due: "Today" },
+        { title: "93C Pour-Over Bloom Audio Reel", client: "Cairn Roasters", assignee: "E. Vance", status: "done", priority: "medium", due: "Done" },
+        { title: "Direct-Trade Farm Margin Report", client: "Cairn Roasters", assignee: "A. Nair", status: "in_progress", priority: "medium", due: "In 2d" },
+        { title: "Tuesday Roast Window Reminder", client: "Cairn Roasters", assignee: "M. Kapoor", status: "done", priority: "low", due: "Done" },
+      ],
       rules: [
         {
           id: "TABOO-03",
@@ -282,67 +382,90 @@ export function InteractiveWorkspace({
         },
       ],
       schedule: [
-        { day: "Thu · 08:30", net: "Instagram", title: "93C Bloom Extraction Acoustic Reel", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
-        { day: "Fri · 09:00", net: "Instagram", title: "1,900m Cooperative Story Carousel", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
-        { day: "Sat · 11:00", net: "LinkedIn", title: "Direct-Trade Farm Margin Report", tag: "bg-[#F3F1EC] text-[#6B6A65]" },
-        { day: "Sun · 14:00", net: "Facebook", title: "Tuesday Roast Drum Pre-Order Window", tag: "bg-[#DDEDEA] text-[#0F7B6C]" },
+        { day: "Thu · Nov 26", net: "Instagram", title: "93C Bloom Extraction Reel", status: "Scheduled" },
+        { day: "Fri · Nov 27", net: "Instagram", title: "1,900m Cooperative Carousel", status: "Approved" },
+        { day: "Sat · Nov 28", net: "LinkedIn", title: "Direct-Trade Farm Report", status: "Review" },
+        { day: "Sun · Nov 29", net: "Facebook", title: "Tuesday Roast Pre-Order", status: "In Production" },
       ],
     },
   };
 
   const currentClient = clientData[selectedClient];
 
-  const renderIcon = (icon: string, isActive: boolean) => {
-    const cls = "w-3.5 h-3.5 shrink-0";
-    switch (icon) {
+  const filteredDashboardRows = currentClient.pipelineRows.filter((row) => {
+    if (dashTaskFilter === "all") return true;
+    return row.status === dashTaskFilter;
+  });
+
+  const renderNavIcon = (id: WorkspaceRoute, isActive: boolean) => {
+    const colorCls = isActive
+      ? appDarkChrome
+        ? "text-white"
+        : "text-[#191919]"
+      : appDarkChrome
+      ? "text-[#A3A0B0]"
+      : "text-[#6B6A65]";
+    const cls = `w-3.5 h-3.5 shrink-0 transition-colors ${colorCls}`;
+    switch (id) {
       case "dashboard":
-        return <LayoutDashboard className={`${cls} text-[#111114]`} />;
+        return <LayoutDashboard className={cls} />;
       case "workspace":
-        return <Briefcase className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <Briefcase className={cls} />;
       case "clients":
-        return <Users className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <Users className={cls} />;
       case "cortex":
-        return <Brain className={`${cls} text-[#111114]`} />;
+        return <Brain className={cls} />;
       case "tasks":
-        return <CheckSquare className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <CheckSquare className={cls} />;
       case "approvals":
-        return <FileCheck2 className={`${cls} text-[#9A6700]`} />;
+        return <FileCheck2 className={`w-3.5 h-3.5 shrink-0 ${isActive ? colorCls : "text-[#9A6700]"}`} />;
       case "studio":
-        return <Sparkles className={`${cls} text-[#9A6700]`} />;
+        return <Sparkles className={`w-3.5 h-3.5 shrink-0 ${isActive ? colorCls : "text-[#9A6700]"}`} />;
       case "plans":
-        return <Layers className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <Layers className={cls} />;
       case "calendar":
-        return <CalendarDays className={`${cls} text-[#0F7B6C]`} />;
+        return <CalendarDays className={`w-3.5 h-3.5 shrink-0 ${isActive ? colorCls : "text-[#0F7B6C]"}`} />;
       case "inbox":
-        return <MessagesSquare className={`${cls} text-[#0F7B6C]`} />;
+        return <MessagesSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? colorCls : "text-[#0F7B6C]"}`} />;
       case "reports":
-        return <BarChart3 className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <BarChart3 className={cls} />;
       case "team":
-        return <UserCheck className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <UserCheck className={cls} />;
       case "billing":
-        return <CreditCard className={`${cls} text-[#111114]`} />;
-      default:
-        return <Settings className={`${cls} ${isActive ? "text-[#111114]" : "text-[#6B6A65]"}`} />;
+        return <CreditCard className={cls} />;
+      case "settings":
+        return <Settings className={cls} />;
     }
   };
 
+  // Explicit surface classes mirroring real Sidebar/Header/AgencyLayout Light & Obsidian modes (zero purple)
+  const shellBg = appDarkChrome ? "bg-[#101014] text-[#F2F0F7] border-[#262630]" : "bg-[#FFFFFF] text-[#37352F] border-[rgba(55,53,47,0.14)]";
+  const sidebarBg = appDarkChrome ? "bg-[#17171E] border-[#262630] text-[#A3A0B0]" : "bg-[#F7F6F3] border-[rgba(55,53,47,0.1)] text-[#6B6A65]";
+  const headerBg = appDarkChrome ? "bg-[#17171E] border-[#262630]" : "bg-[#F7F6F3] border-[rgba(55,53,47,0.1)]";
+  const cardBg = appDarkChrome ? "bg-[#17171E] border-white/[0.08]" : "bg-[#FFFFFF] border-[rgba(55,53,47,0.09)] shadow-[0_1px_2px_rgba(15,15,15,0.04)]";
+  const recessedBg = appDarkChrome ? "bg-[#121217] border-white/[0.08]" : "bg-[#F7F6F3] border-[rgba(55,53,47,0.09)]";
+  const inputBg = appDarkChrome ? "bg-[#20202A] border-white/[0.08] text-[#F2F0F7]" : "bg-[#EFEFED] border-[rgba(55,53,47,0.08)] text-[#37352F]";
+  const headingTxt = appDarkChrome ? "text-[#F2F0F7]" : "text-[#191919]";
+  const mutedTxt = appDarkChrome ? "text-[#A3A0B0]" : "text-[#6B6A65]";
+  const hairline = appDarkChrome ? "border-white/[0.08]" : "border-[rgba(55,53,47,0.09)]";
+
   return (
     <div ref={containerRef} className="w-full">
-      {/* Main Window Frame with Live Scroll-Driven Perspective Flatten */}
+      {/* Main App Window Frame Mirroring Real AgencyLayout (Sidebar + Top Header + Canvas) */}
       <motion.div
         style={{ rotateX, transformPerspective: 1200 }}
-        className="bg-[#FFFFFF] rounded-2xl border border-[#EAE7DF] shadow-[0_24px_60px_-15px_rgba(17,17,20,0.12)] overflow-hidden flex flex-col md:flex-row min-h-[640px]"
+        className={`rounded-2xl border shadow-[0_24px_60px_-15px_rgba(17,17,20,0.14)] overflow-hidden flex flex-col md:flex-row min-h-[670px] transition-colors duration-200 ${shellBg}`}
       >
-        {/* Mobile Client Bar + Horizontal Scrollable Route Rail (< md) */}
-        <div className="md:hidden border-b border-[#EAE7DF] bg-[#FAF9F6]">
-          <div className="p-3 flex items-center justify-between border-b border-[#EAE7DF]">
+        {/* Mobile Client + Route Strip (< md) */}
+        <div className={`md:hidden border-b ${sidebarBg}`}>
+          <div className={`p-3 flex items-center justify-between border-b ${hairline}`}>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-[#111114] text-white flex items-center justify-center font-mono text-xs font-bold">
-                {currentClient.initial}
+              <div className="w-6 h-6 rounded-md bg-[#191919] text-white flex items-center justify-center font-mono text-xs font-bold">
+                B
               </div>
               <div>
-                <p className="text-xs font-semibold text-[#111114]">{currentClient.name}</p>
-                <p className="text-[10px] font-mono text-[#6B6A65]">{currentClient.industry}</p>
+                <p className={`text-xs font-semibold ${headingTxt}`}>Brieva Studio</p>
+                <p className={`text-[10px] font-mono ${mutedTxt}`}>Client: {currentClient.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -350,10 +473,8 @@ export function InteractiveWorkspace({
                 <button
                   key={key}
                   onClick={() => setSelectedClient(key)}
-                  className={`px-2 py-1 rounded text-[10px] font-mono transition-colors ${
-                    selectedClient === key
-                      ? "bg-[#111114] text-white font-semibold"
-                      : "bg-[#FFFFFF] border border-[#EAE7DF] text-[#6B6A65]"
+                  className={`px-2 py-1 rounded text-[10px] font-mono cursor-pointer ${
+                    selectedClient === key ? "bg-[#191919] text-white font-semibold" : "bg-white border border-[rgba(55,53,47,0.1)] text-[#6B6A65]"
                   }`}
                 >
                   {clientData[key].initial}
@@ -361,79 +482,88 @@ export function InteractiveWorkspace({
               ))}
             </div>
           </div>
-
           <div className="flex items-center gap-1.5 overflow-x-auto px-3 py-2 text-xs">
             {NAV_GROUPS.flatMap((g) => g.items).map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveRoute(item.id)}
-                className={`px-2.5 py-1 rounded-md whitespace-nowrap text-[11px] font-medium transition-colors ${
-                  activeRoute === item.id
-                    ? "bg-[#111114] text-white"
-                    : "bg-[#FFFFFF] border border-[#EAE7DF] text-[#6B6A65]"
+                className={`px-2.5 py-1 rounded-md whitespace-nowrap text-[11px] font-medium cursor-pointer ${
+                  activeRoute === item.id ? "bg-[#191919] text-white" : "bg-white border border-[rgba(55,53,47,0.1)] text-[#6B6A65]"
                 }`}
               >
-                {item.label}
+                {item.name}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Desktop Left Sidebar (Exact 5-Tier Architecture) */}
-        <div className="hidden md:flex w-64 bg-[#FAF9F6] border-r border-[#EAE7DF] flex-col shrink-0">
-          {/* Client Retainer Switcher Header */}
-          <div className="p-3.5 border-b border-[#EAE7DF] relative">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-6 h-6 rounded-md bg-[#111114] text-white flex items-center justify-center font-mono text-xs font-bold shrink-0">
-                  {currentClient.initial}
+        {/* ═══════════════════════════════════════════════════════════════════════
+            LEFT SIDEBAR — EXACT MIRROR OF components/layout/Sidebar.tsx
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <aside className={`hidden md:flex w-[238px] border-r flex-col shrink-0 select-none ${sidebarBg}`}>
+          {/* Top Agency / Brand Context Header (h-14 matching Sidebar.tsx) */}
+          <div className={`h-14 border-b px-3 flex items-center justify-between gap-2 relative ${hairline}`}>
+            <button
+              onClick={() => setClientDropdownOpen((p) => !p)}
+              className={`flex items-center gap-2.5 min-w-0 flex-1 rounded-lg p-1 -m-1 text-left transition-colors cursor-pointer ${
+                appDarkChrome ? "hover:bg-white/[0.05]" : "hover:bg-black/[0.04]"
+              }`}
+              title="Switch Client Retainer Workspace"
+            >
+              <div className="w-7 h-7 rounded-lg bg-[#191919] text-white border border-black/10 flex items-center justify-center shrink-0 font-mono text-xs font-bold">
+                B
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className={`font-semibold text-xs tracking-tight truncate ${headingTxt}`}>
+                    Brieva Studio
+                  </span>
+                  <ChevronsUpDown className="w-3 h-3 opacity-60 shrink-0" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-[#111114] truncate font-sans">
-                    {currentClient.name}
-                  </p>
-                  <p className="text-[10px] text-[#6B6A65] font-mono truncate">
-                    {currentClient.industry}
-                  </p>
+                <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                  <span>{currentClient.name}</span>
+                  <span className="opacity-40">&bull;</span>
+                  <span className="text-[#0F7B6C] font-semibold">Online</span>
                 </div>
               </div>
+            </button>
 
-              <button
-                onClick={() => setClientMenuOpen(!clientMenuOpen)}
-                className="p-1 rounded-md border border-[#EAE7DF] bg-[#FFFFFF] hover:bg-[#F3F1EC] text-[#6B6A65] transition-colors cursor-pointer"
-                title="Switch Client Retainer"
-              >
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <PanelLeftClose className="w-3.5 h-3.5 opacity-60 shrink-0" />
 
-            {clientMenuOpen && (
-              <div className="absolute top-full left-2 right-2 mt-1 z-30 bg-[#FFFFFF] rounded-xl border border-[#EAE7DF] shadow-lg p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2 py-1 text-[10px] font-mono text-[#8C8A84] uppercase tracking-wider">
-                  Switch Client Retainer
+            {/* Client Retainer Context Switcher Popover */}
+            {clientDropdownOpen && (
+              <div className={`absolute left-3 right-3 top-full mt-1 rounded-xl border shadow-xl p-1.5 z-40 space-y-1 animate-in fade-in zoom-in-95 duration-100 ${cardBg}`}>
+                <div className={`px-2 py-1 text-[10px] font-mono font-semibold uppercase tracking-wider ${mutedTxt}`}>
+                  Active Client Retainer
                 </div>
                 {(["solis", "linden", "cairn"] as ClientKey[]).map((key) => {
                   const item = clientData[key];
+                  const isSelected = selectedClient === key;
                   return (
                     <button
                       key={key}
                       onClick={() => {
                         setSelectedClient(key);
-                        setClientMenuOpen(false);
+                        setClientDropdownOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-colors cursor-pointer ${
-                        selectedClient === key
-                          ? "bg-[#111114] text-white font-medium"
-                          : "text-[#111114] hover:bg-[#FAF9F6]"
+                      className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
+                        isSelected
+                          ? appDarkChrome
+                            ? "bg-white/[0.08] text-white font-semibold"
+                            : "bg-[#EFEFED] text-[#191919] font-semibold"
+                          : `${mutedTxt} hover:bg-black/[0.04]`
                       }`}
                     >
-                      <div>
-                        <div className="font-sans font-medium text-xs">{item.name}</div>
-                        <div className={`text-[10px] ${selectedClient === key ? "text-white/70" : "text-[#6B6A65]"}`}>
-                          {item.industry}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-5 h-5 rounded bg-[#191919] text-white flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
+                          {item.initial}
+                        </span>
+                        <div className="truncate">
+                          <div className="truncate">{item.name}</div>
+                          <div className="text-[9px] opacity-70 truncate">{item.industry}</div>
                         </div>
                       </div>
-                      {selectedClient === key && <Check className="w-3.5 h-3.5" />}
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[#0F7B6C] shrink-0" />}
                     </button>
                   );
                 })}
@@ -441,63 +571,68 @@ export function InteractiveWorkspace({
             )}
           </div>
 
-          {/* 5-Tier Navigation with Framer Motion Spring Pills */}
-          <nav className="p-2 space-y-3.5 flex-1 overflow-y-auto text-xs">
-            {NAV_GROUPS.map((group) => (
-              <div key={group.tier} className="space-y-0.5">
-                <p className="px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-[#8C8A84]">
-                  {group.tier}
+          {/* 5-Tier Grouped Navigation Links matching Sidebar.tsx */}
+          <nav className="flex-1 px-2 py-3 space-y-4 overflow-y-auto text-xs">
+            {NAV_GROUPS.map((grp) => (
+              <div key={grp.group} className="space-y-0.5">
+                <p className={`px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider opacity-65`}>
+                  {grp.group}
                 </p>
-                {group.items.map((item) => {
+                {grp.items.map((item) => {
                   const isActive = activeRoute === item.id;
                   return (
                     <button
                       key={item.id}
                       onClick={() => setActiveRoute(item.id)}
-                      className={`w-full relative flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${
-                        isActive ? "text-[#111114] font-semibold" : "text-[#6B6A65] hover:bg-white/60"
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all relative cursor-pointer ${
+                        isActive
+                          ? appDarkChrome
+                            ? "bg-white/[0.08] text-[#F2F0F7] font-semibold"
+                            : "bg-[#FFFFFF] text-[#191919] font-semibold shadow-[0_1px_2px_rgba(15,15,15,0.04)]"
+                          : `${mutedTxt} ${appDarkChrome ? "hover:bg-white/[0.04] hover:text-white" : "hover:bg-black/[0.03] hover:text-[#191919]"}`
                       }`}
                     >
                       {isActive && (
-                        <motion.div
-                          layoutId="active-nav-indicator"
+                        <motion.span
+                          layoutId="real-ui-sidebar-pill"
                           transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                          className="absolute inset-0 bg-[#FFFFFF] rounded-lg border border-[#EAE7DF] shadow-xs"
+                          className={`absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r ${
+                            appDarkChrome ? "bg-[#0F7B6C]" : "bg-[#191919]"
+                          }`}
                         />
                       )}
-                      <span className="relative z-10 flex items-center gap-2">
-                        {renderIcon(item.icon, isActive)}
-                        <span>{item.label}</span>
+                      <span className="flex items-center gap-2 min-w-0">
+                        {renderNavIcon(item.id, isActive)}
+                        <span className="truncate">{item.name}</span>
                       </span>
 
                       {item.id === "cortex" && (
-                        <span className="relative z-10 px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] text-[9px] font-mono font-bold tabular-nums">
+                        <span className="px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] border border-[#9A6700]/20 text-[9px] font-mono font-bold tabular-nums">
                           {cortexQueueCount}
                         </span>
                       )}
                       {item.id === "tasks" && (
-                        <span className="relative z-10 px-1.5 py-0.2 rounded bg-[#F3F1EC] text-[#6B6A65] text-[9px] font-mono font-bold tabular-nums">
-                          19
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold tabular-nums ${inputBg}`}>
+                          {currentClient.activeTasks}
                         </span>
                       )}
                       {item.id === "approvals" && (
-                        <span className="relative z-10 px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] text-[9px] font-mono font-bold tabular-nums">
-                          2
+                        <span className="px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] border border-[#9A6700]/25 text-[9px] font-mono font-bold tabular-nums">
+                          {currentClient.reviewQueue}
                         </span>
                       )}
                       {item.id === "studio" && (
-                        <span className="relative z-10 px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] text-[9px] font-mono font-bold">
+                        <span className="px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] border border-[#9A6700]/25 text-[9px] font-mono font-bold">
                           AI
                         </span>
                       )}
                       {item.id === "inbox" && (
-                        <span className="relative z-10 flex items-center gap-1 px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[9px] font-mono font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#0F7B6C]" />
+                        <span className="px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C] border border-[#0F7B6C]/25 text-[9px] font-mono font-bold">
                           Live
                         </span>
                       )}
                       {item.id === "billing" && (
-                        <span className="relative z-10 text-[9px] font-mono text-[#6B6A65] tabular-nums">
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono tabular-nums ${inputBg}`}>
                           38k / 50k
                         </span>
                       )}
@@ -507,704 +642,1033 @@ export function InteractiveWorkspace({
               </div>
             ))}
           </nav>
-        </div>
 
-        {/* Right Active Screen Area */}
-        <div className="flex-1 bg-[#FFFFFF] p-6 overflow-y-auto">
-          {/* 1. DASHBOARD */}
-          {activeRoute === "dashboard" && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between pb-3 border-b border-[#EAE7DF]">
-                <div className="flex items-center gap-3">
+          {/* Bottom Command Menu Launcher & Profile Footer (Exact copy of Sidebar.tsx bottom) */}
+          <div className={`px-2.5 py-2 border-t ${hairline}`}>
+            <button
+              onClick={() =>
+                onTriggerCommandPalette
+                  ? onTriggerCommandPalette()
+                  : window.dispatchEvent(new CustomEvent("agencyos:open-command-palette"))
+              }
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${cardBg}`}
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <Command className={`w-3.5 h-3.5 shrink-0 ${appDarkChrome ? "text-emerald-400" : "text-[#191919]"}`} />
+                <span className={`font-medium truncate text-[11px] ${headingTxt}`}>Command Menu</span>
+              </span>
+              <kbd className={`px-1.5 py-0.2 rounded border text-[9px] font-mono font-semibold ${inputBg}`}>
+                ⌘K
+              </kbd>
+            </button>
+          </div>
+
+          <div className={`border-t p-2.5 flex items-center justify-between gap-2 ${hairline}`}>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-[#191919] text-white flex items-center justify-center font-semibold text-xs shrink-0 font-mono">
+                H
+              </div>
+              <div className="min-w-0">
+                <p className={`text-xs font-semibold truncate leading-tight ${headingTxt}`}>Harshad Potdar</p>
+                <p className={`text-[10px] font-mono truncate ${mutedTxt}`}>owner@brieva.studio</p>
+              </div>
+            </div>
+            <LogOut className={`w-3.5 h-3.5 shrink-0 ${mutedTxt}`} />
+          </div>
+        </aside>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            RIGHT MAIN PANE: TOP HEADER BAR + SCROLLABLE ACTIVE ROUTE
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Exact Top App Header Bar (components/layout/Header.tsx h-14) */}
+          <header className={`h-14 border-b px-4 sm:px-5 flex items-center justify-between gap-3 shrink-0 ${headerBg}`}>
+            {/* Left: Compact Breadcrumbs */}
+            <div className="flex items-center gap-1.5 text-xs font-mono min-w-0 shrink-0">
+              <span className={`hidden sm:inline ${mutedTxt}`}>Workspace /</span>
+              <button
+                onClick={() => setClientDropdownOpen((p) => !p)}
+                className={`font-semibold truncate max-w-[110px] hover:underline cursor-pointer ${headingTxt}`}
+                title="Click to switch active client retainer"
+              >
+                {currentClient.name}
+              </button>
+              <span className={`opacity-40`}>/</span>
+              <span className={`font-bold tracking-wide truncate ${headingTxt}`}>
+                {ROUTE_TITLES[activeRoute]}
+              </span>
+            </div>
+
+            {/* Center: Command Bar Trigger */}
+            <button
+              onClick={() =>
+                onTriggerCommandPalette
+                  ? onTriggerCommandPalette()
+                  : window.dispatchEvent(new CustomEvent("agencyos:open-command-palette"))
+              }
+              className={`hidden sm:flex flex-1 max-w-xs items-center justify-between px-3 py-1.5 rounded-lg border text-xs transition-all cursor-pointer ${
+                appDarkChrome
+                  ? "bg-[#101014] border-white/[0.08] text-[#A3A0B0]"
+                  : "bg-[#FFFFFF] border-[rgba(55,53,47,0.12)] text-[#6B6A65] shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
+              }`}
+            >
+              <span className="flex items-center gap-2 truncate">
+                <Search className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate text-[11px]">Search or jump to...</span>
+              </span>
+              <kbd className={`px-1.5 py-0.2 rounded border text-[9px] font-mono ${inputBg}`}>⌘K</kbd>
+            </button>
+
+            {/* Right: Period Pill, Notifications, Theme Preview Toggle & Avatar */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium ${inputBg}`}>
+                <Calendar className="w-3 h-3" />
+                <span>This Month</span>
+              </div>
+
+              <div className="relative p-1.5 rounded-lg">
+                <Bell className={`w-3.5 h-3.5 ${mutedTxt}`} />
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#0F7B6C]" />
+              </div>
+
+              <button
+                onClick={() => setAppDarkChrome((prev) => !prev)}
+                className={`p-1.5 rounded-lg border cursor-pointer transition-colors ${inputBg}`}
+                title={appDarkChrome ? "Switch preview to Notion Light Mode" : "Switch preview to Obsidian Dark Mode"}
+              >
+                {appDarkChrome ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-[#37352F]" />}
+              </button>
+
+              <div className="w-7 h-7 rounded-lg bg-[#191919] text-white flex items-center justify-center font-mono text-xs font-semibold">
+                H
+              </div>
+            </div>
+          </header>
+
+          {/* ═════════════════════════════════════════════════════════════════════
+              SCROLLABLE APP CANVAS — REAL PAGE LAYOUTS
+             ═════════════════════════════════════════════════════════════════════ */}
+          <div className={`flex-1 p-5 sm:p-6 overflow-y-auto ${appDarkChrome ? "bg-[#101014]" : "bg-[#FFFFFF]"}`}>
+            {/* ── 1. DASHBOARD (Exact mirror of dashboard/page.tsx) ── */}
+            {activeRoute === "dashboard" && (
+              <div className="space-y-5 animate-in fade-in duration-150">
+                {/* Operational Header & Quick Action Dock */}
+                <div className={`flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b ${hairline}`}>
                   <div>
-                    <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                      {currentClient.name} Pulse Dashboard
-                    </h3>
-                    <p className="text-xs text-[#6B6A65] font-sans">
-                      Retainer health, upcoming deliverables, and deterministic compliance verification.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-1 mr-1">
-                    {currentClient.swatches.map((hex) => (
-                      <span
-                        key={hex}
-                        className="w-3 h-3 rounded-full border border-[#EAE7DF]"
-                        style={{ backgroundColor: hex }}
-                      />
-                    ))}
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0F7B6C]" />
-                    All Systems Live
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-[#6B6A65]">Retainer Scope</span>
-                  <p className="text-2xl font-bold text-[#111114] font-mono tabular-nums">{currentClient.activeBrands}</p>
-                  <p className="text-[11px] text-[#0F7B6C] font-mono font-medium">100% Delivery SLA</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-[#6B6A65]">Publishing Queue</span>
-                  <p className="text-2xl font-bold text-[#111114] font-mono tabular-nums">{currentClient.scheduledPosts}</p>
-                  <p className="text-[11px] text-[#6B6A65] font-mono">Instagram · FB · LinkedIn</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-[#6B6A65]">Compliance Pass Rate</span>
-                  <p className="text-2xl font-bold text-[#0F7B6C] font-mono tabular-nums">{currentClient.complianceScore}</p>
-                  <p className="text-[11px] text-[#0F7B6C] font-mono font-medium">0 Brand Drift Incidents</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-[#111114] uppercase tracking-wide font-mono">
-                  Active Deliverables · {currentClient.name}
-                </h4>
-                <div className="rounded-xl border border-[#EAE7DF] divide-y divide-[#EAE7DF] overflow-hidden text-xs">
-                  <div className="p-3.5 flex items-center justify-between bg-white hover:bg-[#FAF9F6] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={currentClient.image}
-                        alt={currentClient.name}
-                        className="w-10 h-10 rounded-md object-cover border border-[#EAE7DF]"
-                      />
-                      <div>
-                        <p className="font-semibold text-[#111114] font-sans">{currentClient.deliverable}</p>
-                        <p className="text-[11px] text-[#6B6A65] font-sans">Multi-Slide Carousel · Awaiting Client Sign-off</p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-[#FBF3DB] text-[#9A6700] text-[10px] font-mono font-medium tabular-nums">
-                      Magic-Link Active
-                    </span>
-                  </div>
-                  <div className="p-3.5 flex items-center justify-between bg-white hover:bg-[#FAF9F6] transition-colors">
-                    <div>
-                      <p className="font-semibold text-[#111114] font-sans">{currentClient.campaignTitle}</p>
-                      <p className="text-[11px] text-[#6B6A65] font-sans">Viral Reel Teleprompter Cut · Director Notes Ready</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium">
-                      Approved
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. CORTEX MEMORY */}
-          {activeRoute === "cortex" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#EAE7DF] gap-2">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    {currentClient.name} — Living Brand Vault
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    Institutional memory rules enforced deterministically on every AI generation run.
-                  </p>
-                </div>
-
-                <div className="flex items-center bg-[#F3F1EC] rounded-lg p-0.5 text-xs font-mono">
-                  <button
-                    onClick={() => setCortexViewMode("cards")}
-                    className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                      cortexViewMode === "cards" ? "bg-white text-[#111114] font-semibold shadow-xs" : "text-[#6B6A65]"
-                    }`}
-                  >
-                    Cards View
-                  </button>
-                  <button
-                    onClick={() => setCortexViewMode("document")}
-                    className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                      cortexViewMode === "document" ? "bg-white text-[#111114] font-semibold shadow-xs" : "text-[#6B6A65]"
-                    }`}
-                  >
-                    Clean Document
-                  </button>
-                </div>
-              </div>
-
-              {cortexQueueCount > 0 && (
-                <div className="p-3.5 rounded-xl bg-[#FBF3DB]/70 border border-[#9A6700]/30 flex items-start justify-between gap-3 text-xs shadow-xs">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-[#9A6700] flex items-center gap-1.5 text-[11px] font-sans">
-                      <AlertCircle className="w-3.5 h-3.5 text-[#9A6700]" />
-                      Pending Memory Review ({cortexQueueCount} items extracted from uploaded brief):
-                    </p>
-                    <p className="text-[#6B6A65] text-[11px] font-sans">
-                      Extracted Rule: &quot;{currentClient.pendingRule}&quot;
-                    </p>
-                    <p className="text-[10px] text-[#8C8A84] font-mono">
-                      {currentClient.pendingDoc}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => setCortexQueueCount((prev) => Math.max(0, prev - 1))}
-                      className="px-2.5 py-1 rounded-lg bg-[#111114] text-white text-[10px] font-medium hover:bg-[#2F2E2B] transition-colors cursor-pointer font-sans"
-                    >
-                      Approve to Vault
-                    </button>
-                    <button
-                      onClick={() => setCortexQueueCount((prev) => Math.max(0, prev - 1))}
-                      className="px-2 py-1 rounded-lg text-[#6B6A65] hover:text-[#111114] text-[10px] transition-colors cursor-pointer font-sans"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {cortexViewMode === "cards" ? (
-                <div className="space-y-3">
-                  {currentClient.rules.map((rule) => (
-                    <div
-                      key={rule.id}
-                      className={`p-4 rounded-xl border bg-[#FAF9F6] space-y-1.5 text-xs ${
-                        rule.id.startsWith("TABOO") ? "border-red-200" : "border-[#EAE7DF]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
-                            rule.id.startsWith("TABOO")
-                              ? "bg-red-50 text-[#C93B2B]"
-                              : "bg-[#DDEDEA] text-[#0F7B6C]"
-                          }`}
-                        >
-                          {rule.type}
-                        </span>
-                        <span className="text-[10px] font-mono text-[#8C8A84] tabular-nums">{rule.id}</span>
-                      </div>
-                      <p className="font-semibold text-[#111114] font-sans">{rule.title}</p>
-                      <p className="text-[11px] text-[#6B6A65] font-sans">
-                        <span className="font-medium text-[#111114]">Rationale:</span> {rule.rationale}
-                      </p>
-                      <p className="text-[11px] text-[#6B6A65] font-sans">
-                        <span className="font-medium text-[#111114]">Provenance:</span> &quot;{rule.provenance}&quot;
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-4 text-xs font-mono leading-relaxed">
-                  <div className="pb-3 border-b border-[#EAE7DF] flex items-center justify-between">
-                    <span className="text-[#8C8A84]">{currentClient.name.toUpperCase()} BRAND RULES SPECIFICATION</span>
-                    <span className="text-[#0F7B6C]">DETERMINISTIC COMPLIANCE LEVEL: STRICT</span>
-                  </div>
-                  {currentClient.rules.map((rule) => (
-                    <div key={rule.id} className="space-y-1">
-                      <p className="text-[#111114] font-bold">[{rule.id}] {rule.title}</p>
-                      <p className="text-[#6B6A65] pl-4">&gt; Scope: {rule.type}</p>
-                      <p className="text-[#6B6A65] pl-4">&gt; Provenance: {rule.provenance}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3. CAMPAIGN STUDIO */}
-          {activeRoute === "studio" && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#EAE7DF] gap-2">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    {currentClient.name} — Campaign Studio
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    6 specialized agents collaborating deterministically on brand briefs.
-                  </p>
-                </div>
-
-                <div className="flex items-center bg-[#F3F1EC] rounded-lg p-0.5 text-xs font-mono">
-                  <button
-                    onClick={() => setStudioTab("carousel")}
-                    className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                      studioTab === "carousel" ? "bg-white text-[#111114] font-semibold shadow-xs" : "text-[#6B6A65]"
-                    }`}
-                  >
-                    Tab A · 5-Slide Carousel
-                  </button>
-                  <button
-                    onClick={() => setStudioTab("teleprompter")}
-                    className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                      studioTab === "teleprompter" ? "bg-white text-[#111114] font-semibold shadow-xs" : "text-[#6B6A65]"
-                    }`}
-                  >
-                    Tab B · Viral Teleprompter
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-2">
-                <span className="text-[10px] font-mono text-[#8C8A84] uppercase tracking-wider">
-                  Active Multi-Agent Swarm (6 Agents):
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-[11px] font-medium font-sans">
-                  {[
-                    ["Strategy", "Brief Synced"],
-                    ["Content", "Copy Written"],
-                    ["Compliance", "Rules Verified"],
-                    ["Publishing", "Ready to Post"],
-                    ["Analytics", "Pacing Tracked"],
-                    ["Orchestrator", "Locked"],
-                  ].map(([role, status]) => (
-                    <div key={role} className="p-2 rounded-lg bg-white border border-[#EAE7DF] text-[#111114]">
-                      <p className="font-semibold">{role}</p>
-                      <p className="text-[9px] text-[#0F7B6C] font-mono">{status}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {studioTab === "carousel" ? (
-                <div className="p-5 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#EAE7DF]">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-[#111114] font-sans">
-                        Slide 1 of 5 · 4:5 Portrait Cover
+                    <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider mb-1">
+                      <span className={mutedTxt}>AgencyOS</span>
+                      <span className="opacity-30">/</span>
+                      <span className="text-[#0F7B6C] flex items-center gap-1.5 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0F7B6C] animate-pulse" />
+                        Live Operations
                       </span>
-                      <div className="flex items-center gap-1">
-                        {currentClient.swatches.map((hex) => (
-                          <span
-                            key={hex}
-                            className="w-3 h-3 rounded-full border border-[#EAE7DF]"
-                            style={{ backgroundColor: hex }}
-                          />
+                    </div>
+                    <h3 className={`text-lg font-heading font-bold tracking-tight flex items-center gap-2 ${headingTxt}`}>
+                      <Activity className="w-4 h-4" />
+                      <span>Agency Command Centre · {currentClient.name}</span>
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium">
+                    <button
+                      onClick={() => setActiveRoute("clients")}
+                      className={`px-2.5 py-1.5 rounded-lg border flex items-center gap-1 cursor-pointer ${cardBg}`}
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Client</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveRoute("studio")}
+                      className="px-3 py-1.5 rounded-lg bg-[#191919] text-white flex items-center gap-1.5 cursor-pointer font-semibold"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Plan with AI</span>
+                      <span className="text-[9px] font-mono opacity-75">⌘P</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4-Column Coherent Telemetry Strip */}
+                <div className={`rounded-xl border overflow-hidden divide-y sm:divide-y-0 sm:divide-x ${hairline} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${cardBg}`}>
+                  <div className="p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase">
+                      <span className={mutedTxt}>Active Retainers</span>
+                      <span className="px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C] font-semibold">100% SLA</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-xl font-bold font-mono tabular-nums ${headingTxt}`}>{currentClient.activeAccounts}</span>
+                      <span className={`text-[11px] ${mutedTxt}`}>Accounts</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase">
+                      <span className={mutedTxt}>Production Pipeline</span>
+                      <span className="px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C] font-semibold">0 Urgent</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-xl font-bold font-mono tabular-nums ${headingTxt}`}>{currentClient.activeTasks}</span>
+                      <span className={`text-[11px] ${mutedTxt}`}>Active tasks</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase">
+                      <span className={mutedTxt}>Review Queue</span>
+                      <span className={`px-1.5 py-0.2 rounded font-semibold ${inputBg}`}>Quality Gate</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-xl font-bold font-mono tabular-nums ${headingTxt}`}>{currentClient.reviewQueue}</span>
+                      <span className={`text-[11px] ${mutedTxt}`}>In review</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase">
+                      <span className={mutedTxt}>Monthly Delivery</span>
+                      <span className="px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C] font-semibold tabular-nums">
+                        {currentClient.deliveredPercent}% Target
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-xl font-bold font-mono tabular-nums ${headingTxt}`}>{currentClient.deliveredRatio}</span>
+                      <span className={`text-[11px] font-mono ${mutedTxt}`}>{currentClient.mrr}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dual-Pane Operational Matrix (Table + Deadlines Radar) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  {/* Left 8 cols: Linear Production Pipeline Table */}
+                  <div className={`lg:col-span-8 rounded-xl border overflow-hidden ${cardBg}`}>
+                    <div className={`p-3.5 border-b flex flex-wrap items-center justify-between gap-2 ${hairline}`}>
+                      <div className="flex items-center gap-2">
+                        <h4 className={`text-xs font-heading font-semibold ${headingTxt}`}>Production Pipeline</h4>
+                        <span className={`px-1.5 py-0.2 text-[9px] font-mono rounded border ${recessedBg} text-[#0F7B6C]`}>
+                          Live Flow
+                        </span>
+                      </div>
+
+                      <div className={`flex items-center p-0.5 rounded-lg border text-[10px] font-mono ${recessedBg}`}>
+                        {(["all", "review", "in_progress", "done"] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setDashTaskFilter(tab)}
+                            className={`px-2 py-0.5 rounded cursor-pointer capitalize ${
+                              dashTaskFilter === tab
+                                ? appDarkChrome
+                                  ? "bg-[#20202A] text-white font-semibold"
+                                  : "bg-white text-[#191919] font-semibold shadow-xs"
+                                : mutedTxt
+                            }`}
+                          >
+                            {tab === "in_progress" ? "Active" : tab}
+                          </button>
                         ))}
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium">
-                      Deterministic Compliance Passed
-                    </span>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${recessedBg} ${mutedTxt}`}>
+                            <th className="py-2 px-3.5 font-semibold">Deliverable / Task</th>
+                            <th className="py-2 px-3 font-semibold">Assignee</th>
+                            <th className="py-2 px-3 font-semibold">Status</th>
+                            <th className="py-2 px-3 text-right font-semibold">Due</th>
+                          </tr>
+                        </thead>
+                        <tbody className={`divide-y ${hairline}`}>
+                          {filteredDashboardRows.map((row) => (
+                            <tr key={row.title} className="h-10">
+                              <td className={`py-2 px-3.5 font-medium ${headingTxt}`}>{row.title}</td>
+                              <td className={`py-2 px-3 text-[11px] font-mono ${mutedTxt}`}>{row.assignee}</td>
+                              <td className="py-2 px-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[9px] font-mono font-semibold uppercase ${
+                                    row.status === "done"
+                                      ? "bg-[#DDEDEA] text-[#0F7B6C]"
+                                      : row.status === "review"
+                                      ? "bg-[#FBF3DB] text-[#9A6700]"
+                                      : `${inputBg}`
+                                  }`}
+                                >
+                                  {row.status === "in_progress" ? "Active" : row.status}
+                                </span>
+                              </td>
+                              <td className={`py-2 px-3 text-right text-[10px] font-mono tabular-nums ${mutedTxt}`}>
+                                {row.due}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-white p-4 rounded-xl border border-[#EAE7DF]">
-                    <div className="sm:col-span-5 relative aspect-[4/5] max-h-48 w-full rounded-lg overflow-hidden border border-[#EAE7DF]">
-                      <img
-                        src={currentClient.image}
-                        alt={currentClient.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-[#111114]/80 text-white font-mono text-[9px] backdrop-blur-xs">
-                        4:5 SAFE ZONE
+                  {/* Right 4 cols: Deadlines Radar matching dashboard/page.tsx */}
+                  <div className={`lg:col-span-4 rounded-xl border p-3.5 space-y-2.5 ${cardBg}`}>
+                    <div className={`flex items-center justify-between pb-2 border-b ${hairline}`}>
+                      <div>
+                        <h4 className={`text-xs font-heading font-semibold ${headingTxt}`}>Deadlines Radar</h4>
+                        <p className={`text-[10px] ${mutedTxt}`}>Next 48h critical SLA</p>
                       </div>
+                      <button
+                        onClick={() => setActiveRoute("tasks")}
+                        className="text-[10px] font-mono text-[#0F7B6C] cursor-pointer hover:underline"
+                      >
+                        View All
+                      </button>
                     </div>
-                    <div className="sm:col-span-7 space-y-2.5 text-left">
-                      <span className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#EAE7DF] text-[10px] font-mono text-[#6B6A65]">
-                        {currentClient.name} · Instagram Carousel
-                      </span>
-                      <h4 className="text-base font-heading font-semibold text-[#111114] leading-snug">
-                        {currentClient.carouselTopic}
-                      </h4>
-                      <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
-                        Crafted from approved brand palette and verified deterministically against {currentClient.rules[0].id} and {currentClient.rules[1].id}.
+
+                    <div className={`p-2.5 rounded-lg border border-l-2 border-l-[#9A6700] space-y-1 ${recessedBg}`}>
+                      <div className="flex items-center justify-between gap-1 text-[11px]">
+                        <span className={`font-semibold truncate ${headingTxt}`}>{currentClient.deliverable}</span>
+                        <span className="px-1.5 py-0.2 rounded bg-[#FBF3DB] text-[#9A6700] text-[9px] font-mono font-semibold">
+                          Today
+                        </span>
+                      </div>
+                      <p className={`text-[10px] font-mono ${mutedTxt}`}>{currentClient.name} · Magic-Link Gate</p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-lg border border-l-2 border-l-[#0F7B6C] space-y-1 ${recessedBg}`}>
+                      <div className="flex items-center justify-between gap-1 text-[11px]">
+                        <span className={`font-semibold truncate ${headingTxt}`}>{currentClient.campaignTitle}</span>
+                        <span className="px-1.5 py-0.2 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[9px] font-mono font-semibold">
+                          Tomorrow
+                        </span>
+                      </div>
+                      <p className={`text-[10px] font-mono ${mutedTxt}`}>{currentClient.name} · Auto-Schedule</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── 2. CORTEX MEMORY (Exact mirror of cortex/page.tsx) ── */}
+            {activeRoute === "cortex" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`flex flex-wrap items-center justify-between gap-3 pb-3 border-b ${hairline}`}>
+                  <div>
+                    <div className={`flex items-center gap-2 text-[10px] font-mono ${mutedTxt}`}>
+                      <span>System</span>
+                      <span>/</span>
+                      <span className="text-[#0F7B6C] font-semibold">Institutional Memory</span>
+                      <span className={`px-1.5 py-0.2 rounded font-bold ${inputBg}`}>v2.0 Cortex</span>
+                    </div>
+                    <h3 className={`text-lg font-heading font-bold flex items-center gap-2 mt-0.5 ${headingTxt}`}>
+                      <Brain className="w-4 h-4" />
+                      <span>AgencyOS Cortex · {currentClient.name}</span>
+                    </h3>
+                  </div>
+
+                  <div className={`flex items-center rounded-lg p-0.5 border text-[11px] font-mono ${recessedBg}`}>
+                    <button
+                      onClick={() => setCortexViewMode("cards")}
+                      className={`px-2.5 py-1 rounded cursor-pointer ${
+                        cortexViewMode === "cards"
+                          ? appDarkChrome
+                            ? "bg-[#20202A] text-white font-semibold"
+                            : "bg-white text-[#191919] font-semibold shadow-xs"
+                          : mutedTxt
+                      }`}
+                    >
+                      Cards View
+                    </button>
+                    <button
+                      onClick={() => setCortexViewMode("document")}
+                      className={`px-2.5 py-1 rounded cursor-pointer ${
+                        cortexViewMode === "document"
+                          ? appDarkChrome
+                            ? "bg-[#20202A] text-white font-semibold"
+                            : "bg-white text-[#191919] font-semibold shadow-xs"
+                          : mutedTxt
+                      }`}
+                    >
+                      Clean Document
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cortex Toolstrip (4 real tabs matching cortex/page.tsx lines 266-325) */}
+                <div className={`p-1 rounded-xl border flex items-center gap-1 overflow-x-auto text-xs ${cardBg}`}>
+                  {[
+                    { id: "queue", label: "Memory Review Queue", count: cortexQueueCount, icon: ShieldAlert },
+                    { id: "vault", label: "Living Brand Vault", count: 12, icon: FileCheck },
+                    { id: "ingest", label: "Ingest Knowledge", icon: UploadCloud },
+                    { id: "ask", label: "Ask Agency Brain", icon: Brain },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    const active = cortexTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setCortexTab(tab.id as any)}
+                        className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 whitespace-nowrap cursor-pointer font-medium transition-colors ${
+                          active ? "bg-[#191919] text-white font-semibold" : `${mutedTxt} hover:opacity-100`
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{tab.label}</span>
+                        {tab.count !== undefined && tab.count > 0 && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-[#FBF3DB] text-[#9A6700] text-[9px] font-mono font-bold tabular-nums">
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Pending Queue Banner */}
+                {cortexQueueCount > 0 && (
+                  <div className="p-3.5 rounded-xl bg-[#FBF3DB]/75 border border-[#9A6700]/30 flex flex-wrap items-start justify-between gap-3 text-xs">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-[#9A6700] flex items-center gap-1.5 text-[11px]">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Pending Memory Review ({cortexQueueCount} extracted rules awaiting human verification)
+                      </p>
+                      <p className="text-[#37352F] text-[11px] font-medium">&quot;{currentClient.pendingRule}&quot;</p>
+                      <p className="text-[10px] font-mono text-[#6B6A65]">{currentClient.pendingDoc}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setCortexQueueCount((p) => Math.max(0, p - 1))}
+                        className="px-2.5 py-1 rounded-lg bg-[#191919] text-white text-[10px] font-semibold cursor-pointer"
+                      >
+                        Approve to Vault
+                      </button>
+                      <button
+                        onClick={() => setCortexQueueCount((p) => Math.max(0, p - 1))}
+                        className="px-2 py-1 rounded-lg text-[#6B6A65] hover:text-[#191919] text-[10px] cursor-pointer"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {cortexTab === "ingest" ? (
+                  <div className={`p-6 rounded-xl border space-y-2 text-xs ${recessedBg}`}>
+                    <p className={`font-semibold ${headingTxt}`}>PDF & Call Transcript Extraction Ready</p>
+                    <p className={mutedTxt}>
+                      Drop client Brand Bibles or onboarding transcripts here. Cortex proposes verifiable rules with provenance citations into your human review queue.
+                    </p>
+                  </div>
+                ) : cortexTab === "ask" ? (
+                  <div className={`p-5 rounded-xl border space-y-3 text-xs ${recessedBg}`}>
+                    <p className={`font-semibold ${headingTxt}`}>Semantic Brand Vault Query ({currentClient.name})</p>
+                    <div className={`p-3 rounded-lg border ${cardBg}`}>
+                      <p className="font-mono text-[10px] text-[#0F7B6C] mb-1">Query: &quot;Can we promote a weekend coupon code?&quot;</p>
+                      <p className={headingTxt}>
+                        Blocked by {currentClient.rules[1].id}: {currentClient.rules[1].title}
                       </p>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <TeleprompterPreview clientKey={selectedClient} theme="light" />
-              )}
-            </div>
-          )}
-
-          {/* 4. CAMPAIGN PLANS */}
-          {activeRoute === "plans" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF]">
-                <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                  {currentClient.name} — Phased Campaign Plan
-                </h3>
-                <p className="text-xs text-[#6B6A65] font-sans">
-                  Campaign Studio deliverables structured into weekly execution phases.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#111114] font-sans">Phase 1: Teaser & Organic Hook</span>
-                    <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">Scheduled</span>
-                  </div>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    3 vertical reels featuring behind-the-scenes craft + 1 educational carousel for {currentClient.name}.
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#111114] font-sans">Phase 2: Launch & Community Conversion</span>
-                    <span className="text-[10px] font-mono text-[#9A6700] bg-[#FBF3DB] px-2 py-0.5 rounded">In Review</span>
-                  </div>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    Multi-slide hero drop carousel + Founder engineering story + concierge community replies.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 5. TASKS */}
-          {activeRoute === "tasks" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF] flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    Dependency-Locked Production Board
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    Downstream tasks remain locked until upstream brand approvals clear.
-                  </p>
-                </div>
-                <span className="text-[10px] font-mono text-[#6B6A65] tabular-nums">19 Active Tasks</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#111114]">1. In Production</span>
-                    <Unlock className="w-3.5 h-3.5 text-[#0F7B6C]" />
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-[#EAE7DF] text-[11px] space-y-1">
-                    <p className="font-semibold text-[#111114]">{currentClient.carouselTopic}</p>
-                    <span className="text-[9px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-1.5 py-0.2 rounded">Unlocked</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#111114]">2. Client Sign-off</span>
-                    <Unlock className="w-3.5 h-3.5 text-[#9A6700]" />
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-[#EAE7DF] text-[11px] space-y-1">
-                    <p className="font-semibold text-[#111114]">{currentClient.deliverable}</p>
-                    <span className="text-[9px] font-mono text-[#9A6700] bg-[#FBF3DB] px-1.5 py-0.2 rounded">Magic-Link Sent</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-2 opacity-85">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#111114]">3. Social Dispatch</span>
-                    <Lock className="w-3.5 h-3.5 text-[#8C8A84]" />
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-white/70 border border-dashed border-[#EAE7DF] text-[11px] space-y-1">
-                    <p className="font-semibold text-[#6B6A65]">Publish to Instagram & Facebook</p>
-                    <span className="text-[9px] font-mono text-[#8C8A84] bg-[#F3F1EC] px-1.5 py-0.2 rounded flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5" /> Locked by Upstream
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 6. APPROVALS */}
-          {activeRoute === "approvals" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF] flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    Magic-Link Review Room Generator
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    Zero-friction mobile review links with tokenized 72-hour access and instant sign-off.
-                  </p>
-                </div>
-                <span className="text-[10px] font-mono text-[#9A6700] bg-[#FBF3DB] px-2 py-0.5 rounded tabular-nums">
-                  2 Pending Review
-                </span>
-              </div>
-
-              <div className="p-4 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-xs text-[#111114] font-sans">{currentClient.deliverable}</p>
-                    <p className="text-[11px] text-[#6B6A65] font-mono">Token: agencyos.app/review/rk_9482bf0e</p>
-                  </div>
-                  <button
-                    onClick={handleCopy}
-                    className="px-3 py-1.5 rounded-lg border border-[#EAE7DF] bg-white hover:bg-[#F3F1EC] text-[#111114] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-sans"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-[#6B6A65]" />
-                    <span>{copiedLink ? "✓ Copied Magic Link" : "Copy Magic Link"}</span>
-                  </button>
-                </div>
-
-                <div className="p-4 rounded-lg bg-white border border-[#EAE7DF] flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-mono text-[#8C8A84] uppercase">Mobile Client Status:</span>
-                    <p className="font-medium text-[#111114] font-sans">
-                      {approvalStatus === "approved" ? "✓ Approved by Client (SHA-256 Signed)" : "Awaiting Client Review"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setApprovalStatus(approvalStatus === "pending" ? "approved" : "pending")}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer font-sans ${
-                      approvalStatus === "approved"
-                        ? "bg-[#DDEDEA] text-[#0F7B6C] border border-[#0F7B6C]/30"
-                        : "bg-[#111114] text-white hover:bg-[#2F2E2B] shadow-xs"
-                    }`}
-                  >
-                    {approvalStatus === "approved" ? "✓ Approved & Locked" : "Click to Simulate Client Approval"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 7. CONTENT CALENDAR */}
-          {activeRoute === "calendar" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF] flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    {currentClient.name} — Omnichannel Schedule
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    Direct publishing to Instagram, Facebook, and LinkedIn with proactive token health alerts.
-                  </p>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium">
-                  All Connections Healthy · 72h Token Alert
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
-                {currentClient.schedule.map((slot) => (
-                  <div key={slot.day} className="p-3 rounded-lg border border-[#EAE7DF] bg-[#FAF9F6] space-y-2">
-                    <span className="font-mono text-[10px] text-[#6B6A65] tabular-nums">{slot.day}</span>
-                    <div className="p-2.5 rounded bg-white border border-[#EAE7DF] space-y-1.5">
-                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded inline-block ${slot.tag}`}>
-                        {slot.net}
-                      </span>
-                      <p className="font-semibold text-[11px] text-[#111114] leading-snug">{slot.title}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 8. COMMUNITY INBOX */}
-          {activeRoute === "inbox" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF] flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    Community CRM & Buying-Intent Triage
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">
-                    Inbound comments scored for buying intent with brand-rule verified replies.
-                  </p>
-                </div>
-                <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium">
-                  Live Webhook Listener
-                </span>
-              </div>
-
-              <div className="p-4 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-[#0F7B6C] text-[10px] font-mono font-semibold tabular-nums">
-                    High-Intent Lead · 94/100
-                  </span>
-                  <span className="text-[10px] font-mono text-[#8C8A84]">Instagram Comment · 4m ago</span>
-                </div>
-                <p className="font-semibold text-[#111114] font-sans">
-                  &quot;{currentClient.inboundComment}&quot;
-                </p>
-                <div className="p-3 rounded-lg bg-white border border-[#EAE7DF] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-[#0F7B6C] flex items-center gap-1 font-semibold">
-                      <Check className="w-3 h-3 text-[#0F7B6C]" /> Cortex Verified Draft Reply:
-                    </span>
-                    <span className="text-[10px] font-mono text-[#8C8A84]">Enforces Rules</span>
-                  </div>
-                  <p className="text-[#6B6A65] leading-relaxed font-sans">
-                    &quot;{currentClient.draftReply}&quot;
-                  </p>
-                  <div className="pt-1 flex items-center justify-end">
-                    <button
-                      onClick={() => setReplyPublished(!replyPublished)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer font-sans ${
-                        replyPublished ? "bg-[#DDEDEA] text-[#0F7B6C]" : "bg-[#111114] text-white hover:bg-[#2F2E2B]"
-                      }`}
-                    >
-                      {replyPublished ? "✓ Published to Instagram" : "1-Click Publish Reply"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 9. BILLING & CREDITS */}
-          {activeRoute === "billing" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF]">
-                <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                  Billing & Computational Credit Economics
-                </h3>
-                <p className="text-xs text-[#6B6A65] font-sans">
-                  Unlimited team seats on every plan. Pay only for computational machine execution.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#111114] font-sans">Monthly Shared Credits</span>
-                  <span className="font-mono text-[#6B6A65] tabular-nums">38,200 / 50,000 used</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-[#EAE7DF] overflow-hidden">
-                  <div className="w-[76%] h-full bg-[#111114] rounded-full" />
-                </div>
-                <p className="text-[11px] text-[#6B6A65] font-sans">
-                  Top-ups available at $1 per 1,000 credits flat rate with zero markup. Credits roll over indefinitely.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* 10. MY WORKSPACE (Interactive Specialist Checklist) */}
-          {activeRoute === "workspace" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF] flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    My Workspace · {currentClient.name} Queue
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">Personal deliverables and review items awaiting action.</p>
-                </div>
-                <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">On Schedule</span>
-              </div>
-              <div className="space-y-2 text-xs">
-                {[
-                  { id: "c1", task: `Verify ${currentClient.rules[0].id} across Q4 brief`, meta: "Compliance" },
-                  { id: "c2", task: `Send Magic-Link review room for ${currentClient.deliverable}`, meta: "Due Today" },
-                  { id: "c3", task: `Confirm WPM pace lock on ${currentClient.campaignTitle} script`, meta: "Teleprompter" },
-                ].map((row) => (
-                  <button
-                    key={row.id}
-                    onClick={() =>
-                      setCompletedChecklist((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
-                    }
-                    className="w-full p-3.5 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] hover:bg-[#F3F1EC] flex items-center justify-between gap-3 text-left transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
+                ) : cortexViewMode === "cards" ? (
+                  <div className="space-y-2.5">
+                    {currentClient.rules.map((rule) => (
                       <div
-                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                          completedChecklist[row.id]
-                            ? "bg-[#0F7B6C] border-[#0F7B6C] text-white"
-                            : "bg-white border-[#EAE7DF]"
+                        key={rule.id}
+                        className={`p-3.5 rounded-xl border space-y-1 text-xs ${cardBg} ${
+                          rule.id.startsWith("TABOO") ? "border-red-300/60" : ""
                         }`}
                       >
-                        {completedChecklist[row.id] && <Check className="w-3 h-3" />}
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                              rule.id.startsWith("TABOO") ? "bg-[#FBE4E4] text-[#C93B2B]" : "bg-[#DDEDEA] text-[#0F7B6C]"
+                            }`}
+                          >
+                            {rule.type}
+                          </span>
+                          <span className={`text-[10px] font-mono tabular-nums ${mutedTxt}`}>{rule.id}</span>
+                        </div>
+                        <p className={`font-semibold ${headingTxt}`}>{rule.title}</p>
+                        <p className={`text-[11px] ${mutedTxt}`}>
+                          <span className={`font-medium ${headingTxt}`}>Provenance:</span> &quot;{rule.provenance}&quot;
+                        </p>
                       </div>
-                      <span className={completedChecklist[row.id] ? "line-through text-[#8C8A84]" : "font-medium text-[#111114]"}>
-                        {row.task}
-                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`p-5 rounded-xl border space-y-3 text-xs font-mono leading-relaxed ${recessedBg}`}>
+                    <div className={`pb-2 border-b flex items-center justify-between ${hairline}`}>
+                      <span className={mutedTxt}>{currentClient.name.toUpperCase()} BRAND SPECIFICATION</span>
+                      <span className="text-[#0F7B6C]">STRICT COMPLIANCE LOCK</span>
                     </div>
-                    <span className="text-[10px] font-mono text-[#6B6A65]">{row.meta}</span>
-                  </button>
-                ))}
+                    {currentClient.rules.map((rule) => (
+                      <div key={rule.id} className="space-y-0.5">
+                        <p className={`font-bold ${headingTxt}`}>[{rule.id}] {rule.title}</p>
+                        <p className={`pl-3 ${mutedTxt}`}>&gt; Provenance: {rule.provenance}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* 11. CLIENTS (All 3 Interactive Client Cards with Real Assets) */}
-          {activeRoute === "clients" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF]">
-                <h3 className="text-sm font-heading font-semibold text-[#111114]">Client Retainer Fleet</h3>
-                <p className="text-xs text-[#6B6A65] font-sans">Select any client retainer to dynamically switch workspace rules and creative assets.</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {(["solis", "linden", "cairn"] as ClientKey[]).map((key) => {
-                  const item = clientData[key];
-                  const active = selectedClient === key;
-                  return (
+            {/* ── 3. CAMPAIGN STUDIO (Exact mirror of campaigns/page.tsx + ContextualCanvas) ── */}
+            {activeRoute === "studio" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`flex flex-wrap items-center justify-between gap-2 pb-3 border-b ${hairline}`}>
+                  <div>
+                    <h3 className={`text-base font-heading font-bold ${headingTxt}`}>
+                      Campaign Studio · {currentClient.name}
+                    </h3>
+                    <p className={`text-xs ${mutedTxt}`}>
+                      6 exact specialist agents collaborating alongside Contextual Canvas artifacts.
+                    </p>
+                  </div>
+
+                  <div className={`flex items-center rounded-lg p-0.5 border text-[11px] font-mono ${recessedBg}`}>
                     <button
-                      key={key}
-                      onClick={() => setSelectedClient(key)}
-                      className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all space-y-3 ${
-                        active ? "bg-[#FFFFFF] border-[#111114] shadow-sm" : "bg-[#FAF9F6] border-[#EAE7DF] hover:bg-[#FFFFFF]"
+                      onClick={() => setStudioTab("carousel")}
+                      className={`px-2.5 py-1 rounded cursor-pointer ${
+                        studioTab === "carousel"
+                          ? appDarkChrome
+                            ? "bg-[#20202A] text-white font-semibold"
+                            : "bg-white text-[#191919] font-semibold shadow-xs"
+                          : mutedTxt
                       }`}
                     >
-                      <div className="aspect-[16/10] rounded-lg overflow-hidden border border-[#EAE7DF]">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      Carousel Deck
+                    </button>
+                    <button
+                      onClick={() => setStudioTab("storyboard")}
+                      className={`px-2.5 py-1 rounded cursor-pointer ${
+                        studioTab === "storyboard"
+                          ? appDarkChrome
+                            ? "bg-[#20202A] text-white font-semibold"
+                            : "bg-white text-[#191919] font-semibold shadow-xs"
+                          : mutedTxt
+                      }`}
+                    >
+                      Storyboard & Teleprompter
+                    </button>
+                    <button
+                      onClick={() => setStudioTab("compliance")}
+                      className={`px-2.5 py-1 rounded cursor-pointer ${
+                        studioTab === "compliance"
+                          ? appDarkChrome
+                            ? "bg-[#20202A] text-white font-semibold"
+                            : "bg-white text-[#191919] font-semibold shadow-xs"
+                          : mutedTxt
+                      }`}
+                    >
+                      Compliance Panel
+                    </button>
+                  </div>
+                </div>
+
+                {/* Hero Entity Tray matching ContextualCanvas.tsx lines 77-146 */}
+                <div className={`p-3.5 rounded-xl border space-y-2 ${cardBg}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-heading font-bold">Hero Entity Tray</span>
+                      <span className="px-2 py-0.5 rounded-full bg-[#FBF3DB] text-[#9A6700] text-[10px] font-mono font-semibold tabular-nums">
+                        {pinnedEntities.length} Pinned Focus
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-mono ${mutedTxt}`}>Grounds all 6 specialist agents</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {pinnedEntities.map((item) => (
+                      <span
+                        key={item}
+                        className="px-2.5 py-1 rounded-lg bg-[#FBF3DB]/80 text-[#9A6700] border border-[#9A6700]/30 text-[11px] font-mono font-semibold inline-flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Exact 6 Real Specialist Agents Bar matching campaigns/page.tsx AGENT_STEPS */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-center text-[10px]">
+                  {[
+                    { name: "Brand Intelligence", icon: ShieldCheck },
+                    { name: "Market & Trends", icon: Search },
+                    { name: "Hist. Performance", icon: BarChart3 },
+                    { name: "Campaign Strategist", icon: Cpu },
+                    { name: "Content Architect", icon: Layers2 },
+                    { name: "Quality Gate", icon: FileCheck },
+                  ].map((ag) => {
+                    const Icon = ag.icon;
+                    return (
+                      <div key={ag.name} className={`p-2 rounded-lg border space-y-1 ${recessedBg}`}>
+                        <Icon className="w-3.5 h-3.5 mx-auto text-[#0F7B6C]" />
+                        <p className={`font-semibold leading-tight ${headingTxt}`}>{ag.name}</p>
+                        <p className="text-[9px] font-mono text-[#0F7B6C]">Verified</p>
                       </div>
-                      <div>
-                        <p className="font-semibold text-xs text-[#111114] font-heading">{item.name}</p>
-                        <p className="text-[11px] text-[#6B6A65] font-sans">{item.industry}</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-[#0F7B6C]">{item.activeBrands}</span>
-                        <div className="flex gap-1">
-                          {item.swatches.map((hex) => (
-                            <span
-                              key={hex}
-                              className="w-2.5 h-2.5 rounded-full border border-[#EAE7DF]"
-                              style={{ backgroundColor: hex }}
-                            />
-                          ))}
+                    );
+                  })}
+                </div>
+
+                {studioTab === "carousel" && (
+                  <div className={`p-4 rounded-xl border space-y-3 ${recessedBg}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-12 gap-4 items-center p-3.5 rounded-xl border ${cardBg}`}>
+                      <div className="sm:col-span-4 relative aspect-[4/5] max-h-44 w-full rounded-lg overflow-hidden border border-[rgba(55,53,47,0.1)]">
+                        <img src={currentClient.image} alt={currentClient.name} className="w-full h-full object-cover" />
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-[#191919]/85 text-white font-mono text-[9px]">
+                          4:5 COVER
                         </div>
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                      <div className="sm:col-span-8 space-y-2 text-left">
+                        <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-semibold">
+                          {currentClient.name} · Slide 1 of 5
+                        </span>
+                        <h4 className={`text-sm font-heading font-bold ${headingTxt}`}>{currentClient.carouselTopic}</h4>
+                        <p className={`text-xs leading-relaxed ${mutedTxt}`}>
+                          Synthesized from Hero Entity Tray and verified deterministically against {currentClient.rules[0].id} and {currentClient.rules[1].id}.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-          {/* 12. REPORTS & ROI */}
-          {activeRoute === "reports" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="pb-3 border-b border-[#EAE7DF] flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-[#111114]">
-                    Reports & Agency ROI · {currentClient.name}
+                {studioTab === "storyboard" && (
+                  <TeleprompterPreview clientKey={selectedClient} theme={appDarkChrome ? "dark" : "light"} />
+                )}
+
+                {studioTab === "compliance" && (
+                  <div className={`p-4 rounded-xl border space-y-2 text-xs ${cardBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-[#0F7B6C] flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Quality Evaluator & Compliance Audit Passed (100%)
+                      </span>
+                      <span className={`font-mono text-[10px] ${mutedTxt}`}>Agent 06 Gate</span>
+                    </div>
+                    <p className={mutedTxt}>
+                      Checked against all active negative taboos and visual guidelines for {currentClient.name}. Zero violations found.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── 4. CAMPAIGN PLANS ── */}
+            {activeRoute === "plans" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b ${hairline}`}>
+                  <h3 className={`text-base font-heading font-bold ${headingTxt}`}>
+                    {currentClient.name} — Phased Campaign Plans
                   </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans">Client engagement lift, save velocity, and production hours saved.</p>
+                  <p className={`text-xs ${mutedTxt}`}>Approved Studio deliverables scheduled into multi-week rollout waves.</p>
                 </div>
-                <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">90-Day Audit</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-1">
-                  <span className="text-[10px] font-mono text-[#6B6A65] uppercase">Organic Reach Lift</span>
-                  <p className="text-2xl font-bold font-mono text-[#0F7B6C] tabular-nums">{currentClient.engagementLift}</p>
-                  <p className="text-[11px] text-[#6B6A65]">vs. pre-vault baseline</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-1">
-                  <span className="text-[10px] font-mono text-[#6B6A65] uppercase">Carousel Save Rate</span>
-                  <p className="text-2xl font-bold font-mono text-[#111114] tabular-nums">{currentClient.saveRate}</p>
-                  <p className="text-[11px] text-[#6B6A65]">Top-decile organic signal</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-1">
-                  <span className="text-[10px] font-mono text-[#6B6A65] uppercase">Specialist Hours Saved</span>
-                  <p className="text-2xl font-bold font-mono text-[#9A6700] tabular-nums">{currentClient.hoursReclaimed}</p>
-                  <p className="text-[11px] text-[#6B6A65]">Monthly cycle reclaimed</p>
+                <div className="space-y-2.5 text-xs">
+                  <div className={`p-4 rounded-xl border space-y-1.5 ${cardBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-semibold ${headingTxt}`}>Wave 1: Teaser & Organic Hook Sequence</span>
+                      <span className="text-[10px] font-mono bg-[#DDEDEA] text-[#0F7B6C] px-2 py-0.5 rounded font-semibold">Scheduled</span>
+                    </div>
+                    <p className={mutedTxt}>3 vertical video cuts with director teleprompter timings + 1 hero carousel.</p>
+                  </div>
+                  <div className={`p-4 rounded-xl border space-y-1.5 ${cardBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-semibold ${headingTxt}`}>Wave 2: Primary Launch & Client Sign-off</span>
+                      <span className="text-[10px] font-mono bg-[#FBF3DB] text-[#9A6700] px-2 py-0.5 rounded font-semibold">In Review</span>
+                    </div>
+                    <p className={mutedTxt}>Cross-channel drop coordinated across Instagram, Facebook, and LinkedIn.</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* 13. TEAM & SETTINGS */}
-          {(activeRoute === "team" || activeRoute === "settings") && (
-            <div className="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3 animate-in fade-in duration-150">
-              <div className="w-10 h-10 rounded-full bg-[#FAF9F6] border border-[#EAE7DF] flex items-center justify-center text-[#6B6A65]">
-                <Lock className="w-4 h-4" />
+            {/* ── 5. TASKS (Exact mirror of tasks/page.tsx telemetry strip + kanban) ── */}
+            {activeRoute === "tasks" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b flex items-center justify-between ${hairline}`}>
+                  <div>
+                    <h3 className={`text-base font-heading font-bold ${headingTxt}`}>Production Tasks & Pipeline</h3>
+                    <p className={`text-xs ${mutedTxt}`}>DAG dependency pipeline across Scripting, Editing, Review, and Dispatch.</p>
+                  </div>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${inputBg} tabular-nums`}>
+                    {currentClient.activeTasks} Active
+                  </span>
+                </div>
+
+                {/* 5-Segment Linear Telemetry Strip matching tasks/page.tsx line 822 */}
+                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-5 divide-x ${hairline} ${cardBg}`}>
+                  {[
+                    ["Remaining", String(currentClient.activeTasks)],
+                    ["Ready to Script", "4"],
+                    ["In Production", "7"],
+                    ["Client Review", String(currentClient.reviewQueue)],
+                    ["Approved", "6"],
+                  ].map(([lbl, num]) => (
+                    <div key={lbl} className="px-2.5 first:pl-1">
+                      <p className={`text-[9px] font-mono uppercase ${mutedTxt}`}>{lbl}</p>
+                      <p className={`text-base font-bold font-mono tabular-nums ${headingTxt}`}>{num}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className={`p-3 rounded-xl border space-y-2 ${recessedBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-semibold ${headingTxt}`}>1. In Production</span>
+                      <Unlock className="w-3.5 h-3.5 text-[#0F7B6C]" />
+                    </div>
+                    <div className={`p-2.5 rounded-lg border space-y-1 ${cardBg}`}>
+                      <p className={`font-semibold text-[11px] ${headingTxt}`}>{currentClient.carouselTopic}</p>
+                      <span className="text-[9px] font-mono bg-[#DDEDEA] text-[#0F7B6C] px-1.5 py-0.2 rounded">Unlocked</span>
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border space-y-2 ${recessedBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-semibold ${headingTxt}`}>2. Client Sign-off</span>
+                      <Unlock className="w-3.5 h-3.5 text-[#9A6700]" />
+                    </div>
+                    <div className={`p-2.5 rounded-lg border space-y-1 ${cardBg}`}>
+                      <p className={`font-semibold text-[11px] ${headingTxt}`}>{currentClient.deliverable}</p>
+                      <span className="text-[9px] font-mono bg-[#FBF3DB] text-[#9A6700] px-1.5 py-0.2 rounded">Magic-Link Sent</span>
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border space-y-2 opacity-80 ${recessedBg}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-semibold ${headingTxt}`}>3. Social Dispatch</span>
+                      <Lock className="w-3.5 h-3.5 text-[#8C8A84]" />
+                    </div>
+                    <div className={`p-2.5 rounded-lg border border-dashed space-y-1 ${cardBg}`}>
+                      <p className={`font-semibold text-[11px] ${mutedTxt}`}>Publish to Instagram & Facebook</p>
+                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded inline-flex items-center gap-1 ${inputBg}`}>
+                        <Lock className="w-2.5 h-2.5" /> Locked by Upstream
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-sm text-[#111114] font-heading">
-                  Protected Admin Tier (Available inside live workspace)
-                </p>
-                <p className="text-xs text-[#6B6A65] max-w-sm font-sans">
-                  Tenant isolation and Role-Based Access Control protect agency billing margins from external freelancers and clients.
-                </p>
+            )}
+
+            {/* ── 6. APPROVALS (Exact mirror of approvals/page.tsx filter toolstrip & queue) ── */}
+            {activeRoute === "approvals" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b flex items-center justify-between ${hairline}`}>
+                  <div>
+                    <h3 className={`text-base font-heading font-bold ${headingTxt}`}>Approvals & Publishing Queue</h3>
+                    <p className={`text-xs ${mutedTxt}`}>Review client feedback, Magic-Link tokens, and signed social releases.</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-[#FBF3DB] text-[#9A6700] text-[10px] font-mono font-bold tabular-nums">
+                    {currentClient.reviewQueue} Pending
+                  </span>
+                </div>
+
+                <div className={`flex flex-wrap items-center gap-1 p-1 border rounded-xl w-fit text-[11px] ${cardBg}`}>
+                  {[
+                    { id: "all", label: "All (4)" },
+                    { id: "client_review", label: "In Review (2)" },
+                    { id: "approved", label: "Ready to Publish (1)" },
+                    { id: "published", label: "Published Live (1)" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setApprovalFilter(tab.id as any)}
+                      className={`px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${
+                        approvalFilter === tab.id ? "bg-[#191919] text-white font-semibold" : mutedTxt
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={`rounded-xl border p-4 space-y-3 ${cardBg}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${recessedBg}`}>
+                        <ImageIcon className="w-4 h-4 text-[#0F7B6C]" />
+                      </div>
+                      <div>
+                        <p className={`font-semibold text-xs ${headingTxt}`}>{currentClient.deliverable}</p>
+                        <p className={`text-[10px] font-mono ${mutedTxt}`}>agencyos.app/review/rk_9482bf0e · 72h Token</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleCopy}
+                        className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-medium flex items-center gap-1.5 cursor-pointer ${recessedBg} ${headingTxt}`}
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>{copiedLink ? "Copied Link" : "Copy Magic Link"}</span>
+                      </button>
+                      <button
+                        onClick={() => setApprovalStatus(approvalStatus === "pending" ? "approved" : "pending")}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer ${
+                          approvalStatus === "approved" ? "bg-[#DDEDEA] text-[#0F7B6C]" : "bg-[#191919] text-white"
+                        }`}
+                      >
+                        {approvalStatus === "approved" ? "✓ Approved (SHA-256)" : "Simulate Client Sign-Off"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* ── 7. CONTENT CALENDAR (Exact mirror of calendar/page.tsx) ── */}
+            {activeRoute === "calendar" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b flex flex-wrap items-center justify-between gap-2 ${hairline}`}>
+                  <div>
+                    <h3 className={`text-base font-heading font-bold ${headingTxt}`}>
+                      {currentClient.name} — Content Calendar
+                    </h3>
+                    <p className={`text-xs ${mutedTxt}`}>Direct publishing schedule with real-time OAuth connection monitoring.</p>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-semibold">
+                    Meta & LinkedIn Healthy · 72h Token Guard
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                  {currentClient.schedule.map((slot) => (
+                    <div key={slot.day} className={`p-3 rounded-xl border space-y-2 ${recessedBg}`}>
+                      <span className={`font-mono text-[10px] tabular-nums ${mutedTxt}`}>{slot.day}</span>
+                      <div className={`p-2.5 rounded-lg border space-y-1.5 ${cardBg}`}>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${inputBg}`}>{slot.net}</span>
+                          <span
+                            className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-semibold ${
+                              slot.status === "Scheduled" || slot.status === "Approved"
+                                ? "bg-[#DDEDEA] text-[#0F7B6C]"
+                                : "bg-[#FBF3DB] text-[#9A6700]"
+                            }`}
+                          >
+                            {slot.status}
+                          </span>
+                        </div>
+                        <p className={`font-semibold text-[11px] leading-snug ${headingTxt}`}>{slot.title}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── 8. COMMUNITY INBOX (Exact mirror of engagement/page.tsx) ── */}
+            {activeRoute === "inbox" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`flex flex-wrap items-center justify-between gap-3 pb-3 border-b ${hairline}`}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#191919] text-white flex items-center justify-center shrink-0">
+                      <MessagesSquare className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-heading font-bold flex items-center gap-2 ${headingTxt}`}>
+                        <span>Community Engagement</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#DDEDEA] text-[#0F7B6C] font-semibold">
+                          Live Inbox
+                        </span>
+                      </h3>
+                      <p className={`text-[11px] ${mutedTxt}`}>AI comment triage, brand-verified replies & direct messages</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                    <span className={`px-2 py-1 rounded border ${inputBg}`}>Needs Reply: 4</span>
+                    <span className="px-2 py-1 rounded bg-[#DDEDEA] text-[#0F7B6C] font-semibold">Buying Leads: 3</span>
+                  </div>
+                </div>
+
+                {/* Stream Mode Switcher matching engagement/page.tsx lines 555-580 */}
+                <div className={`flex items-center p-0.5 rounded-lg border w-fit text-[11px] ${recessedBg}`}>
+                  <button
+                    onClick={() => setEngagementStream("comments")}
+                    className={`px-2.5 py-1 rounded flex items-center gap-1.5 cursor-pointer font-medium ${
+                      engagementStream === "comments" ? "bg-[#191919] text-white" : mutedTxt
+                    }`}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    <span>Comments & Mentions (18)</span>
+                  </button>
+                  <button
+                    onClick={() => setEngagementStream("dms")}
+                    className={`px-2.5 py-1 rounded flex items-center gap-1.5 cursor-pointer font-medium ${
+                      engagementStream === "dms" ? "bg-[#191919] text-white" : mutedTxt
+                    }`}
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>Direct Messages (6)</span>
+                  </button>
+                </div>
+
+                <div className={`p-4 rounded-xl border space-y-3 text-xs ${cardBg}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-semibold tabular-nums">
+                      High-Intent Lead · 94/100
+                    </span>
+                    <span className={`text-[10px] font-mono ${mutedTxt}`}>Instagram · 4m ago</span>
+                  </div>
+                  <p className={`font-semibold ${headingTxt}`}>&quot;{currentClient.inboundComment}&quot;</p>
+                  <div className={`p-3 rounded-lg border space-y-2 ${recessedBg}`}>
+                    <span className="text-[10px] font-mono text-[#0F7B6C] flex items-center gap-1 font-semibold">
+                      <Check className="w-3 h-3" /> Cortex Brand-Rule Verified Reply:
+                    </span>
+                    <p className={mutedTxt}>&quot;{currentClient.draftReply}&quot;</p>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setReplyPublished(!replyPublished)}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${
+                          replyPublished ? "bg-[#DDEDEA] text-[#0F7B6C]" : "bg-[#191919] text-white"
+                        }`}
+                      >
+                        {replyPublished ? "✓ Published Live" : "1-Click Publish Reply"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── 9. BILLING & CREDITS ── */}
+            {activeRoute === "billing" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b ${hairline}`}>
+                  <h3 className={`text-base font-heading font-bold ${headingTxt}`}>Billing & Computational Credits</h3>
+                  <p className={`text-xs ${mutedTxt}`}>Unlimited team seats included. Pay only for AI generation volume.</p>
+                </div>
+                <div className={`p-4 rounded-xl border space-y-3 ${recessedBg}`}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={`font-semibold ${headingTxt}`}>Monthly Shared Credits</span>
+                    <span className={`font-mono tabular-nums ${mutedTxt}`}>38,200 / 50,000 used</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-black/[0.08] overflow-hidden">
+                    <div className="w-[76%] h-full bg-[#191919] rounded-full" />
+                  </div>
+                  <p className={`text-[11px] ${mutedTxt}`}>
+                    Instant rollover top-ups available at $1 per 1,000 credits flat rate. Soft degradation never locks team boards.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ── 10. MY WORKSPACE ── */}
+            {activeRoute === "workspace" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b flex items-center justify-between ${hairline}`}>
+                  <div>
+                    <h3 className={`text-base font-heading font-bold ${headingTxt}`}>My Workbench · {currentClient.name}</h3>
+                    <p className={`text-xs ${mutedTxt}`}>Personal assigned tasks and sign-off actions.</p>
+                  </div>
+                  <span className="text-[10px] font-mono bg-[#DDEDEA] text-[#0F7B6C] px-2 py-0.5 rounded font-semibold">On Schedule</span>
+                </div>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { id: "c1", task: `Verify ${currentClient.rules[0].id} across launch brief`, meta: "Compliance" },
+                    { id: "c2", task: `Dispatch Magic-Link for ${currentClient.deliverable}`, meta: "Due Today" },
+                    { id: "c3", task: `Lock teleprompter pace for ${currentClient.campaignTitle}`, meta: "Darkroom" },
+                  ].map((row) => (
+                    <button
+                      key={row.id}
+                      onClick={() => setCompletedChecklist((prev) => ({ ...prev, [row.id]: !prev[row.id] }))}
+                      className={`w-full p-3 rounded-xl border flex items-center justify-between text-left cursor-pointer ${cardBg}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            completedChecklist[row.id] ? "bg-[#0F7B6C] border-[#0F7B6C] text-white" : hairline
+                          }`}
+                        >
+                          {completedChecklist[row.id] && <Check className="w-3 h-3" />}
+                        </div>
+                        <span className={completedChecklist[row.id] ? "line-through opacity-50" : headingTxt}>
+                          {row.task}
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-mono ${mutedTxt}`}>{row.meta}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── 11. CLIENTS ── */}
+            {activeRoute === "clients" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b ${hairline}`}>
+                  <h3 className={`text-base font-heading font-bold ${headingTxt}`}>Client Retainer Fleet</h3>
+                  <p className={`text-xs ${mutedTxt}`}>Click any client card to switch active workspace rules and deliverables.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {(["solis", "linden", "cairn"] as ClientKey[]).map((key) => {
+                    const item = clientData[key];
+                    const active = selectedClient === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedClient(key)}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all space-y-2.5 ${
+                          active ? "border-[#191919] ring-1 ring-[#191919]/15" : ""
+                        } ${cardBg}`}
+                      >
+                        <div className="aspect-[16/10] rounded-lg overflow-hidden border border-[rgba(55,53,47,0.1)]">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <p className={`font-semibold text-xs font-heading ${headingTxt}`}>{item.name}</p>
+                          <p className={`text-[11px] ${mutedTxt}`}>{item.industry}</p>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-[#0F7B6C]">
+                          <span>{item.activeAccounts} Accounts</span>
+                          <span>{item.deliveredPercent}% SLA</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── 12. REPORTS & ROI ── */}
+            {activeRoute === "reports" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className={`pb-3 border-b flex items-center justify-between ${hairline}`}>
+                  <div>
+                    <h3 className={`text-base font-heading font-bold ${headingTxt}`}>Reports & Agency ROI · {currentClient.name}</h3>
+                    <p className={`text-xs ${mutedTxt}`}>Organic reach lift, save velocity, and production hours reclaimed.</p>
+                  </div>
+                  <span className="text-[10px] font-mono bg-[#DDEDEA] text-[#0F7B6C] px-2 py-0.5 rounded font-semibold">90-Day Audit</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className={`p-4 rounded-xl border space-y-1 ${recessedBg}`}>
+                    <span className={`text-[10px] font-mono uppercase ${mutedTxt}`}>Organic Reach Lift</span>
+                    <p className="text-2xl font-bold font-mono text-[#0F7B6C] tabular-nums">{currentClient.engagementLift}</p>
+                  </div>
+                  <div className={`p-4 rounded-xl border space-y-1 ${recessedBg}`}>
+                    <span className={`text-[10px] font-mono uppercase ${mutedTxt}`}>Carousel Save Rate</span>
+                    <p className={`text-2xl font-bold font-mono tabular-nums ${headingTxt}`}>{currentClient.saveRate}</p>
+                  </div>
+                  <div className={`p-4 rounded-xl border space-y-1 ${recessedBg}`}>
+                    <span className={`text-[10px] font-mono uppercase ${mutedTxt}`}>Hours Reclaimed</span>
+                    <p className="text-2xl font-bold font-mono text-[#9A6700] tabular-nums">{currentClient.hoursReclaimed}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── 13. TEAM & SETTINGS ── */}
+            {(activeRoute === "team" || activeRoute === "settings") && (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3 animate-in fade-in duration-150">
+                <div className={`w-10 h-10 rounded-full border flex items-center justify-center ${recessedBg} ${mutedTxt}`}>
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div className="space-y-1">
+                  <p className={`font-semibold text-sm font-heading ${headingTxt}`}>
+                    Protected Admin Tier (Available inside live workspace)
+                  </p>
+                  <p className={`text-xs max-w-sm ${mutedTxt}`}>
+                    Tenant isolation and Role-Based Access Control shield agency billing margins and owner credentials from freelance contractor views.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>
