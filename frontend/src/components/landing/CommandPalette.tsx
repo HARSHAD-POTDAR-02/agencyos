@@ -16,7 +16,7 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectWorkspaceTab?: (tab: string) => void;
-  onSelectClient?: (client: "one8" | "kaya") => void;
+  onSelectClient?: (client: "solis" | "linden" | "cairn") => void;
 }
 
 export function CommandPalette({
@@ -85,7 +85,7 @@ export function CommandPalette({
       id: "stage-05",
       category: "10-Stage Index",
       title: "05 · Campaign Intelligence",
-      subtitle: "Six specialist agents collaborating from brief to delivery",
+      subtitle: "Six specialist agents tracing briefs from research to delivery",
       badge: "Stage 05",
       action: () => {
         document.getElementById("intelligence")?.scrollIntoView({ behavior: "smooth" });
@@ -173,25 +173,37 @@ export function CommandPalette({
       },
     },
     {
-      id: "client-one8",
+      id: "client-solis",
       category: "Client Fleet",
-      title: "Switch Client to One8 Commune",
-      subtitle: "Hospitality & Dining — candlelit amber moodboard & menu rules",
+      title: "Switch Client to Osteria Solis",
+      subtitle: "Wood-Fired Hospitality — evening candlelight & menu pricing rules",
       badge: "Hospitality",
       action: () => {
-        onSelectClient?.("one8");
+        onSelectClient?.("solis");
         document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "client-kaya",
+      id: "client-linden",
       category: "Client Fleet",
-      title: "Switch Client to Kaya Botanics",
-      subtitle: "D2C Clean Skincare — travertine stone moodboard & eco packaging",
+      title: "Switch Client to Linden & Clay",
+      subtitle: "D2C Botanical Skincare — travertine light & recyclable glass mandate",
       badge: "D2C Skincare",
       action: () => {
-        onSelectClient?.("kaya");
+        onSelectClient?.("linden");
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
+        onClose();
+      },
+    },
+    {
+      id: "client-cairn",
+      category: "Client Fleet",
+      title: "Switch Client to Cairn Roasters",
+      subtitle: "Specialty Micro-Lot Coffee — origin roast transparency & pour-over",
+      badge: "Coffee",
+      action: () => {
+        onSelectClient?.("cairn");
         document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
