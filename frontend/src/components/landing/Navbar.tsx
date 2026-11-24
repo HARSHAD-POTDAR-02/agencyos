@@ -2,17 +2,29 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X, Command } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
-export function Navbar() {
+interface NavbarProps {
+  onOpenCommandPalette?: () => void;
+}
+
+export function Navbar({ onOpenCommandPalette }: NavbarProps) {
   const { token, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isAuthenticated = !isLoading && Boolean(token);
 
+  const triggerPalette = () => {
+    if (onOpenCommandPalette) {
+      onOpenCommandPalette();
+    } else {
+      window.dispatchEvent(new CustomEvent("agencyos:open-command-palette"));
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[rgba(55,53,47,0.08)]">
+    <header className="sticky top-0 z-40 bg-[#FAF9F6]/90 backdrop-blur-md border-b border-[#EAE7DF]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2.5 group">
@@ -20,7 +32,7 @@ export function Navbar() {
               A
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-base tracking-tight text-[#111114] leading-tight">
+              <span className="font-semibold text-base tracking-tight text-[#111114] leading-tight font-sans">
                 AgencyOS
               </span>
               <span className="text-[10px] font-mono text-[#6B6A65] tracking-wide uppercase">
@@ -29,7 +41,7 @@ export function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#6B6A65]">
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-medium text-[#6B6A65]">
             <a href="#preview" className="hover:text-[#111114] transition-colors">
               Interactive Preview
             </a>
@@ -45,76 +57,103 @@ export function Navbar() {
           </nav>
         </div>
 
-        <div className="hidden sm:flex items-center gap-3">
-          <Link
-            href="/login"
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#6B6A65] hover:text-[#111114] hover:bg-[#F1F1EF] transition-colors"
-          >
-            Sign In
-          </Link>
-
-          <Link
-            href={isAuthenticated ? "/dashboard" : "/signup"}
-            className="px-4 py-1.5 rounded-full text-xs font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all shadow-xs flex items-center gap-1.5"
-          >
-            <span>{isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {/* Mobile Hamburger Toggle */}
-        <div className="flex sm:hidden">
+        <div className="flex items-center gap-3">
+          {/* ⌘K Command Palette Quick Trigger */}
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 rounded-md text-[#6B6A65] hover:text-[#111114] hover:bg-[#F1F1EF] transition-colors"
-            aria-label="Toggle Navigation Menu"
+            onClick={triggerPalette}
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[#EAE7DF] bg-[#FFFFFF] hover:bg-[#F3F1EC] text-[#6B6A65] hover:text-[#111114] transition-all text-xs font-medium shadow-xs"
+            title="Open Command Palette (⌘K or Ctrl+K)"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <Command className="w-3.5 h-3.5 text-[#8C8A84]" />
+            <span className="font-sans text-[11px] text-[#8C8A84]">Search & Jump</span>
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#FAF9F6] border border-[#EAE7DF] rounded text-[#8C8A84]">
+              ⌘K
+            </kbd>
           </button>
+
+          <div className="hidden sm:flex items-center gap-3">
+            <Link
+              href="/login"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#6B6A65] hover:text-[#111114] hover:bg-[#F1F1EF] transition-colors font-sans"
+            >
+              Sign In
+            </Link>
+
+            <Link
+              href={isAuthenticated ? "/dashboard" : "/signup"}
+              className="px-4 py-1.5 rounded-full text-xs font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all shadow-xs flex items-center gap-1.5 font-sans"
+            >
+              <span>{isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Mobile Hamburger Toggle */}
+          <div className="flex lg:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 rounded-md text-[#6B6A65] hover:text-[#111114] hover:bg-[#F1F1EF] transition-colors"
+              aria-label="Toggle Navigation Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="sm:hidden border-b border-[rgba(55,53,47,0.08)] bg-[#FAF9F6] px-4 pt-2 pb-4 space-y-2 text-xs font-medium text-[#6B6A65]">
+        <div className="lg:hidden border-b border-[#EAE7DF] bg-[#FAF9F6] px-4 pt-2 pb-4 space-y-2 text-xs font-medium text-[#6B6A65]">
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              triggerPalette();
+            }}
+            className="w-full flex items-center justify-between py-2 text-left hover:text-[#111114] font-sans"
+          >
+            <span>Open Command Palette</span>
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-[#FFFFFF] border border-[#EAE7DF] rounded text-[#8C8A84]">
+              ⌘K
+            </kbd>
+          </button>
           <a
             href="#preview"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 hover:text-[#111114]"
+            className="block py-2 hover:text-[#111114] font-sans"
           >
             Interactive Preview
           </a>
           <a
             href="#differentiators"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 hover:text-[#111114]"
+            className="block py-2 hover:text-[#111114] font-sans"
           >
             Core Differentiators
           </a>
           <a
             href="#operations"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 hover:text-[#111114]"
+            className="block py-2 hover:text-[#111114] font-sans"
           >
             Daily Operations
           </a>
           <a
             href="#pricing"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 hover:text-[#111114]"
+            className="block py-2 hover:text-[#111114] font-sans"
           >
             Pricing & Credits
           </a>
-          <div className="pt-3 border-t border-[rgba(55,53,47,0.08)] flex flex-col gap-2">
+          <div className="pt-3 border-t border-[#EAE7DF] flex flex-col gap-2">
             <Link
               href="/login"
-              className="py-2 text-center text-xs font-medium text-[#6B6A65] hover:text-[#111114]"
+              className="py-2 text-center text-xs font-medium text-[#6B6A65] hover:text-[#111114] font-sans"
             >
               Sign In
             </Link>
             <Link
               href={isAuthenticated ? "/dashboard" : "/signup"}
-              className="py-2 rounded-full text-xs font-medium bg-[#111114] text-white text-center shadow-xs"
+              className="py-2 rounded-full text-xs font-medium bg-[#111114] text-white text-center shadow-xs font-sans"
             >
               {isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}
             </Link>
