@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Brain,
-  FileCheck2,
   CalendarDays,
   MessagesSquare,
   Lock,
@@ -13,19 +12,14 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
-  Copy,
   ChevronRight,
-  Smartphone,
-  Eye,
-  Sliders,
-  Sparkles,
-  Command,
-  Laptop,
   CheckCircle2,
-  RefreshCw,
-  Bell,
-  Play,
   RotateCcw,
+  Layers,
+  Sparkles,
+  BarChart3,
+  Send,
+  FileSearch,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Navbar } from "@/components/landing/Navbar";
@@ -40,17 +34,26 @@ export default function LandingPage() {
   const [workspaceRoute, setWorkspaceRoute] = useState<any>("dashboard");
   const [workspaceClient, setWorkspaceClient] = useState<"one8" | "kaya">("one8");
 
-  // Cause-and-Effect Micro-Demo 1: Cortex Violation Injection
+  // Stage 4: Cortex Violation Injection
   const [violationTriggered, setViolationTriggered] = useState(false);
 
-  // Cause-and-Effect Micro-Demo 2: Magic-Link Mobile Approval & Overlapping Desktop WebSocket Toast
+  // Stage 7: DAG Dependency Pipeline
+  const [upstreamApproved, setUpstreamApproved] = useState(false);
+
+  // Stage 7: Community CRM quick reply
+  const [crmReplied, setCrmReplied] = useState(false);
+
+  // Stage 8: Pocket Sign-Off Studio (Mobile + Desktop WebSocket Toast)
   const [mobileApproved, setMobileApproved] = useState(false);
   const [showDesktopToast, setShowDesktopToast] = useState(false);
 
-  // Cause-and-Effect Micro-Demo 3: Dependency-Locked Pipeline in Operations Bento
-  const [upstreamApproved, setUpstreamApproved] = useState(false);
-
   const isAuthenticated = !isLoading && Boolean(token);
+
+  useEffect(() => {
+    const openListener = () => setIsCommandPaletteOpen(true);
+    window.addEventListener("agencyos:open-command-palette", openListener);
+    return () => window.removeEventListener("agencyos:open-command-palette", openListener);
+  }, []);
 
   const handleMobileApprove = () => {
     setMobileApproved(true);
@@ -64,7 +67,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#111114] font-sans antialiased selection:bg-[#EAE7DF] selection:text-[#111114]">
-      {/* ⌘K Command Palette Modal */}
+      {/* ⌘K Editorial Index Palette */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
@@ -72,93 +75,153 @@ export default function LandingPage() {
         onSelectClient={(client) => setWorkspaceClient(client)}
       />
 
-      {/* ── Section 1: Sticky Top Navigation ── */}
+      {/* Sticky Top Navigation */}
       <Navbar onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
 
-      {/* ── Main Engineered Container with Vertical Guide Rails & Crosshair Intersections ── */}
-      <div className="max-w-7xl mx-auto border-x border-[#EAE7DF] relative bg-transparent">
-        
-        {/* Rail Top-Left / Top-Right Crosshairs */}
+      {/* Main Engineered Container with Vertical Guide Rails & Crosshair Intersections */}
+      <div className="max-w-7xl mx-auto border-x border-[#EAE7DF] relative">
         <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
         <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
 
-        {/* ── Section 2: Hero Section (Warm Paper #FAF9F6) ── */}
-        <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 text-center relative border-b border-[#EAE7DF]">
-          {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFFFFF] border border-[#EAE7DF] shadow-xs mb-6 text-xs text-[#6B6A65]">
-            <span className="font-semibold text-[#111114] font-sans">
-              AI-Native Agency Operating System
-            </span>
-            <span className="text-[#8C8A84]">·</span>
-            <span className="font-sans">Built for Social & Creative Agencies</span>
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 1: MASTHEAD HERO (Asymmetric Split + Brand Proof Specimen)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="hero" className="border-b border-[#EAE7DF] bg-[#FAF9F6] relative">
+          <div className="px-6 sm:px-10 lg:px-12 pt-16 pb-14 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Left Column: Editorial Thesis */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2.5 text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+                <span className="text-[#111114] font-semibold">01 // MASTHEAD</span>
+                <span className="text-[#EAE7DF]">|</span>
+                <span>AI-Native Agency Operating System</span>
+              </div>
+
+              <h1 className="font-heading text-4xl sm:text-5xl lg:text-[64px] font-bold tracking-[-0.04em] text-[#111114] leading-[1.04]">
+                Run the work behind every client.
+              </h1>
+
+              <p className="text-base sm:text-lg text-[#6B6A65] max-w-xl leading-relaxed font-sans">
+                Institutional brand memory, six specialized AI agents, mobile client approvals, dependency-locked production, and omnichannel publishing inside one deterministic workspace.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Link
+                  href={isAuthenticated ? "/dashboard" : "/signup"}
+                  className="px-6 py-3 rounded-full text-sm font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all flex items-center gap-2 font-sans"
+                >
+                  <span>{isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+
+                <a
+                  href="#preview"
+                  className="px-6 py-3 rounded-full text-sm font-medium bg-[#FFFFFF] border border-[#EAE7DF] text-[#111114] hover:bg-[#F3F1EC] transition-all flex items-center gap-2 font-sans"
+                >
+                  <span>Explore the System</span>
+                  <ChevronRight className="w-4 h-4 text-[#8C8A84]" />
+                </a>
+
+                <button
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono text-[#8C8A84] hover:text-[#111114] transition-colors cursor-pointer"
+                >
+                  <kbd className="px-1.5 py-0.5 rounded bg-[#FFFFFF] border border-[#EAE7DF] text-[#111114]">⌘K</kbd>
+                  <span>Stage Index</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: Pinned Brand Proof Specimen Card */}
+            <div className="lg:col-span-5 relative">
+              {/* Registration Crop Marks */}
+              <div className="relative p-4 sm:p-5 bg-[#FFFFFF] border border-[#EAE7DF] shadow-[0_20px_50px_-15px_rgba(17,17,20,0.12)]">
+                <span className="absolute -top-2 -left-2 font-mono text-[10px] text-[#8C8A84] select-none">┌</span>
+                <span className="absolute -top-2 -right-2 font-mono text-[10px] text-[#8C8A84] select-none">┐</span>
+                <span className="absolute -bottom-2 -left-2 font-mono text-[10px] text-[#8C8A84] select-none">└</span>
+                <span className="absolute -bottom-2 -right-2 font-mono text-[10px] text-[#8C8A84] select-none">┘</span>
+
+                {/* Specimen Header */}
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#EAE7DF] text-[10px] font-mono text-[#6B6A65]">
+                  <span>PROOF SPECIMEN · FIG 1.0</span>
+                  <span className="text-[#0F7B6C] font-semibold">COMPLIANCE PASSED</span>
+                </div>
+
+                {/* Editorial Photography Frame */}
+                <div className="relative aspect-[4/3] w-full overflow-hidden border border-[#EAE7DF] mb-3.5 bg-[#1C1917]">
+                  <img
+                    src="/landing/one8-truffle.jpg"
+                    alt="One8 Commune Handmade Burrata and Winter Truffle Gnocchi"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-[#111114]/85 text-white text-[9px] font-mono tracking-wider">
+                    4:5 CAROUSEL · ONE8 COMMUNE
+                  </div>
+                  <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 bg-[#0F7B6C] text-white text-[9px] font-mono font-semibold">
+                    TABOO-04 VERIFIED
+                  </div>
+                </div>
+
+                {/* Specimen Metadata Footer */}
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <div>
+                    <p className="font-heading font-semibold text-[#111114] text-xs">
+                      Weekend Truffle Tasting Launch
+                    </p>
+                    <p className="text-[11px] font-mono text-[#8C8A84]">
+                      6 Agents · Magic-Link Armed
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1" title="Approved Brand Palette">
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#1C1917] border border-[#EAE7DF]" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#9A6700] border border-[#EAE7DF]" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#D6CFC2] border border-[#EAE7DF]" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Main Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-0.035em] text-[#111114] max-w-4xl mx-auto leading-[1.12] font-sans">
-            The Operating System for Modern Marketing Agencies.
-          </h1>
-
-          {/* Subheadline */}
-          <p className="mt-5 text-base sm:text-lg text-[#6B6A65] max-w-3xl mx-auto leading-relaxed font-sans">
-            Run client institutional memory, six specialized AI agents, mobile client approvals, content calendars, and social engagement from one deterministic workspace.
-          </p>
-
-          {/* Dual Action Buttons */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={isAuthenticated ? "/dashboard" : "/signup"}
-              className="px-6 py-3 rounded-full text-sm font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all shadow-xs flex items-center gap-2 font-sans"
-            >
-              <span>{isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-
-            <a
-              href="#preview"
-              className="px-6 py-3 rounded-full text-sm font-medium bg-[#FFFFFF] border border-[#EAE7DF] text-[#111114] hover:bg-[#F3F1EC] transition-all shadow-xs flex items-center gap-2 font-sans"
-            >
-              <span>Try the Live Interface</span>
-              <ChevronRight className="w-4 h-4 text-[#8C8A84]" />
-            </a>
-
-            {/* Quick ⌘K Shortcut Hint */}
-            <button
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="hidden md:flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-mono text-[#8C8A84] hover:text-[#111114] hover:bg-[#FFFFFF] border border-transparent hover:border-[#EAE7DF] transition-all"
-              title="Open Command Palette"
-            >
-              <span>Press</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#FFFFFF] border border-[#EAE7DF] text-[#111114]">⌘K</kbd>
-              <span>to jump anywhere</span>
-            </button>
-          </div>
-
-          {/* Trust & Truth Strip (4 Concise Checks) */}
-          <div className="mt-14 pt-8 border-t border-[#EAE7DF] max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs text-[#6B6A65]">
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-[#0F7B6C] shrink-0" />
+          {/* Masthead Segmented Bottom Truth Rail */}
+          <div className="border-t border-[#EAE7DF] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#EAE7DF] bg-[#FFFFFF]/60 text-xs text-[#6B6A65]">
+            <div className="px-6 py-3.5 flex items-center gap-2.5">
+              <Check className="w-3.5 h-3.5 text-[#0F7B6C] shrink-0" />
               <span className="font-sans">Unlimited team members & free seats</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-[#0F7B6C] shrink-0" />
+            <div className="px-6 py-3.5 flex items-center gap-2.5">
+              <Check className="w-3.5 h-3.5 text-[#0F7B6C] shrink-0" />
               <span className="font-sans">Deterministic brand rules & taboos</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-[#0F7B6C] shrink-0" />
+            <div className="px-6 py-3.5 flex items-center gap-2.5">
+              <Check className="w-3.5 h-3.5 text-[#0F7B6C] shrink-0" />
               <span className="font-sans">Direct Instagram, FB & LinkedIn publishing</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-[#0F7B6C] shrink-0" />
+            <div className="px-6 py-3.5 flex items-center gap-2.5">
+              <Check className="w-3.5 h-3.5 text-[#0F7B6C] shrink-0" />
               <span className="font-sans">Zero AI model training on client IP</span>
             </div>
           </div>
         </section>
 
-        {/* ── Section 3: Flagship Interactive AgencyOS Workspace (#preview) ── */}
-        <section className="py-16 bg-[#FFFFFF] border-b border-[#EAE7DF] relative">
-          {/* Section Marker */}
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 2: FLAGSHIP WORKSPACE (One system across the agency)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="preview" className="py-20 px-6 sm:px-10 lg:px-12 bg-[#FFFFFF] border-b border-[#EAE7DF] relative">
           <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
           <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+            <div className="space-y-2 max-w-2xl">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+                02 // FLAGSHIP WORKSPACE
+              </span>
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114]">
+                One system across the agency.
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#6B6A65] max-w-md font-sans leading-relaxed">
+              Switch between One8 Commune and Kaya Botanics in the top-left switcher, or navigate all 13 live modules below.
+            </p>
+          </div>
 
           <InteractiveWorkspace
             externalRoute={workspaceRoute}
@@ -166,107 +229,84 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* ── Section 4: The Operational Problem (Warm Stone #F3F1EC with Hairline Grid) ── */}
-        <section className="py-24 px-4 sm:px-6 lg:px-8 border-b border-[#EAE7DF] bg-[#F3F1EC]/60 relative">
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 3: FRAGMENTED CHAOS VS. DETERMINISTIC SYSTEM (Unboxed Broadsheet)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="problem" className="bg-[#F3F1EC] border-b border-[#EAE7DF] relative">
           <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
           <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
 
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-2">
-            <p className="text-xs font-mono uppercase tracking-wider text-[#6B6A65]">
-              The Operational Problem
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-[#111114] tracking-tight font-sans">
-              Disconnected Agency Stack vs. Deterministic Pipeline
+          <div className="px-6 sm:px-10 lg:px-12 pt-20 pb-10 border-b border-[#EAE7DF]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+              03 // OPERATIONAL CONTRAST
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114] mt-2 max-w-3xl">
+              Why patched-together tools break at ten retainers.
             </h2>
-            <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
-              When creative agencies patch together five single-purpose SaaS subscriptions, communication drops, brand compliance drifts, and client approvals stall.
-            </p>
           </div>
 
-          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left Card: Disconnected Agency Stack */}
-            <div className="p-8 rounded-2xl bg-[#FFFFFF] border border-[#EAE7DF] shadow-xs space-y-6">
-              <div className="space-y-1">
-                <span className="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-mono font-semibold uppercase tracking-wider">
-                  Fragmented Status Quo
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#EAE7DF]">
+            {/* Left Broadsheet Column: Fragmented Chaos */}
+            <div className="p-8 sm:p-12 space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-[#C93B2B] font-semibold">
+                  Legacy Stack · Unstructured Noise
                 </span>
-                <h3 className="text-xl font-semibold text-[#111114] font-sans">
-                  The Disconnected Agency Stack
-                </h3>
+                <span className="font-mono text-xs text-[#C93B2B] tabular-nums">$1,200+/mo Seat Tax</span>
               </div>
 
-              <div className="space-y-4 text-xs text-[#6B6A65] font-sans">
-                <div className="space-y-1">
-                  <p className="font-semibold text-[#111114] flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    $1,200+/mo Seat-Tax Bleed
-                  </p>
-                  <p className="leading-relaxed">
-                    Paying per-seat licenses across Asana, Google Docs, ChatGPT Plus seats, Hootsuite, and WhatsApp business accounts penalizes team expansion.
+              <div className="space-y-5 text-sm">
+                <div className="pb-4 border-b border-[#EAE7DF]">
+                  <p className="font-heading font-semibold text-[#111114]">Five disconnected logins per specialist</p>
+                  <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                    Asana boards, Google Docs, generic AI chat seats, legacy schedulers, and WhatsApp groups silently drain margin every time you hire.
                   </p>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="font-semibold text-[#111114] flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    Brand Voice & Compliance Drift
-                  </p>
-                  <p className="leading-relaxed">
-                    Junior copywriters and generic AI prompts repeatedly forget client taboos, healthcare rules, and pricing guidelines stored in static PDFs.
+                <div className="pb-4 border-b border-[#EAE7DF]">
+                  <p className="font-heading font-semibold text-[#111114]">Brand guidelines buried in static PDFs</p>
+                  <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                    Junior strategists and generic prompts forget regulatory taboos and pricing rules the second a brief moves fast.
                   </p>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="font-semibold text-[#111114] flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    Approval Gridlock & Scattered Feedback
-                  </p>
-                  <p className="leading-relaxed">
-                    Client feedback is fragmented across WhatsApp voice notes, messy email threads, and buried Google Drive links, causing delayed publishing.
+                <div>
+                  <p className="font-heading font-semibold text-[#111114]">Feedback lost in WhatsApp voice notes</p>
+                  <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                    Clients refuse to log into complex project tools, leaving final approvals trapped across screenshots and email threads.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Right Card: Unified AgencyOS Pipeline */}
-            <div className="p-8 rounded-2xl bg-[#FFFFFF] border border-[#111114] shadow-md space-y-6">
-              <div className="space-y-1">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-semibold uppercase tracking-wider">
-                  The AgencyOS Engine
+            {/* Right Broadsheet Column: Deterministic System */}
+            <div className="p-8 sm:p-12 space-y-6 bg-[#FFFFFF]/55">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-[#0F7B6C] font-semibold">
+                  AgencyOS · Deterministic Pipeline
                 </span>
-                <h3 className="text-xl font-semibold text-[#111114] font-sans">
-                  The Deterministic Agency Pipeline
-                </h3>
+                <span className="font-mono text-xs text-[#0F7B6C] tabular-nums">Unlimited Seats Included</span>
               </div>
 
-              <div className="space-y-4 text-xs text-[#6B6A65] font-sans">
-                <div className="space-y-1">
-                  <p className="font-semibold text-[#111114] flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#0F7B6C]" />
-                    Enforced Institutional Memory
-                  </p>
-                  <p className="leading-relaxed">
-                    Living Brand Vault rules and negative taboos are verified before copy ever reaches internal review or the client.
+              <div className="space-y-5 text-sm">
+                <div className="pb-4 border-b border-[#EAE7DF]">
+                  <p className="font-heading font-semibold text-[#111114]">Zero per-seat tax across your entire team</p>
+                  <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                    Add account managers, copywriters, editors, and contractors freely. Pay only for actual AI generation runs.
                   </p>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="font-semibold text-[#111114] flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#0F7B6C]" />
-                    Zero-Friction Mobile Approvals
-                  </p>
-                  <p className="leading-relaxed">
-                    Clients review and sign off on carousels, teleprompter video cuts, and captions directly from their mobile phone via 1-click tokenized magic links.
+                <div className="pb-4 border-b border-[#EAE7DF]">
+                  <p className="font-heading font-semibold text-[#111114]">Institutional memory enforced pre-draft</p>
+                  <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                    Cortex blocks non-compliant claims and prohibited discounts automatically before a single deliverable enters review.
                   </p>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="font-semibold text-[#111114] flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#0F7B6C]" />
-                    Dependency-Locked Execution
-                  </p>
-                  <p className="leading-relaxed">
-                    Deliverables flow automatically from Campaign Studio to Phased Campaign Plans to Content Calendar without copy-paste overhead.
+                <div>
+                  <p className="font-heading font-semibold text-[#111114]">1-click mobile sign-off with cryptographic audit</p>
+                  <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                    Tokenized review rooms open instantly on any client phone, locking approved assets directly into your publishing calendar.
                   </p>
                 </div>
               </div>
@@ -274,539 +314,680 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Section 5: The Three Core Differentiators (Distinct Layouts) ── */}
-        <section id="differentiators" className="border-b border-[#EAE7DF] relative">
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 4: CORTEX — PROOFREADER CANVAS
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="cortex" className="py-20 px-6 sm:px-10 lg:px-12 bg-[#FAF9F6] border-b border-[#EAE7DF] relative">
           <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
           <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
 
-          <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 text-center max-w-3xl mx-auto space-y-2">
-            <p className="text-xs font-mono uppercase tracking-wider text-[#6B6A65]">
-              Core Differentiators
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-[#111114] tracking-tight font-sans">
-              Three Capabilities Built Specifically for Marketing Retainers
-            </h2>
-            <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
-              Tested against hundreds of client review cycles. Designed to eliminate brand drift, endless WhatsApp sign-offs, and multi-take video production.
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
+            <div className="space-y-2 max-w-2xl">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#0F7B6C] font-semibold">
+                04 // CORTEX PROOFREADER CANVAS
+              </span>
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114]">
+                Deterministic brand rules, taboos, and provenance.
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
+                Cortex extracts hard boundaries from client PDFs into a human-reviewed vault. Test what happens when a copywriter or prompt violates a taboo.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 bg-[#FFFFFF] px-3 py-2 rounded-xl border border-[#EAE7DF] shadow-xs">
+              <span className="text-xs font-mono text-[#6B6A65]">Proofreader Test:</span>
+              <button
+                onClick={() => setViolationTriggered(!violationTriggered)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
+                  violationTriggered
+                    ? "bg-[#C93B2B] text-white"
+                    : "bg-[#111114] text-white hover:bg-[#2F2E2B]"
+                }`}
+              >
+                {violationTriggered ? "Restore Clean Proof" : "Inject Rule Violation"}
+              </button>
+            </div>
           </div>
 
-          {/* ── Showcase 1: Cortex Living Brand Vault (Wide Split-Diff Canvas with Violation Injection) ── */}
-          <div id="cortex-vault" className="py-16 px-4 sm:px-6 lg:px-8 border-t border-[#EAE7DF] bg-[#FAF9F6]">
-            <div className="max-w-6xl mx-auto space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-mono text-[#0F7B6C] uppercase font-bold tracking-wider">
-                    Differentiator 01 · Cortex Living Brand Vault
-                  </span>
-                  <h3 className="text-2xl font-semibold text-[#111114] font-sans">
-                    Deterministic Rule Enforcement, Not Passive Vector Search
-                  </h3>
-                  <p className="text-xs text-[#6B6A65] font-sans max-w-xl">
-                    Unlike passive vector search that hallucinates or forgets negative constraints, Cortex enforces hard negative taboos before copy is generated.
+          {/* Wide Split-Diff Proofreader Canvas */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 rounded-2xl border border-[#EAE7DF] bg-[#FFFFFF] shadow-sm overflow-hidden">
+            {/* Left: Living Brand Vault Source Rules */}
+            <div className="lg:col-span-5 p-6 bg-[#FAF9F6] border-b lg:border-b-0 lg:border-r border-[#EAE7DF] space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#111114] flex items-center gap-2 font-sans">
+                  <Brain className="w-4 h-4 text-[#111114]" />
+                  One8 Commune · Brand Vault
+                </span>
+                <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">
+                  Strict Lock
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl border border-[#C93B2B]/25 bg-[#FFFFFF] space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-[#C93B2B] bg-red-50 px-1.5 py-0.5 rounded">
+                      Negative Taboo
+                    </span>
+                    <span className="font-mono text-[10px] text-[#8C8A84] tabular-nums">TABOO-04</span>
+                  </div>
+                  <p className="font-semibold text-[#111114]">
+                    Never make medical or therapeutic health claims.
+                  </p>
+                  <p className="text-[11px] text-[#6B6A65] leading-relaxed">
+                    PDF Provenance: &quot;Brand Bible v2.4, p. 11: Frame all ingredients around hospitality craft, never medicinal cures.&quot;
                   </p>
                 </div>
 
-                {/* Interactive Cause-and-Effect Toggle */}
-                <div className="flex items-center gap-3 bg-[#FFFFFF] p-2 rounded-xl border border-[#EAE7DF] shadow-xs">
-                  <span className="text-xs font-sans text-[#6B6A65]">Test Violation Engine:</span>
-                  <button
-                    onClick={() => setViolationTriggered(!violationTriggered)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer shadow-xs ${
+                <div className="p-4 rounded-xl border border-[#EAE7DF] bg-[#FFFFFF] space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-[#9A6700] bg-[#FBF3DB] px-1.5 py-0.5 rounded">
+                      Pricing Boundary
+                    </span>
+                    <span className="font-mono text-[10px] text-[#8C8A84] tabular-nums">RULE-01</span>
+                  </div>
+                  <p className="font-semibold text-[#111114]">
+                    Never publish percentage discounts on signature tasting dishes.
+                  </p>
+                  <p className="text-[11px] text-[#6B6A65] leading-relaxed">
+                    PDF Provenance: &quot;Founder Charter: Preserve dining equity; zero promotional markdown codes.&quot;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Live Red-Ink Markup & Corrective Rewrite */}
+            <div className="lg:col-span-7 p-6 sm:p-8 space-y-5 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#EAE7DF]">
+                  <span className="text-xs font-semibold text-[#111114]">
+                    Compliance Diff & Auto-Correction Stream
+                  </span>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${
                       violationTriggered
-                        ? "bg-red-700 text-white"
-                        : "bg-[#111114] text-white hover:bg-[#2F2E2B]"
+                        ? "bg-red-50 text-[#C93B2B] border border-[#C93B2B]/30"
+                        : "bg-[#DDEDEA] text-[#0F7B6C]"
                     }`}
                   >
-                    {violationTriggered ? "Reset Clean Draft" : "Inject Rule Violation"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Wide Split-Diff Canvas */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 rounded-2xl border border-[#EAE7DF] bg-[#FFFFFF] shadow-md overflow-hidden">
-                {/* Left Pane: Brand Vault Rules & Taboo Specification (5 cols) */}
-                <div className="lg:col-span-5 p-6 bg-[#FAF9F6] border-r border-[#EAE7DF] space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#111114] font-sans flex items-center gap-2">
-                      <Brain className="w-4 h-4 text-[#111114]" />
-                      Living Brand Vault · One8 Commune
-                    </span>
-                    <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">
-                      Enforced
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="p-3.5 rounded-xl border border-red-200 bg-[#FFFFFF] space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded">
-                          Negative Taboo
-                        </span>
-                        <span className="font-mono text-[10px] text-[#8C8A84]">TABOO-04</span>
-                      </div>
-                      <p className="font-semibold text-[#111114] font-sans">
-                        Never make medical or therapeutic health claims.
-                      </p>
-                      <p className="text-[11px] text-[#6B6A65] font-sans">
-                        Provenance: &quot;Brand Bible v2.4, Section 3.1: All culinary descriptions must refrain from medicinal claims.&quot;
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl border border-[#EAE7DF] bg-[#FFFFFF] space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold text-[#9A6700] bg-[#FBF3DB] px-1.5 py-0.5 rounded">
-                          Pricing Rule
-                        </span>
-                        <span className="font-mono text-[10px] text-[#8C8A84]">RULE-01</span>
-                      </div>
-                      <p className="font-semibold text-[#111114] font-sans">
-                        Never offer discounts or mention markdown percentages on signature menu items.
-                      </p>
-                      <p className="text-[11px] text-[#6B6A65] font-sans">
-                        Provenance: Founder Charter: &quot;Preserve premium dining positioning; zero coupons.&quot;
-                      </p>
-                    </div>
-                  </div>
+                    {violationTriggered ? "VIOLATION INTERCEPTED" : "ALL RULES PASSED"}
+                  </span>
                 </div>
 
-                {/* Right Pane: Live Caption Composer with Strikeout & Auto-Rewrite (7 cols) */}
-                <div className="lg:col-span-7 p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#EAE7DF]">
-                    <span className="text-xs font-semibold text-[#111114] font-sans">
-                      Live Caption Composer & Compliance Verification
-                    </span>
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                        violationTriggered
-                          ? "bg-red-50 text-red-700 border border-red-200"
-                          : "bg-[#DDEDEA] text-[#0F7B6C]"
-                      }`}
-                    >
-                      {violationTriggered ? "VIOLATION DETECTED" : "COMPLIANCE PASSED"}
-                    </span>
-                  </div>
-
-                  {violationTriggered ? (
-                    <div className="space-y-4">
-                      {/* Inline Strikethrough of Forbidden Copy */}
-                      <div className="p-4 rounded-xl bg-red-50/60 border border-red-200 space-y-2 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono font-bold text-red-700 flex items-center gap-1.5">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            Violates TABOO-04 (Medical Claim) & RULE-01 (Discount Prohibition):
-                          </span>
-                        </div>
-                        <p className="text-[#111114] leading-relaxed font-sans line-through decoration-red-600 decoration-2 opacity-80">
-                          &quot;Guaranteed 100% cure for inflammation with our wild forest mushroom reduction — 20% discount this weekend only.&quot;
-                        </p>
-                      </div>
-
-                      {/* Clean Auto-Rewrite by Compliance Agent */}
-                      <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#0F7B6C]/30 space-y-2 text-xs">
-                        <span className="text-[10px] font-mono font-bold text-[#0F7B6C] flex items-center gap-1.5">
-                          <Check className="w-3.5 h-3.5" />
-                          Compliance Agent Auto-Rewrite (Verified against Vault):
-                        </span>
-                        <p className="text-[#111114] leading-relaxed font-sans font-medium">
-                          &quot;Crafted with wild forest mushrooms, simmered for forty-eight hours to bring out earthy umami depth and handmade burrata warmth.&quot;
-                        </p>
-                        <p className="text-[11px] text-[#6B6A65] font-sans">
-                          Result: Therapeutic claim replaced with culinary craftsmanship narrative; discount eliminated to preserve signature pricing.
-                        </p>
-                      </div>
+                {violationTriggered ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-red-50/50 border border-[#C93B2B]/30 space-y-2 text-xs">
+                      <span className="text-[10px] font-mono font-bold text-[#C93B2B] flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Blocked Draft · Violates TABOO-04 & RULE-01:
+                      </span>
+                      <p className="text-[#111114] text-sm leading-relaxed line-through decoration-[#C93B2B] decoration-2 opacity-80">
+                        &quot;Guaranteed 100% cure for inflammation with our wild mushroom reduction — 20% discount this Friday only.&quot;
+                      </p>
                     </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-3 text-xs">
-                      <span className="text-[10px] font-mono text-[#0F7B6C] flex items-center gap-1.5 font-bold">
+
+                    <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#0F7B6C]/35 space-y-2 text-xs">
+                      <span className="text-[10px] font-mono font-bold text-[#0F7B6C] flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5" />
-                        Clean Draft Verified by Compliance Agent:
+                        Deterministic Compliance Rewrite:
                       </span>
-                      <p className="text-[#111114] leading-relaxed font-sans font-medium text-sm">
-                        &quot;This is what happens when you shave black winter truffles directly over handmade burrata gnocchi. Freshly harvested, prepared in thirty limited portions this Friday evening.&quot;
+                      <p className="text-[#111114] text-sm leading-relaxed font-medium">
+                        &quot;Crafted with wild forest mushrooms, simmered forty-eight hours over oak fire for deep umami richness. Thirty tables served each Friday evening.&quot;
                       </p>
-                      <p className="text-[11px] text-[#6B6A65] font-sans">
-                        Verified against TABOO-04 and RULE-01. Click &quot;Inject Rule Violation&quot; above to see real-time boundary enforcement.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Showcase 2: Magic-Link Review Rooms (Overlapping Desktop + Mobile Frame) ── */}
-          <div id="review-room" className="py-16 px-4 sm:px-6 lg:px-8 border-t border-[#EAE7DF] bg-[#FFFFFF]">
-            <div className="max-w-6xl mx-auto space-y-8">
-              <div className="max-w-2xl space-y-1">
-                <span className="text-xs font-mono text-[#0F7B6C] uppercase font-bold tracking-wider">
-                  Differentiator 02 · Magic-Link Review Rooms
-                </span>
-                <h3 className="text-2xl font-semibold text-[#111114] font-sans">
-                  Zero-Friction Mobile Client Sign-Off with Real-Time WebSockets
-                </h3>
-                <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
-                  Never ask busy founders to download an app or create an account. They open a tokenized mobile link on their phone, swipe through carousels, and tap approve in seconds.
-                </p>
-              </div>
-
-              {/* Overlapping Desktop + Mobile Frame Container */}
-              <div className="relative rounded-2xl border border-[#EAE7DF] bg-[#FAF9F6] p-6 sm:p-10 overflow-hidden min-h-[460px] flex flex-col lg:flex-row items-center justify-between gap-8">
-                
-                {/* Desktop Agency View (Left Background Area) */}
-                <div className="w-full lg:w-1/2 space-y-4">
-                  <div className="p-5 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] shadow-xs space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-[#EAE7DF]">
-                      <span className="text-xs font-semibold text-[#111114] font-sans">
-                        Agency Dashboard · Real-Time Delivery Feed
-                      </span>
-                      <span className="text-[10px] font-mono text-[#0F7B6C] flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-[#0F7B6C] animate-pulse" />
-                        WebSocket Active
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between text-[#6B6A65]">
-                        <span>Client:</span>
-                        <span className="font-semibold text-[#111114]">One8 Commune</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[#6B6A65]">
-                        <span>Deliverable:</span>
-                        <span className="font-semibold text-[#111114]">Weekend Truffle Tasting Deliverable</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[#6B6A65]">
-                        <span>Review Room Link:</span>
-                        <span className="font-mono text-[11px] text-[#0F7B6C]">agencyos.app/review/rk_9482bf0e</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[#6B6A65]">
-                        <span>Expiry Guard:</span>
-                        <span className="font-mono text-[11px]">72 Hours Auto-Lock</span>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Overlapping Real-Time Toast that fires when approved */}
-                  {showDesktopToast && (
-                    <div className="p-4 rounded-xl bg-[#111114] text-white shadow-xl border border-neutral-700 space-y-1 animate-in fade-in slide-in-from-top-4 duration-300">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono text-emerald-400 font-semibold flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          WebSocket Event: Client Approved!
-                        </span>
-                        <span className="text-[10px] font-mono text-white/50">Just now</span>
-                      </div>
-                      <p className="text-xs font-sans text-white/90">
-                        One8 Commune signed off on Weekend Truffle Tasting Deliverable.
-                      </p>
-                      <p className="text-[10px] font-mono text-white/60">
-                        Automated social dispatch pipeline unlocked for Friday 18:00.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="pt-2">
-                    <button
-                      onClick={handleResetApproval}
-                      className="text-xs font-mono text-[#6B6A65] hover:text-[#111114] flex items-center gap-1.5"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Reset Demo State
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile Hardware Frame (Right Foreground Area) */}
-                <div className="w-full max-w-[280px] bg-[#FFFFFF] rounded-[32px] border-4 border-[#111114] shadow-2xl p-4 space-y-4">
-                  {/* Phone Notch & Header */}
-                  <div className="w-20 h-3.5 bg-[#111114] rounded-full mx-auto" />
-                  
-                  <div className="text-center space-y-0.5">
-                    <span className="text-[9px] font-mono text-[#8C8A84] uppercase">One8 Commune Review Room</span>
-                    <p className="text-xs font-bold text-[#111114] font-sans">Weekend Truffle Tasting</p>
-                  </div>
-
-                  {/* Carousel Slide Card inside Mobile */}
-                  <div className="h-36 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] p-3 flex flex-col justify-between text-center">
-                    <span className="text-[9px] font-mono text-[#0F7B6C]">Slide 1 of 5</span>
-                    <p className="text-[11px] font-semibold text-[#111114] font-sans">
-                      Handmade Burrata & Winter Truffle Gnocchi
+                ) : (
+                  <div className="p-5 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-3">
+                    <span className="text-[10px] font-mono text-[#0F7B6C] flex items-center gap-1.5 font-bold">
+                      <Check className="w-3.5 h-3.5" />
+                      Clean Production Copy · Ready for Carousel Slide 1
+                    </span>
+                    <p className="text-[#111114] text-base leading-relaxed font-medium">
+                      &quot;Shaved black winter truffles over handmade burrata gnocchi. Thirty limited portions prepared fresh every Friday evening.&quot;
                     </p>
-                    <span className="text-[9px] font-mono text-[#8C8A84]">Compliance: 100%</span>
+                    <p className="text-xs text-[#6B6A65]">
+                      Click &quot;Inject Rule Violation&quot; above to watch Cortex catch prohibited claims and rewrite copy deterministically.
+                    </p>
                   </div>
-
-                  {/* Mobile Interactive Approval Action */}
-                  <div className="space-y-2">
-                    {mobileApproved ? (
-                      <div className="p-2.5 rounded-xl bg-[#DDEDEA] border border-[#0F7B6C]/30 text-center space-y-0.5">
-                        <p className="text-xs font-bold text-[#0F7B6C] flex items-center justify-center gap-1">
-                          <Check className="w-3.5 h-3.5" />
-                          Approved & Signed
-                        </p>
-                        <p className="text-[9px] font-mono text-[#0F7B6C]">SHA-256 Hash Locked</p>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleMobileApprove}
-                        className="w-full py-2.5 rounded-xl bg-[#111114] text-white text-xs font-medium hover:bg-[#2F2E2B] transition-all shadow-xs cursor-pointer font-sans"
-                      >
-                        Tap to Approve Deliverable
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Showcase 3: Viral Teleprompter Studio (High-Contrast Dark Obsidian #101014 Band) ── */}
-          <div id="teleprompter" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-[#EAE7DF] bg-[#101014] text-white relative">
-            <div className="max-w-6xl mx-auto space-y-8">
-              <div className="max-w-2xl space-y-1">
-                <span className="text-xs font-mono text-emerald-400 uppercase font-bold tracking-wider">
-                  Differentiator 03 · Viral Teleprompter Studio
-                </span>
-                <h3 className="text-3xl font-semibold text-white tracking-tight font-sans">
-                  Dark Studio Viewport with Live Auto-Scrolling WPM Speed Dial
-                </h3>
-                <p className="text-xs text-white/70 font-sans leading-relaxed">
-                  Turn campaign scripts into high-retention short-form reels. Adjust speaking pace from 110 to 180 words per minute to auto-scroll the script, time visual hooks, and enforce brand rules.
-                </p>
+                )}
               </div>
 
-              {/* Real Auto-Scrolling Teleprompter in Dark Mode */}
-              <TeleprompterPreview
-                clientName="One8 Commune"
-                reelTitle="Executive Chef Truffle Tasting Reel (60s Cut)"
-                wordCount={138}
-                theme="dark"
-              />
+              <div className="pt-4 border-t border-[#EAE7DF] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#8C8A84]">
+                <span>Human-in-the-Loop Queue: 3 Pending PDF Rules</span>
+                <span>Zero Passive Vector Hallucinations</span>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── Section 6: Daily Operations Bento Grid (Crisp White #FFFFFF) ── */}
-        <section id="operations" className="py-24 px-4 sm:px-6 lg:px-8 border-b border-[#EAE7DF] bg-[#FFFFFF] relative">
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 5: CAMPAIGN INTELLIGENCE (6 Specialist Agents)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="intelligence" className="py-20 px-6 sm:px-10 lg:px-12 bg-[#FFFFFF] border-b border-[#EAE7DF] relative">
           <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
           <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
 
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-2">
-            <p className="text-xs font-mono uppercase tracking-wider text-[#6B6A65]">
-              Daily Operations
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-[#111114] tracking-tight font-sans">
-              Everything Your Agency Ships Every Single Day
+          <div className="max-w-3xl space-y-2 mb-12">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+              05 // CAMPAIGN INTELLIGENCE
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114]">
+              Six specialist agents, chained like an actual creative department.
             </h2>
             <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
-              From automated social publishing to high-intent comment triage and dependency-locked task pipelines.
+              Instead of one generic chat prompt guessing at brand tone, AgencyOS runs a structured six-agent architecture where research, strategy, copy, compliance, and formatting hand off verified artifacts.
             </p>
           </div>
 
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Card 1: Content Calendar & Direct Publishing */}
-            <div className="p-7 rounded-2xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-lg bg-[#FFFFFF] border border-[#EAE7DF] flex items-center justify-center text-[#0F7B6C]">
-                  <CalendarDays className="w-4 h-4" />
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium">
-                  Connection Health: Healthy
-                </span>
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-[#111114] font-sans">
-                  Omnichannel Content Calendar & Direct Publishing
-                </h3>
-                <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
-                  Schedule and publish multi-platform campaigns directly to Instagram, Facebook, and LinkedIn with proactive 72-hour token auto-expiry alerts.
-                </p>
-              </div>
-              <div className="p-3 rounded-xl bg-white border border-[#EAE7DF] space-y-1.5 text-xs">
-                <div className="flex items-center justify-between font-mono text-[11px]">
-                  <span className="text-[#111114] font-semibold">One8 Commune · Friday 18:00</span>
-                  <span className="text-[#0F7B6C]">Auto-Publish Armed</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border border-[#EAE7DF] divide-y sm:divide-y-0 sm:divide-x divide-[#EAE7DF] bg-[#FAF9F6]">
+            {[
+              {
+                num: "01",
+                role: "Strategy Agent",
+                tag: "Positioning & Hooks",
+                desc: "Analyzes the client brief, seasonal menu or product drop, and target audience conversion angles.",
+              },
+              {
+                num: "02",
+                role: "Content Architect",
+                tag: "Carousels & Scripts",
+                desc: "Drafts 5-slide visual carousel narratives, caption hooks, and scene-timed short-form video scripts.",
+              },
+              {
+                num: "03",
+                role: "Compliance Evaluator",
+                tag: "Cortex Gatekeeper",
+                desc: "Audits every draft word-for-word against Cortex taboos, provenance rules, and legal boundaries.",
+              },
+              {
+                num: "04",
+                role: "Publishing Agent",
+                tag: "Channel Formatting",
+                desc: "Formats 4:5 portrait crops, 9:16 reel safe zones, hashtag sets, and optimal Meta/LinkedIn windows.",
+              },
+              {
+                num: "05",
+                role: "Analytics Agent",
+                tag: "Historical Lift",
+                desc: "Reads past post performance to calibrate hook pacing, format mix, and weekly retainer cadence.",
+              },
+              {
+                num: "06",
+                role: "Orchestrator",
+                tag: "Artifact Assembly",
+                desc: "Bundles approved outputs into structured Campaign Plans ready for client sign-off and scheduling.",
+              },
+            ].map((agent, i) => (
+              <div
+                key={agent.num}
+                className={`p-6 bg-[#FFFFFF] space-y-3 ${
+                  i >= 3 ? "lg:border-t border-[#EAE7DF]" : ""
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-[#8C8A84]">AGENT {agent.num}</span>
+                  <span className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#EAE7DF] text-[#111114]">
+                    {agent.tag}
+                  </span>
                 </div>
-                <p className="text-[11px] text-[#6B6A65]">Instagram Carousel + Facebook Video Reel</p>
-              </div>
-            </div>
-
-            {/* Card 2: Community CRM & Social Inbox */}
-            <div className="p-7 rounded-2xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-lg bg-[#FFFFFF] border border-[#EAE7DF] flex items-center justify-center text-[#0F7B6C]">
-                  <MessagesSquare className="w-4 h-4" />
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-mono font-medium">
-                  High-Intent Lead: 94/100
-                </span>
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-[#111114] font-sans">
-                  Community CRM & Buying-Intent Triage
+                <h3 className="font-heading text-base font-bold text-[#111114]">
+                  {agent.role}
                 </h3>
-                <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
-                  Inbound social comments are triaged for purchasing intent. High-intent leads receive Cortex-verified draft replies ready for 1-click publishing.
+                <p className="text-xs text-[#6B6A65] leading-relaxed font-sans">
+                  {agent.desc}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-white border border-[#EAE7DF] space-y-1.5 text-xs">
-                <p className="font-semibold text-[#111114] font-sans">&quot;Do you have private dining availability for 30 this Friday?&quot;</p>
-                <p className="text-[11px] text-[#0F7B6C] font-mono">✓ Verified concierge reply prepared</p>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 6: DARKROOM PRODUCTION SUITE (Obsidian #101014 Band)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="darkroom" className="py-24 px-6 sm:px-10 lg:px-12 bg-[#101014] text-white border-b border-[#26262B] relative">
+          <div className="max-w-6xl mx-auto space-y-10">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div className="space-y-2 max-w-2xl">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-semibold">
+                  06 // DARKROOM PRODUCTION SUITE
+                </span>
+                <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-white">
+                  Studio teleprompter and short-form video delivery.
+                </h2>
+                <p className="text-xs sm:text-sm text-white/70 font-sans leading-relaxed">
+                  Turn approved scripts into single-take reels. Dial speaking pace from 110 to 180 words per minute to drive live auto-scroll speed, scene hooks, and director cues.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#17171E] border border-[#26262B] text-[11px] font-mono text-white/80">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>9:16 REEL SUITE · 24FPS</span>
               </div>
             </div>
 
-            {/* Card 3: Real Cause-and-Effect Dependency-Locked Pipeline */}
-            <div className="p-7 rounded-2xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-4 shadow-xs">
+            <TeleprompterPreview
+              clientName="One8 Commune"
+              reelTitle="Chef's Truffle Tasting Reel (60s Short-Form)"
+              wordCount={138}
+              theme="dark"
+            />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 7: DAILY OPERATIONS (Edge-to-Edge Swiss Structural Matrix)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="operations" className="bg-[#FFFFFF] border-b border-[#EAE7DF] relative">
+          <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
+          <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
+
+          <div className="px-6 sm:px-10 lg:px-12 pt-20 pb-10 border-b border-[#EAE7DF]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+              07 // DAILY OPERATIONS
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114] mt-2 max-w-2xl">
+              Daily dispatch, without the Slack circus.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#EAE7DF]">
+            {/* Cell 1: DAG Execution & Dependency-Locked Pipeline */}
+            <div className="p-8 sm:p-10 space-y-6 bg-[#FAF9F6]/50">
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-lg bg-[#FFFFFF] border border-[#EAE7DF] flex items-center justify-center text-[#111114]">
+                <span className="font-mono text-[11px] text-[#111114] font-semibold flex items-center gap-2">
                   {upstreamApproved ? <Unlock className="w-4 h-4 text-[#0F7B6C]" /> : <Lock className="w-4 h-4 text-[#9A6700]" />}
+                  DAG TASK ENGINE
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#FFFFFF] border border-[#EAE7DF] text-[#6B6A65] text-[10px] font-mono">
-                  Interactive Micro-Demo
-                </span>
+                <span className="text-[10px] font-mono text-[#8C8A84]">Interactive Circuit</span>
               </div>
 
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-[#111114] font-sans">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-[#111114]">
                   Dependency-Locked Production Pipeline
                 </h3>
-                <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
-                  Prevent costly rework. Downstream production and publishing cards remain locked until upstream creative brief sign-offs clear.
+                <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                  Downstream design and social publishing cards stay frosted and locked until upstream creative brief sign-offs clear.
                 </p>
               </div>
 
-              {/* Interactive Upstream -> Downstream Pipeline */}
-              <div className="space-y-3 pt-2">
-                {/* Upstream Card */}
-                <div className="p-3 rounded-xl bg-white border border-[#EAE7DF] flex items-center justify-between text-xs">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-mono text-[#8C8A84]">Upstream Step 1:</span>
+              <div className="space-y-2.5 pt-2">
+                <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] flex items-center justify-between gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] font-mono text-[#8C8A84]">STEP 01 · UPSTREAM</span>
                     <p className="font-semibold text-[#111114]">Creative Brief & Taboo Sign-off</p>
                   </div>
                   <button
                     onClick={() => setUpstreamApproved(!upstreamApproved)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
-                      upstreamApproved
-                        ? "bg-[#DDEDEA] text-[#0F7B6C]"
-                        : "bg-[#111114] text-white hover:bg-[#2F2E2B]"
+                      upstreamApproved ? "bg-[#DDEDEA] text-[#0F7B6C]" : "bg-[#111114] text-white hover:bg-[#2F2E2B]"
                     }`}
                   >
-                    {upstreamApproved ? "✓ Brief Approved" : "Click to Approve Brief"}
+                    {upstreamApproved ? "✓ Approved" : "Approve Brief"}
                   </button>
                 </div>
 
-                {/* Animated Connector Bar */}
-                <div className="flex items-center justify-center">
-                  <div
-                    className={`w-0.5 h-5 transition-colors duration-300 ${
-                      upstreamApproved ? "bg-[#0F7B6C]" : "bg-[#EAE7DF]"
-                    }`}
-                  />
+                <div className="flex justify-center">
+                  <div className={`w-0.5 h-5 transition-colors duration-300 ${upstreamApproved ? "bg-[#0F7B6C]" : "bg-[#EAE7DF]"}`} />
                 </div>
 
-                {/* Downstream Card */}
                 <div
-                  className={`p-3 rounded-xl border transition-all text-xs ${
+                  className={`p-3.5 rounded-xl border transition-all text-xs flex items-center justify-between ${
                     upstreamApproved
-                      ? "bg-white border-[#0F7B6C]/40 shadow-xs"
-                      : "bg-[#FAF9F6] border-dashed border-[#EAE7DF] opacity-60"
+                      ? "bg-[#FFFFFF] border-[#0F7B6C]/40 shadow-xs"
+                      : "bg-[#F3F1EC] border-dashed border-[#EAE7DF] opacity-65"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-mono text-[#8C8A84]">Downstream Step 2:</span>
-                      <p className="font-semibold text-[#111114]">Carousel Production & Direct Publishing</p>
-                    </div>
-                    {upstreamApproved ? (
-                      <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded font-semibold">
-                        Unlocked & Active
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-mono text-[#8C8A84] bg-[#F3F1EC] px-2 py-0.5 rounded flex items-center gap-1">
-                        <Lock className="w-2.5 h-2.5" /> Locked
-                      </span>
-                    )}
+                  <div>
+                    <span className="text-[10px] font-mono text-[#8C8A84]">STEP 02 · DOWNSTREAM</span>
+                    <p className="font-semibold text-[#111114]">Carousel Production & Direct Publishing</p>
                   </div>
+                  {upstreamApproved ? (
+                    <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded font-semibold">
+                      Unlocked
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono text-[#8C8A84] bg-[#FFFFFF] px-2 py-0.5 rounded flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Locked
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Card 4: Role-Based Access Control */}
-            <div className="p-7 rounded-2xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-4 shadow-xs">
+            {/* Cell 2: Community CRM & Buying-Intent Triage */}
+            <div className="p-8 sm:p-10 space-y-6 bg-[#FFFFFF]">
               <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-lg bg-[#FFFFFF] border border-[#EAE7DF] flex items-center justify-center text-[#111114]">
-                  <ShieldCheck className="w-4 h-4" />
+                <span className="font-mono text-[11px] text-[#0F7B6C] font-semibold flex items-center gap-2">
+                  <MessagesSquare className="w-4 h-4" />
+                  COMMUNITY CRM INBOX
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#FFFFFF] border border-[#EAE7DF] text-[#6B6A65] text-[10px] font-mono">
-                  Governance
+                <span className="px-2 py-0.5 rounded bg-emerald-50 text-[#0F7B6C] text-[10px] font-mono font-semibold tabular-nums">
+                  Lead Intent: 94/100
                 </span>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-[#111114] font-sans">
-                  Role-Based Access Control & Tenant Isolation
+
+              <div>
+                <h3 className="font-heading text-lg font-bold text-[#111114]">
+                  Real-Time Comment Triage & Verified Replies
                 </h3>
-                <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
-                  Protect agency billing margins, private credit allocations, and client spaces. Freelance designers never see internal retainers or financial settings.
+                <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                  Inbound Meta and LinkedIn comments are scored for buying intent and paired with Cortex-verified concierge replies.
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-white border border-[#EAE7DF] space-y-1.5 text-xs font-mono">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[#111114]">Agency Owner Tier</span>
-                  <span className="text-[#0F7B6C]">Full Billing & Model Access</span>
+
+              <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#EAE7DF] space-y-3 text-xs">
+                <div className="flex items-center justify-between font-mono text-[10px] text-[#8C8A84]">
+                  <span>@arjun_kapoor · Instagram</span>
+                  <span>4m ago</span>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#6B6A65]">
-                  <span>Specialist / Contractor</span>
-                  <span>Deliverables Only (Zero Financials)</span>
+                <p className="font-semibold text-[#111114]">
+                  &quot;Do you take private group bookings for 30 guests this Friday evening?&quot;
+                </p>
+                <div className="p-3 rounded-lg bg-[#FFFFFF] border border-[#EAE7DF] flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-[#6B6A65]">
+                    Draft: &quot;Our private dining room is available Friday—concierge DM sent.&quot;
+                  </span>
+                  <button
+                    onClick={() => setCrmReplied(!crmReplied)}
+                    className={`px-2.5 py-1 rounded text-[11px] font-mono font-medium cursor-pointer transition-colors ${
+                      crmReplied ? "bg-[#DDEDEA] text-[#0F7B6C]" : "bg-[#111114] text-white"
+                    }`}
+                  >
+                    {crmReplied ? "✓ Sent" : "1-Click Reply"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#EAE7DF] border-t border-[#EAE7DF]">
+            {/* Cell 3: OAuth Monitoring & Connection Health */}
+            <div className="p-8 sm:p-10 space-y-5 bg-[#FFFFFF]">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] text-[#111114] font-semibold flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-[#0F7B6C]" />
+                  OAUTH HEALTH MONITOR
+                </span>
+                <span className="text-[10px] font-mono text-[#0F7B6C] bg-[#DDEDEA] px-2 py-0.5 rounded">
+                  72h Expiry Guard Active
+                </span>
+              </div>
+              <div>
+                <h3 className="font-heading text-lg font-bold text-[#111114]">
+                  Proactive Token Alerts Before Posts Fail
+                </h3>
+                <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                  Background monitors inspect Meta Graph and LinkedIn OAuth tokens continuously, alerting account managers 72 hours prior to expiration.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
+                <div className="p-2.5 rounded-lg bg-[#FAF9F6] border border-[#EAE7DF]">
+                  <p className="text-[#111114] font-semibold">Instagram</p>
+                  <p className="text-[#0F7B6C] text-[10px]">Healthy · 54d</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#FAF9F6] border border-[#EAE7DF]">
+                  <p className="text-[#111114] font-semibold">Facebook</p>
+                  <p className="text-[#0F7B6C] text-[10px]">Healthy · 54d</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#FAF9F6] border border-[#EAE7DF]">
+                  <p className="text-[#111114] font-semibold">LinkedIn</p>
+                  <p className="text-[#9A6700] text-[10px]">Renew in 48h</p>
                 </div>
               </div>
             </div>
 
+            {/* Cell 4: Role-Based Access Control (RBAC) */}
+            <div className="p-8 sm:p-10 space-y-5 bg-[#FAF9F6]/50">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] text-[#111114] font-semibold flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  RBAC & TENANT ISOLATION
+                </span>
+                <span className="text-[10px] font-mono text-[#6B6A65]">Financial Shield</span>
+              </div>
+              <div>
+                <h3 className="font-heading text-lg font-bold text-[#111114]">
+                  Isolate Freelancers from Agency Margins
+                </h3>
+                <p className="text-xs text-[#6B6A65] mt-1 leading-relaxed">
+                  External contractors only see assigned creative deliverables. Retainer pricing, billing ledgers, and private client tiers remain locked to owners.
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#111114]">Agency Owner</span>
+                  <span className="text-[#0F7B6C]">Contracts · Billing · All Clients</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[#6B6A65]">
+                  <span>Freelance Editor</span>
+                  <span>Assigned Deliverables Only</span>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ── Section 7: Retainer Margin Calculator & Economics (#pricing) ── */}
-        <MarginCalculator />
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 8: POCKET SIGN-OFF STUDIO (Mobile Hardware + Desktop WebSocket Toast)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="signoff" className="py-20 px-6 sm:px-10 lg:px-12 bg-[#FFFFFF] border-b border-[#EAE7DF] relative">
+          <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
+          <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
 
-        {/* ── Section 8: Final Call to Action Banner & Public-Safe Footer ── */}
-        <section className="py-24 px-4 sm:px-6 lg:px-8 text-center bg-[#FAF9F6] border-t border-[#EAE7DF] relative">
+          <div className="max-w-3xl space-y-2 mb-12">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#0F7B6C] font-semibold">
+              08 // POCKET SIGN-OFF STUDIO
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114]">
+              Clients approve from their phone in two seconds.
+            </h2>
+            <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
+              No passwords, no app installs. Dispatch a 72-hour tokenized Magic Link; the moment your client signs off on mobile, your desktop board updates live over WebSockets.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#EAE7DF] bg-[#FAF9F6] p-6 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-10">
+            {/* Desktop Receiver Panel + Live WebSocket Receipt */}
+            <div className="w-full lg:w-1/2 space-y-5">
+              <div className="p-6 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#EAE7DF]">
+                  <span className="text-xs font-semibold text-[#111114]">
+                    Agency Desktop · Approval Receiver
+                  </span>
+                  <span className="text-[10px] font-mono text-[#0F7B6C] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#0F7B6C] animate-pulse" />
+                    WebSocket Listening
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-[#8C8A84]">Client</span>
+                    <span className="text-[#111114] font-semibold">One8 Commune</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#8C8A84]">Magic Link</span>
+                    <span className="text-[#0F7B6C]">agencyos.app/review/rk_9482bf0e</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#8C8A84]">Security</span>
+                    <span className="text-[#111114]">72h Auto-Lock · SHA-256</span>
+                  </div>
+                </div>
+              </div>
+
+              {showDesktopToast ? (
+                <div className="p-4 rounded-xl bg-[#111114] text-white shadow-xl border border-neutral-800 space-y-1.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      WebSocket Event: Client Approved
+                    </span>
+                    <span className="text-white/50">Just now</span>
+                  </div>
+                  <p className="text-xs text-white/90">
+                    One8 Commune signed off on Weekend Truffle Tasting Carousel.
+                  </p>
+                  <p className="text-[10px] font-mono text-white/60">
+                    SHA-256: 8f9c2e...4b1a · Scheduled for Friday 18:00 dispatch.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-dashed border-[#EAE7DF] text-xs font-mono text-[#8C8A84]">
+                  Waiting for mobile client sign-off on the right...
+                </div>
+              )}
+
+              <button
+                onClick={handleResetApproval}
+                className="text-xs font-mono text-[#6B6A65] hover:text-[#111114] inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset Sign-Off Demo
+              </button>
+            </div>
+
+            {/* Mobile Hardware Frame with Real Editorial Image */}
+            <div className="w-full max-w-[300px] bg-[#FFFFFF] rounded-[34px] border-4 border-[#111114] shadow-2xl p-4 space-y-4">
+              <div className="w-20 h-3.5 bg-[#111114] rounded-full mx-auto" />
+
+              <div className="text-center space-y-0.5">
+                <span className="text-[9px] font-mono text-[#8C8A84] uppercase">Review Room · One8 Commune</span>
+                <p className="text-xs font-heading font-bold text-[#111114]">Weekend Truffle Tasting</p>
+              </div>
+
+              <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden border border-[#EAE7DF]">
+                <img
+                  src="/landing/one8-truffle.jpg"
+                  alt="One8 Commune Deliverable Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-[#111114]/80 text-white text-[9px] font-mono">
+                  SLIDE 1 / 5
+                </div>
+                <div className="absolute bottom-2 inset-x-2 p-2 rounded-lg bg-[#111114]/85 text-white backdrop-blur-xs text-[10px] leading-snug">
+                  Shaved black winter truffles over handmade burrata gnocchi. Thirty portions each Friday.
+                </div>
+              </div>
+
+              {mobileApproved ? (
+                <div className="p-3 rounded-xl bg-[#DDEDEA] border border-[#0F7B6C]/35 text-center space-y-0.5">
+                  <p className="text-xs font-bold text-[#0F7B6C] flex items-center justify-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    Approved & Signed
+                  </p>
+                  <p className="text-[9px] font-mono text-[#0F7B6C]">SHA-256 Hash Locked</p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleMobileApprove}
+                  className="w-full py-3 rounded-xl bg-[#111114] text-white text-xs font-medium hover:bg-[#2F2E2B] transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>Tap to Sign Off Deliverable</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 9: PUBLISHING & ECONOMICS
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="pricing" className="py-20 px-6 sm:px-10 lg:px-12 bg-[#F3F1EC]/55 border-b border-[#EAE7DF] relative">
+          <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
+          <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
+
+          <div className="max-w-3xl space-y-2 mb-12">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+              09 // PUBLISHING & ECONOMICS
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[#111114]">
+              Omnichannel publishing and zero per-seat penalties.
+            </h2>
+            <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
+              Approved assets dispatch directly to Instagram, Facebook, and LinkedIn via distributed worker queues, while unlimited team seats protect your agency margins as you scale retainers.
+            </p>
+          </div>
+
+          {/* Publishing & Analytics Pillar Strip */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            <div className="p-5 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#111114]">
+                <CalendarDays className="w-4 h-4 text-[#0F7B6C]" />
+                <span>Omnichannel Calendar</span>
+              </div>
+              <p className="text-xs text-[#6B6A65] leading-relaxed">
+                Monthly and weekly grids syncing directly from Phased Campaign Plans with drag-and-drop rescheduling.
+              </p>
+            </div>
+            <div className="p-5 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#111114]">
+                <Send className="w-4 h-4 text-[#0F7B6C]" />
+                <span>Direct Meta & LinkedIn Dispatch</span>
+              </div>
+              <p className="text-xs text-[#6B6A65] leading-relaxed">
+                Distributed publication workers with lease locking prevent duplicate posts and handle retries automatically.
+              </p>
+            </div>
+            <div className="p-5 rounded-xl bg-[#FFFFFF] border border-[#EAE7DF] space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#111114]">
+                <BarChart3 className="w-4 h-4 text-[#0F7B6C]" />
+                <span>Retainer ROI Analytics</span>
+              </div>
+              <p className="text-xs text-[#6B6A65] leading-relaxed">
+                Automated metric workers track organic lift, impressions, and specialist time saved across client accounts.
+              </p>
+            </div>
+          </div>
+
+          <MarginCalculator />
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            STAGE 10: CLOSING SIGN-OFF & ARCHITECTURAL FOOTER
+           ═══════════════════════════════════════════════════════════════════════ */}
+        <section id="closing" className="py-24 px-6 sm:px-10 lg:px-12 text-center bg-[#FAF9F6] relative">
           <div className="absolute -top-2.5 -left-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
           <div className="absolute -top-2.5 -right-2.5 select-none font-mono text-xs text-[#8C8A84] pointer-events-none">+</div>
 
           <div className="max-w-3xl mx-auto space-y-6">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-[#111114] font-sans leading-tight">
-              Run Every Client Retainer on One Deterministic System.
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#6B6A65]">
+              10 // CLOSING SIGN-OFF
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[-0.035em] text-[#111114] leading-[1.08]">
+              Run every client retainer on one deterministic system.
             </h2>
             <p className="text-sm sm:text-base text-[#6B6A65] max-w-2xl mx-auto leading-relaxed font-sans">
-              Zero brand drift, zero seat taxes, and 1-click mobile client approvals. Join forward-thinking agencies operating with institutional memory.
+              Zero brand drift, zero seat taxes, and 1-click mobile client approvals. Built for agencies that refuse to ship mediocre work.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Link
                 href={isAuthenticated ? "/dashboard" : "/signup"}
-                className="px-6 py-3 rounded-full text-sm font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all shadow-xs flex items-center gap-2 font-sans"
+                className="px-6 py-3 rounded-full text-sm font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all flex items-center gap-2 font-sans"
               >
                 <span>{isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <a
                 href="#preview"
-                className="px-6 py-3 rounded-full text-sm font-medium bg-[#FFFFFF] border border-[#EAE7DF] text-[#111114] hover:bg-[#F3F1EC] transition-all shadow-xs font-sans"
+                className="px-6 py-3 rounded-full text-sm font-medium bg-[#FFFFFF] border border-[#EAE7DF] text-[#111114] hover:bg-[#F3F1EC] transition-all font-sans"
               >
-                Try the Live Interface
+                Return to Live Workspace
               </a>
             </div>
           </div>
         </section>
 
-        {/* Public-Safe Footer */}
-        <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-[#EAE7DF] bg-[#FFFFFF] text-xs text-[#6B6A65]">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        {/* Architectural Footer */}
+        <footer className="py-12 px-6 sm:px-10 lg:px-12 border-t border-[#EAE7DF] bg-[#FFFFFF] text-xs text-[#6B6A65]">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded bg-[#111114] text-white flex items-center justify-center font-mono text-xs font-bold">
                   A
                 </div>
-                <span className="font-semibold text-sm text-[#111114] font-sans">AgencyOS</span>
+                <span className="font-heading font-bold text-sm text-[#111114]">AgencyOS</span>
               </div>
               <p className="text-[11px] leading-relaxed font-sans">
                 The Operating System for Modern Marketing Agencies. Built by Brieva.
@@ -814,19 +995,19 @@ export default function LandingPage() {
             </div>
 
             <div className="space-y-1.5 font-sans">
-              <p className="font-semibold text-[#111114]">Product</p>
-              <p><a href="#preview" className="hover:text-[#111114]">Interactive Preview</a></p>
-              <p><a href="#cortex-vault" className="hover:text-[#111114]">Cortex Living Brand Vault</a></p>
-              <p><a href="#review-room" className="hover:text-[#111114]">Magic-Link Review Rooms</a></p>
-              <p><a href="#teleprompter" className="hover:text-[#111114]">Viral Teleprompter Studio</a></p>
+              <p className="font-semibold text-[#111114]">Architecture</p>
+              <p><a href="#preview" className="hover:text-[#111114]">Flagship Workspace</a></p>
+              <p><a href="#cortex" className="hover:text-[#111114]">Cortex Proofreader Canvas</a></p>
+              <p><a href="#intelligence" className="hover:text-[#111114]">Campaign Intelligence</a></p>
+              <p><a href="#darkroom" className="hover:text-[#111114]">Darkroom Production Suite</a></p>
             </div>
 
             <div className="space-y-1.5 font-sans">
-              <p className="font-semibold text-[#111114]">Workspaces</p>
-              <p><a href="#operations" className="hover:text-[#111114]">Content Calendar</a></p>
-              <p><a href="#operations" className="hover:text-[#111114]">Community CRM & Inbox</a></p>
-              <p><a href="#operations" className="hover:text-[#111114]">Dependency-Locked Tasks</a></p>
-              <p><a href="#pricing" className="hover:text-[#111114]">Pricing & Retainer Calculator</a></p>
+              <p className="font-semibold text-[#111114]">Operations</p>
+              <p><a href="#operations" className="hover:text-[#111114]">DAG Task Engine & CRM</a></p>
+              <p><a href="#signoff" className="hover:text-[#111114]">Pocket Sign-Off Studio</a></p>
+              <p><a href="#pricing" className="hover:text-[#111114]">Publishing & Economics</a></p>
+              <p><Link href="/login" className="hover:text-[#111114]">Agency Sign In</Link></p>
             </div>
 
             <div className="space-y-1.5 font-sans">
@@ -838,12 +1019,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="max-w-6xl mx-auto pt-6 border-t border-[#EAE7DF] flex flex-wrap items-center justify-between gap-4 font-mono text-[11px]">
+          <div className="pt-6 border-t border-[#EAE7DF] flex flex-wrap items-center justify-between gap-4 font-mono text-[11px]">
             <span>© 2026 AgencyOS by Brieva. All rights reserved.</span>
             <span>Deterministic Agency Architecture</span>
           </div>
         </footer>
-
       </div>
     </div>
   );

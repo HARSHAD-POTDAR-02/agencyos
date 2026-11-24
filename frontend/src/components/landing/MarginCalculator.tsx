@@ -12,22 +12,9 @@ export function MarginCalculator() {
   const extraRetainers = Math.floor(retainers * 0.45);
 
   return (
-    <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-[#EAE7DF] bg-[#F3F1EC]/40">
-      {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-16 space-y-2">
-        <p className="text-xs font-mono uppercase tracking-wider text-[#6B6A65]">
-          Transparent Economics
-        </p>
-        <h2 className="text-3xl sm:text-4xl font-semibold text-[#111114] tracking-tight font-sans">
-          Fair Pricing with Zero Per-Seat Penalties
-        </h2>
-        <p className="text-xs sm:text-sm text-[#6B6A65] leading-relaxed font-sans">
-          Traditional agency software penalizes hiring by charging $30 to $50 every month for each team member. AgencyOS includes unlimited team seats on every plan and charges only for computational AI work.
-        </p>
-      </div>
-
+    <div className="space-y-12">
       {/* Base Plan Card + Action Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Core Base Plan Card */}
         <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-[#EAE7DF] shadow-md flex flex-col justify-between space-y-6">
           <div className="space-y-3">
@@ -234,6 +221,6 @@ export function MarginCalculator() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

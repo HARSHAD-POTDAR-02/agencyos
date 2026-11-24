@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Search, Compass, Laptop, Building2, ArrowRight, CornerDownLeft, X } from "lucide-react";
+import { Search, Compass, Laptop, Building2, CornerDownLeft, X } from "lucide-react";
 
 export interface CommandItem {
   id: string;
-  category: "Navigation" | "Workspace Views" | "Client Fleet";
+  category: "10-Stage Index" | "Workspace Views" | "Client Fleet";
   title: string;
   subtitle: string;
   badge?: string;
@@ -35,7 +35,6 @@ export function CommandPalette({
         if (isOpen) {
           onClose();
         } else {
-          // Trigger open via custom event if not controlled
           window.dispatchEvent(new CustomEvent("agencyos:open-command-palette"));
         }
       }
@@ -50,139 +49,126 @@ export function CommandPalette({
 
   const commands: CommandItem[] = useMemo(() => [
     {
-      id: "nav-preview",
-      category: "Navigation",
-      title: "Interactive Workspace Preview",
-      subtitle: "Jump to Section 3 live software window",
-      badge: "Section 3",
+      id: "stage-02",
+      category: "10-Stage Index",
+      title: "02 · Flagship Workspace",
+      subtitle: "One system across the agency — interactive 5-tier preview",
+      badge: "Stage 02",
       action: () => {
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "nav-cortex",
-      category: "Navigation",
-      title: "Cortex Living Brand Vault",
-      subtitle: "Deterministic taboo and rule enforcement showcase",
-      badge: "Showcase 1",
+      id: "stage-03",
+      category: "10-Stage Index",
+      title: "03 · Fragmented Chaos vs. Deterministic System",
+      subtitle: "The operational problem AgencyOS eliminates",
+      badge: "Stage 03",
       action: () => {
-        const el = document.getElementById("cortex-vault");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("problem")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "nav-approvals",
-      category: "Navigation",
-      title: "Magic-Link Review Rooms",
-      subtitle: "Mobile client sign-off with real-time WebSocket toast",
-      badge: "Showcase 2",
+      id: "stage-04",
+      category: "10-Stage Index",
+      title: "04 · Cortex — Proofreader Canvas",
+      subtitle: "Brand intelligence, negative taboos, PDF provenance, red-ink diff",
+      badge: "Stage 04",
       action: () => {
-        const el = document.getElementById("review-room");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("cortex")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "nav-teleprompter",
-      category: "Navigation",
-      title: "Viral Teleprompter Studio",
-      subtitle: "Dark studio viewport with live auto-scroll WPM speed dial",
-      badge: "Showcase 3",
+      id: "stage-05",
+      category: "10-Stage Index",
+      title: "05 · Campaign Intelligence",
+      subtitle: "Six specialist agents collaborating from brief to delivery",
+      badge: "Stage 05",
       action: () => {
-        const el = document.getElementById("teleprompter");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("intelligence")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "nav-operations",
-      category: "Navigation",
-      title: "Daily Operations Bento",
-      subtitle: "Calendar, Community CRM, and Dependency-Locked Pipeline",
-      badge: "Section 6",
+      id: "stage-06",
+      category: "10-Stage Index",
+      title: "06 · Darkroom Production Suite",
+      subtitle: "Video production, live auto-scroll teleprompter, WPM speed dial",
+      badge: "Stage 06",
       action: () => {
-        const el = document.getElementById("operations");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("darkroom")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "nav-pricing",
-      category: "Navigation",
-      title: "Pricing & Retainer Margin Calculator",
-      subtitle: "Interactive retainer slider and credit economics",
-      badge: "Section 7",
+      id: "stage-07",
+      category: "10-Stage Index",
+      title: "07 · Daily Operations",
+      subtitle: "DAG execution, OAuth monitoring, community CRM and RBAC",
+      badge: "Stage 07",
       action: () => {
-        const el = document.getElementById("pricing");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("operations")?.scrollIntoView({ behavior: "smooth" });
+        onClose();
+      },
+    },
+    {
+      id: "stage-08",
+      category: "10-Stage Index",
+      title: "08 · Pocket Sign-Off Studio",
+      subtitle: "Mobile Magic-Link approval interface and WebSocket receipts",
+      badge: "Stage 08",
+      action: () => {
+        document.getElementById("signoff")?.scrollIntoView({ behavior: "smooth" });
+        onClose();
+      },
+    },
+    {
+      id: "stage-09",
+      category: "10-Stage Index",
+      title: "09 · Publishing & Economics",
+      subtitle: "Omnichannel calendar, analytics, credits, and margin ledger",
+      badge: "Stage 09",
+      action: () => {
+        document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
       id: "view-cortex",
       category: "Workspace Views",
-      title: "Cortex Memory & Rules",
-      subtitle: "Inspect taboo enforcement and review queue in Section 3",
+      title: "Open Cortex Memory in Workspace",
+      subtitle: "Inspect taboo enforcement and review queue inside Stage 02",
       badge: "Workspace",
       action: () => {
         onSelectWorkspaceTab?.("cortex");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
       id: "view-studio",
       category: "Workspace Views",
-      title: "Campaign Studio & 6 Agents",
-      subtitle: "Inspect multi-agent collaboration and deliverables",
+      title: "Open Campaign Studio in Workspace",
+      subtitle: "Inspect multi-agent deliverables and carousel proofs",
       badge: "Workspace",
       action: () => {
         onSelectWorkspaceTab?.("studio");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
-        onClose();
-      },
-    },
-    {
-      id: "view-calendar",
-      category: "Workspace Views",
-      title: "Content Calendar & Publishing",
-      subtitle: "View omnichannel weekly schedule and token health",
-      badge: "Workspace",
-      action: () => {
-        onSelectWorkspaceTab?.("calendar");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
       id: "view-inbox",
       category: "Workspace Views",
-      title: "Community Inbox & CRM",
-      subtitle: "View Instagram high-intent buyer triage (94/100)",
+      title: "Open Community Inbox in Workspace",
+      subtitle: "Inspect Instagram high-intent buyer triage (94/100)",
       badge: "Workspace",
       action: () => {
         onSelectWorkspaceTab?.("inbox");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
-        onClose();
-      },
-    },
-    {
-      id: "view-billing",
-      category: "Workspace Views",
-      title: "Billing & Credit Meter",
-      subtitle: "Inspect 38k/50k meter and transparent credit tasks",
-      badge: "Workspace",
-      action: () => {
-        onSelectWorkspaceTab?.("billing");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
@@ -190,12 +176,11 @@ export function CommandPalette({
       id: "client-one8",
       category: "Client Fleet",
       title: "Switch Client to One8 Commune",
-      subtitle: "Hospitality & Dining: Taboo-01 health claims and signature menu",
+      subtitle: "Hospitality & Dining — candlelit amber moodboard & menu rules",
       badge: "Hospitality",
       action: () => {
         onSelectClient?.("one8");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
@@ -203,12 +188,11 @@ export function CommandPalette({
       id: "client-kaya",
       category: "Client Fleet",
       title: "Switch Client to Kaya Botanics",
-      subtitle: "D2C Organic Skincare: Eco packaging rules and clean aesthetic",
-      badge: "D2C Wellness",
+      subtitle: "D2C Clean Skincare — travertine stone moodboard & eco packaging",
+      badge: "D2C Skincare",
       action: () => {
         onSelectClient?.("kaya");
-        const el = document.getElementById("preview");
-        el?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
@@ -246,12 +230,11 @@ export function CommandPalette({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-[#111114]/40 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-[#111114]/45 backdrop-blur-sm animate-in fade-in duration-150">
       <div
-        className="w-full max-w-xl bg-[#FFFFFF] rounded-2xl border border-[#EAE7DF] shadow-2xl overflow-hidden flex flex-col max-h-[75vh]"
+        className="w-full max-w-xl bg-[#FFFFFF] rounded-xl border border-[#EAE7DF] shadow-2xl overflow-hidden flex flex-col max-h-[75vh]"
         onKeyDown={handleKeyDown}
       >
-        {/* Search Input Bar */}
         <div className="flex items-center px-4 py-3.5 border-b border-[#EAE7DF] gap-3 bg-[#FAF9F6]">
           <Search className="w-4 h-4 text-[#8C8A84] shrink-0" />
           <input
@@ -259,7 +242,7 @@ export function CommandPalette({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a section, workspace screen, or client name..."
+            placeholder="Jump to stage, workspace screen, or client brand..."
             className="w-full text-sm font-sans bg-transparent text-[#111114] placeholder-[#8C8A84] focus:outline-none"
           />
           {query ? (
@@ -276,7 +259,6 @@ export function CommandPalette({
           )}
         </div>
 
-        {/* Command List */}
         <div className="overflow-y-auto p-2 space-y-1">
           {filteredCommands.length === 0 ? (
             <div className="py-8 text-center text-xs font-sans text-[#8C8A84]">
@@ -290,17 +272,17 @@ export function CommandPalette({
                   key={command.id}
                   onClick={() => command.action()}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors ${
                     isSelected ? "bg-[#111114] text-[#FFFFFF]" : "text-[#111114] hover:bg-[#F3F1EC]"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
                         isSelected ? "bg-white/10 text-white" : "bg-[#FAF9F6] border border-[#EAE7DF] text-[#6B6A65]"
                       }`}
                     >
-                      {command.category === "Navigation" && <Compass className="w-3.5 h-3.5" />}
+                      {command.category === "10-Stage Index" && <Compass className="w-3.5 h-3.5" />}
                       {command.category === "Workspace Views" && <Laptop className="w-3.5 h-3.5" />}
                       {command.category === "Client Fleet" && <Building2 className="w-3.5 h-3.5" />}
                     </div>
@@ -336,16 +318,15 @@ export function CommandPalette({
           )}
         </div>
 
-        {/* Footer Guidance */}
         <div className="px-4 py-2 border-t border-[#EAE7DF] bg-[#FAF9F6] flex items-center justify-between text-[11px] font-sans text-[#8C8A84]">
           <div className="flex items-center gap-2">
-            <span>Navigation:</span>
+            <span>Navigate:</span>
             <span className="font-mono bg-[#FFFFFF] px-1 py-0.5 rounded border border-[#EAE7DF]">↑</span>
             <span className="font-mono bg-[#FFFFFF] px-1 py-0.5 rounded border border-[#EAE7DF]">↓</span>
-            <span>Select:</span>
+            <span>Open:</span>
             <span className="font-mono bg-[#FFFFFF] px-1.5 py-0.5 rounded border border-[#EAE7DF]">↵</span>
           </div>
-          <span className="font-mono text-[10px]">AgencyOS Command Palette</span>
+          <span className="font-mono text-[10px]">AgencyOS Editorial Index</span>
         </div>
       </div>
     </div>

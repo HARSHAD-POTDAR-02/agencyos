@@ -122,6 +122,8 @@ export function InteractiveWorkspace({
         },
       ],
       deliverable: "Weekend Truffle Tasting Deliverable",
+      image: "/landing/one8-truffle.jpg",
+      swatches: ["#1C1917", "#9A6700", "#D6CFC2"],
       inboundComment: "Do you take private group bookings for 30 guests this Friday evening?",
       draftReply: "We would love to host your group at One8 Commune. Our private dining room is available this Friday—our guest concierge has sent a direct message with our curated group tasting menu.",
     },
@@ -159,6 +161,8 @@ export function InteractiveWorkspace({
         },
       ],
       deliverable: "Cold-Pressed Botanical Elixir Deliverable",
+      image: "/landing/kaya-elixir.jpg",
+      swatches: ["#2D4A3E", "#C8B8A2", "#F3F1EC"],
       inboundComment: "Is the bio-fermented squalane suitable for hyper-sensitive rosacea-prone skin?",
       draftReply: "Yes. Our bio-fermented squalane is 100% plant-derived, non-comedogenic, and fragrance-free, clinically tested for sensitive skin barriers. We recommend doing a 24-hour patch test before full application.",
     },
@@ -167,23 +171,10 @@ export function InteractiveWorkspace({
   const currentClient = clientData[selectedClient];
 
   return (
-    <section id="preview" className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-28">
-      {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-        <p className="text-xs font-mono uppercase tracking-wider text-[#6B6A65]">
-          Interactive System Preview
-        </p>
-        <h2 className="text-3xl sm:text-4xl font-semibold text-[#111114] tracking-tight font-sans">
-          Explore the Five-Tier AgencyOS Workspace
-        </h2>
-        <p className="text-xs sm:text-sm text-[#6B6A65] font-sans leading-relaxed">
-          Click any section in the sidebar or switch between active agency clients to test deterministic brand rules, multi-agent collaboration, and mobile review rooms.
-        </p>
-      </div>
-
+    <div className="w-full">
       {/* Main Window Frame with 3D Perspective Flatten */}
       <div className="relative group [perspective:1200px]">
-        <div className="bg-[#FFFFFF] rounded-2xl border border-[#EAE7DF] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[640px] transition-transform duration-500 ease-out">
+        <div className="bg-[#FFFFFF] rounded-2xl border border-[#EAE7DF] shadow-[0_24px_60px_-15px_rgba(17,17,20,0.12)] overflow-hidden flex flex-col md:flex-row min-h-[640px] transition-transform duration-500 ease-out">
           
           {/* Left Sidebar (Our Real 5-Tier Architecture) */}
           <div className="w-full md:w-64 bg-[#FAF9F6] border-r border-[#EAE7DF] flex flex-col shrink-0">
@@ -863,25 +854,50 @@ export function InteractiveWorkspace({
                 </div>
 
                 {studioTab === "carousel" ? (
-                  <div className="p-6 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-4">
+                  <div className="p-5 rounded-xl border border-[#EAE7DF] bg-[#FAF9F6] space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-[#EAE7DF]">
-                      <span className="font-semibold text-xs text-[#111114] font-sans">
-                        Slide 1 of 5 · Visual Cover Slide
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-xs text-[#111114] font-sans">
+                          Slide 1 of 5 · 4:5 Portrait Cover
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {currentClient.swatches.map((hex) => (
+                            <span
+                              key={hex}
+                              className="w-3 h-3 rounded-full border border-[#EAE7DF]"
+                              style={{ backgroundColor: hex }}
+                              title={`Brand Palette ${hex}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
                       <span className="px-2 py-0.5 rounded bg-[#DDEDEA] text-[#0F7B6C] text-[10px] font-mono font-medium">
                         Deterministic Compliance Passed
                       </span>
                     </div>
-                    <div className="h-44 rounded-lg bg-white border border-[#EAE7DF] flex flex-col items-center justify-center p-6 text-center space-y-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#FAF9F6] border border-[#EAE7DF] text-[10px] font-mono text-[#6B6A65]">
-                        {currentClient.name} · Instagram Carousel
-                      </span>
-                      <h4 className="text-base sm:text-lg font-semibold text-[#111114] max-w-md font-sans">
-                        {currentClient.carouselTopic}
-                      </h4>
-                      <p className="text-xs text-[#6B6A65] font-sans">
-                        Handmade daily. Verified against {currentClient.rules[0].id} and {currentClient.rules[1].id}.
-                      </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-white p-4 rounded-xl border border-[#EAE7DF]">
+                      <div className="sm:col-span-5 relative aspect-[4/5] max-h-48 w-full rounded-lg overflow-hidden border border-[#EAE7DF]">
+                        <img
+                          src={currentClient.image}
+                          alt={currentClient.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-[#111114]/80 text-white font-mono text-[9px] backdrop-blur-xs">
+                          4:5 SAFE ZONE
+                        </div>
+                      </div>
+                      <div className="sm:col-span-7 space-y-2.5 text-left">
+                        <span className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#EAE7DF] text-[10px] font-mono text-[#6B6A65]">
+                          {currentClient.name} · Instagram Carousel
+                        </span>
+                        <h4 className="text-base font-heading font-semibold text-[#111114] leading-snug">
+                          {currentClient.carouselTopic}
+                        </h4>
+                        <p className="text-xs text-[#6B6A65] font-sans leading-relaxed">
+                          Crafted from approved brand palette and verified deterministically against {currentClient.rules[0].id} and {currentClient.rules[1].id}.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1247,6 +1263,6 @@ export function InteractiveWorkspace({
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
