@@ -58,6 +58,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/common/MarkdownRenderer";
+import { ShareReviewModal } from "@/components/ShareReviewModal";
 
 interface SubmissionVersion {
   id: string;
@@ -339,6 +340,12 @@ function TaskWorkspaceContent() {
     height: number;
   } | null>(null);
   const [rejectingVisual, setRejectingVisual] = useState(false);
+  const [shareModalState, setShareModalState] = useState<{
+    open: boolean;
+    reviewUrl: string;
+    suggestedEmail?: string | null;
+    suggestedName?: string | null;
+  }>({ open: false, reviewUrl: "" });
 
   // Cortex In-Task Compliance State
   const [auditingCompliance, setAuditingCompliance] = useState(false);
@@ -885,11 +892,21 @@ function TaskWorkspaceContent() {
     try {
       const data = await reviewApi.generateToken(effectiveAgencyId, task.deliverable_id, token);
       const fullUrl = `${window.location.origin}/review/${data.token}`;
-      await navigator.clipboard.writeText(fullUrl);
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+      } catch {
+        // Ignore clipboard failure
+      }
       setCopiedReviewLink(true);
+      setShareModalState({
+        open: true,
+        reviewUrl: fullUrl,
+        suggestedEmail: data.suggested_recipient_email,
+        suggestedName: data.suggested_recipient_name,
+      });
       setNotification({
         type: "success",
-        text: "Zero-login client review link copied to clipboard!",
+        text: "Zero-login client review link copied! You can also email it directly in the popup.",
       });
       setTimeout(() => setCopiedReviewLink(false), 3000);
     } catch (err: any) {
@@ -3352,6 +3369,20 @@ function TaskWorkspaceContent() {
               <span>ESC closes presenter mode</span>
             </div>
           </div>
+        )}
+
+        {effectiveAgencyId && token && task?.deliverable_id && (
+          <ShareReviewModal
+            open={shareModalState.open}
+            onClose={() => setShareModalState((prev) => ({ ...prev, open: false }))}
+            agencyId={effectiveAgencyId}
+            deliverableId={task.deliverable_id}
+            deliverableTitle={task.deliverable_title || task.title}
+            token={token}
+            initialReviewUrl={shareModalState.reviewUrl}
+            suggestedEmail={shareModalState.suggestedEmail}
+            suggestedName={shareModalState.suggestedName}
+          />
         )}
       </main>
     </div>

@@ -136,7 +136,7 @@ function EngagementTrendChart({ posts }: { posts: LiveMetaPostItem[] }) {
 
   if (dailyData.length === 0) {
     return (
-      <div className="h-44 flex items-center justify-center text-xs text-[#A3A0B0] italic bg-[#101014] rounded-xl border border-white/[0.08]">
+      <div className="h-44 flex items-center justify-center text-xs text-[#6B6A65] dark:text-[#A3A0B0] italic bg-[#F7F6F3] dark:bg-[#101014] rounded-xl border border-black/[0.08] dark:border-white/[0.08]">
         No post timeline data available yet.
       </div>
     );
@@ -163,20 +163,20 @@ function EngagementTrendChart({ posts }: { posts: LiveMetaPostItem[] }) {
   const areaD = `${lineD} L ${points[points.length - 1].x.toFixed(1)} ${height - padBottom} L ${points[0].x.toFixed(1)} ${height - padBottom} Z`;
 
   return (
-    <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+    <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3 shadow-xs">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-[#A78BFA]" />
-          <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight">
+          <Activity className="w-4 h-4 text-[#7C3AED] dark:text-[#A78BFA]" />
+          <h3 className="text-sm font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
             Audience Engagement Velocity Over Time
           </h3>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/30 font-bold">
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-700 dark:text-[#A78BFA] border border-violet-500/25 dark:border-[#A78BFA]/30 font-bold">
           {dailyData.length} Active Days Tracked
         </span>
       </div>
 
-      <div className="relative w-full aspect-[600/180] bg-[#101014] rounded-xl border border-white/[0.06] p-2 overflow-hidden">
+      <div className="relative w-full aspect-[600/180] bg-[#F7F6F3] dark:bg-[#101014] rounded-xl border border-black/[0.06] dark:border-white/[0.06] p-2 overflow-hidden">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
           <defs>
             <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
@@ -518,78 +518,132 @@ function FormatPerformanceComparison({ posts }: { posts: LiveMetaPostItem[] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT 5: Itemized Transparent Financial Ledger ("The Receipt" for the ₹43k)
+// COMPONENT 5: Itemized Transparent Financial Ledger
 // ─────────────────────────────────────────────────────────────────────────────
 function ItemizedFinancialReceipt({ report }: { report: MonthlyReport }) {
   const roi = report.roi_metrics;
   if (!roi) return null;
 
+  const formatParts: string[] = [];
+  if ((roi.videos_count ?? 0) > 0) formatParts.push(`${roi.videos_count} Video/Reel @ ₹15k`);
+  if ((roi.carousels_count ?? 0) > 0) formatParts.push(`${roi.carousels_count} Carousel @ ₹10k`);
+  if ((roi.images_count ?? 0) > 0) formatParts.push(`${roi.images_count} Static/Graphic @ ₹6k`);
+  if ((roi.other_count ?? 0) > 0) formatParts.push(`${roi.other_count} Other @ ₹4k`);
+  const assetBreakdownText =
+    formatParts.length > 0
+      ? `${report.deliverables_delivered} Approved Assets (${formatParts.join(", ")})`
+      : `${report.deliverables_delivered} Approved Assets (Studio Benchmark)`;
+
+  const accountLabels =
+    roi.connected_account_labels && roi.connected_account_labels.length > 0
+      ? roi.connected_account_labels.join(" + ")
+      : "Connected client channels";
+
+  const hasRetainer = roi.is_retainer_configured !== false && roi.monthly_retainer_fee > 0;
+
   return (
-    <div className="surface-card rounded-2xl border border-white/[0.08] p-6 space-y-4 shadow-xs">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.08]">
+    <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-6 space-y-4 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-black/[0.08] dark:border-white/[0.08]">
         <div className="flex items-center gap-2">
-          <Award className="w-4 h-4 text-[#E5AA58]" />
+          <Award className="w-4 h-4 text-amber-600 dark:text-[#E5AA58]" />
           <div>
-            <h3 className="text-sm font-heading font-bold text-[#F2F0F7] tracking-tight">
-              Itemized Earned Media Value (EMV) Financial Ledger
+            <h3 className="text-sm font-heading font-bold text-[#191919] dark:text-[#F2F0F7] tracking-tight">
+              Itemized Earned Media Value (EMV) &amp; Agency Cost Ledger
             </h3>
-            <p className="text-xs text-[#A3A0B0]">
-              Transparent line-item audit showing exactly how the ₹43,770 realized value was computed
+            <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0]">
+              Line-item audit showing how {formatCurrency(roi.estimated_earned_media_value, roi.currency)} realized EMV was computed for {report.client_name}
             </p>
           </div>
         </div>
-        <span className="text-xs font-mono text-[#A3A0B0] self-start sm:self-auto bg-[#101014] px-3 py-1.5 rounded-xl border border-white/[0.08]">
-          Total Realized Value: <strong className="text-[#45B88A]">{formatCurrency(roi.estimated_earned_media_value, roi.currency)}</strong>
+        <span className="text-xs font-mono text-[#6B6A65] dark:text-[#A3A0B0] self-start sm:self-auto bg-[#F7F6F3] dark:bg-[#101014] px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08]">
+          Total Realized Value: <strong className="text-emerald-600 dark:text-[#45B88A]">{formatCurrency(roi.estimated_earned_media_value, roi.currency)}</strong>
         </span>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs font-mono">
           <thead>
-            <tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-[#A3A0B0]">
+            <tr className="border-b border-black/[0.06] dark:border-white/[0.06] text-[10px] uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0]">
               <th className="pb-2">Value Component</th>
               <th className="pb-2">Source / Evidence</th>
               <th className="pb-2">Benchmark Valuation Rate</th>
               <th className="pb-2 text-right">Realized Amount</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.04] text-[11px]">
+          <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.04] text-[11px]">
             <tr>
-              <td className="py-2.5 text-[#A78BFA] font-bold">1. Creative Asset Production</td>
-              <td className="py-2.5 text-[#F2F0F7]">{report.deliverables_delivered} Approved Assets (1 Video @ ₹15k, 1 Carousel @ ₹10k, base)</td>
-              <td className="py-2.5 text-[#A3A0B0]">Standard creative studio replacement cost</td>
-              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(roi.estimated_production_value, roi.currency)}</td>
+              <td className="py-2.5 text-violet-700 dark:text-[#A78BFA] font-bold">1. Creative Asset Production</td>
+              <td className="py-2.5 text-[#191919] dark:text-[#F2F0F7]">{assetBreakdownText}</td>
+              <td className="py-2.5 text-[#6B6A65] dark:text-[#A3A0B0]">Standard studio replacement cost</td>
+              <td className="py-2.5 text-right font-bold text-[#191919] dark:text-[#F2F0F7]">{formatCurrency(roi.estimated_production_value, roi.currency)}</td>
             </tr>
             <tr>
-              <td className="py-2.5 text-[#E16F7B] font-bold">2. Verified Meta Likes</td>
-              <td className="py-2.5 text-[#F2F0F7]">{report.total_likes} Real Likes Streamed from Graph API</td>
-              <td className="py-2.5 text-[#A3A0B0]">₹40.00 / verified organic like</td>
-              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(report.total_likes * 40, roi.currency)}</td>
+              <td className="py-2.5 text-rose-600 dark:text-[#E16F7B] font-bold">2. Verified Organic Likes</td>
+              <td className="py-2.5 text-[#191919] dark:text-[#F2F0F7]">{report.total_likes.toLocaleString()} Likes</td>
+              <td className="py-2.5 text-[#6B6A65] dark:text-[#A3A0B0]">₹40.00 / organic like</td>
+              <td className="py-2.5 text-right font-bold text-[#191919] dark:text-[#F2F0F7]">{formatCurrency(report.total_likes * 40, roi.currency)}</td>
             </tr>
             <tr>
-              <td className="py-2.5 text-[#69A9D8] font-bold">3. High-Intent Comments</td>
-              <td className="py-2.5 text-[#F2F0F7]">{report.total_comments} Real Comments on Published Content</td>
-              <td className="py-2.5 text-[#A3A0B0]">₹125.00 / high-intent audience comment</td>
-              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(report.total_comments * 125, roi.currency)}</td>
+              <td className="py-2.5 text-sky-600 dark:text-[#69A9D8] font-bold">3. High-Intent Comments</td>
+              <td className="py-2.5 text-[#191919] dark:text-[#F2F0F7]">{report.total_comments.toLocaleString()} Comments</td>
+              <td className="py-2.5 text-[#6B6A65] dark:text-[#A3A0B0]">₹125.00 / audience comment</td>
+              <td className="py-2.5 text-right font-bold text-[#191919] dark:text-[#F2F0F7]">{formatCurrency(report.total_comments * 125, roi.currency)}</td>
             </tr>
+            {(roi.total_saves ?? 0) > 0 && (
+              <tr>
+                <td className="py-2.5 text-amber-600 dark:text-[#E5AA58] font-bold">4. High-Intent Saves</td>
+                <td className="py-2.5 text-[#191919] dark:text-[#F2F0F7]">{(roi.total_saves ?? 0).toLocaleString()} Saves</td>
+                <td className="py-2.5 text-[#6B6A65] dark:text-[#A3A0B0]">₹80.00 / post save</td>
+                <td className="py-2.5 text-right font-bold text-[#191919] dark:text-[#F2F0F7]">{formatCurrency(roi.saves_valuation ?? 0, roi.currency)}</td>
+              </tr>
+            )}
             <tr>
-              <td className="py-2.5 text-[#45B88A] font-bold">4. Verified Follower Reach</td>
-              <td className="py-2.5 text-[#F2F0F7]">{roi.total_audience} Verified Subscribers (@posthero.ai + Test page)</td>
-              <td className="py-2.5 text-[#A3A0B0]">₹15.00 / verified subscriber</td>
-              <td className="py-2.5 text-right font-bold text-[#F2F0F7]">{formatCurrency(roi.total_audience * 15, roi.currency)}</td>
+              <td className="py-2.5 text-emerald-600 dark:text-[#45B88A] font-bold">{(roi.total_saves ?? 0) > 0 ? "5." : "4."} Verified Audience Reach</td>
+              <td className="py-2.5 text-[#191919] dark:text-[#F2F0F7]">{roi.total_audience.toLocaleString()} Followers ({accountLabels})</td>
+              <td className="py-2.5 text-[#6B6A65] dark:text-[#A3A0B0]">₹15.00 / verified follower</td>
+              <td className="py-2.5 text-right font-bold text-[#191919] dark:text-[#F2F0F7]">{formatCurrency(roi.total_audience * 15, roi.currency)}</td>
             </tr>
             <tr className="border-t border-black/[0.08] dark:border-white/[0.1] bg-[#F7F6F3] dark:bg-[#101014]/60 font-bold">
-              <td className="py-3 text-[#F2F0F7]" colSpan={2}>
+              <td className="py-3 text-[#191919] dark:text-[#F2F0F7]" colSpan={2}>
                 Total Generated Earned Media Value (EMV)
               </td>
-              <td className="py-3 text-[#A3A0B0]">Monthly Retainer: {formatCurrency(roi.monthly_retainer_fee, roi.currency)}</td>
-              <td className="py-3 text-right text-base text-[#45B88A]">
+              <td className="py-3 text-[#6B6A65] dark:text-[#A3A0B0]">
+                {hasRetainer ? `Monthly Retainer: ${formatCurrency(roi.monthly_retainer_fee, roi.currency)}` : "Retainer Not Configured"}
+              </td>
+              <td className="py-3 text-right text-base text-emerald-600 dark:text-[#45B88A]">
                 {formatCurrency(roi.estimated_earned_media_value, roi.currency)}
-                <span className="text-xs text-[#A78BFA] ml-2 block sm:inline">({roi.roi_multiplier}x Retainer Multiple)</span>
+                <span className="text-xs text-violet-700 dark:text-[#A78BFA] ml-2 block sm:inline">
+                  {hasRetainer ? `(${roi.roi_multiplier}x Retainer Multiple)` : "(Set contract retainer for ROI multiple)"}
+                </span>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* Agency Cost-to-Serve & Net Margin Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-black/[0.06] dark:border-white/[0.06] text-xs font-mono">
+        <div className="p-3 rounded-xl bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.06] dark:border-white/[0.06]">
+          <span className="text-[10px] uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] block">AI Production Cost (Period)</span>
+          <span className="text-sm font-bold text-[#191919] dark:text-[#F2F0F7] mt-0.5 block">
+            {formatCurrency(roi.ai_production_cost_inr ?? 0, roi.currency)}
+            <span className="text-[10px] text-[#6B6A65] dark:text-[#A3A0B0] font-normal ml-1.5">
+              (${(roi.ai_production_cost_usd ?? 0).toFixed(4)} · {(roi.ai_tokens_used ?? 0).toLocaleString()} tok)
+            </span>
+          </span>
+        </div>
+        <div className="p-3 rounded-xl bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.06] dark:border-white/[0.06]">
+          <span className="text-[10px] uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] block">Cost Per Approved Asset</span>
+          <span className="text-sm font-bold text-[#191919] dark:text-[#F2F0F7] mt-0.5 block">
+            {hasRetainer ? formatCurrency(roi.cost_per_approved_asset, roi.currency) : "—"}
+          </span>
+        </div>
+        <div className="p-3 rounded-xl bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.06] dark:border-white/[0.06]">
+          <span className="text-[10px] uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0] block">Net Agency Margin (Retainer - AI)</span>
+          <span className="text-sm font-bold text-emerald-600 dark:text-[#45B88A] mt-0.5 block">
+            {hasRetainer ? formatCurrency(roi.net_agency_margin_inr ?? roi.monthly_retainer_fee, roi.currency) : "—"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -628,7 +682,7 @@ function ReportsContent() {
   );
 
   const [activeTab, setActiveTab] = useState<"deliverables" | "live_feed" | "benchmarks">("deliverables");
-  const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook">("all");
+  const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook" | "linkedin">("all");
   const [sortBy, setSortBy] = useState<"views" | "likes" | "comments" | "engagement">("views");
   const [showRoiInfo, setShowRoiInfo] = useState(false);
 
@@ -829,6 +883,11 @@ function ReportsContent() {
     return report.top_deliverables.filter((d) => (d.platform || "").toLowerCase().includes("facebook")).length;
   }, [report?.top_deliverables]);
 
+  const linkedinCount = useMemo(() => {
+    if (!report?.top_deliverables) return 0;
+    return report.top_deliverables.filter((d) => (d.platform || "").toLowerCase().includes("linkedin")).length;
+  }, [report?.top_deliverables]);
+
   if (!isLoading && isSpecialist) {
     return null;
   }
@@ -837,8 +896,32 @@ function ReportsContent() {
     report?.instagram_profile?.connected || report?.facebook_profile?.connected
   );
 
+  const chartPosts = useMemo<LiveMetaPostItem[]>(() => {
+    if (report?.live_meta_posts && report.live_meta_posts.length > 0) {
+      return report.live_meta_posts;
+    }
+    if (!report?.top_deliverables || report.top_deliverables.length === 0) {
+      return [];
+    }
+    return report.top_deliverables.map((d) => ({
+      id: d.id,
+      platform: d.platform || "instagram",
+      caption: d.title,
+      media_type: (d.deliverable_type || "").toUpperCase(),
+      permalink: d.live_post_url || "",
+      timestamp: d.timestamp || undefined,
+      likes_count: d.likes_count || 0,
+      comments_count: d.comments_count || 0,
+      shares_count: d.shares_count || 0,
+      views_count: d.views_count || 0,
+      saved_count: d.saved_count || 0,
+      is_deliverable_match: true,
+      deliverable_title: d.title,
+    }));
+  }, [report?.live_meta_posts, report?.top_deliverables]);
+
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none text-[#F2F0F7]">
+    <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-none text-[#191919] dark:text-[#F2F0F7]">
       {/* ── Editorial Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-white/[0.08] print:border-none">
         <div className="space-y-1">
@@ -887,23 +970,23 @@ function ReportsContent() {
       </div>
 
       {/* ── Selector Filters Bar (Linear Toolstrip) ── */}
-      <div className="surface-card rounded-xl border border-white/[0.08] p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs print:hidden">
+      <div className="surface-card rounded-xl border border-black/[0.08] dark:border-white/[0.08] p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs print:hidden">
         <div className="flex flex-wrap items-center gap-3">
           {/* Client Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-[#A3A0B0] flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <label className="text-xs font-semibold text-[#6B6A65] dark:text-[#A3A0B0] flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-violet-600 dark:text-[#A78BFA]" />
               <span>Client:</span>
             </label>
             {loadingClients ? (
-              <div className="h-8 w-44 bg-[#101014] animate-pulse rounded-lg border border-white/[0.08]" />
+              <div className="h-8 w-44 bg-[#EFEFED] dark:bg-[#101014] animate-pulse rounded-lg border border-black/[0.08] dark:border-white/[0.08]" />
             ) : clients.length === 0 ? (
-              <span className="text-xs text-[#71717A] italic">No clients registered</span>
+              <span className="text-xs text-[#6B6A65] dark:text-[#71717A] italic">No clients registered</span>
             ) : (
               <select
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
-                className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+                className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet-500/50 cursor-pointer transition-colors"
               >
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -914,18 +997,18 @@ function ReportsContent() {
             )}
           </div>
 
-          <div className="h-4 w-[1px] bg-white/[0.08] hidden sm:block" />
+          <div className="h-4 w-[1px] bg-black/[0.08] dark:bg-white/[0.08] hidden sm:block" />
 
           {/* Month Selector */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-[#A3A0B0] flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <label className="text-xs font-medium text-[#6B6A65] dark:text-[#A3A0B0] flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-violet-600 dark:text-[#A78BFA]" />
               <span>Period:</span>
             </label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+              className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet-500/50 cursor-pointer transition-colors"
             >
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -938,7 +1021,7 @@ function ReportsContent() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="text-xs font-medium text-[#F2F0F7] bg-[#101014] border border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/50 cursor-pointer transition-colors"
+              className="text-xs font-medium text-[#191919] dark:text-[#F2F0F7] bg-[#F7F6F3] dark:bg-[#101014] border border-black/[0.08] dark:border-white/[0.08] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-violet-500/50 cursor-pointer transition-colors"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -1240,7 +1323,7 @@ function ReportsContent() {
             </div>
 
             {/* Time-Series Area Chart (Timeline Velocity) */}
-            <EngagementTrendChart posts={report.live_meta_posts || []} />
+            <EngagementTrendChart posts={chartPosts} />
 
             {/* 2-Column: Interaction Mix Donut & Best Day to Post */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1249,11 +1332,11 @@ function ReportsContent() {
                 comments={report.total_comments}
                 shares={report.roi_metrics?.total_social_interactions ? Math.max(0, report.roi_metrics.total_social_interactions - report.total_likes - report.total_comments) : 0}
               />
-              <DayOfWeekEngagementChart posts={report.live_meta_posts || []} />
+              <DayOfWeekEngagementChart posts={chartPosts} />
             </div>
 
             {/* Content Format Comparison Bar Cards */}
-            <FormatPerformanceComparison posts={report.live_meta_posts || []} />
+            <FormatPerformanceComparison posts={chartPosts} />
           </div>
 
           {/* ── SECTION 3: ITEMIZED TRANSPARENT FINANCIAL LEDGER ("THE RECEIPT" FOR THE ₹43k) ── */}
@@ -1262,18 +1345,18 @@ function ReportsContent() {
           {/* ── SECTION 4: 4 KEY KPI CARDS ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* KPI 1: Contract Quota Fulfillment */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0]">
                   Retainer Quota SLA
                 </span>
                 <span
                   className={`p-2 rounded-xl border ${
                     report.quota_fulfillment_rate >= 100
-                      ? "bg-[#45B88A]/10 text-[#45B88A] border-[#45B88A]/30"
+                      ? "bg-[#45B88A]/10 text-emerald-600 dark:text-[#45B88A] border-[#45B88A]/30"
                       : report.quota_fulfillment_rate >= 50
-                      ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30"
-                      : "bg-[#E5AA58]/10 text-[#E5AA58] border-[#E5AA58]/30"
+                      ? "bg-[#A78BFA]/10 text-violet-600 dark:text-[#A78BFA] border-[#A78BFA]/30"
+                      : "bg-[#E5AA58]/10 text-amber-600 dark:text-[#E5AA58] border-[#E5AA58]/30"
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -1282,17 +1365,22 @@ function ReportsContent() {
 
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
+                  <span className="text-3xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                     {report.quota_fulfillment_rate}%
                   </span>
-                  <span className="text-xs font-mono text-[#A3A0B0]">fulfilled</span>
+                  <span className="text-xs font-mono text-[#6B6A65] dark:text-[#A3A0B0]">fulfilled</span>
                 </div>
-                <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1 font-mono">
                   {report.deliverables_delivered} of {report.total_scope_quota} items delivered
+                  {typeof report.delivered_delta_pct === "number" && (
+                    <span className={`ml-1.5 font-bold ${report.delivered_delta_pct >= 0 ? "text-emerald-600 dark:text-[#45B88A]" : "text-rose-500"}`}>
+                      ({report.delivered_delta_pct >= 0 ? "+" : ""}{report.delivered_delta_pct}% MoM)
+                    </span>
+                  )}
                 </p>
               </div>
 
-              <div className="w-full h-1.5 rounded-full bg-[#101014] overflow-hidden border border-white/[0.04]">
+              <div className="w-full h-1.5 rounded-full bg-[#EFEFED] dark:bg-[#101014] overflow-hidden border border-black/[0.06] dark:border-white/[0.04]">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     report.quota_fulfillment_rate >= 100
@@ -1307,112 +1395,128 @@ function ReportsContent() {
             </div>
 
             {/* KPI 2: Total Content Views / Impressions */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
-                  Total Reach & Views
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0]">
+                  Total Reach &amp; Views
                 </span>
-                <span className="p-2 rounded-xl bg-[#69A9D8]/10 text-[#69A9D8] border border-[#69A9D8]/30">
+                <span className="p-2 rounded-xl bg-[#69A9D8]/10 text-sky-600 dark:text-[#69A9D8] border border-[#69A9D8]/30">
                   <Eye className="w-4 h-4" />
                 </span>
               </div>
 
               <div>
-                <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
-                  {report.total_views.toLocaleString()}
-                </span>
-                <p className="text-[11px] text-[#A3A0B0] mt-1 font-mono">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7] tracking-tight">
+                    {report.total_views.toLocaleString()}
+                  </span>
+                  {typeof report.views_delta_pct === "number" && (
+                    <span className={`text-[11px] font-mono font-bold ${report.views_delta_pct >= 0 ? "text-emerald-600 dark:text-[#45B88A]" : "text-rose-500"}`}>
+                      {report.views_delta_pct >= 0 ? "+" : ""}{report.views_delta_pct}% MoM
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-1 font-mono">
                   {report.engagement_rate_metrics?.is_live_insights_verified
-                    ? "Verified live reach across feed via Meta Insights"
-                    : "Organic reach & impressions across feed"}
+                    ? "Verified live reach via Meta Insights"
+                    : report.total_views > 0
+                    ? "Tracked views across deliverables"
+                    : "Awaiting live impressions data"}
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-sky-600 dark:text-[#69A9D8] bg-[#69A9D8]/10 border border-[#69A9D8]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <TrendingUp className="w-3 h-3" />
                 <span>
                   {report.engagement_rate_metrics?.is_live_insights_verified
                     ? "Live Meta Insights API"
-                    : "Meta Organic Reach"}
+                    : "Campaign Telemetry"}
                 </span>
               </div>
             </div>
 
             {/* KPI 3: Total Social Engagement */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3.5 shadow-xs">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0]">
                   Total Engagement
                 </span>
-                <span className="p-2 rounded-xl bg-[#E16F7B]/10 text-[#E16F7B] border border-[#E16F7B]/30">
+                <span className="p-2 rounded-xl bg-[#E16F7B]/10 text-rose-600 dark:text-[#E16F7B] border border-[#E16F7B]/30">
                   <Heart className="w-4 h-4" />
                 </span>
               </div>
 
               <div>
-                <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
-                  {(report.total_likes + report.total_comments).toLocaleString()}
-                </span>
-                <div className="flex items-center gap-2 text-[11px] font-mono text-[#A3A0B0] mt-1">
-                  <span className="inline-flex items-center gap-1 text-[#F2F0F7]">
-                    <Heart className="w-3 h-3 text-[#E16F7B]" /> {report.total_likes.toLocaleString()}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7] tracking-tight">
+                    {(report.engagement_rate_metrics?.total_engagements ?? (report.total_likes + report.total_comments)).toLocaleString()}
+                  </span>
+                  {typeof report.engagements_delta_pct === "number" && (
+                    <span className={`text-[11px] font-mono font-bold ${report.engagements_delta_pct >= 0 ? "text-emerald-600 dark:text-[#45B88A]" : "text-rose-500"}`}>
+                      {report.engagements_delta_pct >= 0 ? "+" : ""}{report.engagements_delta_pct}% MoM
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-[11px] font-mono text-[#6B6A65] dark:text-[#A3A0B0] mt-1">
+                  <span className="inline-flex items-center gap-1 text-[#191919] dark:text-[#F2F0F7]">
+                    <Heart className="w-3 h-3 text-rose-500 dark:text-[#E16F7B]" /> {report.total_likes.toLocaleString()}
                   </span>
                   <span>&bull;</span>
-                  <span className="inline-flex items-center gap-1 text-[#F2F0F7]">
-                    <MessageCircle className="w-3 h-3 text-[#69A9D8]" /> {report.total_comments.toLocaleString()}
+                  <span className="inline-flex items-center gap-1 text-[#191919] dark:text-[#F2F0F7]">
+                    <MessageCircle className="w-3 h-3 text-sky-600 dark:text-[#69A9D8]" /> {report.total_comments.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-2.5 py-0.5 rounded-md w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-rose-600 dark:text-[#E16F7B] bg-[#E16F7B]/10 border border-[#E16F7B]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <Share2 className="w-3 h-3" />
-                <span>Verified Meta Interactions</span>
+                <span>Verified Interactions</span>
               </div>
             </div>
 
             {/* KPI 4: Engagement Rate by Reach (ERR) */}
-            <div className="surface-card rounded-2xl border border-white/[0.08] p-5 space-y-3 shadow-xs">
+            <div className="surface-card rounded-2xl border border-black/[0.08] dark:border-white/[0.08] p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#A3A0B0]">
+                <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#6B6A65] dark:text-[#A3A0B0]">
                   Engagement Rate (ERR)
                 </span>
-                <span className="p-2 rounded-xl bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30">
+                <span className="p-2 rounded-xl bg-[#10B981]/10 text-emerald-600 dark:text-[#10B981] border border-[#10B981]/30">
                   <Sparkles className="w-4 h-4" />
                 </span>
               </div>
 
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold font-mono text-[#F2F0F7] tracking-tight">
+                  <span className="text-3xl font-bold font-mono text-[#191919] dark:text-[#F2F0F7] tracking-tight">
                     {report.avg_engagement_rate}%
                   </span>
-                  <span className="text-xs font-mono text-[#10B981] font-semibold">ERR</span>
+                  <span className="text-xs font-mono text-emerald-600 dark:text-[#10B981] font-semibold">ERR</span>
                 </div>
-                <p className="text-[11px] text-[#A3A0B0] mt-0.5 font-mono">
+                <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] mt-0.5 font-mono">
                   (Total Engagements &divide; Reach) &times; 100
                 </p>
-                <div className="text-[10px] font-mono text-white/50 mt-0.5">
+                <div className="text-[10px] font-mono text-[#6B6A65] dark:text-white/50 mt-0.5">
                   ({report.engagement_rate_metrics?.total_engagements ?? (report.total_likes + report.total_comments)} &divide; {(report.engagement_rate_metrics?.total_reach ?? report.total_views).toLocaleString()} reach) &times; 100
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/30 px-2.5 py-0.5 rounded-md w-fit">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-600 dark:text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/30 px-2.5 py-0.5 rounded-md w-fit">
                 <ArrowUpRight className="w-3 h-3" />
                 <span>
                   {report.engagement_rate_metrics?.is_live_insights_verified
-                    ? "✓ 100% Live Meta Insights Verified"
-                    : report.engagement_rate_metrics?.benchmark_status ?? "⭐ Elite Organic (>5.0%)"}
+                    ? "Live Meta Insights Verified"
+                    : report.engagement_rate_metrics?.benchmark_status ?? "Awaiting Reach Data"}
                 </span>
               </div>
 
-              <div className="pt-2 border-t border-white/[0.06] grid grid-cols-2 gap-2 text-[10px] font-mono">
+              <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06] grid grid-cols-2 gap-2 text-[10px] font-mono">
                 <div>
-                  <span className="text-[#A3A0B0] block">By Followers (ERF):</span>
-                  <span className="text-[#F2F0F7] font-semibold">{report.engagement_rate_metrics?.erf_rate ?? "43.6"}%</span>
+                  <span className="text-[#6B6A65] dark:text-[#A3A0B0] block">By Followers (ERF):</span>
+                  <span className="text-[#191919] dark:text-[#F2F0F7] font-semibold">{report.engagement_rate_metrics?.erf_rate ?? 0}%</span>
                 </div>
                 <div>
-                  <span className="text-[#A3A0B0] block">Avg per Post:</span>
-                  <span className="text-[#F2F0F7] font-semibold">{report.engagement_rate_metrics?.avg_engagements_per_post ?? "3.05"} int/post</span>
+                  <span className="text-[#6B6A65] dark:text-[#A3A0B0] block">Avg per Post:</span>
+                  <span className="text-[#191919] dark:text-[#F2F0F7] font-semibold">{report.engagement_rate_metrics?.avg_engagements_per_post ?? 0} int/post</span>
                 </div>
               </div>
             </div>
@@ -1519,6 +1623,18 @@ function ReportsContent() {
                     >
                       Facebook ({facebookCount})
                     </button>
+                    {linkedinCount > 0 && (
+                      <button
+                        onClick={() => setPlatformFilter("linkedin")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                          platformFilter === "linkedin"
+                            ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 font-bold border border-sky-500/30 shadow-xs"
+                            : "text-[#6B6A65] dark:text-[#A3A0B0] hover:text-sky-600"
+                        }`}
+                      >
+                        LinkedIn ({linkedinCount})
+                      </button>
+                    )}
                   </div>
                 )}
 

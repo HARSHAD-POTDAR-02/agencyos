@@ -11,10 +11,13 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import date
 from pathlib import Path
 from typing import Literal
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
@@ -490,6 +493,7 @@ async def update_deliverable(
         deliverable.title = payload.title.strip()
 
     # 3. Synchronize status if provided
+    previous_status = deliverable.status
     if payload.status is not None:
         deliverable.status = payload.status
 
@@ -523,6 +527,27 @@ async def update_deliverable(
             else:
                 for t in tasks:
                     t.status = task_map[deliverable.status]
+
+    # 4. Automation: When moved into client_review, auto-create magic link & email client if email provider is configured
+    if (
+        payload.status == DeliverableStatus.client_review
+        and previous_status != DeliverableStatus.client_review
+        and deliverable.campaign
+        and deliverable.campaign.client
+    ):
+        try:
+            from app.services.email_service import is_email_configured
+            from app.routers.review import send_deliverable_review_invite
+            if is_email_configured():
+                await send_deliverable_review_invite(
+                    deliverable=deliverable,
+                    client=deliverable.campaign.client,
+                    agency_id=agency_id,
+                    created_by_id=None,
+                    db=db,
+                )
+        except Exception as mail_exc:
+            logger.warning("Auto client-review magic link email failed (non-blocking): %s", mail_exc)
 
     await db.commit()
     await db.refresh(deliverable)

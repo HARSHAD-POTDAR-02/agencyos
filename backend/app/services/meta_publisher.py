@@ -1468,6 +1468,7 @@ async def send_instagram_dm(
             return data
 
         # 2. If standard failed and human agent tag is enabled, attempt with HUMAN_AGENT message tag
+        data_tagged: dict[str, Any] = {}
         if use_human_agent_tag:
             tagged_payload: dict[str, Any] = {
                 "recipient": {"id": recipient_id},
@@ -1480,15 +1481,29 @@ async def send_instagram_dm(
             data_tagged = res_tagged.json()
             if res_tagged.status_code == 200 and "error" not in data_tagged:
                 return data_tagged
-
-        # If both attempts failed, raise descriptive error
-        err_msg = data.get("error", {}).get("message", "Failed to send Instagram DM.")
-        err_subcode = data.get("error", {}).get("error_subcode")
-        if err_subcode == 2534022:
-            err_msg = (
-                "Outside 24-hour messaging window. In Development Mode, the recipient Instagram account must be "
-                "an accepted Instagram Tester on your Meta App, and must have sent a fresh inbound message to open the window."
+            logger.warning(
+                "Instagram DM HUMAN_AGENT fallback failed (status=%s): %s",
+                res_tagged.status_code,
+                data_tagged.get("error"),
             )
-        raise MetaPublishingError(f"Meta API error: {err_msg}", data.get("error"))
+
+        # If both attempts failed, raise descriptive error including HUMAN_AGENT failure detail
+        std_err = data.get("error", {}) if isinstance(data, dict) else {}
+        tagged_err = data_tagged.get("error", {}) if isinstance(data_tagged, dict) else {}
+        err_msg = std_err.get("message", "Failed to send Instagram DM.")
+        err_subcode = std_err.get("error_subcode")
+        if err_subcode == 2534022:
+            base_msg = (
+                "Outside 24-hour messaging window (last inbound user message is over 24 hours old). "
+                "Ask the user to send a fresh DM to reopen the 24-hour window"
+            )
+            tagged_msg = tagged_err.get("message")
+            if tagged_msg:
+                err_msg = f"{base_msg}. 7-day HUMAN_AGENT tag was also rejected by Meta: {tagged_msg}"
+            else:
+                err_msg = f"{base_msg}."
+        elif tagged_err.get("message"):
+            err_msg = f"{err_msg} (HUMAN_AGENT fallback: {tagged_err['message']})"
+        raise MetaPublishingError(f"Meta API error: {err_msg}", std_err or tagged_err)
 
 

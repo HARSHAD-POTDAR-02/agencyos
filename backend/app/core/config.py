@@ -97,5 +97,15 @@ class Settings(BaseSettings):
     META_WEBHOOK_VERIFY_TOKEN: str = "agencyos_meta_webhook_secret_2026"
     METRICS_SYNC_INTERVAL_MINUTES: int = 15
 
+    # Outbound Email Automation (SMTP or Resend)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
+    EMAIL_FROM: str = ""
+    EMAIL_FROM_NAME: str = "AgencyOS"
+    RESEND_API_KEY: str = ""
+
 
 settings = Settings()

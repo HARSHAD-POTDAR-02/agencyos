@@ -14,9 +14,11 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.database import get_db
 from app.dependencies import get_current_user, require_agency_member
+from app.models.agency import Agency
 from app.models.approval import Approval, ApprovalDecision
 from app.models.campaign import Campaign
 from app.models.client import Client
+from app.models.client_reviewer import ClientReviewer
 from app.models.client_social_account import ClientSocialAccount
 from app.models.comment import DeliverableComment
 from app.models.content_version import ContentVersion
@@ -32,7 +34,10 @@ from app.schemas.review import (
     ReviewCommentOut,
     ReviewDecisionRequest,
     ReviewTokenOut,
+    SendReviewEmailOut,
+    SendReviewEmailRequest,
 )
+from app.services.email_service import send_magic_review_email
 from app.services.meta_publisher import ensure_instagram_compatible_image
 from app.services.scheduler_coordinator import global_wakeup_signal
 from app.services.tunnel_service import get_effective_media_url
@@ -66,8 +71,118 @@ def _resolve_schedule_datetime(
 
 
 # ===========================================================================
-# 1. Agency Authenticated Endpoints: Generate & Manage Review Tokens
+# 1. Agency Authenticated Endpoints: Generate & Email Magic Review Tokens
 # ===========================================================================
+
+async def _resolve_client_recipient(
+    client: Client,
+    db: AsyncSession,
+    explicit_email: str | None = None,
+) -> tuple[str | None, str]:
+    """Resolve recipient email and name from override, Client.contact_email, or ClientReviewer."""
+    recipient_name = client.contact_person or client.business_name
+    if explicit_email and explicit_email.strip():
+        return explicit_email.strip(), recipient_name
+    if client.contact_email and client.contact_email.strip():
+        return client.contact_email.strip(), recipient_name
+
+    rev_res = await db.execute(
+        select(User)
+        .join(ClientReviewer, ClientReviewer.user_id == User.id)
+        .where(ClientReviewer.client_id == client.id)
+    )
+    reviewer_user = rev_res.scalars().first()
+    if reviewer_user and reviewer_user.email:
+        return reviewer_user.email.strip(), (reviewer_user.full_name or recipient_name)
+    return None, recipient_name
+
+
+async def ensure_active_review_token(
+    deliverable_id: uuid.UUID,
+    created_by_id: uuid.UUID | None,
+    db: AsyncSession,
+) -> ReviewToken:
+    """Return existing active non-expired ReviewToken or create a fresh one."""
+    tok_res = await db.execute(
+        select(ReviewToken)
+        .where(
+            ReviewToken.deliverable_id == deliverable_id,
+            ReviewToken.is_active == True,
+        )
+        .order_by(ReviewToken.created_at.desc())
+    )
+    existing_token = tok_res.scalars().first()
+    if existing_token and (existing_token.expires_at is None or existing_token.expires_at > datetime.now(timezone.utc)):
+        return existing_token
+
+    new_token = ReviewToken(
+        id=uuid.uuid4(),
+        deliverable_id=deliverable_id,
+        token=generate_review_token(),
+        created_by_id=created_by_id,
+        is_active=True,
+        views_count=0,
+    )
+    db.add(new_token)
+    await db.flush()
+    return new_token
+
+
+async def send_deliverable_review_invite(
+    *,
+    deliverable: Deliverable,
+    client: Client,
+    agency_id: uuid.UUID,
+    created_by_id: uuid.UUID | None,
+    db: AsyncSession,
+    recipient_email: str | None = None,
+    custom_note: str | None = None,
+) -> SendReviewEmailOut:
+    """Ensure active ReviewToken exists and email the zero-login portal link to the client."""
+    token_obj = await ensure_active_review_token(deliverable.id, created_by_id, db)
+    resolved_email, recipient_name = await _resolve_client_recipient(client, db, explicit_email=recipient_email)
+    review_url = f"/review/{token_obj.token}"
+    full_review_url = f"{settings.FRONTEND_URL.rstrip('/')}{review_url}"
+
+    if not resolved_email:
+        return SendReviewEmailOut(
+            token=token_obj.token,
+            review_url=review_url,
+            full_review_url=full_review_url,
+            client_name=client.business_name,
+            recipient_email=None,
+            sent=False,
+            configured=True,
+            provider="none",
+            error=f"No contact_email is set on client '{client.business_name}'. Add an email on the Client profile or enter one above.",
+        )
+
+    agency = await db.get(Agency, agency_id)
+    agency_name = agency.name if agency else "AgencyOS"
+
+    res = await send_magic_review_email(
+        recipient_email=resolved_email,
+        recipient_name=recipient_name,
+        client_name=client.business_name,
+        agency_name=agency_name,
+        deliverable_title=deliverable.title,
+        platform=deliverable.platform or "instagram",
+        deliverable_type=deliverable.deliverable_type or "post",
+        review_url=full_review_url,
+        custom_note=custom_note,
+    )
+    return SendReviewEmailOut(
+        token=token_obj.token,
+        review_url=review_url,
+        full_review_url=full_review_url,
+        client_name=client.business_name,
+        recipient_email=resolved_email,
+        sent=res.sent,
+        configured=res.configured,
+        provider=res.provider,
+        error=res.error,
+    )
+
 
 @router.post(
     "/agencies/{agency_id}/deliverables/{deliverable_id}/review-token",
@@ -84,7 +199,6 @@ async def generate_or_get_review_token(
     Generates a cryptographically secure zero-login magic review token for a deliverable,
     or returns the existing active token.
     """
-    # Verify deliverable belongs to agency
     deliv_res = await db.execute(
         select(Deliverable, Campaign, Client)
         .join(Campaign, Deliverable.campaign_id == Campaign.id)
@@ -101,50 +215,82 @@ async def generate_or_get_review_token(
             detail="Deliverable not found within this agency.",
         )
 
-    # Check for existing active token
-    tok_res = await db.execute(
-        select(ReviewToken).where(
-            ReviewToken.deliverable_id == deliverable_id,
-            ReviewToken.is_active == True,
-        ).order_by(ReviewToken.created_at.desc())
-    )
-    existing_token = tok_res.scalars().first()
-
-    if existing_token:
-        # Check expiration (if set)
-        if existing_token.expires_at is None or existing_token.expires_at > datetime.now(timezone.utc):
-            return ReviewTokenOut(
-                token=existing_token.token,
-                review_url=f"/review/{existing_token.token}",
-                is_active=existing_token.is_active,
-                views_count=existing_token.views_count,
-                last_accessed_at=existing_token.last_accessed_at,
-                created_at=existing_token.created_at,
-                expires_at=existing_token.expires_at,
-            )
-
-    # Generate fresh active token
-    new_token = ReviewToken(
-        id=uuid.uuid4(),
-        deliverable_id=deliverable_id,
-        token=generate_review_token(),
-        created_by_id=current_user.id,
-        is_active=True,
-        views_count=0,
-    )
-    db.add(new_token)
+    _, _, client = row
+    token_obj = await ensure_active_review_token(deliverable_id, current_user.id, db)
     await db.commit()
-    await db.refresh(new_token)
+    await db.refresh(token_obj)
+    suggested_email, suggested_name = await _resolve_client_recipient(client, db)
 
     return ReviewTokenOut(
-        token=new_token.token,
-        review_url=f"/review/{new_token.token}",
-        is_active=new_token.is_active,
-        views_count=new_token.views_count,
-        last_accessed_at=new_token.last_accessed_at,
-        created_at=new_token.created_at,
-        expires_at=new_token.expires_at,
+        token=token_obj.token,
+        review_url=f"/review/{token_obj.token}",
+        is_active=token_obj.is_active,
+        views_count=token_obj.views_count,
+        last_accessed_at=token_obj.last_accessed_at,
+        created_at=token_obj.created_at,
+        expires_at=token_obj.expires_at,
+        suggested_recipient_email=suggested_email,
+        suggested_recipient_name=suggested_name,
     )
+
+
+@router.post(
+    "/agencies/{agency_id}/deliverables/{deliverable_id}/send-review-email",
+    response_model=SendReviewEmailOut,
+)
+async def send_deliverable_review_email_endpoint(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    payload: SendReviewEmailRequest,
+    current_user: User = Depends(get_current_user),
+    membership: Membership = Depends(require_agency_member),
+    db: AsyncSession = Depends(get_db),
+) -> SendReviewEmailOut:
+    """
+    Generates/reuses the zero-login magic review link for a deliverable, optionally moves it
+    into 'client_review' status, and emails the link directly to the client's email.
+    """
+    deliv_res = await db.execute(
+        select(Deliverable, Campaign, Client)
+        .join(Campaign, Deliverable.campaign_id == Campaign.id)
+        .join(Client, Campaign.client_id == Client.id)
+        .where(
+            Deliverable.id == deliverable_id,
+            Client.agency_id == agency_id,
+        )
+    )
+    row = deliv_res.first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deliverable not found within this agency.",
+        )
+
+    deliverable, _, client = row
+    if payload.move_to_client_review and deliverable.status not in (
+        DeliverableStatus.client_review,
+        DeliverableStatus.approved,
+        DeliverableStatus.scheduled,
+        DeliverableStatus.published,
+    ):
+        deliverable.status = DeliverableStatus.client_review
+        tasks_res = await db.execute(select(Task).where(Task.deliverable_id == deliverable.id))
+        tasks = tasks_res.scalars().all()
+        review_tasks = [t for t in tasks if t.task_type in ("approval", "review")]
+        for t in (review_tasks or tasks):
+            t.status = TaskStatus.client_review
+
+    result = await send_deliverable_review_invite(
+        deliverable=deliverable,
+        client=client,
+        agency_id=agency_id,
+        created_by_id=current_user.id,
+        db=db,
+        recipient_email=payload.recipient_email,
+        custom_note=payload.custom_note,
+    )
+    await db.commit()
+    return result
 
 
 @router.delete(
@@ -479,7 +625,7 @@ async def submit_public_review_decision(
                 deliverable.status = DeliverableStatus.scheduled
                 deliverable.scheduled_at = sched_at
                 is_auto_scheduled = True
-                global_wakeup_signal.trigger()
+                await global_wakeup_signal.notify(deliverable.id)
 
         if not is_auto_scheduled:
             deliverable.status = DeliverableStatus.approved

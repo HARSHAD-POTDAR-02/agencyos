@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { deliverableApi, approvalApi, publishingApi, reviewApi, API_BASE } from "@/lib/api";
 import { useAgencyWebSocket } from "@/lib/websocket-context";
 import PublishModal from "@/components/publishing/PublishModal";
+import { ShareReviewModal } from "@/components/ShareReviewModal";
 import {
   ArrowLeft,
   Upload,
@@ -227,6 +228,12 @@ function DeliverableDetailContent() {
   const [metricsShares, setMetricsShares] = useState(0);
   const [savingMetrics, setSavingMetrics] = useState(false);
   const [syncingMetrics, setSyncingMetrics] = useState(false);
+  const [shareModalState, setShareModalState] = useState<{
+    open: boolean;
+    reviewUrl: string;
+    suggestedEmail?: string | null;
+    suggestedName?: string | null;
+  }>({ open: false, reviewUrl: "" });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
@@ -563,8 +570,18 @@ function DeliverableDetailContent() {
     try {
       const data = await reviewApi.generateToken(effectiveAgencyId, deliverable.id, token);
       const fullUrl = `${window.location.origin}/review/${data.token}`;
-      await navigator.clipboard.writeText(fullUrl);
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+      } catch {
+        // Ignore clipboard failure
+      }
       setCopiedReviewLink(true);
+      setShareModalState({
+        open: true,
+        reviewUrl: fullUrl,
+        suggestedEmail: data.suggested_recipient_email,
+        suggestedName: data.suggested_recipient_name,
+      });
       setTimeout(() => setCopiedReviewLink(false), 3000);
     } catch (err: any) {
       console.error("Failed to generate magic review link:", err);
@@ -2137,6 +2154,23 @@ function DeliverableDetailContent() {
           onSuccess={async () => {
             await fetchDeliverable();
             window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));
+          }}
+        />
+      )}
+
+      {effectiveAgencyId && token && deliverable && (
+        <ShareReviewModal
+          open={shareModalState.open}
+          onClose={() => setShareModalState((prev) => ({ ...prev, open: false }))}
+          agencyId={effectiveAgencyId}
+          deliverableId={deliverable.id}
+          deliverableTitle={deliverable.title}
+          token={token}
+          initialReviewUrl={shareModalState.reviewUrl}
+          suggestedEmail={shareModalState.suggestedEmail}
+          suggestedName={shareModalState.suggestedName}
+          onEmailSent={async () => {
+            await fetchDeliverable();
           }}
         />
       )}

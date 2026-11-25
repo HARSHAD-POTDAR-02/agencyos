@@ -1060,6 +1060,18 @@ export interface AgencyRoiMetrics {
   estimated_earned_media_value: number;
   roi_multiplier: number;
   breakdown_text: string;
+  videos_count?: number;
+  carousels_count?: number;
+  images_count?: number;
+  other_count?: number;
+  total_saves?: number;
+  saves_valuation?: number;
+  ai_production_cost_usd?: number;
+  ai_production_cost_inr?: number;
+  ai_tokens_used?: number;
+  net_agency_margin_inr?: number;
+  connected_account_labels?: string[];
+  is_retainer_configured?: boolean;
 }
 
 export interface ContentFormatDistribution {
@@ -1104,6 +1116,9 @@ export interface MonthlyReport {
     views_count: number;
     likes_count: number;
     comments_count: number;
+    shares_count?: number;
+    saved_count?: number;
+    timestamp?: string | null;
   }>;
   executive_summary: string;
   instagram_profile?: InstagramProfileTelemetry | null;
@@ -1112,6 +1127,13 @@ export interface MonthlyReport {
   roi_metrics?: AgencyRoiMetrics | null;
   format_distribution?: ContentFormatDistribution | null;
   engagement_rate_metrics?: EngagementRateMetrics | null;
+  previous_month_views?: number | null;
+  previous_month_engagements?: number | null;
+  previous_month_delivered?: number | null;
+  views_delta_pct?: number | null;
+  engagements_delta_pct?: number | null;
+  delivered_delta_pct?: number | null;
+  is_retainer_configured?: boolean;
 }
 
 export const publishingApi = {
@@ -1635,6 +1657,20 @@ export interface ReviewTokenData {
   last_accessed_at: string | null;
   created_at: string;
   expires_at: string | null;
+  suggested_recipient_email?: string | null;
+  suggested_recipient_name?: string | null;
+}
+
+export interface SendReviewEmailData {
+  token: string;
+  review_url: string;
+  full_review_url: string;
+  client_name: string;
+  recipient_email?: string | null;
+  sent: boolean;
+  configured: boolean;
+  provider: string;
+  error?: string | null;
 }
 
 export interface PublicContentVersion {
@@ -1686,6 +1722,22 @@ export const reviewApi = {
   generateToken: (agencyId: string, deliverableId: string, token: string) =>
     apiFetch<ReviewTokenData>(`/agencies/${agencyId}/deliverables/${deliverableId}/review-token`, {
       method: "POST",
+      token,
+    }),
+
+  sendReviewEmail: (
+    agencyId: string,
+    deliverableId: string,
+    payload: {
+      recipient_email?: string;
+      custom_note?: string;
+      move_to_client_review?: boolean;
+    },
+    token: string
+  ) =>
+    apiFetch<SendReviewEmailData>(`/agencies/${agencyId}/deliverables/${deliverableId}/send-review-email`, {
+      method: "POST",
+      body: payload,
       token,
     }),
 

@@ -21,6 +21,7 @@ from app.models.client_social_account import ClientSocialAccount
 from app.models.content_version import ContentVersion
 from app.models.contract import Contract, ContractStatus, ScopeItem
 from app.models.deliverable import Deliverable, DeliverableStatus
+from app.models.operational_workflow import ModelInvocation
 from app.models.task import Task, TaskStatus
 from app.models.user import Membership
 from app.models.publication_job import JobStatus, PublicationJob, PublicationAttempt
@@ -713,26 +714,27 @@ async def get_client_monthly_delivery_report(
     target_month = month or now.month
     target_year = year or now.year
 
-    # 1. Total Scope Quota & Retainer Fee from Active Contracts
+    # 1. Total Scope Quota & Retainer Fee from Active Contracts (with consistent fallback)
     contract_query = (
         select(Contract)
         .where(Contract.client_id == client.id, Contract.status == ContractStatus.active)
     )
-    active_contracts = (await db.execute(contract_query)).scalars().all()
-    monthly_retainer_fee = sum(float(c.monthly_fee_inr or 0) for c in active_contracts)
-    if monthly_retainer_fee == 0:
-        # Fallback to any contract for client if active has 0
-        all_contracts = (
+    target_contracts = (await db.execute(contract_query)).scalars().all()
+    if not target_contracts:
+        target_contracts = (
             await db.execute(select(Contract).where(Contract.client_id == client.id))
         ).scalars().all()
-        monthly_retainer_fee = sum(float(c.monthly_fee_inr or 0) for c in all_contracts)
 
-    scope_query = (
-        select(func.coalesce(func.sum(ScopeItem.monthly_quantity), 0))
-        .join(Contract, ScopeItem.contract_id == Contract.id)
-        .where(Contract.client_id == client.id, Contract.status == ContractStatus.active)
-    )
-    total_scope_quota = (await db.execute(scope_query)).scalar() or 0
+    monthly_retainer_fee = sum(float(c.monthly_fee_inr or 0) for c in target_contracts)
+    contract_ids = [c.id for c in target_contracts]
+    if contract_ids:
+        scope_query = (
+            select(func.coalesce(func.sum(ScopeItem.monthly_quantity), 0))
+            .where(ScopeItem.contract_id.in_(contract_ids))
+        )
+        total_scope_quota = int((await db.execute(scope_query)).scalar() or 0)
+    else:
+        total_scope_quota = 0
 
     # 2. Query Deliverables for this client along with their campaign
     deliv_query = (
@@ -742,21 +744,27 @@ async def get_client_monthly_delivery_report(
     )
     rows = (await db.execute(deliv_query)).all()
 
-    # Filter deliverables that belong to target_month and target_year
-    deliverables: list[Deliverable] = []
-    for d, c in rows:
-        belongs_to_month = False
+    def _belongs_to_period(d: Deliverable, c: Campaign | None, y: int, m: int) -> bool:
         if d.published_at:
-            belongs_to_month = (d.published_at.year == target_year and d.published_at.month == target_month)
-        elif d.planned_date:
-            belongs_to_month = (d.planned_date.year == target_year and d.planned_date.month == target_month)
-        elif c and c.period_year and c.period_month:
-            belongs_to_month = (c.period_year == target_year and c.period_month == target_month)
-        elif d.created_at:
-            belongs_to_month = (d.created_at.year == target_year and d.created_at.month == target_month)
+            return d.published_at.year == y and d.published_at.month == m
+        if d.planned_date:
+            return d.planned_date.year == y and d.planned_date.month == m
+        if c and c.period_year and c.period_month:
+            return c.period_year == y and c.period_month == m
+        if d.created_at:
+            return d.created_at.year == y and d.created_at.month == m
+        return False
 
-        if belongs_to_month:
+    prev_month = 12 if target_month == 1 else target_month - 1
+    prev_year = target_year - 1 if target_month == 1 else target_year
+
+    deliverables: list[Deliverable] = []
+    prev_deliverables: list[Deliverable] = []
+    for d, c in rows:
+        if _belongs_to_period(d, c, target_year, target_month):
             deliverables.append(d)
+        elif _belongs_to_period(d, c, prev_year, prev_month):
+            prev_deliverables.append(d)
 
     deliverables_delivered = sum(
         1 for d in deliverables if d.status in (DeliverableStatus.approved, DeliverableStatus.published)
@@ -771,7 +779,7 @@ async def get_client_monthly_delivery_report(
         else (100.0 if deliverables_delivered > 0 else 0.0)
     )
 
-    # 3. Live Meta Graph API Telemetry Collection
+    # 3. Live Meta Graph API Telemetry Collection (filtered to target_month / target_year)
     social_query = select(ClientSocialAccount).where(
         ClientSocialAccount.client_id == client.id,
         ClientSocialAccount.is_active.is_(True),
@@ -798,10 +806,13 @@ async def get_client_monthly_delivery_report(
     ig_profile_out: InstagramProfileTelemetry | None = None
     fb_profile_out: FacebookProfileTelemetry | None = None
     live_meta_posts_out: list[LiveMetaPostItem] = []
+    connected_account_labels: list[str] = []
 
     if meta_telemetry:
         if meta_telemetry.get("instagram"):
             ig_p = meta_telemetry["instagram"]
+            if ig_p.get("username"):
+                connected_account_labels.append(f"@{ig_p['username']}")
             ig_profile_out = InstagramProfileTelemetry(
                 connected=True,
                 id=ig_p.get("id"),
@@ -816,6 +827,8 @@ async def get_client_monthly_delivery_report(
             )
         if meta_telemetry.get("facebook"):
             fb_p = meta_telemetry["facebook"]
+            if fb_p.get("page_name"):
+                connected_account_labels.append(str(fb_p["page_name"]))
             fb_profile_out = FacebookProfileTelemetry(
                 connected=True,
                 id=fb_p.get("id"),
@@ -827,11 +840,26 @@ async def get_client_monthly_delivery_report(
                 avatar_url=fb_p.get("avatar_url"),
             )
 
-        # Match live posts with DB deliverables and sync metrics
+        # Match live posts with DB deliverables and sync metrics (strictly filtered to target month/year)
         raw_posts = meta_telemetry.get("posts", [])
         deliverables_modified = False
 
+        def _post_in_period(ts_raw: str | None) -> bool:
+            if not ts_raw:
+                return target_year == now.year and target_month == now.month
+            try:
+                norm = ts_raw.replace("Z", "+00:00")
+                if len(norm) >= 5 and (norm[-5] in ("+", "-")) and norm[-3] != ":":
+                    norm = f"{norm[:-2]}:{norm[-2:]}"
+                dt = datetime.fromisoformat(norm)
+                return dt.year == target_year and dt.month == target_month
+            except Exception:
+                return target_year == now.year and target_month == now.month
+
         for p in raw_posts:
+            if not _post_in_period(p.get("timestamp")):
+                continue
+
             post_id = str(p.get("id") or "")
             permalink = str(p.get("permalink") or "")
             matched_deliverable: Deliverable | None = None
@@ -856,12 +884,8 @@ async def get_client_monthly_delivery_report(
                 if p_comments > (matched_deliverable.comments_count or 0):
                     matched_deliverable.comments_count = p_comments
                     deliverables_modified = True
-                # If views were 0, estimate views based on likes/comments
                 if p.get("views_count", 0) > 0 or p.get("reach_count", 0) > 0:
                     matched_deliverable.views_count = p.get("views_count") or p.get("reach_count")
-                    deliverables_modified = True
-                elif (matched_deliverable.views_count or 0) == 0 and (p_likes > 0 or p_comments > 0):
-                    matched_deliverable.views_count = (p_likes * 14) + (p_comments * 30)
                     deliverables_modified = True
 
             live_meta_posts_out.append(
@@ -887,62 +911,57 @@ async def get_client_monthly_delivery_report(
         if deliverables_modified:
             await db.commit()
 
-    # 4. Totals & Engagement Aggregation (Standard Engagement Rate by Reach - ERR)
+    # 4. Totals & Engagement Aggregation (Period-filtered, honest reach)
     db_views = sum(d.views_count or 0 for d in deliverables)
     db_likes = sum(d.likes_count or 0 for d in deliverables)
     db_comments = sum(d.comments_count or 0 for d in deliverables)
 
-    # Blend with Meta telemetry if available to present rich real engagement
-    live_meta_likes = meta_telemetry.get("total_likes", 0) if meta_telemetry else 0
-    live_meta_comments = meta_telemetry.get("total_comments", 0) if meta_telemetry else 0
-    live_meta_shares = meta_telemetry.get("total_shares", 0) if meta_telemetry else 0
-    live_meta_reach = meta_telemetry.get("total_reach", 0) if meta_telemetry else 0
-    live_meta_views = meta_telemetry.get("total_views", 0) if meta_telemetry else 0
-    live_meta_saves = meta_telemetry.get("total_saves", 0) if meta_telemetry else 0
+    live_meta_likes = sum(p.likes_count for p in live_meta_posts_out)
+    live_meta_comments = sum(p.comments_count for p in live_meta_posts_out)
+    live_meta_shares = sum(p.shares_count for p in live_meta_posts_out)
+    live_meta_reach = sum(p.reach_count for p in live_meta_posts_out)
+    live_meta_views = sum(p.views_count for p in live_meta_posts_out)
+    live_meta_saves = sum(p.saved_count for p in live_meta_posts_out)
     total_audience = meta_telemetry.get("total_audience", 0) if meta_telemetry else 0
     num_meta_posts = len(live_meta_posts_out)
 
     blended_likes = max(db_likes, live_meta_likes)
     blended_comments = max(db_comments, live_meta_comments)
-    total_social_interactions = blended_likes + blended_comments + live_meta_shares
+    total_social_interactions = blended_likes + blended_comments + live_meta_shares + live_meta_saves
 
-    # Calculate Organic Reach:
-    # Use 100% verified live Meta Insights reach if available; fallback to benchmark
+    # Honest Organic Reach: verified Meta Insights reach first, then DB views, else 0 (no synthetic numbers)
     is_live_insights = live_meta_reach > 0
     if is_live_insights:
         total_reach = live_meta_reach
-        total_views = max(live_meta_views, live_meta_reach)
-    elif num_meta_posts > 0 and total_social_interactions > 0:
-        total_reach = max(db_views * max(num_meta_posts, 1), total_social_interactions * 20, 1280)
-        total_views = total_reach
-    elif db_views > 0:
-        total_reach = db_views
-        total_views = db_views
+        total_views = max(live_meta_views, live_meta_reach, db_views)
+    elif live_meta_views > 0 or db_views > 0:
+        total_views = max(live_meta_views, db_views)
+        total_reach = total_views
     else:
-        total_reach = max(total_audience * 10, 500) if total_audience > 0 else 100
-        total_views = total_reach
+        total_reach = 0
+        total_views = 0
 
     # ERR (Engagement Rate by Reach): (Total Engagements / Reach) * 100
-    err_rate = round((total_social_interactions / max(total_reach, 1)) * 100, 2)
+    err_rate = round((total_social_interactions / total_reach) * 100, 2) if total_reach > 0 else 0.0
 
     # ERF (Engagement Rate by Followers): (Avg Engagements Per Post / Followers) * 100
-    avg_engagements_per_post = round(total_social_interactions / max(num_meta_posts, 1), 2)
+    post_denominator = max(num_meta_posts, deliverables_published, 1)
+    avg_engagements_per_post = round(total_social_interactions / post_denominator, 2) if total_social_interactions > 0 else 0.0
     erf_rate = (
-        round((avg_engagements_per_post / max(total_audience, 1)) * 100, 2)
-        if total_audience > 0
+        round((avg_engagements_per_post / total_audience) * 100, 2)
+        if total_audience > 0 and avg_engagements_per_post > 0
         else 0.0
     )
 
-    # Overall reported engagement rate is ERR (industry gold standard for organic content)
     engagement_rate = err_rate
 
     benchmark_status = (
-        "⭐ Elite Performance (> 5.0%)"
+        "Elite Performance (> 5.0%)"
         if err_rate >= 5.0
         else (
-            "✓ Strong Organic Performance (1.5% - 5.0%)"
+            "Strong Organic Performance (1.5% - 5.0%)"
             if err_rate >= 1.5
-            else "Standard Engagement (< 1.5%)"
+            else ("Standard Engagement (< 1.5%)" if total_reach > 0 else "Awaiting Live Reach Data")
         )
     )
 
@@ -959,22 +978,27 @@ async def get_client_monthly_delivery_report(
         is_live_insights_verified=is_live_insights,
     )
 
-    # 5. Format Distribution
+    # 5. Format Distribution (DB deliverables + unmatched Meta posts only — no double-counting)
     videos = sum(1 for d in deliverables if any(k in (d.deliverable_type or "").lower() for k in ("video", "reel")))
-    images = sum(1 for d in deliverables if any(k in (d.deliverable_type or "").lower() for k in ("graphic", "photo", "image", "single")))
+    images = sum(1 for d in deliverables if any(k in (d.deliverable_type or "").lower() for k in ("graphic", "photo", "image", "single", "static")))
     carousels = sum(1 for d in deliverables if "carousel" in (d.deliverable_type or "").lower())
     other = max(0, len(deliverables) - videos - images - carousels)
 
+    unmatched_meta = [p for p in live_meta_posts_out if not p.is_deliverable_match]
+    extra_videos = sum(1 for p in unmatched_meta if "VIDEO" in (p.media_type or "").upper() or "REEL" in (p.media_type or "").upper())
+    extra_carousels = sum(1 for p in unmatched_meta if "CAROUSEL" in (p.media_type or "").upper())
+    extra_images = max(0, len(unmatched_meta) - extra_videos - extra_carousels)
+
     format_distribution = ContentFormatDistribution(
-        videos_count=videos + (meta_telemetry.get("video_count", 0) if meta_telemetry else 0),
-        images_count=images + (meta_telemetry.get("image_count", 0) if meta_telemetry else 0),
-        carousels_count=carousels + (meta_telemetry.get("carousel_count", 0) if meta_telemetry else 0),
+        videos_count=videos + extra_videos,
+        images_count=images + extra_images,
+        carousels_count=carousels + extra_carousels,
         other_count=other,
     )
 
-    # 6. Agency Financial ROI & Realization Engine
+    # 6. Agency Financial ROI, EMV & Cost-to-Serve Engine
     # Standard creative asset production benchmark values:
-    # Video/Reel: ₹15,000 (~$180), Carousel: ₹10,000 (~$120), Graphic/Photo: ₹6,000 (~$75), Other: ₹4,000
+    # Video/Reel: ₹15,000, Carousel: ₹10,000, Graphic/Photo: ₹6,000, Other: ₹4,000
     estimated_production_value = float(
         (videos * 15000) + (carousels * 10000) + (images * 6000) + (other * 4000)
     )
@@ -982,8 +1006,11 @@ async def get_client_monthly_delivery_report(
         estimated_production_value = float(deliverables_delivered * 7500)
 
     # Organic Earned Media Value (EMV):
-    # Likes @ ₹40, Comments @ ₹125, Shares @ ₹250, Audience Reach @ ₹15 per follower
-    earned_engagement_val = float((blended_likes * 40.0) + (blended_comments * 125.0) + (live_meta_shares * 250.0))
+    # Likes @ ₹40, Comments @ ₹125, Saves @ ₹80, Shares @ ₹250, Audience Reach @ ₹15 per follower
+    saves_valuation = float(live_meta_saves * 80.0)
+    earned_engagement_val = float(
+        (blended_likes * 40.0) + (blended_comments * 125.0) + (live_meta_shares * 250.0) + saves_valuation
+    )
     earned_reach_val = float(total_audience * 15.0)
     total_earned_media_value = round(estimated_production_value + earned_engagement_val + earned_reach_val, 2)
 
@@ -993,11 +1020,36 @@ async def get_client_monthly_delivery_report(
         else (round(monthly_retainer_fee / max(total_scope_quota, 1), 2) if monthly_retainer_fee > 0 else 0.0)
     )
 
+    is_retainer_configured = monthly_retainer_fee > 0
     roi_multiplier = (
         round(total_earned_media_value / monthly_retainer_fee, 2)
-        if monthly_retainer_fee > 0
-        else (2.4 if total_earned_media_value > 0 else 1.0)
+        if is_retainer_configured
+        else 0.0
     )
+
+    # Query actual AI production cost-to-serve from ModelInvocation telemetry for this client in this period
+    period_start = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+    if target_month == 12:
+        period_end = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        period_end = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
+
+    ai_cost_stmt = (
+        select(
+            func.coalesce(func.sum(ModelInvocation.cost_usd), 0),
+            func.coalesce(func.sum(ModelInvocation.total_tokens), 0),
+        )
+        .where(
+            ModelInvocation.client_id == client.id,
+            ModelInvocation.created_at >= period_start,
+            ModelInvocation.created_at < period_end,
+        )
+    )
+    ai_cost_row = (await db.execute(ai_cost_stmt)).first()
+    ai_production_cost_usd = round(float(ai_cost_row[0] or 0), 4) if ai_cost_row else 0.0
+    ai_tokens_used = int(ai_cost_row[1] or 0) if ai_cost_row else 0
+    ai_production_cost_inr = round(ai_production_cost_usd * 85.0, 2)
+    net_agency_margin_inr = round(monthly_retainer_fee - ai_production_cost_inr, 2) if is_retainer_configured else 0.0
 
     roi_metrics = AgencyRoiMetrics(
         monthly_retainer_fee=monthly_retainer_fee,
@@ -1009,15 +1061,41 @@ async def get_client_monthly_delivery_report(
         estimated_production_value=estimated_production_value,
         estimated_earned_media_value=total_earned_media_value,
         roi_multiplier=roi_multiplier,
-        breakdown_text="Calculated via Earned Media Value (EMV): production asset value + organic social engagement valuation (₹40/like, ₹125/comment, ₹250/share) over monthly contract retainer.",
+        breakdown_text="Calculated via Earned Media Value (EMV): creative asset production value + organic social engagement (₹40/like, ₹125/comment, ₹80/save, ₹250/share) + audience reach over monthly retainer.",
+        videos_count=videos,
+        carousels_count=carousels,
+        images_count=images,
+        other_count=other,
+        total_saves=live_meta_saves,
+        saves_valuation=saves_valuation,
+        ai_production_cost_usd=ai_production_cost_usd,
+        ai_production_cost_inr=ai_production_cost_inr,
+        ai_tokens_used=ai_tokens_used,
+        net_agency_margin_inr=net_agency_margin_inr,
+        connected_account_labels=connected_account_labels,
+        is_retainer_configured=is_retainer_configured,
     )
+
+    # Month-over-Month (MoM) comparison deltas
+    prev_delivered = sum(1 for d in prev_deliverables if d.status in (DeliverableStatus.approved, DeliverableStatus.published))
+    prev_views = sum(d.views_count or 0 for d in prev_deliverables)
+    prev_engagements = sum((d.likes_count or 0) + (d.comments_count or 0) for d in prev_deliverables)
+
+    def _calc_delta_pct(curr: int | float, prev: int | float) -> float | None:
+        if prev <= 0:
+            return None
+        return round(((curr - prev) / prev) * 100, 1)
+
+    views_delta_pct = _calc_delta_pct(total_views, prev_views)
+    engagements_delta_pct = _calc_delta_pct(total_social_interactions, prev_engagements)
+    delivered_delta_pct = _calc_delta_pct(deliverables_delivered, prev_delivered)
 
     # 7. Top deliverables sorted by views and likes
     top_items = sorted(
         deliverables,
         key=lambda d: ((d.views_count or 0) * 2 + (d.likes_count or 0)),
         reverse=True,
-    )[:5]
+    )[:10]
 
     def get_actual_platform(d: Deliverable) -> str:
         if d.publishing_platform:
@@ -1027,7 +1105,13 @@ async def get_client_monthly_delivery_report(
                 return "facebook"
             if "instagram.com" in d.live_post_url:
                 return "instagram"
+            if "linkedin.com" in d.live_post_url:
+                return "linkedin"
         return (d.platform or "instagram").lower()
+
+    def _deliverable_timestamp(d: Deliverable) -> str | None:
+        dt = d.published_at or (datetime.combine(d.planned_date, datetime.min.time()) if d.planned_date else None) or d.created_at
+        return dt.isoformat() if dt else None
 
     top_deliverables = [
         TopDeliverableItem(
@@ -1039,6 +1123,7 @@ async def get_client_monthly_delivery_report(
             views_count=d.views_count or 0,
             likes_count=d.likes_count or 0,
             comments_count=d.comments_count or 0,
+            timestamp=_deliverable_timestamp(d),
         )
         for d in top_items
     ]
@@ -1047,7 +1132,7 @@ async def get_client_monthly_delivery_report(
     month_name = datetime(target_year, target_month, 1).strftime("%B %Y")
     audience_str = f" across an audience of {total_audience} verified followers" if total_audience > 0 else ""
     interactions_str = f", generating {total_social_interactions:,} audience interactions" if total_social_interactions > 0 else ""
-    roi_str = f" yielding a {roi_multiplier}x Return on Investment (₹{total_earned_media_value:,.0f} EMV vs ₹{monthly_retainer_fee:,.0f} retainer)" if monthly_retainer_fee > 0 else ""
+    roi_str = f" yielding a {roi_multiplier}x Return on Investment (₹{total_earned_media_value:,.0f} EMV vs ₹{monthly_retainer_fee:,.0f} retainer)" if is_retainer_configured else ""
 
     if deliverables_delivered == 0:
         executive_summary = (
@@ -1058,7 +1143,7 @@ async def get_client_monthly_delivery_report(
         executive_summary = (
             f"For {month_name}, the agency delivered {deliverables_delivered} approved assets for {client.business_name} "
             f"({deliverables_published} published live), achieving a {quota_rate}% contract scope fulfillment rate. "
-            f"Live Meta telemetry tracked {total_views:,} impressions{audience_str}{interactions_str}{roi_str}."
+            f"Tracked {total_views:,} impressions{audience_str}{interactions_str}{roi_str}."
         )
 
     return MonthlyReportOut(
@@ -1082,6 +1167,13 @@ async def get_client_monthly_delivery_report(
         roi_metrics=roi_metrics,
         format_distribution=format_distribution,
         engagement_rate_metrics=engagement_metrics,
+        previous_month_views=prev_views,
+        previous_month_engagements=prev_engagements,
+        previous_month_delivered=prev_delivered,
+        views_delta_pct=views_delta_pct,
+        engagements_delta_pct=engagements_delta_pct,
+        delivered_delta_pct=delivered_delta_pct,
+        is_retainer_configured=is_retainer_configured,
     )
 
 

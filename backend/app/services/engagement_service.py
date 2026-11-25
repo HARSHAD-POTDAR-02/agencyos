@@ -349,8 +349,11 @@ async def sync_client_social_engagement(
                         await db.flush()
                         conversations_synced += 1
                     else:
+                        conv_obj.participant_username = participant_username
+                        conv_obj.participant_id = participant_id
                         conv_obj.last_message_text = last_msg_text
                         conv_obj.last_message_at = last_time
+                        conv_obj.unread_count = int(conv_item.get("unread_count") or 0)
 
                     # Ingest individual messages in this thread
                     for msg in raw_messages:

@@ -44,6 +44,9 @@ class TopDeliverableItem(BaseModel):
     views_count: int
     likes_count: int
     comments_count: int
+    shares_count: int = 0
+    saved_count: int = 0
+    timestamp: str | None = None
 
 
 class ScheduleDeliverableRequest(BaseModel):
@@ -149,6 +152,18 @@ class AgencyRoiMetrics(BaseModel):
     estimated_earned_media_value: float = 0.0
     roi_multiplier: float = 0.0
     breakdown_text: str = ""
+    videos_count: int = 0
+    carousels_count: int = 0
+    images_count: int = 0
+    other_count: int = 0
+    total_saves: int = 0
+    saves_valuation: float = 0.0
+    ai_production_cost_usd: float = 0.0
+    ai_production_cost_inr: float = 0.0
+    ai_tokens_used: int = 0
+    net_agency_margin_inr: float = 0.0
+    connected_account_labels: list[str] = []
+    is_retainer_configured: bool = True
 
 
 class EngagementRateMetrics(BaseModel):
@@ -193,5 +208,12 @@ class MonthlyReportOut(BaseModel):
     roi_metrics: AgencyRoiMetrics | None = None
     format_distribution: ContentFormatDistribution | None = None
     engagement_rate_metrics: EngagementRateMetrics | None = None
+    previous_month_views: int | None = None
+    previous_month_engagements: int | None = None
+    previous_month_delivered: int | None = None
+    views_delta_pct: float | None = None
+    engagements_delta_pct: float | None = None
+    delivered_delta_pct: float | None = None
+    is_retainer_configured: bool = True
 
 

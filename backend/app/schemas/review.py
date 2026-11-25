@@ -14,9 +14,29 @@ class ReviewTokenOut(BaseModel):
     last_accessed_at: datetime | None = None
     created_at: datetime
     expires_at: datetime | None = None
+    suggested_recipient_email: str | None = None
+    suggested_recipient_name: str | None = None
 
     class Config:
         from_attributes = True
+
+
+class SendReviewEmailRequest(BaseModel):
+    recipient_email: str | None = None
+    custom_note: str | None = None
+    move_to_client_review: bool = True
+
+
+class SendReviewEmailOut(BaseModel):
+    token: str
+    review_url: str
+    full_review_url: str
+    client_name: str
+    recipient_email: str | None = None
+    sent: bool
+    configured: bool
+    provider: str
+    error: str | None = None
 
 
 class ReviewCommentCreate(BaseModel):

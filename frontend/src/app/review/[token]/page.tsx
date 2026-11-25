@@ -251,10 +251,10 @@ export default function MagicLinkReviewRoomPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090D] flex items-center justify-center p-6 text-[#F2F0F7]">
+      <div className="min-h-screen bg-[#F7F6F3] dark:bg-[#09090D] flex items-center justify-center p-6 text-[#191919] dark:text-[#F2F0F7]">
         <div className="text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-[#A78BFA] animate-spin mx-auto" />
-          <p className="text-xs font-mono text-[#A3A0B0]">Opening Secure Client Review Room...</p>
+          <RefreshCw className="w-8 h-8 text-violet-600 dark:text-[#A78BFA] animate-spin mx-auto" />
+          <p className="text-xs font-mono text-[#6B6A65] dark:text-[#A3A0B0]">Opening Secure Client Review Room...</p>
         </div>
       </div>
     );
@@ -262,18 +262,18 @@ export default function MagicLinkReviewRoomPage() {
 
   if (error || !room) {
     return (
-      <div className="min-h-screen bg-[#09090D] flex items-center justify-center p-6 text-[#F2F0F7]">
-        <div className="max-w-md w-full bg-[#14141A] border border-[#E16F7B]/30 rounded-2xl p-6 text-center space-y-4 shadow-xl">
-          <div className="w-12 h-12 rounded-xl bg-[#E16F7B]/10 border border-[#E16F7B]/30 flex items-center justify-center mx-auto text-[#E16F7B]">
+      <div className="min-h-screen bg-[#F7F6F3] dark:bg-[#09090D] flex items-center justify-center p-6 text-[#191919] dark:text-[#F2F0F7]">
+        <div className="max-w-md w-full bg-white dark:bg-[#14141A] border border-rose-500/30 rounded-2xl p-6 text-center space-y-4 shadow-xl">
+          <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500 dark:text-[#E16F7B]">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-base font-heading font-bold text-[#F2F0F7]">Review Link Expired or Invalid</h2>
-            <p className="text-xs text-[#A3A0B0] leading-relaxed">
+            <h2 className="text-base font-heading font-bold text-[#191919] dark:text-[#F2F0F7]">Review Link Expired or Invalid</h2>
+            <p className="text-xs text-[#6B6A65] dark:text-[#A3A0B0] leading-relaxed">
               {error || "This review link is no longer accessible. It may have been completed, expired, or revoked by the agency team."}
             </p>
           </div>
-          <p className="text-[11px] font-mono text-[#71717A]">
+          <p className="text-[11px] font-mono text-[#6B6A65] dark:text-[#71717A]">
             Please contact your agency account manager to receive a new active review link.
           </p>
         </div>
@@ -301,9 +301,9 @@ export default function MagicLinkReviewRoomPage() {
   const StatusIcon = statusCfg.icon;
 
   return (
-    <div className="min-h-screen bg-[#09090D] text-[#F2F0F7] flex flex-col selection:bg-[#A78BFA]/30">
+    <div className="fixed inset-0 overflow-y-auto bg-[#F7F6F3] dark:bg-[#09090D] text-[#191919] dark:text-[#F2F0F7] selection:bg-[#A78BFA]/30">
       {/* ── TOP NAVIGATION BAR ── */}
-      <header className="border-b border-white/[0.08] bg-[#101014]/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4">
+      <header className="border-b border-black/[0.08] dark:border-white/[0.08] bg-white/90 dark:bg-[#101014]/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 shrink-0">
         {/* Client Brand Monogram & Title */}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#A78BFA] to-[#69A9D8] text-[#101014] font-heading font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
@@ -311,11 +311,11 @@ export default function MagicLinkReviewRoomPage() {
           </div>
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-[#A78BFA] uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-[#191919] dark:text-[#F2F0F7] uppercase tracking-wider">
                 {room.client_name}
               </span>
-              <span className="text-white/[0.2] text-xs">/</span>
-              <span className="text-xs font-heading font-bold text-[#F2F0F7] truncate max-w-[200px] sm:max-w-xs">
+              <span className="text-black/[0.2] dark:text-white/[0.2] text-xs">/</span>
+              <span className="text-xs font-heading font-bold text-[#191919] dark:text-[#F2F0F7] truncate max-w-[200px] sm:max-w-xs">
                 {room.title}
               </span>
             </div>
@@ -665,11 +665,11 @@ export default function MagicLinkReviewRoomPage() {
       </main>
 
       {/* ── STICKY ONE-TAP CLIENT DECISION ACTION BAR ── */}
-      <footer className="fixed bottom-0 inset-x-0 bg-[#0E0E14]/90 backdrop-blur-md border-t border-white/[0.1] p-4 sm:px-8 z-40">
+      <footer className="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#0E0E14]/95 backdrop-blur-md border-t border-black/[0.08] dark:border-white/[0.1] p-4 sm:px-8 z-40">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-[#A3A0B0]">Deliverable Sign-Off:</span>
-            <span className="font-bold text-[#F2F0F7]">{room.title}</span>
+            <span className="text-[#6B6A65] dark:text-[#A3A0B0]">Deliverable Sign-Off:</span>
+            <span className="font-bold text-[#191919] dark:text-[#F2F0F7]">{room.title}</span>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
