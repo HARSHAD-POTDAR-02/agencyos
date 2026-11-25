@@ -49,7 +49,9 @@ from app.services.meta_publisher import (
     MetaPublishingError,
     MetaPostNotFoundError,
     fetch_live_meta_telemetry,
+    publish_facebook_carousel,
     publish_facebook_page_post,
+    publish_instagram_carousel,
     publish_instagram_photo,
     publish_instagram_reel,
     sync_facebook_metrics,
@@ -63,6 +65,77 @@ from app.services.tenant_service import (
 from app.services.tunnel_service import get_effective_media_url, get_effective_public_base_url
 
 router = APIRouter(prefix="/agencies/{agency_id}", tags=["publishing"])
+
+
+def _resolve_carousel_items(
+    payload: Any,
+    deliverable: Deliverable,
+    latest_version: ContentVersion | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Resolve ordered 2..10 carousel items (images, videos, or mixed).
+    Priority:
+    1. Explicit media_urls_override (2+ URLs)
+    2. Latest version's own multi-slide carousel_items (keeps revision history isolated!)
+    3. Explicit content_version_ids (2+ IDs) if explicitly supplied
+    """
+    items: list[dict[str, Any]] = []
+    media_urls_override = getattr(payload, "media_urls_override", None)
+    content_version_ids = getattr(payload, "content_version_ids", None)
+
+    if media_urls_override and len(media_urls_override) >= 2:
+        for m_u in media_urls_override[:10]:
+            u_str = str(m_u).strip()
+            if u_str:
+                items.append({
+                    "url": u_str,
+                    "is_video": u_str.lower().endswith((".mp4", ".mov", ".m4v")),
+                })
+        return items
+
+    if latest_version and getattr(latest_version, "carousel_items", None) and len(latest_version.carousel_items) >= 2:
+        for it in latest_version.carousel_items[:10]:
+            skey = str(it.get("storage_key") or "")
+            fname = str(it.get("file_name") or "")
+            ftype = str(it.get("file_type") or "")
+            is_vid = bool("video" in ftype.lower() or fname.lower().endswith((".mp4", ".mov", ".m4v")))
+            if is_vid:
+                items.append({
+                    "url": get_effective_media_url(skey) if skey else str(it.get("url") or ""),
+                    "is_video": True,
+                })
+            else:
+                v_local = str(Path(settings.UPLOAD_DIR) / skey) if skey else None
+                _, ig_skey = ensure_instagram_compatible_image(v_local, skey)
+                items.append({
+                    "url": get_effective_media_url(ig_skey or skey),
+                    "is_video": False,
+                })
+        return items
+
+    if content_version_ids and len(content_version_ids) >= 2:
+        ver_map = {v.id: v for v in (deliverable.content_versions or [])}
+        for vid in content_version_ids[:10]:
+            v_obj = ver_map.get(vid)
+            if not v_obj:
+                continue
+            v_is_vid = bool(
+                (v_obj.file_type and "video" in v_obj.file_type)
+                or v_obj.file_name.lower().endswith((".mp4", ".mov", ".m4v"))
+            )
+            if v_is_vid:
+                items.append({
+                    "url": get_effective_media_url(v_obj.storage_key),
+                    "is_video": True,
+                })
+            else:
+                v_local = str(Path(settings.UPLOAD_DIR) / v_obj.storage_key) if v_obj.storage_key else None
+                _, ig_skey = ensure_instagram_compatible_image(v_local, v_obj.storage_key)
+                items.append({
+                    "url": get_effective_media_url(ig_skey or v_obj.storage_key),
+                    "is_video": False,
+                })
+    return items
 
 
 @router.post(
@@ -162,6 +235,8 @@ async def publish_deliverable(
                 )
 
             try:
+                carousel_items = _resolve_carousel_items(payload, deliverable, latest_version)
+
                 if payload.platform == "instagram":
                     if not social_account.instagram_business_id:
                         raise HTTPException(
@@ -169,7 +244,14 @@ async def publish_deliverable(
                             detail="Instagram Business ID is missing from the connected social account.",
                         )
 
-                    if is_video:
+                    if len(carousel_items) >= 2:
+                        result = await publish_instagram_carousel(
+                            access_token=social_account.access_token,
+                            instagram_business_id=social_account.instagram_business_id,
+                            items=carousel_items,
+                            caption=caption,
+                        )
+                    elif is_video:
                         result = await publish_instagram_reel(
                             access_token=social_account.access_token,
                             instagram_business_id=social_account.instagram_business_id,
@@ -211,16 +293,24 @@ async def publish_deliverable(
                             detail="Facebook Page ID is missing from the connected social account.",
                         )
 
-                    result = await publish_facebook_page_post(
-                        access_token=social_account.access_token,
-                        page_id=social_account.facebook_page_id,
-                        media_url=media_url,
-                        caption=caption,
-                        is_video=is_video,
-                        local_file_path=local_file_str,
-                        file_name=latest_version.file_name,
-                        file_type=latest_version.file_type,
-                    )
+                    if len(carousel_items) >= 2:
+                        result = await publish_facebook_carousel(
+                            access_token=social_account.access_token,
+                            page_id=social_account.facebook_page_id,
+                            items=carousel_items,
+                            caption=caption,
+                        )
+                    else:
+                        result = await publish_facebook_page_post(
+                            access_token=social_account.access_token,
+                            page_id=social_account.facebook_page_id,
+                            media_url=media_url,
+                            caption=caption,
+                            is_video=is_video,
+                            local_file_path=local_file_str,
+                            file_name=latest_version.file_name,
+                            file_type=latest_version.file_type,
+                        )
                     live_url = result.get("permalink")
                     external_post_id = str(result.get("post_id"))
                     success_message = "Successfully published to Facebook Page!"
@@ -261,6 +351,7 @@ async def publish_deliverable(
 
         elif payload.platform == "both":
             # Dual-platform publishing: Instagram & Facebook
+            carousel_items = _resolve_carousel_items(payload, deliverable, latest_version)
             accounts_res = await db.execute(
                 select(ClientSocialAccount).where(
                     ClientSocialAccount.client_id == client.id,
@@ -301,7 +392,14 @@ async def publish_deliverable(
                 }
             elif ig_account and ig_account.instagram_business_id:
                 try:
-                    if is_video:
+                    if len(carousel_items) >= 2:
+                        ig_result = await publish_instagram_carousel(
+                            access_token=ig_account.access_token,
+                            instagram_business_id=ig_account.instagram_business_id,
+                            items=carousel_items,
+                            caption=caption,
+                        )
+                    elif is_video:
                         ig_result = await publish_instagram_reel(
                             access_token=ig_account.access_token,
                             instagram_business_id=ig_account.instagram_business_id,
@@ -354,16 +452,24 @@ async def publish_deliverable(
                 }
             elif fb_account and fb_account.facebook_page_id:
                 try:
-                    fb_result = await publish_facebook_page_post(
-                        access_token=fb_account.access_token,
-                        page_id=fb_account.facebook_page_id,
-                        media_url=media_url,
-                        caption=caption,
-                        is_video=is_video,
-                        local_file_path=local_file_str,
-                        file_name=latest_version.file_name,
-                        file_type=latest_version.file_type,
-                    )
+                    if len(carousel_items) >= 2:
+                        fb_result = await publish_facebook_carousel(
+                            access_token=fb_account.access_token,
+                            page_id=fb_account.facebook_page_id,
+                            items=carousel_items,
+                            caption=caption,
+                        )
+                    else:
+                        fb_result = await publish_facebook_page_post(
+                            access_token=fb_account.access_token,
+                            page_id=fb_account.facebook_page_id,
+                            media_url=media_url,
+                            caption=caption,
+                            is_video=is_video,
+                            local_file_path=local_file_str,
+                            file_name=latest_version.file_name,
+                            file_type=latest_version.file_type,
+                        )
                     platform_results["facebook"] = {
                         "success": True,
                         "post_id": str(fb_result.get("post_id")),
@@ -1291,6 +1397,14 @@ async def schedule_deliverable(
     operation_id = uuid.uuid4()
     created_jobs: list[PublicationJob] = []
 
+    sched_carousel_items = _resolve_carousel_items(payload, deliverable, latest_version)
+    import json as _json
+    sched_media_snapshot = (
+        _json.dumps(sched_carousel_items)
+        if len(sched_carousel_items) >= 2
+        else get_effective_media_url(latest_version.storage_key)
+    )
+
     for plat in target_platforms:
         acc = platform_account_map[plat]
         job = PublicationJob(
@@ -1304,7 +1418,7 @@ async def schedule_deliverable(
             scheduled_timezone=payload.scheduled_timezone or "UTC",
             next_attempt_at=sched_at,
             caption_snapshot=payload.caption_override or latest_version.caption or deliverable.title,
-            media_url_snapshot=get_effective_media_url(latest_version.storage_key),
+            media_url_snapshot=sched_media_snapshot,
             share_to_feed=payload.share_to_feed,
             max_attempts=3,
         )

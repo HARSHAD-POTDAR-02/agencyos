@@ -74,6 +74,13 @@ interface ContentVersion {
   uploaded_by_id: string;
   created_at: string;
   url?: string;
+  carousel_slides?: Array<{
+    index: number;
+    file_name: string;
+    file_type: string | null;
+    is_video: boolean;
+    url: string;
+  }>;
 }
 
 interface DeliverableDetail {
@@ -170,7 +177,7 @@ function DeliverableDetailContent() {
   // Upload modal / form state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTaskId, setUploadTaskId] = useState<string>(taskIdParam || "none");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -354,13 +361,17 @@ function DeliverableDetailContent() {
 
   const handleUploadVersion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!effectiveAgencyId || !token || !id || !uploadFile) return;
+    if (!effectiveAgencyId || !token || !id || uploadFiles.length === 0) return;
 
     try {
       setUploading(true);
       setUploadError(null);
       const formData = new FormData();
-      formData.append("file", uploadFile);
+      if (uploadFiles.length >= 2) {
+        uploadFiles.slice(0, 10).forEach((f) => formData.append("files", f));
+      } else {
+        formData.append("file", uploadFiles[0]);
+      }
       if (uploadCaption.trim()) formData.append("caption", uploadCaption.trim());
       if (uploadNotes.trim()) formData.append("notes", uploadNotes.trim());
       if (uploadTaskId && uploadTaskId !== "none") {
@@ -376,7 +387,7 @@ function DeliverableDetailContent() {
 
       // Close modal & reset fields
       setShowUploadModal(false);
-      setUploadFile(null);
+      setUploadFiles([]);
       setUploadCaption("");
       setUploadNotes("");
 
@@ -1811,18 +1822,21 @@ function DeliverableDetailContent() {
                 </p>
               </div>
 
-              {/* File Dropzone / Picker */}
+              {/* File Dropzone / Picker (Single or Multi-Slide Carousel) */}
               <div>
                 <label className="text-xs font-mono font-medium text-[#191919] dark:text-[#F2F0F7] block mb-1.5">
-                  Select Reel File, Script, or Creative Asset *
+                  Select File(s) — 1 file or 2–10 images &amp; videos for a Carousel *
                 </label>
                 <input
                   type="file"
+                  multiple
                   ref={fileInputRef}
                   accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,.pdf,.docx,.doc,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain"
                   onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setUploadFile(e.target.files[0]);
+                    if (e.target.files && e.target.files.length > 0) {
+                      const picked = Array.from(e.target.files);
+                      setUploadFiles((prev) => [...prev, ...picked].slice(0, 10));
+                      e.target.value = "";
                     }
                   }}
                   className="hidden"
@@ -1830,24 +1844,42 @@ function DeliverableDetailContent() {
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
-                    uploadFile
+                    uploadFiles.length > 0
                       ? "border-[#2383E2] dark:border-[#A78BFA] bg-blue-500/10 dark:bg-[#A78BFA]/10"
                       : "border-black/[0.12] dark:border-white/[0.12] hover:border-[#2383E2]/60 dark:hover:border-[#A78BFA]/60 bg-[#F7F6F3] dark:bg-[#0D0D11]/60"
                   }`}
                 >
-                  {uploadFile ? (
-                    <div className="space-y-1">
-                      {uploadFile.name.match(/\.(pdf|docx|doc|txt)$/i) || uploadFile.type.startsWith("text/") || uploadFile.type.includes("pdf") || uploadFile.type.includes("word") ? (
-                        <FileText className="w-6 h-6 text-[#2383E2] dark:text-[#A78BFA] mx-auto" />
-                      ) : uploadFile.type.startsWith("image/") || uploadFile.name.match(/\.(png|jpe?g|webp|gif)$/i) ? (
-                        <FileImage className="w-6 h-6 text-[#2383E2] dark:text-[#A78BFA] mx-auto" />
-                      ) : (
-                        <FileVideo className="w-6 h-6 text-[#2383E2] dark:text-[#A78BFA] mx-auto" />
-                      )}
-                      <p className="text-xs font-mono font-bold text-[#191919] dark:text-[#F2F0F7]">{uploadFile.name}</p>
-                      <p className="text-[11px] text-[#6B6A65] dark:text-[#A3A0B0] font-mono">{formatBytes(uploadFile.size)}</p>
-                      <span className="text-[10px] text-[#2383E2] dark:text-[#A78BFA] font-medium underline block pt-1">
-                        Click to change file
+                  {uploadFiles.length > 0 ? (
+                    <div className="space-y-2 text-left">
+                      <p className="text-xs font-mono font-bold text-[#191919] dark:text-[#F2F0F7] text-center">
+                        {uploadFiles.length >= 2
+                          ? `Carousel Deck (${uploadFiles.length} slides selected)`
+                          : uploadFiles[0].name}
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {uploadFiles.map((f, idx) => (
+                          <div
+                            key={`${f.name}-${idx}`}
+                            className="flex items-center justify-between gap-2 text-[11px] font-mono bg-white/80 dark:bg-[#17171E] px-2.5 py-1 rounded-lg border border-black/[0.06] dark:border-white/[0.08]"
+                          >
+                            <span className="truncate">
+                              #{idx + 1} · {f.name} ({formatBytes(f.size)})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                setUploadFiles((prev) => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="text-rose-500 hover:text-rose-400 text-[10px] font-bold px-1 cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-[#2383E2] dark:text-[#A78BFA] font-medium underline block pt-1 text-center">
+                        Click to re-select files (up to 10)
                       </span>
                     </div>
                   ) : (
@@ -1902,7 +1934,7 @@ function DeliverableDetailContent() {
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading || !uploadFile}
+                  disabled={uploading || uploadFiles.length === 0}
                   className="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-[#101014] bg-[#A78BFA] hover:bg-[#B69BFF] rounded-xl shadow-[0_0_12px_rgba(167,139,250,0.25)] disabled:opacity-50 transition-all cursor-pointer"
                 >
                   {uploading ? (
@@ -2151,6 +2183,7 @@ function DeliverableDetailContent() {
           initialIntent={publishModalIntent}
           currentScheduledAt={deliverable.scheduled_at}
           isRescheduling={isRescheduling}
+          latestCarouselSlides={currentPreviewVersion?.carousel_slides || []}
           onSuccess={async () => {
             await fetchDeliverable();
             window.dispatchEvent(new CustomEvent("agencyos:badge-refresh"));

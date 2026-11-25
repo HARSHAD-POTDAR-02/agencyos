@@ -11,6 +11,7 @@ Supports:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -504,6 +505,127 @@ async def publish_instagram_photo(
         }
 
 
+async def publish_instagram_carousel(
+    access_token: str,
+    instagram_business_id: str,
+    items: list[dict[str, Any]],
+    caption: str = "",
+    max_wait_seconds: int = 180,
+) -> dict[str, Any]:
+    """
+    Publish an Instagram Carousel (2 to 10 slides) supporting images, videos, or a mix of both.
+    Each item in `items` is {"url": str, "is_video": bool}.
+    Step 1: POST /{ig_user_id}/media with is_carousel_item=true for each slide & poll until FINISHED.
+    Step 2: POST /{ig_user_id}/media with media_type=CAROUSEL, children=<comma-joined IDs>, caption.
+    Step 3: Poll parent container until FINISHED, then POST /{ig_user_id}/media_publish.
+    """
+    if len(items) < 2 or len(items) > 10:
+        raise MetaPublishingError("Instagram carousels require between 2 and 10 media items.")
+
+    for item in items:
+        url = str(item.get("url") or "")
+        if not url or any(h in url.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0")):
+            raise MetaPublishingError(
+                f"Cannot publish carousel to Instagram: Meta servers cannot reach '{url}'. "
+                "All carousel images and videos must have publicly accessible HTTPS URLs."
+            )
+
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        media_url_ep = f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/media"
+        child_ids: list[str] = []
+
+        async def _poll_container(cid: str, label: str, url_hint: str, timeout_s: int) -> None:
+            status_url = f"{GRAPH_API_BASE}/{version}/{cid}"
+            waited = 0
+            poll_interval = 3
+            while waited < timeout_s:
+                s_res = await client.get(
+                    status_url,
+                    params={"fields": "status_code,status", "access_token": access_token},
+                )
+                s_data = s_res.json()
+                code = str(s_data.get("status_code", "")).upper()
+                if code == "FINISHED":
+                    return
+                if code == "ERROR":
+                    err_msg = s_data.get("status") or format_meta_api_error(label, s_data.get("error"), media_url=url_hint)
+                    raise MetaPublishingError(f"{label} error: {err_msg}", s_data)
+                await asyncio.sleep(poll_interval)
+                waited += poll_interval
+            raise MetaPublishingError(f"{label} timed out after {timeout_s}s waiting for Meta container processing.")
+
+        # Step 1: Create & poll each child container (images and/or videos)
+        for idx, item in enumerate(items, start=1):
+            m_url = str(item["url"])
+            is_vid = bool(item.get("is_video"))
+            child_payload: dict[str, Any] = {
+                "is_carousel_item": "true",
+                "access_token": access_token,
+            }
+            if is_vid:
+                child_payload["media_type"] = "VIDEO"
+                child_payload["video_url"] = m_url
+            else:
+                child_payload["image_url"] = m_url
+
+            c_res = await client.post(media_url_ep, data=child_payload)
+            c_data = c_res.json()
+            if c_res.status_code != 200 or "id" not in c_data:
+                err_msg = format_meta_api_error(
+                    f"Instagram carousel slide {idx} ({'video' if is_vid else 'image'})",
+                    c_data.get("error"),
+                    media_url=m_url,
+                )
+                raise MetaPublishingError(err_msg, c_data.get("error"))
+
+            child_id = c_data["id"]
+            await _poll_container(
+                child_id,
+                f"Instagram carousel slide {idx}",
+                m_url,
+                max_wait_seconds if is_vid else 45,
+            )
+            child_ids.append(child_id)
+
+        # Step 2: Create parent CAROUSEL container
+        parent_payload = {
+            "media_type": "CAROUSEL",
+            "children": ",".join(child_ids),
+            "caption": caption,
+            "access_token": access_token,
+        }
+        p_res = await client.post(media_url_ep, data=parent_payload)
+        p_data = p_res.json()
+        if p_res.status_code != 200 or "id" not in p_data:
+            err_msg = format_meta_api_error("Instagram carousel container creation", p_data.get("error"))
+            raise MetaPublishingError(err_msg, p_data.get("error"))
+
+        creation_id = p_data["id"]
+        await _poll_container(creation_id, "Instagram carousel container", items[0]["url"], 60)
+
+        # Step 3: Publish carousel container
+        publish_url = f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/media_publish"
+        pub_res = await client.post(
+            publish_url,
+            data={"creation_id": creation_id, "access_token": access_token},
+        )
+        pub_data = pub_res.json()
+        if pub_res.status_code != 200 or "id" not in pub_data:
+            err_msg = format_meta_api_error("Instagram carousel publishing", pub_data.get("error"))
+            raise MetaPublishingError(err_msg, pub_data.get("error"))
+
+        media_id = pub_data["id"]
+        permalink = await _fetch_permalink(client, version, media_id, access_token)
+        return {
+            "media_id": media_id,
+            "permalink": permalink,
+            "creation_id": creation_id,
+            "children_count": len(child_ids),
+            "platform": "instagram",
+        }
+
+
 async def publish_instagram_reel(
     access_token: str,
     instagram_business_id: str,
@@ -745,6 +867,127 @@ async def publish_instagram_reel(
         }
 
 
+async def publish_instagram_carousel(
+    access_token: str,
+    instagram_business_id: str,
+    items: list[dict[str, Any]],
+    caption: str = "",
+    max_wait_seconds: int = 180,
+) -> dict[str, Any]:
+    """
+    Publish an Instagram Carousel (2 to 10 slides) supporting images, videos, or a mix of both.
+    Each item in `items` is {"url": str, "is_video": bool}.
+    Step 1: POST /{ig_user_id}/media with is_carousel_item=true for each slide & poll until FINISHED.
+    Step 2: POST /{ig_user_id}/media with media_type=CAROUSEL, children=<comma-joined IDs>, caption.
+    Step 3: Poll parent container until FINISHED, then POST /{ig_user_id}/media_publish.
+    """
+    if len(items) < 2 or len(items) > 10:
+        raise MetaPublishingError("Instagram carousels require between 2 and 10 media items.")
+
+    for item in items:
+        url = str(item.get("url") or "")
+        if not url or any(h in url.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0")):
+            raise MetaPublishingError(
+                f"Cannot publish carousel to Instagram: Meta servers cannot reach '{url}'. "
+                "All carousel images and videos must have publicly accessible HTTPS URLs."
+            )
+
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        media_url_ep = f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/media"
+        child_ids: list[str] = []
+
+        async def _poll_container(cid: str, label: str, url_hint: str, timeout_s: int) -> None:
+            status_url = f"{GRAPH_API_BASE}/{version}/{cid}"
+            waited = 0
+            poll_interval = 3
+            while waited < timeout_s:
+                s_res = await client.get(
+                    status_url,
+                    params={"fields": "status_code,status", "access_token": access_token},
+                )
+                s_data = s_res.json()
+                code = str(s_data.get("status_code", "")).upper()
+                if code == "FINISHED":
+                    return
+                if code == "ERROR":
+                    err_msg = s_data.get("status") or format_meta_api_error(label, s_data.get("error"), media_url=url_hint)
+                    raise MetaPublishingError(f"{label} error: {err_msg}", s_data)
+                await asyncio.sleep(poll_interval)
+                waited += poll_interval
+            raise MetaPublishingError(f"{label} timed out after {timeout_s}s waiting for Meta container processing.")
+
+        # Step 1: Create & poll each child container (images and/or videos)
+        for idx, item in enumerate(items, start=1):
+            m_url = str(item["url"])
+            is_vid = bool(item.get("is_video"))
+            child_payload: dict[str, Any] = {
+                "is_carousel_item": "true",
+                "access_token": access_token,
+            }
+            if is_vid:
+                child_payload["media_type"] = "VIDEO"
+                child_payload["video_url"] = m_url
+            else:
+                child_payload["image_url"] = m_url
+
+            c_res = await client.post(media_url_ep, data=child_payload)
+            c_data = c_res.json()
+            if c_res.status_code != 200 or "id" not in c_data:
+                err_msg = format_meta_api_error(
+                    f"Instagram carousel slide {idx} ({'video' if is_vid else 'image'})",
+                    c_data.get("error"),
+                    media_url=m_url,
+                )
+                raise MetaPublishingError(err_msg, c_data.get("error"))
+
+            child_id = c_data["id"]
+            await _poll_container(
+                child_id,
+                f"Instagram carousel slide {idx}",
+                m_url,
+                max_wait_seconds if is_vid else 45,
+            )
+            child_ids.append(child_id)
+
+        # Step 2: Create parent CAROUSEL container
+        parent_payload = {
+            "media_type": "CAROUSEL",
+            "children": ",".join(child_ids),
+            "caption": caption,
+            "access_token": access_token,
+        }
+        p_res = await client.post(media_url_ep, data=parent_payload)
+        p_data = p_res.json()
+        if p_res.status_code != 200 or "id" not in p_data:
+            err_msg = format_meta_api_error("Instagram carousel container creation", p_data.get("error"))
+            raise MetaPublishingError(err_msg, p_data.get("error"))
+
+        creation_id = p_data["id"]
+        await _poll_container(creation_id, "Instagram carousel container", items[0]["url"], 60)
+
+        # Step 3: Publish carousel container
+        publish_url = f"{GRAPH_API_BASE}/{version}/{instagram_business_id}/media_publish"
+        pub_res = await client.post(
+            publish_url,
+            data={"creation_id": creation_id, "access_token": access_token},
+        )
+        pub_data = pub_res.json()
+        if pub_res.status_code != 200 or "id" not in pub_data:
+            err_msg = format_meta_api_error("Instagram carousel publishing", pub_data.get("error"))
+            raise MetaPublishingError(err_msg, pub_data.get("error"))
+
+        media_id = pub_data["id"]
+        permalink = await _fetch_permalink(client, version, media_id, access_token)
+        return {
+            "media_id": media_id,
+            "permalink": permalink,
+            "creation_id": creation_id,
+            "children_count": len(child_ids),
+            "platform": "instagram",
+        }
+
+
 async def publish_facebook_page_post(
     access_token: str,
     page_id: str,
@@ -852,6 +1095,85 @@ async def publish_facebook_page_post(
         return {
             "post_id": post_id,
             "permalink": permalink,
+            "platform": "facebook",
+        }
+
+
+async def publish_facebook_carousel(
+    access_token: str,
+    page_id: str,
+    items: list[dict[str, Any]],
+    caption: str = "",
+) -> dict[str, Any]:
+    """
+    Publish a multi-photo album post to a Facebook Page via attached_media.
+    """
+    if len(items) < 2:
+        raise MetaPublishingError("Carousel requires at least 2 media items.")
+
+    image_items = [it for it in items if not it.get("is_video")]
+    if len(image_items) < 2:
+        raise MetaPublishingError(
+            "Facebook Page multi-item posts support 2+ photos in attached_media; mixed video+photo carousels are supported on Instagram only."
+        )
+
+    version = _get_api_version()
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        page_token = access_token
+        try:
+            pt_res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/{page_id}",
+                params={"fields": "access_token", "access_token": access_token},
+            )
+            pt_data = pt_res.json()
+            if pt_data.get("access_token"):
+                page_token = pt_data["access_token"]
+        except Exception:
+            pass
+
+        attached: list[dict[str, str]] = []
+        photo_url = f"{GRAPH_API_BASE}/{version}/{page_id}/photos"
+        for it in image_items[:10]:
+            res = await client.post(
+                photo_url,
+                data={"url": str(it["url"]), "published": "false", "access_token": page_token},
+            )
+            data = res.json()
+            if res.status_code != 200 or "id" not in data:
+                err_msg = data.get("error", {}).get("message", "Failed to upload Facebook carousel photo.")
+                raise MetaPublishingError(f"Facebook carousel photo upload failed: {err_msg}", data.get("error"))
+            attached.append({"media_fbid": str(data["id"])})
+
+        feed_res = await client.post(
+            f"{GRAPH_API_BASE}/{version}/{page_id}/feed",
+            data={
+                "message": caption,
+                "attached_media": json.dumps(attached),
+                "access_token": page_token,
+            },
+        )
+        feed_data = feed_res.json()
+        if feed_res.status_code != 200 or "id" not in feed_data:
+            err_msg = feed_data.get("error", {}).get("message", "Failed to publish Facebook multi-photo post.")
+            raise MetaPublishingError(f"Facebook carousel publishing failed: {err_msg}", feed_data.get("error"))
+
+        post_id = str(feed_data["id"])
+        permalink = f"https://www.facebook.com/{post_id}"
+        try:
+            p_res = await client.get(
+                f"{GRAPH_API_BASE}/{version}/{post_id}",
+                params={"fields": "permalink_url", "access_token": page_token},
+            )
+            p_data = p_res.json()
+            if "permalink_url" in p_data:
+                permalink = p_data["permalink_url"]
+        except Exception:
+            pass
+
+        return {
+            "post_id": post_id,
+            "permalink": permalink,
+            "children_count": len(attached),
             "platform": "facebook",
         }
 

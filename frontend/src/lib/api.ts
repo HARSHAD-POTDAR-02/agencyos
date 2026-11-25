@@ -1146,6 +1146,8 @@ export const publishingApi = {
       live_post_url?: string;
       caption_override?: string;
       media_url_override?: string;
+      content_version_ids?: string[];
+      media_urls_override?: string[];
       share_to_feed?: boolean;
     },
     token: string
@@ -1215,6 +1217,7 @@ export const publishingApi = {
       scheduled_timezone?: string;
       platform?: string;
       caption_override?: string;
+      content_version_ids?: string[];
       share_to_feed?: boolean;
     },
     token: string

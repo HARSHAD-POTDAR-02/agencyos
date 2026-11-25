@@ -13,6 +13,8 @@ class PublishDeliverableRequest(BaseModel):
     live_post_url: str | None = None
     caption_override: str | None = None
     media_url_override: str | None = None
+    content_version_ids: list[uuid.UUID] | None = None
+    media_urls_override: list[str] | None = None
     share_to_feed: bool = True
 
 
@@ -54,6 +56,8 @@ class ScheduleDeliverableRequest(BaseModel):
     scheduled_timezone: str = "UTC"
     platform: str = "both"  # "instagram", "facebook", "both"
     caption_override: str | None = None
+    content_version_ids: list[uuid.UUID] | None = None
+    media_urls_override: list[str] | None = None
     share_to_feed: bool = True
 
 

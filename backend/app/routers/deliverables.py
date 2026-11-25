@@ -242,7 +242,8 @@ async def list_versions(
 async def upload_version(
     agency_id: uuid.UUID,
     deliverable_id: uuid.UUID,
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
+    files: list[UploadFile] | None = File(None),
     caption: str | None = Form(None),
     notes: str | None = Form(None),
     task_id: uuid.UUID | None = Form(None),
@@ -252,25 +253,40 @@ async def upload_version(
 ) -> ContentVersionOut:
     """
     Upload a new content version for a deliverable.
-    Accepts video (.mp4, .mov), image (.jpg, .png, .gif, .webp), or document (.pdf, .docx, .doc, .txt) files.
-    Optionally tags the asset to a specific production task (e.g. scripting, filming, editing).
+    Supports a single file (`file`) or a 2-10 slide mixed image/video carousel (`files`).
     Automatically increments version_number.
     Also bumps deliverable status → in_production if still not_started.
     """
     await assert_deliverable_belongs_to_agency(deliverable_id, agency_id, db)
 
-    # Validate file type
-    suffix = Path(file.filename or "").suffix.lower()
-    is_valid_type = (
-        not file.content_type
-        or any(file.content_type.startswith(prefix) for prefix in ALLOWED_MIME_PREFIXES)
-        or suffix in ALLOWED_DOCUMENT_EXTENSIONS
-    )
-    if not is_valid_type:
+    upload_list: list[UploadFile] = []
+    if files:
+        upload_list.extend([f for f in files if f and f.filename])
+    if file and file.filename:
+        upload_list.append(file)
+    if not upload_list:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported file format. Please upload a video, image, PDF, Word doc (.docx), or text (.txt) file.",
+            detail="Please attach at least one image, video, or document file.",
         )
+    if len(upload_list) > 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A carousel version supports up to 10 files.",
+        )
+
+    for uf in upload_list:
+        suffix = Path(uf.filename or "").suffix.lower()
+        is_valid_type = (
+            not uf.content_type
+            or any(uf.content_type.startswith(prefix) for prefix in ALLOWED_MIME_PREFIXES)
+            or suffix in ALLOWED_DOCUMENT_EXTENSIONS
+        )
+        if not is_valid_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file format '{uf.filename}'. Please upload video, image, PDF, Word doc, or text files.",
+            )
 
     # Validate task if provided
     if task_id is not None:
@@ -290,21 +306,45 @@ async def upload_version(
     )
     version_number = (count_result.scalar() or 0) + 1
 
-    # Save file to local filesystem
-    storage_key, checksum, file_size = await save_file(file, deliverable_id)
+    saved_items: list[dict[str, object]] = []
+    primary_checksum = ""
+    total_size = 0
+    for idx, uf in enumerate(upload_list):
+        s_key, c_sum, f_size = await save_file(uf, deliverable_id)
+        if idx == 0:
+            primary_checksum = c_sum
+        total_size += f_size or 0
+        saved_items.append({
+            "storage_key": s_key,
+            "file_name": uf.filename or f"upload_{idx + 1}",
+            "file_type": uf.content_type,
+            "file_size_bytes": f_size,
+        })
+
+    first_item = saved_items[0]
+    carousel_payload = saved_items if len(saved_items) >= 2 else None
 
     content_version = ContentVersion(
         id=uuid.uuid4(),
         deliverable_id=deliverable_id,
         task_id=task_id,
         version_number=version_number,
-        storage_key=storage_key,
-        file_name=file.filename or "upload",
-        file_type=file.content_type,
-        file_size_bytes=file_size,
-        checksum_sha256=checksum,
+        storage_key=str(first_item["storage_key"]),
+        file_name=(
+            f"Carousel ({len(saved_items)} slides)"
+            if carousel_payload
+            else str(first_item["file_name"])
+        ),
+        file_type=(
+            "multipart/carousel"
+            if carousel_payload
+            else (str(first_item["file_type"]) if first_item["file_type"] else None)
+        ),
+        file_size_bytes=total_size,
+        checksum_sha256=primary_checksum,
         caption=caption,
         notes=notes,
+        carousel_items=carousel_payload,
         uploaded_by_id=current_user.id,
     )
     db.add(content_version)

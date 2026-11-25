@@ -64,6 +64,13 @@ interface PublishModalProps {
   initialIntent?: "publish" | "schedule";
   currentScheduledAt?: string | null;
   isRescheduling?: boolean;
+  latestCarouselSlides?: Array<{
+    index: number;
+    file_name: string;
+    file_type: string | null;
+    is_video: boolean;
+    url: string;
+  }>;
 }
 
 export default function PublishModal({
@@ -80,6 +87,7 @@ export default function PublishModal({
   initialIntent = "publish",
   currentScheduledAt = null,
   isRescheduling = false,
+  latestCarouselSlides = [],
 }: PublishModalProps) {
   const { token, activeAgencyId, agencies } = useAuth();
   const effectiveAgencyId = activeAgencyId || (agencies.length > 0 ? agencies[0].agency_id : null);
@@ -868,6 +876,44 @@ export default function PublishModal({
                   placeholder="https://www.instagram.com/p/..."
                   className="w-full text-xs text-[#F2F0F7] p-2.5 rounded-xl border border-[#30303D] bg-[#101014] focus:outline-none focus:border-[#A78BFA]"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Approved Carousel Deck Preview (from latest version only — isolated from prior drafts) */}
+          {mode === "automated" && latestCarouselSlides.length >= 2 && (
+            <div className="p-3.5 rounded-xl bg-[#101014] border border-[#30303D] space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-[#F2F0F7]">
+                  Carousel Deck Ready to Publish
+                </span>
+                <span className="text-[10px] font-mono text-[#A78BFA] bg-[#A78BFA]/15 px-2 py-0.5 rounded border border-[#A78BFA]/30">
+                  {latestCarouselSlides.length} slides
+                </span>
+              </div>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {latestCarouselSlides.map((slide) => (
+                  <div
+                    key={`${slide.index}-${slide.file_name}`}
+                    className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-[#17171E] border-white/[0.08] text-xs text-[#F2F0F7]"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] font-mono font-bold text-[#A78BFA]">
+                        #{slide.index}
+                      </span>
+                      <span className="truncate">{slide.file_name}</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                        slide.is_video
+                          ? "bg-amber-500/15 text-amber-300"
+                          : "bg-sky-500/15 text-sky-300"
+                      }`}
+                    >
+                      {slide.is_video ? "VIDEO" : "IMAGE"}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

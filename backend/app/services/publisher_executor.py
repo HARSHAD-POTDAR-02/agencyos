@@ -19,7 +19,9 @@ from app.models.task import Task, TaskStatus
 from app.services.lease_manager import guarded_update_job, reconcile_deliverable_status, renew_lease
 from app.services.meta_publisher import (
     MetaPublishingError,
+    publish_facebook_carousel,
     publish_facebook_page_post,
+    publish_instagram_carousel,
     publish_instagram_photo,
     publish_instagram_reel,
     ensure_instagram_compatible_image,
@@ -180,57 +182,100 @@ async def execute_publication_job(
 
     # 3. Execution based on platform
     try:
+        carousel_items: list[dict[str, Any]] | None = None
+        if job.media_url_snapshot and job.media_url_snapshot.strip().startswith("["):
+            try:
+                import json
+                parsed = json.loads(job.media_url_snapshot)
+                if isinstance(parsed, list) and len(parsed) >= 2:
+                    carousel_items = [
+                        it if isinstance(it, dict) else {
+                            "url": str(it),
+                            "is_video": str(it).lower().endswith((".mp4", ".mov", ".m4v")),
+                        }
+                        for it in parsed
+                    ]
+            except Exception:
+                carousel_items = None
+
         if job.platform == "instagram":
             if not social_acc.instagram_business_id:
                 raise MetaPublishingError("Instagram Business ID is missing on social account.")
 
-            is_video = bool(
-                (job.media_url_snapshot or "").lower().endswith((".mp4", ".mov", ".m4v"))
-                or (file_type and "video" in file_type)
-            )
-
-            # Lease heartbeat callback for long video uploads & polling
-            async def heartbeat_callback():
-                still_valid = await renew_lease(db, job.id, claim_token)
-                if not still_valid:
-                    raise StaleWorkerError("Worker lost claim lease during Instagram video processing.")
-
-            if is_video:
-                async with _video_upload_lock:
-                    result = await publish_instagram_reel(
-                        access_token=social_acc.access_token,
-                        instagram_business_id=social_acc.instagram_business_id,
-                        video_url=media_url,
-                        caption=job.caption_snapshot or "",
-                        share_to_feed=job.share_to_feed,
-                        local_file_path=local_file_path,
-                        file_type=file_type,
-                    )
-            else:
-                # Ensure photo is converted to Instagram-compliant JPEG in sRGB
-                ig_local_path, ig_storage_key = ensure_instagram_compatible_image(
-                    local_file_path, version.storage_key if version else None
-                )
-                if ig_storage_key:
-                    media_url = get_effective_media_url(ig_storage_key)
-
-                result = await publish_instagram_photo(
+            if carousel_items:
+                result = await publish_instagram_carousel(
                     access_token=social_acc.access_token,
                     instagram_business_id=social_acc.instagram_business_id,
-                    image_url=media_url,
+                    items=carousel_items,
                     caption=job.caption_snapshot or "",
                 )
+            else:
+                is_video = bool(
+                    (job.media_url_snapshot or "").lower().endswith((".mp4", ".mov", ".m4v"))
+                    or (file_type and "video" in file_type)
+                )
+
+                # Lease heartbeat callback for long video uploads & polling
+                async def heartbeat_callback():
+                    still_valid = await renew_lease(db, job.id, claim_token)
+                    if not still_valid:
+                        raise StaleWorkerError("Worker lost claim lease during Instagram video processing.")
+
+                if is_video:
+                    async with _video_upload_lock:
+                        result = await publish_instagram_reel(
+                            access_token=social_acc.access_token,
+                            instagram_business_id=social_acc.instagram_business_id,
+                            video_url=media_url,
+                            caption=job.caption_snapshot or "",
+                            share_to_feed=job.share_to_feed,
+                            local_file_path=local_file_path,
+                            file_type=file_type,
+                        )
+                else:
+                    # Ensure photo is converted to Instagram-compliant JPEG in sRGB
+                    ig_local_path, ig_storage_key = ensure_instagram_compatible_image(
+                        local_file_path, version.storage_key if version else None
+                    )
+                    if ig_storage_key:
+                        media_url = get_effective_media_url(ig_storage_key)
+
+                    result = await publish_instagram_photo(
+                        access_token=social_acc.access_token,
+                        instagram_business_id=social_acc.instagram_business_id,
+                        image_url=media_url,
+                        caption=job.caption_snapshot or "",
+                    )
 
         elif job.platform == "facebook":
             if not social_acc.facebook_page_id:
                 raise MetaPublishingError("Facebook Page ID is missing on social account.")
 
-            is_video = bool(
-                (job.media_url_snapshot or "").lower().endswith((".mp4", ".mov", ".m4v"))
-                or (file_type and "video" in file_type)
-            )
-            if is_video:
-                async with _video_upload_lock:
+            if carousel_items:
+                result = await publish_facebook_carousel(
+                    access_token=social_acc.access_token,
+                    page_id=social_acc.facebook_page_id,
+                    items=carousel_items,
+                    caption=job.caption_snapshot or "",
+                )
+            else:
+                is_video = bool(
+                    (job.media_url_snapshot or "").lower().endswith((".mp4", ".mov", ".m4v"))
+                    or (file_type and "video" in file_type)
+                )
+                if is_video:
+                    async with _video_upload_lock:
+                        result = await publish_facebook_page_post(
+                            access_token=social_acc.access_token,
+                            page_id=social_acc.facebook_page_id,
+                            media_url=media_url,
+                            caption=job.caption_snapshot or "",
+                            is_video=is_video,
+                            local_file_path=local_file_path,
+                            file_name=file_name,
+                            file_type=file_type,
+                        )
+                else:
                     result = await publish_facebook_page_post(
                         access_token=social_acc.access_token,
                         page_id=social_acc.facebook_page_id,
@@ -241,17 +286,6 @@ async def execute_publication_job(
                         file_name=file_name,
                         file_type=file_type,
                     )
-            else:
-                result = await publish_facebook_page_post(
-                    access_token=social_acc.access_token,
-                    page_id=social_acc.facebook_page_id,
-                    media_url=media_url,
-                    caption=job.caption_snapshot or "",
-                    is_video=is_video,
-                    local_file_path=local_file_path,
-                    file_name=file_name,
-                    file_type=file_type,
-                )
 
         else:
             raise MetaPublishingError(f"Unsupported publication platform: '{job.platform}'")
