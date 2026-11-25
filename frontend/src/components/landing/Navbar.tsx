@@ -45,11 +45,11 @@ export function Navbar({ onOpenCommandPalette }: NavbarProps) {
             <a href="#preview" className="hover:text-[#111114] transition-colors">
               Workspace
             </a>
-            <a href="#cortex" className="hover:text-[#111114] transition-colors">
-              Cortex
+            <a href="#intelligence" className="hover:text-[#111114] transition-colors">
+              6-Agent Swarm
             </a>
-            <a href="#darkroom" className="hover:text-[#111114] transition-colors">
-              Darkroom
+            <a href="#cortex" className="hover:text-[#111114] transition-colors">
+              Brand & Sign-Off
             </a>
             <a href="#operations" className="hover:text-[#111114] transition-colors">
               Operations
@@ -82,10 +82,10 @@ export function Navbar({ onOpenCommandPalette }: NavbarProps) {
             </Link>
 
             <Link
-              href={isAuthenticated ? "/dashboard" : "/signup"}
+              href="/waitlist"
               className="px-4 py-2 rounded-full text-xs font-medium bg-[#111114] text-white hover:bg-[#2F2E2B] transition-all flex items-center gap-1.5 font-sans"
             >
-              <span>{isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}</span>
+              <span>Join Waitlist</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -119,11 +119,11 @@ export function Navbar({ onOpenCommandPalette }: NavbarProps) {
           <a href="#preview" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-[#111114]">
             Workspace
           </a>
-          <a href="#cortex" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-[#111114]">
-            Cortex
+          <a href="#intelligence" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-[#111114]">
+            6-Agent Swarm
           </a>
-          <a href="#darkroom" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-[#111114]">
-            Darkroom
+          <a href="#cortex" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-[#111114]">
+            Brand & Sign-Off
           </a>
           <a href="#operations" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-[#111114]">
             Operations
@@ -136,10 +136,10 @@ export function Navbar({ onOpenCommandPalette }: NavbarProps) {
               Sign In
             </Link>
             <Link
-              href={isAuthenticated ? "/dashboard" : "/signup"}
+              href="/waitlist"
               className="py-2 rounded-full text-xs font-medium bg-[#111114] text-white text-center"
             >
-              {isAuthenticated ? "Open Dashboard" : "Start Agency Workspace"}
+              Join Waitlist
             </Link>
           </div>
         </div>

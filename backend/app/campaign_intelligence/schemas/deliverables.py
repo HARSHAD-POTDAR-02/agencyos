@@ -41,6 +41,7 @@ class CarouselSlide(BaseModel):
     headline: str = Field(description="Dominant slide title")
     body_copy: str = Field(default="", description="Body text or bullet points")
     visual_layout: str = Field(default="Clean typography layout with brand aesthetic", description="Layout specification: illustration, mockup, diagram")
+    image_prompt: str | None = Field(default=None, description="Clean photographic visual prompt for Flux Klein (no text overlays, logos, or typography)")
     slide_type: Literal["cover", "content", "takeaway", "cta"] = "content"
 
     @model_validator(mode="before")

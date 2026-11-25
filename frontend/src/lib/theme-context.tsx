@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, Suspense, useContext, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type Theme = "dark" | "light";
 
@@ -13,29 +14,38 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function MarketingRouteSync({
+  theme,
+  applyAppTheme,
+}: {
+  theme: Theme;
+  applyAppTheme: (t: Theme) => void;
+}) {
+  const pathname = usePathname();
+  const isMarketing = pathname === "/";
+
+  useEffect(() => {
+    if (isMarketing) {
+      const root = document.documentElement;
+      root.setAttribute("data-marketing", "true");
+      root.classList.remove("dark");
+      root.classList.add("light");
+      root.style.colorScheme = "light";
+    } else {
+      applyAppTheme(theme);
+    }
+  }, [isMarketing, theme, applyAppTheme]);
+
+  return null;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    try {
-      const savedTheme = localStorage.getItem("agencyos-theme") as Theme | null;
-      if (savedTheme === "light" || savedTheme === "dark") {
-        setThemeState(savedTheme);
-        applyTheme(savedTheme);
-      } else {
-        // Default to dark canvas
-        applyTheme("dark");
-      }
-    } catch {
-      applyTheme("dark");
-    } finally {
-      setMounted(true);
-    }
-  }, []);
-
-  const applyTheme = (newTheme: Theme) => {
+  const applyAppTheme = (newTheme: Theme) => {
     const root = document.documentElement;
+    root.removeAttribute("data-marketing");
     if (newTheme === "dark") {
       root.classList.add("dark");
       root.classList.remove("light");
@@ -47,9 +57,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    let activeTheme: Theme = "dark";
+    try {
+      const savedTheme = localStorage.getItem("agencyos-theme") as Theme | null;
+      if (savedTheme === "light" || savedTheme === "dark") {
+        activeTheme = savedTheme;
+      }
+    } catch {
+      // Fallback to dark default
+    }
+    setThemeState(activeTheme);
+    setMounted(true);
+  }, []);
+
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    applyTheme(newTheme);
+    const isMarketing = typeof window !== "undefined" && window.location.pathname === "/";
+    if (!isMarketing) {
+      applyAppTheme(newTheme);
+    }
     try {
       localStorage.setItem("agencyos-theme", newTheme);
     } catch (e) {
@@ -64,6 +91,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, mounted, toggleTheme, setTheme }}>
+      <Suspense fallback={null}>
+        <MarketingRouteSync theme={theme} applyAppTheme={applyAppTheme} />
+      </Suspense>
       {children}
     </ThemeContext.Provider>
   );

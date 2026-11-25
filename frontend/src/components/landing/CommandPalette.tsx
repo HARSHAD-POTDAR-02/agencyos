@@ -5,7 +5,7 @@ import { Search, Compass, Laptop, Building2, CornerDownLeft, X } from "lucide-re
 
 export interface CommandItem {
   id: string;
-  category: "10-Stage Index" | "Workspace Views" | "Client Fleet";
+  category: "Stage Index" | "Workspace Views" | "Client Fleet";
   title: string;
   subtitle: string;
   badge?: string;
@@ -50,87 +50,65 @@ export function CommandPalette({
   const commands: CommandItem[] = useMemo(() => [
     {
       id: "stage-02",
-      category: "10-Stage Index",
-      title: "02 · Flagship Workspace",
-      subtitle: "One system across the agency — interactive 5-tier preview",
+      category: "Stage Index",
+      title: "02 · Old Agency Stack vs AgencyOS",
+      subtitle: "Why patched-together tools leak margin at ten retainers",
       badge: "Stage 02",
-      action: () => {
-        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
-        onClose();
-      },
-    },
-    {
-      id: "stage-03",
-      category: "10-Stage Index",
-      title: "03 · Fragmented Chaos vs. Deterministic System",
-      subtitle: "The operational problem AgencyOS eliminates",
-      badge: "Stage 03",
       action: () => {
         document.getElementById("problem")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "stage-04",
-      category: "10-Stage Index",
-      title: "04 · Cortex — Proofreader Canvas",
-      subtitle: "Brand intelligence, negative taboos, PDF provenance, red-ink diff",
-      badge: "Stage 04",
+      id: "stage-03",
+      category: "Stage Index",
+      title: "03 · Live Application Preview",
+      subtitle: "Touch the real AgencyOS workspace across 14 screens",
+      badge: "Stage 03",
       action: () => {
-        document.getElementById("cortex")?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "stage-05",
-      category: "10-Stage Index",
-      title: "05 · Campaign Intelligence",
-      subtitle: "Six specialist agents tracing briefs from research to delivery",
-      badge: "Stage 05",
+      id: "stage-04",
+      category: "Stage Index",
+      title: "04 · Six-Agent Creative Swarm",
+      subtitle: "Parallel research, strategy barrier, and self-healing QA gate",
+      badge: "Stage 04",
       action: () => {
         document.getElementById("intelligence")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "stage-06",
-      category: "10-Stage Index",
-      title: "06 · Darkroom Production Suite",
-      subtitle: "Video production, live auto-scroll teleprompter, WPM speed dial",
-      badge: "Stage 06",
+      id: "stage-05",
+      category: "Stage Index",
+      title: "05 · Brand Safety & Pocket Sign-Off",
+      subtitle: "Cortex rule enforcement + 10-second mobile client approvals",
+      badge: "Stage 05",
       action: () => {
-        document.getElementById("darkroom")?.scrollIntoView({ behavior: "smooth" });
+        document.getElementById("cortex")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "stage-07",
-      category: "10-Stage Index",
-      title: "07 · Daily Operations",
-      subtitle: "DAG execution, OAuth monitoring, community CRM and RBAC",
-      badge: "Stage 07",
+      id: "stage-06",
+      category: "Stage Index",
+      title: "06 · Production & Daily Dispatch",
+      subtitle: "Auto-unlocked tasks, shoot teleprompter, CRM inbox & margin shield",
+      badge: "Stage 06",
       action: () => {
         document.getElementById("operations")?.scrollIntoView({ behavior: "smooth" });
         onClose();
       },
     },
     {
-      id: "stage-08",
-      category: "10-Stage Index",
-      title: "08 · Pocket Sign-Off Studio",
-      subtitle: "Mobile Magic-Link approval interface and WebSocket receipts",
-      badge: "Stage 08",
-      action: () => {
-        document.getElementById("signoff")?.scrollIntoView({ behavior: "smooth" });
-        onClose();
-      },
-    },
-    {
-      id: "stage-09",
-      category: "10-Stage Index",
-      title: "09 · Publishing & Economics",
-      subtitle: "Omnichannel calendar, analytics, credits, and margin ledger",
-      badge: "Stage 09",
+      id: "stage-07",
+      category: "Stage Index",
+      title: "07 · Agency Economics & Pricing",
+      subtitle: "Unlimited seats, credit rollover ledger, and retainer savings",
+      badge: "Stage 07",
       action: () => {
         document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
         onClose();
@@ -140,7 +118,7 @@ export function CommandPalette({
       id: "view-cortex",
       category: "Workspace Views",
       title: "Open Cortex Memory in Workspace",
-      subtitle: "Inspect taboo enforcement and review queue inside Stage 02",
+      subtitle: "Inspect taboo enforcement and review queue inside Stage 03",
       badge: "Workspace",
       action: () => {
         onSelectWorkspaceTab?.("cortex");
@@ -294,7 +272,7 @@ export function CommandPalette({
                         isSelected ? "bg-white/10 text-white" : "bg-[#FAF9F6] border border-[#EAE7DF] text-[#6B6A65]"
                       }`}
                     >
-                      {command.category === "10-Stage Index" && <Compass className="w-3.5 h-3.5" />}
+                      {command.category === "Stage Index" && <Compass className="w-3.5 h-3.5" />}
                       {command.category === "Workspace Views" && <Laptop className="w-3.5 h-3.5" />}
                       {command.category === "Client Fleet" && <Building2 className="w-3.5 h-3.5" />}
                     </div>

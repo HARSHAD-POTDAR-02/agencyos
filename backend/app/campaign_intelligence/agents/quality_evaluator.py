@@ -1270,8 +1270,18 @@ AUDIT INSTRUCTIONS:
             checks_passed += (len(deliverables) - len(flagged_indices))
 
         except Exception as e:
-            logger.warning(f"Semantic audit LLM invocation encountered issue: {e}. Defaulting to deterministic checks.")
-            checks_passed += len(deliverables)
+            logger.warning(f"Semantic audit LLM invocation failed: {e}. Failing closed and flagging warning for human verification.")
+            findings.append(
+                QualityFinding(
+                    category=FindingCategory.brand_compliance,
+                    severity=FindingSeverity.warning,
+                    deliverable_index=None,
+                    deliverable_title=None,
+                    issue_description=f"Semantic brand-compliance audit could not complete ({str(e)[:120]}). Verify claims and filmability before approval.",
+                    issue="Semantic compliance audit incomplete — manual verification required.",
+                    remediation_instruction="Re-run evaluation or verify claims manually against client brand guardrails.",
+                )
+            )
 
         return findings, checks_passed, total_checks
 

@@ -79,6 +79,8 @@ interface StudioChatSessionData {
   suggestedObjective: string;
   suggestedCustomBrief: string;
   deliverablePreferences: string[];
+  suggestedPlatforms?: string[];
+  suggestedTargetAudience?: string[];
   isReadyToGenerate: boolean;
   startDate: string;
   endDate: string;
@@ -449,6 +451,8 @@ function CampaignStudioContent() {
   const [suggestedObjective, setSuggestedObjective] = useState<string>("");
   const [suggestedCustomBrief, setSuggestedCustomBrief] = useState<string>("");
   const [deliverablePreferences, setDeliverablePreferences] = useState<string[]>([]);
+  const [suggestedPlatforms, setSuggestedPlatforms] = useState<string[]>([]);
+  const [suggestedTargetAudience, setSuggestedTargetAudience] = useState<string[]>([]);
   const [isReadyToGenerate, setIsReadyToGenerate] = useState(false);
 
   // Client Campaigns state for switching and cleanup
@@ -978,6 +982,8 @@ function CampaignStudioContent() {
         suggestedObjective: "",
         suggestedCustomBrief: "",
         deliverablePreferences: [],
+        suggestedPlatforms: [],
+        suggestedTargetAudience: [],
         isReadyToGenerate: false,
         startDate: "",
         endDate: "",
@@ -1030,6 +1036,8 @@ function CampaignStudioContent() {
       setSuggestedObjective("");
       setSuggestedCustomBrief("");
       setDeliverablePreferences([]);
+      setSuggestedPlatforms([]);
+      setSuggestedTargetAudience([]);
       setIsReadyToGenerate(false);
       setStartDate("");
       setEndDate("");
@@ -1105,6 +1113,8 @@ function CampaignStudioContent() {
         setSuggestedObjective(parsed.suggestedObjective || "");
         setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
         setDeliverablePreferences(parsed.deliverablePreferences || []);
+        setSuggestedPlatforms(parsed.suggestedPlatforms || []);
+        setSuggestedTargetAudience(parsed.suggestedTargetAudience || []);
         setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
         setStartDate(parsed.startDate || "");
         setEndDate(parsed.endDate || "");
@@ -1206,6 +1216,8 @@ function CampaignStudioContent() {
         suggestedObjective,
         suggestedCustomBrief,
         deliverablePreferences,
+        suggestedPlatforms,
+        suggestedTargetAudience,
         isReadyToGenerate,
         startDate,
         endDate,
@@ -1264,6 +1276,8 @@ function CampaignStudioContent() {
     suggestedObjective,
     suggestedCustomBrief,
     deliverablePreferences,
+    suggestedPlatforms,
+    suggestedTargetAudience,
     isReadyToGenerate,
     startDate,
     endDate,
@@ -1336,6 +1350,8 @@ function CampaignStudioContent() {
           setSuggestedObjective(parsed.suggestedObjective || "");
           setSuggestedCustomBrief(parsed.suggestedCustomBrief || "");
           setDeliverablePreferences(parsed.deliverablePreferences || []);
+          setSuggestedPlatforms(parsed.suggestedPlatforms || []);
+          setSuggestedTargetAudience(parsed.suggestedTargetAudience || []);
           setIsReadyToGenerate(Boolean(parsed.isReadyToGenerate));
           setStartDate(parsed.startDate || "");
           setEndDate(parsed.endDate || "");
@@ -1565,6 +1581,12 @@ function CampaignStudioContent() {
             if (response.suggested_deliverable_preferences && response.suggested_deliverable_preferences.length > 0) {
               setDeliverablePreferences(response.suggested_deliverable_preferences);
             }
+            if (response.suggested_platforms && response.suggested_platforms.length > 0) {
+              setSuggestedPlatforms(response.suggested_platforms);
+            }
+            if (response.suggested_target_audience && response.suggested_target_audience.length > 0) {
+              setSuggestedTargetAudience(response.suggested_target_audience);
+            }
             if (response.suggested_start_date) setStartDate(response.suggested_start_date);
             if (response.suggested_end_date) setEndDate(response.suggested_end_date);
             if (response.suggested_duration_days) setDurationDays(response.suggested_duration_days);
@@ -1689,9 +1711,16 @@ function CampaignStudioContent() {
         if (response.suggested_deliverable_preferences && response.suggested_deliverable_preferences.length > 0) {
           setDeliverablePreferences(response.suggested_deliverable_preferences);
         }
+        if (response.suggested_platforms && response.suggested_platforms.length > 0) {
+          setSuggestedPlatforms(response.suggested_platforms);
+        }
+        if (response.suggested_target_audience && response.suggested_target_audience.length > 0) {
+          setSuggestedTargetAudience(response.suggested_target_audience);
+        }
         if (response.suggested_start_date) setStartDate(response.suggested_start_date);
         if (response.suggested_end_date) setEndDate(response.suggested_end_date);
         if (response.suggested_duration_days) setDurationDays(response.suggested_duration_days);
+        if (response.suggested_deliverable_count) setDeliverableCount(response.suggested_deliverable_count);
         if (response.suggested_period_month) setPeriodMonth(response.suggested_period_month);
         if (response.suggested_period_year) setPeriodYear(response.suggested_period_year);
         if (response.is_ready_to_generate) setIsReadyToGenerate(true);
@@ -1975,6 +2004,33 @@ function CampaignStudioContent() {
       const briefName = `${clientObj?.business_name || "Client"} - Campaign Sprint`;
       const briefTheme = suggestedObjective || suggestedCustomBrief || "Autonomous Multi-Platform Campaign";
 
+      // Distill agreed chat brief + user instructions + latest proposed plan so downstream agents follow the chat
+      const substantiveMsgs = chatMessages.filter(
+        (m) =>
+          !m.agentPipeline &&
+          !m.id.startsWith("welcome-") &&
+          !m.id.startsWith("abort-") &&
+          typeof m.content === "string" &&
+          m.content.trim().length > 0
+      );
+      const userTranscript = substantiveMsgs
+        .filter((m) => m.role === "user")
+        .map((m) => `- ${m.content.trim()}`)
+        .join("\n")
+        .slice(-1500);
+      const assistantPlans = substantiveMsgs
+        .filter((m) => m.role === "assistant")
+        .slice(-2)
+        .map((m) => m.content.trim())
+        .join("\n---\n")
+        .slice(-2200);
+      const additionalContextParts = [
+        suggestedCustomBrief ? `Synthesized Chat Brief:\n${suggestedCustomBrief}` : "",
+        userTranscript ? `User Requirements from Chat:\n${userTranscript}` : "",
+        assistantPlans ? `Proposed Plan & Concepts Discussed in Chat (FOLLOW THIS PLAN):\n${assistantPlans}` : "",
+      ].filter(Boolean);
+      const additionalContextPayload = additionalContextParts.join("\n\n");
+
       // 1. Launch 14-task operational DAG run in PostgreSQL
       const dagRun = await operationalWorkflowApi.launchRun(
         effectiveAgencyId,
@@ -1982,12 +2038,17 @@ function CampaignStudioContent() {
           client_id: targetClientId,
           campaign_name: briefName,
           theme: briefTheme,
-          primary_goal: suggestedObjective || "Drive conversions, pipeline and brand authority",
-          target_audience: ["Enterprise Decision Makers & Technical Leads"],
-          platforms: deliverablePreferences.length > 0 ? deliverablePreferences : ["linkedin"],
-          deliverable_count: deliverableCount || (durationDays === 1 ? 1 : (durationDays ? Math.min(durationDays, 14) : 2)),
+          primary_goal: suggestedObjective || "Drive qualified engagement and conversions",
+          target_audience: suggestedTargetAudience.length > 0 ? suggestedTargetAudience : undefined,
+          platforms: suggestedPlatforms.length > 0 ? suggestedPlatforms : undefined,
+          formats: deliverablePreferences.length > 0 ? deliverablePreferences : undefined,
+          deliverable_count: deliverableCount || undefined,
+          additional_context: additionalContextPayload || undefined,
+          pinned_entities: pinnedEntities.length > 0 ? pinnedEntities : undefined,
           period_month: periodMonth || (new Date().getMonth() + 1),
           period_year: periodYear || new Date().getFullYear(),
+          start_date: startDate || undefined,
+          end_date: endDate || undefined,
           duration_days: durationDays || 1,
         },
         token
@@ -2094,7 +2155,6 @@ function CampaignStudioContent() {
         humanStratTask = (runUpdated.tasks || []).find((t: any) => t.task_key === "human_strategy_approval");
 
         if (
-          (stratTask && stratTask.status === "completed") ||
           (humanStratTask && humanStratTask.status === "waiting_for_human") ||
           runUpdated.status === "completed" ||
           runUpdated.status === "failed"
@@ -2147,7 +2207,7 @@ function CampaignStudioContent() {
         setActiveArtifact(blueprintArtifact);
         setPersistedArtifacts((prev) => [blueprintArtifact, ...prev.filter((a) => a.id !== blueprintArtifact.id)]);
 
-        if (humanStratTask && humanStratTask.status === "waiting_for_human") {
+        if (humanStratTask && (humanStratTask.status === "waiting_for_human" || humanStratTask.status === "pending")) {
           setPendingApproval({
             stage: "strategy",
             taskId: humanStratTask.id,
@@ -2629,7 +2689,7 @@ function CampaignStudioContent() {
   return (
     <div className="flex flex-col h-[calc(100vh-4.25rem)] w-full mx-auto px-2 sm:px-4 py-2 overflow-hidden bg-[#101014] text-[#F2F0F7] ambient-glow">
       {/* ── 1. Consolidated Sleek Header ── */}
-      <header className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-white/[0.08] shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-white/[0.08] shrink-0">
         {/* Left: Studio Brand & Client Selector */}
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2.5">
@@ -2790,7 +2850,7 @@ function CampaignStudioContent() {
             <ChevronRight className="w-3 h-3 text-[#A3A0B0]" />
           </Link>
         </div>
-      </header>
+      </div>
 
       {/* Mobile Tab Control (< lg only) */}
       <div className="flex lg:hidden items-center p-0.5 bg-[#17171E] rounded-lg border border-[#30303D] my-1.5 shrink-0">
@@ -2948,19 +3008,19 @@ function CampaignStudioContent() {
           </div>
           {/* Active Human Approval Checkpoint Banner (Integrated DAG Gate) */}
           {pendingApproval?.stage === "strategy" && (
-            <div className="p-3.5 m-3 rounded-xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-amber-500/10 shrink-0">
+            <div className="p-3.5 m-3 rounded-xl bg-amber-50 dark:bg-amber-500/15 border-2 border-amber-400/60 dark:border-amber-500/40 text-amber-950 dark:text-amber-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-amber-500/10 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <Clock className="w-4 h-4 animate-pulse" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-amber-100 flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-amber-950 dark:text-amber-100 flex items-center gap-2">
                     Creative Director Approval Required
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.2 rounded bg-amber-500/20 text-amber-300">
+                    <span className="text-[10px] uppercase font-semibold px-2 py-0.2 rounded bg-amber-500/20 text-amber-900 dark:text-amber-300">
                       Checkpoint 1
                     </span>
                   </h4>
-                  <p className="text-[11px] text-amber-200/80">
+                  <p className="text-[11px] text-amber-900/85 dark:text-amber-200/80">
                     Review the Strategy Blueprint on your canvas. Approve to unblock parallel content generation.
                   </p>
                 </div>
@@ -2977,19 +3037,19 @@ function CampaignStudioContent() {
           )}
 
           {pendingApproval?.stage === "client" && (
-            <div className="p-3.5 m-3 rounded-xl bg-violet-500/15 border-2 border-violet-500/40 text-violet-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-violet-500/10 shrink-0">
+            <div className="p-3.5 m-3 rounded-xl bg-violet-50 dark:bg-violet-500/15 border-2 border-violet-400/50 dark:border-violet-500/40 text-slate-900 dark:text-violet-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-violet-500/10 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-violet-500/15 dark:bg-violet-500/20 border border-violet-500/30 text-violet-700 dark:text-violet-300 flex items-center justify-center shrink-0">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-violet-100 flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-950 dark:text-violet-100 flex items-center gap-2">
                     Client Approval Required
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.2 rounded bg-violet-500/20 text-violet-300">
+                    <span className="text-[10px] uppercase font-semibold px-2 py-0.2 rounded bg-violet-500/20 text-violet-900 dark:text-violet-300">
                       Checkpoint 2
                     </span>
                   </h4>
-                  <p className="text-[11px] text-violet-200/80">
+                  <p className="text-[11px] text-slate-700 dark:text-violet-200/80">
                     Deliverables have passed the Global Quality Audit. Authorize for publishing.
                   </p>
                 </div>
@@ -3507,6 +3567,22 @@ function CampaignStudioContent() {
                     {durationDays ? `${durationDays} Days (${startDate || "Day 1"} → ${endDate || "Day " + durationDays})` : "Monthly Retainer Scope"}
                   </span>
                 </div>
+                {(suggestedPlatforms.length > 0 || deliverablePreferences.length > 0 || deliverableCount) && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-black/[0.06] dark:border-white/[0.06]">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-[#6B6A65] dark:text-[#A3A0B0] block">Platforms</span>
+                      <span className="text-[#191919] dark:text-[#F2F0F7] capitalize">
+                        {suggestedPlatforms.length > 0 ? suggestedPlatforms.join(", ") : "Auto from chat"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-[#6B6A65] dark:text-[#A3A0B0] block">Formats &amp; Count</span>
+                      <span className="text-[#191919] dark:text-[#F2F0F7] capitalize">
+                        {deliverableCount ? `${deliverableCount} deliverables` : "Auto"}{deliverablePreferences.length > 0 ? ` (${deliverablePreferences.join(", ")})` : ""}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

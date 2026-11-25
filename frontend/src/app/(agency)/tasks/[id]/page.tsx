@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback, Suspense, useRef } from "react
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { taskApi, agencyApi, reviewApi, API_BASE, ScriptBlock, TaskChecklistItem, cortexApi } from "@/lib/api";
+import { taskApi, agencyApi, reviewApi, deliverableApi, API_BASE, ScriptBlock, TaskChecklistItem, cortexApi } from "@/lib/api";
+import { useAgencyWebSocket } from "@/lib/websocket-context";
 import {
   Brain,
   ArrowLeft,
@@ -314,7 +315,7 @@ function TaskWorkspaceContent() {
   const [deleting, setDeleting] = useState(false);
 
   // Submission Form State
-  const [submissionMode, setSubmissionMode] = useState<"script" | "media">("script");
+  const [submissionMode, setSubmissionMode] = useState<"script" | "media" | "generate">("script");
   const [scriptTitle, setScriptTitle] = useState("");
   const [hook, setHook] = useState("");
   const [scriptBody, setScriptBody] = useState("");
@@ -324,9 +325,117 @@ function TaskWorkspaceContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
+  // Flux Klein AI Visual Generation State
+  const [visualPreset, setVisualPreset] = useState<"square_1_1" | "portrait_4_5" | "reel_9_16">("portrait_4_5");
+  const [visualPrompt, setVisualPrompt] = useState("");
+  const [visualSlideIndex, setVisualSlideIndex] = useState("");
+  const [generatingVisual, setGeneratingVisual] = useState(false);
+  const [visualNotice, setVisualNotice] = useState<{ type: "queued" | "ready" | "error"; message: string } | null>(null);
+  const [renderedAsset, setRenderedAsset] = useState<{
+    content_version_id: string;
+    version_number: number;
+    media_url: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [rejectingVisual, setRejectingVisual] = useState(false);
+
   // Cortex In-Task Compliance State
   const [auditingCompliance, setAuditingCompliance] = useState(false);
   const [complianceResult, setComplianceResult] = useState<any | null>(null);
+
+  useAgencyWebSocket("VISUAL_ASSETS_READY", (envelope) => {
+    if (!task?.deliverable_id || envelope?.data?.deliverable_id !== task.deliverable_id) return;
+    setVisualNotice({
+      type: "ready",
+      message: `Rendered v${envelope.data.version_number} (${envelope.data.width}×${envelope.data.height}) persisted to S3. ${envelope.data.credits_remaining} credits left.`,
+    });
+    if (envelope.data?.media_url && envelope.data?.content_version_id) {
+      setRenderedAsset({
+        content_version_id: envelope.data.content_version_id,
+        version_number: envelope.data.version_number,
+        media_url: envelope.data.media_url,
+        width: envelope.data.width,
+        height: envelope.data.height,
+      });
+    }
+    loadTask();
+  });
+
+  useAgencyWebSocket("VISUAL_ASSET_FAILED", (envelope) => {
+    if (!task?.deliverable_id || envelope?.data?.deliverable_id !== task.deliverable_id) return;
+    setVisualNotice({
+      type: "error",
+      message: envelope.data?.error || "Visual generation failed. Zero credits deducted.",
+    });
+  });
+
+  const handleGenerateTaskVisual = async () => {
+    if (!effectiveAgencyId || !token || !task?.deliverable_id) return;
+    try {
+      setGeneratingVisual(true);
+      setVisualNotice(null);
+      const slideNum = visualSlideIndex.trim() ? Number(visualSlideIndex.trim()) : undefined;
+      const res = await deliverableApi.generateVisual(
+        effectiveAgencyId,
+        task.deliverable_id,
+        {
+          preset: visualPreset,
+          prompt: visualPrompt.trim() || undefined,
+          slide_index: slideNum,
+          task_id: task.id,
+        },
+        token
+      );
+      setVisualNotice({
+        type: "queued",
+        message: `Rendering ${res.width}×${res.height} visual via Flux Klein (${res.credit_cost} credits reserved on success)...`,
+      });
+    } catch (err: unknown) {
+      setVisualNotice({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to start visual generation",
+      });
+    } finally {
+      setGeneratingVisual(false);
+    }
+  };
+
+  const handleRejectRenderedVisual = async () => {
+    if (!effectiveAgencyId || !token || !task?.deliverable_id || !renderedAsset) return;
+    try {
+      setRejectingVisual(true);
+      await deliverableApi.deleteVersion(
+        effectiveAgencyId,
+        task.deliverable_id,
+        renderedAsset.content_version_id,
+        token
+      );
+      setRenderedAsset(null);
+      setVisualNotice({
+        type: "error",
+        message: `Rejected & deleted v${renderedAsset.version_number} from S3. Adjust your prompt and render again.`,
+      });
+      await loadTask();
+    } catch (err: unknown) {
+      setVisualNotice({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to delete rejected visual",
+      });
+    } finally {
+      setRejectingVisual(false);
+    }
+  };
+
+  const handleAcceptRenderedVisual = async () => {
+    if (!renderedAsset) return;
+    setVisualNotice({
+      type: "ready",
+      message: `Accepted v${renderedAsset.version_number} and attached to deliverable.`,
+    });
+    setRenderedAsset(null);
+    await loadTask();
+  };
 
   const handleAuditDraft = async () => {
     if (!task?.client_id && !task?.deliverable_id) return;
@@ -1139,22 +1248,31 @@ function TaskWorkspaceContent() {
             )}
 
             {task.deliverable_id && (
-              <button
-                type="button"
-                onClick={handleCopyMagicReviewLink}
-                disabled={generatingReviewLink}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 border border-[#A78BFA]/30 text-xs font-semibold text-[#A78BFA] hover:text-[#c4b5fd] transition-colors cursor-pointer shadow-xs"
-                title="Generate & copy zero-login client review link"
-              >
-                {generatingReviewLink ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : copiedReviewLink ? (
-                  <Check className="w-3.5 h-3.5 text-[#45B88A]" />
-                ) : (
-                  <Share2 className="w-3.5 h-3.5" />
-                )}
-                <span>{copiedReviewLink ? "Review Link Copied!" : "Share Review Link"}</span>
-              </button>
+              <>
+                <Link
+                  href={`/deliverables/${task.deliverable_id}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition-colors shadow-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Open Deliverable</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleCopyMagicReviewLink}
+                  disabled={generatingReviewLink}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 border border-[#A78BFA]/30 text-xs font-semibold text-[#A78BFA] hover:text-[#c4b5fd] transition-colors cursor-pointer shadow-xs"
+                  title="Generate & copy zero-login client review link"
+                >
+                  {generatingReviewLink ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : copiedReviewLink ? (
+                    <Check className="w-3.5 h-3.5 text-[#45B88A]" />
+                  ) : (
+                    <Share2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>{copiedReviewLink ? "Review Link Copied!" : "Share Review Link"}</span>
+                </button>
+              </>
             )}
 
             <Link
@@ -2022,8 +2140,22 @@ function TaskWorkspaceContent() {
                           : "text-[#A3A0B0] hover:text-[#F2F0F7]"
                       }`}
                     >
-                      Media File
+                      Upload Custom
                     </button>
+                    {task.deliverable_id && (
+                      <button
+                        type="button"
+                        onClick={() => setSubmissionMode("generate")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer inline-flex items-center gap-1 ${
+                          submissionMode === "generate"
+                            ? "bg-emerald-500/20 text-emerald-300 font-semibold shadow-xs"
+                            : "text-emerald-400 hover:text-emerald-300"
+                        }`}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Generate Visual
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2405,6 +2537,154 @@ function TaskWorkspaceContent() {
                   </div>
                 )}
 
+                {submissionMode === "generate" && task.deliverable_id && (
+                  <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Generate Visual Asset (Flux-3-Image-Klein)</span>
+                        </p>
+                        <p className="text-[10px] font-mono text-[#6B6A65] dark:text-[#A3A0B0]">
+                          Uploads straight to S3/B2 · 5 AI Credits deducted only on success
+                        </p>
+                      </div>
+                    </div>
+
+                    {visualNotice && (
+                      <div
+                        className={`p-3 rounded-xl border text-xs font-mono flex items-center gap-2 ${
+                          visualNotice.type === "ready"
+                            ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300"
+                            : visualNotice.type === "error"
+                            ? "bg-rose-500/15 border-rose-500/35 text-rose-700 dark:text-rose-300"
+                            : "bg-amber-500/15 border-amber-500/35 text-amber-700 dark:text-amber-300"
+                        }`}
+                      >
+                        {visualNotice.type === "queued" && <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />}
+                        {visualNotice.type === "ready" && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+                        {visualNotice.type === "error" && <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{visualNotice.message}</span>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-[#6B6A65] dark:text-[#A3A0B0]">
+                        Aspect Ratio Preset
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          { id: "portrait_4_5", label: "4:5 Portrait", dims: "896×1120", sub: "IG Feed / Carousel" },
+                          { id: "square_1_1", label: "1:1 Square", dims: "1024×1024", sub: "IG / FB / LI Feed" },
+                          { id: "reel_9_16", label: "9:16 Vertical", dims: "768×1360", sub: "Reel Cover" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setVisualPreset(opt.id as "square_1_1" | "portrait_4_5" | "reel_9_16")}
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                              visualPreset === opt.id
+                                ? "border-emerald-500 bg-emerald-500/15 text-[#191919] dark:text-white"
+                                : "border-black/[0.1] dark:border-white/[0.1] bg-white/60 dark:bg-[#101014] text-[#6B6A65] dark:text-[#A3A0B0]"
+                            }`}
+                          >
+                            <p className="text-xs font-semibold">{opt.label}</p>
+                            <p className="text-[10px] font-mono opacity-80">{opt.dims}</p>
+                            <p className="text-[10px] opacity-65">{opt.sub}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-[#6B6A65] dark:text-[#A3A0B0]">
+                        Clean Visual Prompt
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={visualPrompt}
+                        onChange={(e) => setVisualPrompt(e.target.value)}
+                        placeholder={`Describe the scene for "${task.deliverable_title || task.title}". Text, logos, and watermarks are automatically suppressed.`}
+                        className="w-full bg-white dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] placeholder:text-[#6B6A65]/60 p-3 rounded-xl border border-black/[0.1] dark:border-white/[0.1] focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={visualSlideIndex}
+                        onChange={(e) => setVisualSlideIndex(e.target.value)}
+                        placeholder="Optional Slide # (1-20)"
+                        className="w-44 bg-white dark:bg-[#101014] text-xs text-[#191919] dark:text-[#F2F0F7] px-3 py-2 rounded-xl border border-black/[0.1] dark:border-white/[0.1]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGenerateTaskVisual}
+                        disabled={generatingVisual || task.is_locked}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#101014] text-xs font-bold disabled:opacity-50 transition-all cursor-pointer"
+                      >
+                        {generatingVisual ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Queuing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" /> Render Visual to S3 (5 Credits)
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {renderedAsset && (
+                      <div className="mt-3 rounded-2xl border border-emerald-500/35 bg-[#101014] p-4 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-emerald-400 font-semibold">
+                            Generated Preview · v{renderedAsset.version_number} ({renderedAsset.width}×{renderedAsset.height})
+                          </span>
+                          <a
+                            href={renderedAsset.media_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#A3A0B0] hover:text-white inline-flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" /> Open Full
+                          </a>
+                        </div>
+
+                        <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-black/40 flex items-center justify-center max-h-[420px]">
+                          <img
+                            src={renderedAsset.media_url}
+                            alt={`Generated visual v${renderedAsset.version_number}`}
+                            className="max-h-[420px] w-auto object-contain"
+                          />
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-end gap-2.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleRejectRenderedVisual}
+                            disabled={rejectingVisual}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>{rejectingVisual ? "Discarding..." : "Reject & Discard"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleAcceptRenderedVisual}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#101014] text-xs font-bold transition-all cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Accept Visual</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Cortex In-Task Brand Compliance Copilot Gate */}
                 <div className="pt-2 border-t border-black/[0.08] dark:border-white/[0.06] space-y-2">
                   <div className="flex items-center justify-between">
@@ -2498,32 +2778,34 @@ function TaskWorkspaceContent() {
                 })()}
               </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting || task.is_locked || (submissionMode === "media" && !selectedFile)}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all ${
-                    task.is_locked
-                      ? "bg-black/[0.04] text-[#9B9A97] border border-black/[0.08] dark:bg-white/[0.05] dark:text-[#71717A] dark:border-white/[0.08] cursor-not-allowed opacity-60"
-                      : "bg-[#2383E2] hover:bg-[#1D6FBF] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] disabled:opacity-40 cursor-pointer shadow-2xs"
-                  }`}
-                >
-                  {submitting ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Uploading & Submitting...</span>
-                    </>
-                  ) : task.is_locked ? (
-                    <>
-                      <Lock className="w-3.5 h-3.5 text-[#E5AA58]" />
-                      <span className="text-[#E5AA58]">Task Locked — Upstream Incomplete</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Submit Version {task.submissions.length + 1} for Internal Review</span>
-                    </>
-                  )}
-                </button>
+                {submissionMode !== "generate" && (
+                  <button
+                    type="submit"
+                    disabled={submitting || task.is_locked || (submissionMode === "media" && !selectedFile)}
+                    className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all ${
+                      task.is_locked
+                        ? "bg-black/[0.04] text-[#9B9A97] border border-black/[0.08] dark:bg-white/[0.05] dark:text-[#71717A] dark:border-white/[0.08] cursor-not-allowed opacity-60"
+                        : "bg-[#2383E2] hover:bg-[#1D6FBF] text-white dark:bg-[#A78BFA] dark:hover:bg-[#B69BFF] dark:text-[#101014] disabled:opacity-40 cursor-pointer shadow-2xs"
+                    }`}
+                  >
+                    {submitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Uploading & Submitting...</span>
+                      </>
+                    ) : task.is_locked ? (
+                      <>
+                        <Lock className="w-3.5 h-3.5 text-[#E5AA58]" />
+                        <span className="text-[#E5AA58]">Task Locked — Upstream Incomplete</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Submit Version {task.submissions.length + 1} for Internal Review</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </form>
             </div>
 

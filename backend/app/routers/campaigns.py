@@ -29,6 +29,8 @@ from app.campaign_intelligence.schemas.strategy import CampaignStrategy
 from app.campaign_intelligence.tools.date_utils import (
     extract_date_range_from_text,
     extract_format_and_count_from_text,
+    extract_format_breakdown_from_text,
+    extract_platforms_from_text,
     sanitize_date_year,
 )
 from app.campaign_intelligence.schemas.brand import (
@@ -277,19 +279,27 @@ async def generate_plan_endpoint(
             f"{custom_brief_text or ''}\n[HERO FOCUS]: Feature these verified hero entities: {pinned_summary}"
         ).strip()
 
+    # Extract explicit platforms & format counts from brief/objective so Instagram-only requests don't leak to LinkedIn
+    brief_scan_text = f"{payload.custom_brief or ''} {payload.objective or ''}"
+    detected_platforms = extract_platforms_from_text(brief_scan_text)
+    format_breakdown = extract_format_breakdown_from_text(brief_scan_text)
+
     brief = CampaignBrief(
         campaign_id=campaign_id,
         client_id=client_id,
         agency_id=agency_id,
         name=f"{client.business_name} - {period_m}/{period_y} Plan",
-        objective=payload.objective or f"Deliver {duration_days or 3} high-impact social media deliverables",
+        objective=payload.objective or f"Deliver {detected_count or duration_days or 3} high-impact social media deliverables",
+        platforms=detected_platforms or ["linkedin", "instagram"],
         period_month=period_m,
         period_year=period_y,
         start_date=start_dt,
         end_date=end_dt,
         duration_days=duration_days,
+        target_deliverables_count=detected_count,
         custom_brief=custom_brief_text,
         deliverable_preferences=final_prefs or [],
+        deliverable_requests=format_breakdown,
         pinned_entities=payload.pinned_entities,
     )
 
@@ -506,6 +516,8 @@ class ChatBriefLLMOutput(BaseModel):
     suggested_objective: str | None = None
     suggested_custom_brief: str | None = None
     suggested_deliverable_preferences: list[str] | None = None
+    suggested_platforms: list[str] | None = None
+    suggested_target_audience: list[str] | None = None
     suggested_period_month: int | None = None
     suggested_period_year: int | None = None
     suggested_start_date: str | None = None
@@ -1094,15 +1106,28 @@ async def execute_chat_turn(
             )
             await db.commit()
 
-        # Date extraction fallback for specialist turns so campaign state is kept fresh
+        # Date, platform & format extraction fallback for specialist turns so campaign state is kept fresh
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year, reference_start_date=payload.start_date)
-        extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
+        latest_fmts, latest_cnt = extract_format_and_count_from_text(latest_user_text)
+        all_fmts, all_cnt = extract_format_and_count_from_text(combined_user_text)
+        extracted_fmts = latest_fmts or all_fmts
+        extracted_cnt = latest_cnt if latest_cnt is not None else all_cnt
+        extracted_platforms = extract_platforms_from_text(latest_user_text) or extract_platforms_from_text(combined_user_text)
 
         candidate_entities = extract_candidate_entities(
             brand_profile=brand_profile,
             client=client,
             existing_discovered=payload.discovered_entities,
             artifact_payload=specialist_res.artifact_payload,
+        )
+
+        # Preserve full user instructions + concise specialist plan so downstream agents follow what was agreed
+        specialist_plan_summary = (specialist_res.reply or "").strip()[:1200]
+        specialist_custom_brief = "\n".join(
+            part for part in [
+                f"User Request: {combined_user_text}" if combined_user_text else "",
+                f"Proposed Specialist Plan ({adapter.specialist_name}): {specialist_plan_summary}" if specialist_plan_summary else "",
+            ] if part
         )
 
         return ChatBriefResponse(
@@ -1120,13 +1145,16 @@ async def execute_chat_turn(
             artifact_status=saved_artifact.status if saved_artifact else None,
             activity_logs=[{"message": log} if isinstance(log, str) else log for log in specialist_res.activity_logs],
             suggested_objective=f"{adapter.specialist_name} strategic plan for {client.business_name}",
-            suggested_custom_brief=latest_user_text,
+            suggested_custom_brief=specialist_custom_brief or latest_user_text,
             suggested_deliverable_preferences=extracted_fmts or (["reel", "carousel"] if target_agent_id == "content_architect" else None),
+            suggested_platforms=extracted_platforms or None,
+            suggested_target_audience=target_aud_list or None,
             suggested_period_month=extracted.period_month if extracted else (payload.period_month or ref_month),
             suggested_period_year=extracted.period_year if extracted else (payload.period_year or ref_year),
             suggested_start_date=extracted.start_date.isoformat() if extracted else payload.start_date,
             suggested_end_date=extracted.end_date.isoformat() if extracted else payload.end_date,
-            suggested_duration_days=extracted.duration_days if extracted else extracted_cnt,
+            suggested_duration_days=extracted.duration_days if extracted else None,
+            suggested_deliverable_count=extracted_cnt,
             is_ready_to_generate=False,
             pinned_entities=payload.pinned_entities,
             discovered_entities=candidate_entities,
@@ -1258,8 +1286,9 @@ CRITICAL SYSTEM RULES:
    - Current Year Context: The active year is {ref_year}. If the user mentions dates without an explicit year (e.g. 'from 8th nov to 11th nov', 'nov 8 - 11', 'next 3 days', 'Nov 10-14'), you MUST ALWAYS assume and use the year {ref_year} (e.g. {ref_year}-11-08 to {ref_year}-11-11). NEVER default to past years such as 2024 or 2025 unless the user explicitly specified that past year.
    - Calculate and populate `suggested_start_date` (YYYY-MM-DD), `suggested_end_date` (YYYY-MM-DD), `suggested_duration_days` (total calendar days in sprint), and matching `suggested_period_month`/`suggested_period_year`.
 2. Structured Memory Preservation:
-   - Always synthesize the evolving strategy into `suggested_objective` (1 crisp sentence) and `suggested_custom_brief` (2-3 sentences capturing audience, themes, and guardrails) reflecting everything agreed upon across the entire chat.
-   - Even when providing specialist answers (e.g. video scripts or market trends), retain or refine the brief fields so the user can seamlessly transition between specialist deep-dives and full campaign sprint generation!
+   - Always synthesize the evolving strategy into `suggested_objective` (1 crisp sentence) and `suggested_custom_brief` (a comprehensive 3-6 sentence creative brief capturing the target audience, selected products/topics, proposed carousel/reel concepts and hooks, exact format counts, pacing, and guardrails agreed across the entire chat).
+   - Populate `suggested_platforms` (lowercase platform names e.g. ["instagram"] or ["linkedin", "instagram"]), `suggested_target_audience` (list of specific audience personas discussed or in Brand Profile), `suggested_deliverable_preferences` (formats e.g. ["carousel", "reel"]), and `suggested_deliverable_count` (exact total deliverable count requested, e.g. 3 for 2 carousels + 1 reel).
+   - Even when providing specialist answers (e.g. video scripts or market trends), retain or refine all structured brief fields so the user can seamlessly transition between specialist deep-dives and full campaign sprint generation!
 3. Readiness Determination (`is_ready_to_generate`):
    - Set `is_ready_to_generate = True` ONLY when the user explicitly tells you to proceed/generate (e.g., 'let's generate', 'create it', 'looks good go ahead', 'run it'), OR when the strategy is completely locked. In exploratory turns, keep `is_ready_to_generate = False`.
 4. STRICT LANGUAGE POLICY - ENGLISH EXCLUSIVELY:
@@ -1314,7 +1343,11 @@ CRITICAL SYSTEM RULES:
         )
 
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year, reference_start_date=payload.start_date)
-        extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
+        latest_fmts, latest_cnt = extract_format_and_count_from_text(latest_user_text)
+        all_fmts, all_cnt = extract_format_and_count_from_text(combined_user_text)
+        extracted_fmts = latest_fmts or all_fmts
+        extracted_cnt = latest_cnt if latest_cnt is not None else all_cnt
+        extracted_platforms = extract_platforms_from_text(latest_user_text) or extract_platforms_from_text(combined_user_text)
 
         # Deterministic extraction takes precedence when user provided an explicit date range
         if extracted:
@@ -1347,6 +1380,16 @@ CRITICAL SYSTEM RULES:
         final_deliverable_prefs = (
             extracted_fmts or output.suggested_deliverable_preferences or None
         )
+        final_platforms = (
+            extracted_platforms
+            or ([p.lower().strip() for p in output.suggested_platforms if p and p.strip()] if output.suggested_platforms else None)
+        )
+        final_target_audience = output.suggested_target_audience or (target_aud_list or None)
+        final_deliverable_count = (
+            extracted_cnt
+            or output.suggested_deliverable_count
+            or (1 if final_duration_days == 1 else (min(final_duration_days, 10) if final_duration_days else None))
+        )
 
         reply_text = format_executive_reply(output.reply)
         if not has_explicit_year and ref_year >= 2026:
@@ -1373,12 +1416,14 @@ CRITICAL SYSTEM RULES:
             suggested_objective=output.suggested_objective,
             suggested_custom_brief=output.suggested_custom_brief,
             suggested_deliverable_preferences=final_deliverable_prefs,
+            suggested_platforms=final_platforms,
+            suggested_target_audience=final_target_audience,
             suggested_period_month=final_month,
             suggested_period_year=final_year,
             suggested_start_date=final_start_date,
             suggested_end_date=final_end_date,
             suggested_duration_days=final_duration_days,
-            suggested_deliverable_count=output.suggested_deliverable_count or (1 if final_duration_days == 1 else (min(final_duration_days, 10) if final_duration_days else None)),
+            suggested_deliverable_count=final_deliverable_count,
             is_ready_to_generate=output.is_ready_to_generate,
             pinned_entities=payload.pinned_entities,
             discovered_entities=candidate_entities,
@@ -1386,7 +1431,11 @@ CRITICAL SYSTEM RULES:
     except Exception as ex:
         logger.error(f"Structured LLM failed in chat_brief_endpoint ({ex}). Initiating contextual recovery...")
         extracted = extract_date_range_from_text(combined_user_text, default_year=ref_year, reference_start_date=payload.start_date)
-        extracted_fmts, extracted_cnt = extract_format_and_count_from_text(combined_user_text)
+        latest_fmts, latest_cnt = extract_format_and_count_from_text(latest_user_text)
+        all_fmts, all_cnt = extract_format_and_count_from_text(combined_user_text)
+        extracted_fmts = latest_fmts or all_fmts
+        extracted_cnt = latest_cnt if latest_cnt is not None else all_cnt
+        extracted_platforms = extract_platforms_from_text(latest_user_text) or extract_platforms_from_text(combined_user_text)
         if extracted:
             start_date_str = extracted.start_date.isoformat()
             end_date_str = extracted.end_date.isoformat()
@@ -1446,13 +1495,16 @@ CRITICAL SYSTEM RULES:
             artifact_type=active_artifact_type,
             artifact_payload=active_artifact_payload,
             artifact_version_number=active_artifact_version,
+            suggested_custom_brief=combined_user_text or None,
             suggested_period_month=p_month,
             suggested_period_year=p_year,
             suggested_start_date=start_date_str,
             suggested_end_date=end_date_str,
             suggested_duration_days=dur_days,
-            suggested_deliverable_count=1 if dur_days == 1 else (min(dur_days, 10) if dur_days else None),
+            suggested_deliverable_count=extracted_cnt or (1 if dur_days == 1 else (min(dur_days, 10) if dur_days else None)),
             suggested_deliverable_preferences=extracted_fmts,
+            suggested_platforms=extracted_platforms or None,
+            suggested_target_audience=target_aud_list or None,
             is_ready_to_generate=False,
             pinned_entities=payload.pinned_entities,
             discovered_entities=candidate_entities,

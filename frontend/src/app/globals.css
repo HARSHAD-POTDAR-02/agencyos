@@ -380,116 +380,116 @@
 }
 
 /* ── Notion Warm Paper Light Mode Adapter ── */
-html:not(.dark) {
+html:not(.dark):not([data-marketing="true"]) {
   color-scheme: light;
 }
 
-html:not(.dark) body {
+html:not(.dark):not([data-marketing="true"]) body {
   background-color: #FFFFFF !important;
   color: #37352F !important;
 }
 
 /* Base Surfaces in Notion Light Mode */
-html:not(.dark) .surface-card {
+html:not(.dark):not([data-marketing="true"]) .surface-card {
   background-color: #FFFFFF !important;
   border-color: rgba(55, 53, 47, 0.09) !important;
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 0 0 1px rgba(55, 53, 47, 0.06) !important;
 }
 
-html:not(.dark) .surface-card-hover:hover {
+html:not(.dark):not([data-marketing="true"]) .surface-card-hover:hover {
   background-color: #FAFAF9 !important;
   border-color: rgba(55, 53, 47, 0.18) !important;
   box-shadow: 0 4px 12px -2px rgba(15, 15, 15, 0.08) !important;
   transform: translateY(-1px);
 }
 
-html:not(.dark) .surface-elevated {
+html:not(.dark):not([data-marketing="true"]) .surface-elevated {
   background-color: #FFFFFF !important;
   border-color: rgba(55, 53, 47, 0.12) !important;
   box-shadow: 0 12px 32px -4px rgba(15, 15, 15, 0.12), 0 0 0 1px rgba(55, 53, 47, 0.08) !important;
 }
 
 /* Notion Sidebar & Header: Warm Cream #F7F6F3 */
-html:not(.dark) aside,
-html:not(.dark) header {
+html:not(.dark):not([data-marketing="true"]) aside,
+html:not(.dark):not([data-marketing="true"]) header {
   background-color: #F7F6F3 !important;
   border-color: rgba(55, 53, 47, 0.12) !important;
 }
 
 /* ── All Dark Canvas & Panel Backgrounds mapped to Warm Paper White (#FFFFFF) ── */
-html:not(.dark) .bg-\[\#101014\],
-html:not(.dark) .bg-\[\#0D0D11\],
-html:not(.dark) .bg-\[\#0D0D12\],
-html:not(.dark) .bg-\[\#08080A\],
-html:not(.dark) .bg-\[\#09090B\],
-html:not(.dark) .bg-\[\#17171E\],
-html:not(.dark) .bg-\[\#262630\],
-html:not(.dark) .bg-\[\#2E2E3B\],
-html:not(.dark) .bg-zinc-900,
-html:not(.dark) .bg-neutral-900 {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#101014\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#0D0D11\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#0D0D12\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#08080A\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#09090B\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#17171E\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#262630\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#2E2E3B\],
+html:not(.dark):not([data-marketing="true"]) .bg-zinc-900,
+html:not(.dark):not([data-marketing="true"]) .bg-neutral-900 {
   background-color: #FFFFFF !important;
 }
 
 /* ── Secondary Panels, Feeds, Calendar Cells & Recessed Column Tracks -> Notion Cream #F7F6F3 ── */
-html:not(.dark) table thead tr,
-html:not(.dark) .bg-\[\#121217\],
-html:not(.dark) .bg-\[\#121217\]\/90,
-html:not(.dark) .bg-\[\#121217\]\/50,
-html:not(.dark) .bg-\[\#121218\],
-html:not(.dark) .bg-\[\#14141A\],
-html:not(.dark) .bg-\[\#14141A\]\/60,
-html:not(.dark) .bg-\[\#14141B\],
-html:not(.dark) .bg-\[\#15151B\],
-html:not(.dark) .bg-\[\#161622\],
-html:not(.dark) .bg-\[\#171720\],
-html:not(.dark) .bg-\[\#181820\],
-html:not(.dark) .bg-\[\#181822\],
-html:not(.dark) .bg-\[\#181824\],
-html:not(.dark) .bg-\[\#0F0F14\],
-html:not(.dark) .bg-\[\#101014\]\/40,
-html:not(.dark) .bg-\[\#101014\]\/50,
-html:not(.dark) .bg-\[\#101014\]\/60,
-html:not(.dark) .bg-\[\#101014\]\/80,
-html:not(.dark) .bg-\[\#0D0D11\]\/60 {
+html:not(.dark):not([data-marketing="true"]) table thead tr,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#121217\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#121217\]\/90,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#121217\]\/50,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#121218\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#14141A\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#14141A\]\/60,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#14141B\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#15151B\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#161622\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#171720\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#181820\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#181822\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#181824\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#0F0F14\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#101014\]\/40,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#101014\]\/50,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#101014\]\/60,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#101014\]\/80,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#0D0D11\]\/60 {
   background-color: #F7F6F3 !important;
 }
 
-html:not(.dark) table th {
+html:not(.dark):not([data-marketing="true"]) table th {
   color: #6B6A65 !important;
 }
 
-html:not(.dark) table tbody tr:hover {
+html:not(.dark):not([data-marketing="true"]) table tbody tr:hover {
   background-color: #FAFAF9 !important;
 }
 
 /* ── Inputs, Inline Badges, Kbd and Secondary Surfaces -> #EFEFED ── */
-html:not(.dark) .bg-\[\#20202A\],
-html:not(.dark) .bg-\[\#23232F\],
-html:not(.dark) .bg-\[\#242430\],
-html:not(.dark) .bg-\[\#282836\],
-html:not(.dark) .bg-\[\#2A2A38\],
-html:not(.dark) .bg-\[\#2c2c3b\],
-html:not(.dark) .bg-\[\#1A1A22\],
-html:not(.dark) .bg-\[\#1a1a22\],
-html:not(.dark) .bg-\[\#1a1a24\],
-html:not(.dark) .bg-black\/40,
-html:not(.dark) .bg-black\/50,
-html:not(.dark) .bg-black\/60 {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#20202A\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#23232F\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#242430\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#282836\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#2A2A38\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#2c2c3b\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#1A1A22\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#1a1a22\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#1a1a24\],
+html:not(.dark):not([data-marketing="true"]) .bg-black\/40,
+html:not(.dark):not([data-marketing="true"]) .bg-black\/50,
+html:not(.dark):not([data-marketing="true"]) .bg-black\/60 {
   background-color: #EFEFED !important;
   color: #37352F !important;
 }
 
 /* Modal Backdrops in Notion Light Mode */
-html:not(.dark) .fixed.bg-black\/70,
-html:not(.dark) .fixed.bg-black\/60,
-html:not(.dark) .fixed.bg-black\/50,
-html:not(.dark) .fixed.bg-black\/40 {
+html:not(.dark):not([data-marketing="true"]) .fixed.bg-black\/70,
+html:not(.dark):not([data-marketing="true"]) .fixed.bg-black\/60,
+html:not(.dark):not([data-marketing="true"]) .fixed.bg-black\/50,
+html:not(.dark):not([data-marketing="true"]) .fixed.bg-black\/40 {
   background-color: rgba(15, 15, 15, 0.4) !important;
 }
 
 /* Gradients Overrides in Notion Light Mode */
-html:not(.dark) .bg-gradient-to-br.from-\[\#262630\].to-\[\#17171E\],
-html:not(.dark) .bg-gradient-to-b.from-\[\#14141A\].to-\[\#101014\] {
+html:not(.dark):not([data-marketing="true"]) .bg-gradient-to-br.from-\[\#262630\].to-\[\#17171E\],
+html:not(.dark):not([data-marketing="true"]) .bg-gradient-to-b.from-\[\#14141A\].to-\[\#101014\] {
   background-image: none !important;
   background-color: #FFFFFF !important;
   color: #37352F !important;
@@ -497,425 +497,425 @@ html:not(.dark) .bg-gradient-to-b.from-\[\#14141A\].to-\[\#101014\] {
 }
 
 /* ── All Hover States in Notion Light Mode -> #F1F1EF ── */
-html:not(.dark) .hover\:bg-\[\#1C1C25\]:hover,
-html:not(.dark) .hover\:bg-\[\#20202A\]:hover,
-html:not(.dark) .hover\:bg-\[\#20202A\]\/40:hover,
-html:not(.dark) .hover\:bg-\[\#20202A\]\/50:hover,
-html:not(.dark) .hover\:bg-\[\#262630\]:hover,
-html:not(.dark) .hover\:bg-\[\#17171E\]:hover,
-html:not(.dark) .hover\:bg-\[\#121217\]:hover,
-html:not(.dark) .hover\:bg-\[\#181822\]:hover,
-html:not(.dark) .hover\:bg-\[\#252533\]:hover,
-html:not(.dark) .hover\:bg-\[\#282836\]:hover,
-html:not(.dark) .hover\:bg-\[\#2a2a38\]:hover,
-html:not(.dark) .hover\:bg-\[\#2c2c3b\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.02\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.025\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.03\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.035\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.04\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.06\]:hover,
-html:not(.dark) .hover\:bg-white\/\[0\.08\]:hover {
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#1C1C25\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#20202A\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#20202A\]\/40:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#20202A\]\/50:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#262630\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#17171E\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#121217\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#181822\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#252533\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#282836\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#2a2a38\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-\[\#2c2c3b\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.02\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.025\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.03\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.035\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.04\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.06\]:hover,
+html:not(.dark):not([data-marketing="true"]) .hover\:bg-white\/\[0\.08\]:hover {
   background-color: #F1F1EF !important;
 }
 
 /* ── Notion Warm Charcoal Text Hierarchy ── */
 /* Primary Text (Headings, titles, active labels) */
-html:not(.dark) .text-\[\#F2F0F7\],
-html:not(.dark) .text-\[\#F2F0F7\]\/90,
-html:not(.dark) .text-\[\#F2F0F7\]\/80,
-html:not(.dark) .text-\[\#F2F0F7\]\/70,
-html:not(.dark) .text-\[\#F2F0F7\]\/60,
-html:not(.dark) .text-\[\#E4E4E7\],
-html:not(.dark) .text-\[\#D4D4D8\],
-html:not(.dark) .text-zinc-100,
-html:not(.dark) .text-zinc-200 {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#F2F0F7\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#F2F0F7\]\/90,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#F2F0F7\]\/80,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#F2F0F7\]\/70,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#F2F0F7\]\/60,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E4E4E7\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#D4D4D8\],
+html:not(.dark):not([data-marketing="true"]) .text-zinc-100,
+html:not(.dark):not([data-marketing="true"]) .text-zinc-200 {
   color: #37352F !important;
 }
 
 /* Secondary Text (Descriptions, metadata, sublabels) */
-html:not(.dark) .text-\[\#A3A0B0\],
-html:not(.dark) .text-\[\#A3A0B0\]\/70,
-html:not(.dark) .text-\[\#A3A0B0\]\/60,
-html:not(.dark) .text-\[\#A3A0B0\]\/50,
-html:not(.dark) .text-\[\#A3A0B0\]\/40,
-html:not(.dark) .text-\[\#71717A\],
-html:not(.dark) .text-\[\#8A8797\],
-html:not(.dark) .text-\[\#A1A1AA\],
-html:not(.dark) .text-zinc-400 {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A3A0B0\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A3A0B0\]\/70,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A3A0B0\]\/60,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A3A0B0\]\/50,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A3A0B0\]\/40,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#71717A\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#8A8797\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A1A1AA\],
+html:not(.dark):not([data-marketing="true"]) .text-zinc-400 {
   color: #6B6A65 !important;
 }
 
 /* Muted & Timestamps */
-html:not(.dark) .text-\[\#6C697D\],
-html:not(.dark) .text-zinc-500,
-html:not(.dark) .text-zinc-600 {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#6C697D\],
+html:not(.dark):not([data-marketing="true"]) .text-zinc-500,
+html:not(.dark):not([data-marketing="true"]) .text-zinc-600 {
   color: #9B9A97 !important;
 }
 
 /* Disabled Text */
-html:not(.dark) .text-\[\#474554\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#474554\] {
   color: #C7C6C2 !important;
 }
 
 /* Telemetry & Inactive Metric Numbers / Labels */
-html:not(.dark) .text-\[\#A78BFA\]\/20,
-html:not(.dark) .text-\[\#A78BFA\]\/25,
-html:not(.dark) .text-\[\#A78BFA\]\/30,
-html:not(.dark) .text-\[\#A78BFA\]\/40,
-html:not(.dark) .text-\[\#A78BFA\]\/50,
-html:not(.dark) .text-\[\#A78BFA\]\/60,
-html:not(.dark) .text-\[\#A78BFA\]\/75,
-html:not(.dark) .text-\[\#E5AA58\]\/20,
-html:not(.dark) .text-\[\#E5AA58\]\/25,
-html:not(.dark) .text-\[\#E5AA58\]\/30,
-html:not(.dark) .text-\[\#E5AA58\]\/40,
-html:not(.dark) .text-\[\#E5AA58\]\/50,
-html:not(.dark) .text-\[\#E5AA58\]\/60,
-html:not(.dark) .text-\[\#E5AA58\]\/75,
-html:not(.dark) .text-\[\#69A9D8\]\/20,
-html:not(.dark) .text-\[\#69A9D8\]\/25,
-html:not(.dark) .text-\[\#69A9D8\]\/30,
-html:not(.dark) .text-\[\#69A9D8\]\/40,
-html:not(.dark) .text-\[\#69A9D8\]\/50,
-html:not(.dark) .text-\[\#69A9D8\]\/60,
-html:not(.dark) .text-\[\#69A9D8\]\/75,
-html:not(.dark) .text-\[\#45B88A\]\/20,
-html:not(.dark) .text-\[\#45B88A\]\/25,
-html:not(.dark) .text-\[\#45B88A\]\/30,
-html:not(.dark) .text-\[\#45B88A\]\/40,
-html:not(.dark) .text-\[\#45B88A\]\/50,
-html:not(.dark) .text-\[\#45B88A\]\/60,
-html:not(.dark) .text-\[\#E16F7B\]\/30,
-html:not(.dark) .text-\[\#E16F7B\]\/35,
-html:not(.dark) .text-\[\#E16F7B\]\/40,
-html:not(.dark) .text-\[\#E16F7B\]\/60 {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/20,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/25,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/30,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/40,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/50,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/60,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\]\/75,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/20,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/25,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/30,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/40,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/50,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/60,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\]\/75,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/20,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/25,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/30,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/40,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/50,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/60,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\]\/75,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\]\/20,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\]\/25,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\]\/30,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\]\/40,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\]\/50,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\]\/60,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E16F7B\]\/30,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E16F7B\]\/35,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E16F7B\]\/40,
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E16F7B\]\/60 {
   color: #6B6A65 !important;
 }
 
-html:not(.dark) .group:hover .group-hover\:text-\[\#A78BFA\],
-html:not(.dark) .group:hover .group-hover\:text-\[\#A78BFA\]\/60,
-html:not(.dark) .group:hover .group-hover\:text-\[\#A78BFA\]\/80 {
+html:not(.dark):not([data-marketing="true"]) .group:hover .group-hover\:text-\[\#A78BFA\],
+html:not(.dark):not([data-marketing="true"]) .group:hover .group-hover\:text-\[\#A78BFA\]\/60,
+html:not(.dark):not([data-marketing="true"]) .group:hover .group-hover\:text-\[\#A78BFA\]\/80 {
   color: #191919 !important;
 }
 
 /* ── Hairline Borders & Dividers in Notion Light Mode ── */
-html:not(.dark) .border-white\/\[0\.04\],
-html:not(.dark) .border-white\/\[0\.06\],
-html:not(.dark) .border-white\/\[0\.08\],
-html:not(.dark) .border-white\/\[0\.1\],
-html:not(.dark) .border-white\/\[0\.12\],
-html:not(.dark) .border-white\/\[0\.14\],
-html:not(.dark) .border-white\/\[0\.15\],
-html:not(.dark) .border-white\/\[0\.18\],
-html:not(.dark) .border-white\/\[0\.2\],
-html:not(.dark) .border-\[\#30303D\],
-html:not(.dark) .border-\[\#262630\],
-html:not(.dark) .border-\[\#20202B\],
-html:not(.dark) .border-\[\#262638\] {
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.04\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.06\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.08\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.1\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.12\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.14\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.15\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.18\],
+html:not(.dark):not([data-marketing="true"]) .border-white\/\[0\.2\],
+html:not(.dark):not([data-marketing="true"]) .border-\[\#30303D\],
+html:not(.dark):not([data-marketing="true"]) .border-\[\#262630\],
+html:not(.dark):not([data-marketing="true"]) .border-\[\#20202B\],
+html:not(.dark):not([data-marketing="true"]) .border-\[\#262638\] {
   border-color: rgba(55, 53, 47, 0.12) !important;
 }
 
 /* Hairline Dividers (Children Selectors) in Notion Light Mode */
-html:not(.dark) .divide-white\/\[0\.04\] > :not([hidden]) ~ :not([hidden]),
-html:not(.dark) .divide-white\/\[0\.06\] > :not([hidden]) ~ :not([hidden]),
-html:not(.dark) .divide-white\/\[0\.08\] > :not([hidden]) ~ :not([hidden]),
-html:not(.dark) .divide-\[\#262630\] > :not([hidden]) ~ :not([hidden]),
-html:not(.dark) .divide-\[\#30303D\] > :not([hidden]) ~ :not([hidden]) {
+html:not(.dark):not([data-marketing="true"]) .divide-white\/\[0\.04\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark):not([data-marketing="true"]) .divide-white\/\[0\.06\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark):not([data-marketing="true"]) .divide-white\/\[0\.08\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark):not([data-marketing="true"]) .divide-\[\#262630\] > :not([hidden]) ~ :not([hidden]),
+html:not(.dark):not([data-marketing="true"]) .divide-\[\#30303D\] > :not([hidden]) ~ :not([hidden]) {
   border-color: rgba(55, 53, 47, 0.14) !important;
 }
 
 /* Universal Divider Safety Rules */
-html:not(.dark) .divide-y > :not([hidden]) ~ :not([hidden]) {
+html:not(.dark):not([data-marketing="true"]) .divide-y > :not([hidden]) ~ :not([hidden]) {
   border-top-color: rgba(55, 53, 47, 0.12);
 }
-html:not(.dark) .divide-x > :not([hidden]) ~ :not([hidden]),
-html:not(.dark) .sm\:divide-x > :not([hidden]) ~ :not([hidden]),
-html:not(.dark) .md\:divide-x > :not([hidden]) ~ :not([hidden]) {
+html:not(.dark):not([data-marketing="true"]) .divide-x > :not([hidden]) ~ :not([hidden]),
+html:not(.dark):not([data-marketing="true"]) .sm\:divide-x > :not([hidden]) ~ :not([hidden]),
+html:not(.dark):not([data-marketing="true"]) .md\:divide-x > :not([hidden]) ~ :not([hidden]) {
   border-left-color: rgba(55, 53, 47, 0.14) !important;
 }
 
 /* Translucent fills mapped to subtle ink tints */
-html:not(.dark) .bg-white\/\[0\.02\],
-html:not(.dark) .bg-white\/\[0\.04\],
-html:not(.dark) .bg-white\/\[0\.06\] {
+html:not(.dark):not([data-marketing="true"]) .bg-white\/\[0\.02\],
+html:not(.dark):not([data-marketing="true"]) .bg-white\/\[0\.04\],
+html:not(.dark):not([data-marketing="true"]) .bg-white\/\[0\.06\] {
   background-color: rgba(55, 53, 47, 0.04) !important;
 }
 
-html:not(.dark) .bg-white\/\[0\.08\],
-html:not(.dark) .bg-white\/\[0\.1\] {
+html:not(.dark):not([data-marketing="true"]) .bg-white\/\[0\.08\],
+html:not(.dark):not([data-marketing="true"]) .bg-white\/\[0\.1\] {
   background-color: rgba(55, 53, 47, 0.06) !important;
 }
 
 /* ── Primary Brand Accent (Zero Purple): Map to Notion Blue #2383E2 ── */
-html:not(.dark) .text-\[\#A78BFA\],
-html:not(.dark) .text-\[\#B69BFF\],
-html:not(.dark) .text-\[\#C4B5FD\],
-html:not(.dark) .text-purple-400,
-html:not(.dark) .text-purple-300,
-html:not(.dark) .text-purple-500 {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#A78BFA\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#B69BFF\],
+html:not(.dark):not([data-marketing="true"]) .text-\[\#C4B5FD\],
+html:not(.dark):not([data-marketing="true"]) .text-purple-400,
+html:not(.dark):not([data-marketing="true"]) .text-purple-300,
+html:not(.dark):not([data-marketing="true"]) .text-purple-500 {
   color: #2383E2 !important;
 }
 
-html:not(.dark) .bg-\[\#A78BFA\]\/10,
-html:not(.dark) .bg-\[\#A78BFA\]\/15,
-html:not(.dark) .bg-\[\#A78BFA\]\/20,
-html:not(.dark) .bg-\[\#A78BFA\]\/\[0\.12\],
-html:not(.dark) .bg-\[\#A78BFA\]\/\[0\.08\],
-html:not(.dark) .bg-purple-950\/10,
-html:not(.dark) .bg-purple-950\/20,
-html:not(.dark) .bg-purple-900\/20 {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]\/15,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]\/20,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]\/\[0\.12\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]\/\[0\.08\],
+html:not(.dark):not([data-marketing="true"]) .bg-purple-950\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-950\/20,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-900\/20 {
   background-color: rgba(35, 131, 226, 0.09) !important;
 }
 
-html:not(.dark) .border-\[\#A78BFA\],
-html:not(.dark) .border-\[\#A78BFA\]\/20,
-html:not(.dark) .border-\[\#A78BFA\]\/30,
-html:not(.dark) .border-\[\#A78BFA\]\/40,
-html:not(.dark) .border-\[\#A78BFA\]\/50,
-html:not(.dark) .border-\[\#A78BFA\]\/\[0\.28\],
-html:not(.dark) .border-purple-800\/40,
-html:not(.dark) .border-l-purple-500 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#A78BFA\],
+html:not(.dark):not([data-marketing="true"]) .border-\[\#A78BFA\]\/20,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#A78BFA\]\/30,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#A78BFA\]\/40,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#A78BFA\]\/50,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#A78BFA\]\/\[0\.28\],
+html:not(.dark):not([data-marketing="true"]) .border-purple-800\/40,
+html:not(.dark):not([data-marketing="true"]) .border-l-purple-500 {
   border-color: rgba(35, 131, 226, 0.35) !important;
 }
 
-html:not(.dark) .ring-\[\#A78BFA\]\/20,
-html:not(.dark) .ring-\[\#A78BFA\]\/30 {
+html:not(.dark):not([data-marketing="true"]) .ring-\[\#A78BFA\]\/20,
+html:not(.dark):not([data-marketing="true"]) .ring-\[\#A78BFA\]\/30 {
   --tw-ring-color: rgba(35, 131, 226, 0.25) !important;
 }
 
 /* Solid primary action buttons become Notion Solid Charcoal #191919 with #FFFFFF text */
-html:not(.dark) .bg-\[\#A78BFA\]:not([class*="/"]):not([class*="group-hover"]) {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]:not([class*="/"]):not([class*="group-hover"]) {
   background-color: #191919 !important;
   color: #FFFFFF !important;
 }
-html:not(.dark) .bg-\[\#A78BFA\]:not([class*="/"]):not([class*="group-hover"]) * {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]:not([class*="/"]):not([class*="group-hover"]) * {
   color: #FFFFFF !important;
   stroke: #FFFFFF !important;
 }
-html:not(.dark) .bg-\[\#A78BFA\]:not([class*="/"]):not([class*="group-hover"]):hover {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#A78BFA\]:not([class*="/"]):not([class*="group-hover"]):hover {
   background-color: #2F2E2B !important;
 }
 
 /* ── Notion Status Pills: Pastel Palette ── */
-html:not(.dark) .text-\[\#45B88A\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#45B88A\] {
   color: #0F7B6C !important;
 }
-html:not(.dark) .bg-\[\#45B88A\]\/10,
-html:not(.dark) .bg-\[\#45B88A\]\/\[0\.12\] {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#45B88A\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#45B88A\]\/\[0\.12\] {
   background-color: #DDEDEA !important;
 }
-html:not(.dark) .border-\[\#45B88A\]\/30,
-html:not(.dark) .border-\[\#45B88A\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#45B88A\]\/30,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#45B88A\]\/20 {
   border-color: rgba(15, 123, 108, 0.22) !important;
 }
 
-html:not(.dark) .text-\[\#E5AA58\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E5AA58\] {
   color: #9A6700 !important;
 }
-html:not(.dark) .bg-\[\#E5AA58\]\/10,
-html:not(.dark) .bg-\[\#E5AA58\]\/\[0\.12\] {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#E5AA58\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#E5AA58\]\/\[0\.12\] {
   background-color: #FBF3DB !important;
 }
-html:not(.dark) .border-\[\#E5AA58\]\/30,
-html:not(.dark) .border-\[\#E5AA58\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#E5AA58\]\/30,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#E5AA58\]\/20 {
   border-color: rgba(154, 103, 0, 0.24) !important;
 }
 
-html:not(.dark) .text-\[\#E16F7B\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#E16F7B\] {
   color: #E03E3E !important;
 }
-html:not(.dark) .bg-\[\#E16F7B\]\/10,
-html:not(.dark) .bg-\[\#E16F7B\]\/\[0\.12\] {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#E16F7B\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#E16F7B\]\/\[0\.12\] {
   background-color: #FBE4E4 !important;
 }
-html:not(.dark) .border-\[\#E16F7B\]\/30,
-html:not(.dark) .border-\[\#E16F7B\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#E16F7B\]\/30,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#E16F7B\]\/20 {
   border-color: rgba(224, 62, 62, 0.22) !important;
 }
 
-html:not(.dark) .text-\[\#69A9D8\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#69A9D8\] {
   color: #0B6E99 !important;
 }
-html:not(.dark) .bg-\[\#69A9D8\]\/10,
-html:not(.dark) .bg-\[\#69A9D8\]\/\[0\.12\] {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#69A9D8\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#69A9D8\]\/\[0\.12\] {
   background-color: #DDEBF1 !important;
 }
-html:not(.dark) .border-\[\#69A9D8\]\/30,
-html:not(.dark) .border-\[\#69A9D8\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#69A9D8\]\/30,
+html:not(.dark):not([data-marketing="true"]) .border-\[\#69A9D8\]\/20 {
   border-color: rgba(11, 110, 153, 0.22) !important;
 }
 
-html:not(.dark) .text-\[\#38BDF8\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#38BDF8\] {
   color: #64473A !important;
 }
-html:not(.dark) .bg-\[\#38BDF8\]\/10,
-html:not(.dark) .bg-\[\#38BDF8\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#38BDF8\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#38BDF8\]\/20 {
   background-color: #E9E5E3 !important;
 }
-html:not(.dark) .border-\[\#38BDF8\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#38BDF8\]\/20 {
   border-color: rgba(100, 71, 58, 0.20) !important;
 }
 
-html:not(.dark) .text-\[\#F472B6\] {
+html:not(.dark):not([data-marketing="true"]) .text-\[\#F472B6\] {
   color: #D9730D !important;
 }
-html:not(.dark) .bg-\[\#F472B6\]\/10,
-html:not(.dark) .bg-\[\#F472B6\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#F472B6\]\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#F472B6\]\/20 {
   background-color: #FAEBDD !important;
 }
-html:not(.dark) .border-\[\#F472B6\]\/20 {
+html:not(.dark):not([data-marketing="true"]) .border-\[\#F472B6\]\/20 {
   border-color: rgba(217, 115, 13, 0.22) !important;
 }
 
 /* ── Keyboard Shortcut & Kanban Count Badges in Notion Light Mode ── */
-html:not(.dark) kbd,
-html:not(.dark) .kbd-pill,
-html:not(.dark) span.kbd-pill {
+html:not(.dark):not([data-marketing="true"]) kbd,
+html:not(.dark):not([data-marketing="true"]) .kbd-pill,
+html:not(.dark):not([data-marketing="true"]) span.kbd-pill {
   color: #37352F !important;
   background-color: #EFEFED !important;
   border: 1px solid rgba(55, 53, 47, 0.14) !important;
   box-shadow: 0 1px 0 rgba(55, 53, 47, 0.08) !important;
 }
 
-html:not(.dark) span.bg-\[\#1a1a22\],
-html:not(.dark) span.bg-\[\#1A1A22\] {
+html:not(.dark):not([data-marketing="true"]) span.bg-\[\#1a1a22\],
+html:not(.dark):not([data-marketing="true"]) span.bg-\[\#1A1A22\] {
   background-color: #EFEFED !important;
   color: #37352F !important;
   border-color: rgba(55, 53, 47, 0.14) !important;
 }
 
 /* Canvas dot-matrix & subtle glow in Notion Light Mode */
-html:not(.dark) .framer-canvas-grid {
+html:not(.dark):not([data-marketing="true"]) .framer-canvas-grid {
   background-image: radial-gradient(rgba(55, 53, 47, 0.09) 1px, transparent 1px) !important;
 }
 
-html:not(.dark) .ambient-glow {
+html:not(.dark):not([data-marketing="true"]) .ambient-glow {
   background-image: radial-gradient(ellipse 90% 40% at 50% -10%, rgba(35, 131, 226, 0.04), transparent 70%) !important;
 }
 
 /* Telemetry strip separator in Notion Light Mode */
-html:not(.dark) .telemetry-cell:not(:last-child)::after {
+html:not(.dark):not([data-marketing="true"]) .telemetry-cell:not(:last-child)::after {
   background-color: rgba(55, 53, 47, 0.14) !important;
 }
 
 /* Scrollbar in Notion Light Mode */
-html:not(.dark) ::-webkit-scrollbar-thumb {
+html:not(.dark):not([data-marketing="true"]) ::-webkit-scrollbar-thumb {
   background: rgba(55, 53, 47, 0.18) !important;
 }
-html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+html:not(.dark):not([data-marketing="true"]) ::-webkit-scrollbar-thumb:hover {
   background: rgba(55, 53, 47, 0.32) !important;
 }
 
 /* ── Universal Notion Light Mode Safety Overrides ── */
 
 /* Text headings & titles with hardcoded text-white */
-html:not(.dark) h1.text-white,
-html:not(.dark) h2.text-white,
-html:not(.dark) h3.text-white,
-html:not(.dark) h4.text-white,
-html:not(.dark) h5.text-white,
-html:not(.dark) header h1.text-white,
-html:not(.dark) header h2.text-white,
-html:not(.dark) header h3.text-white,
-html:not(.dark) header h4.text-white,
-html:not(.dark) header p.text-white,
-html:not(.dark) header span.text-white:not(button *):not(a *):not([class*="bg-"]),
-html:not(.dark) .surface-card h1.text-white,
-html:not(.dark) .surface-card h2.text-white,
-html:not(.dark) .surface-card h3.text-white,
-html:not(.dark) .surface-card h4.text-white,
-html:not(.dark) .surface-card h5.text-white {
+html:not(.dark):not([data-marketing="true"]) h1.text-white,
+html:not(.dark):not([data-marketing="true"]) h2.text-white,
+html:not(.dark):not([data-marketing="true"]) h3.text-white,
+html:not(.dark):not([data-marketing="true"]) h4.text-white,
+html:not(.dark):not([data-marketing="true"]) h5.text-white,
+html:not(.dark):not([data-marketing="true"]) header h1.text-white,
+html:not(.dark):not([data-marketing="true"]) header h2.text-white,
+html:not(.dark):not([data-marketing="true"]) header h3.text-white,
+html:not(.dark):not([data-marketing="true"]) header h4.text-white,
+html:not(.dark):not([data-marketing="true"]) header p.text-white,
+html:not(.dark):not([data-marketing="true"]) header span.text-white:not(button *):not(a *):not([class*="bg-"]),
+html:not(.dark):not([data-marketing="true"]) .surface-card h1.text-white,
+html:not(.dark):not([data-marketing="true"]) .surface-card h2.text-white,
+html:not(.dark):not([data-marketing="true"]) .surface-card h3.text-white,
+html:not(.dark):not([data-marketing="true"]) .surface-card h4.text-white,
+html:not(.dark):not([data-marketing="true"]) .surface-card h5.text-white {
   color: #191919 !important;
 }
 
 /* Enforce pure white text and icon strokes for solid dark primary buttons in light mode */
-html:not(.dark) .bg-\[\#191919\],
-html:not(.dark) .bg-\[\#191919\] *,
-html:not(.dark) button.bg-\[\#191919\],
-html:not(.dark) button.bg-\[\#191919\] *,
-html:not(.dark) a.bg-\[\#191919\],
-html:not(.dark) a.bg-\[\#191919\] * {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#191919\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#191919\] *,
+html:not(.dark):not([data-marketing="true"]) button.bg-\[\#191919\],
+html:not(.dark):not([data-marketing="true"]) button.bg-\[\#191919\] *,
+html:not(.dark):not([data-marketing="true"]) a.bg-\[\#191919\],
+html:not(.dark):not([data-marketing="true"]) a.bg-\[\#191919\] * {
   color: #FFFFFF !important;
 }
 
 /* Hardcoded dark backgrounds inside cards, badges, and headers */
-html:not(.dark) .bg-\[\#191922\],
-html:not(.dark) .bg-\[\#20202B\],
-html:not(.dark) .bg-\[\#181822\],
-html:not(.dark) .bg-\[\#181824\],
-html:not(.dark) .bg-\[\#14141B\],
-html:not(.dark) .bg-\[\#121218\],
-html:not(.dark) .bg-\[\#13131A\],
-html:not(.dark) .bg-\[\#1C1C26\] {
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#191922\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#20202B\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#181822\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#181824\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#14141B\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#121218\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#13131A\],
+html:not(.dark):not([data-marketing="true"]) .bg-\[\#1C1C26\] {
   background-color: #F7F6F3 !important;
   color: #37352F !important;
   border-color: rgba(55, 53, 47, 0.12) !important;
 }
 
 /* Hardcoded purple gradients become clean Notion Charcoal or Blue */
-html:not(.dark) .from-purple-600.to-indigo-600,
-html:not(.dark) .from-purple-600.to-indigo-500,
-html:not(.dark) .from-purple-500.to-indigo-500 {
+html:not(.dark):not([data-marketing="true"]) .from-purple-600.to-indigo-600,
+html:not(.dark):not([data-marketing="true"]) .from-purple-600.to-indigo-500,
+html:not(.dark):not([data-marketing="true"]) .from-purple-500.to-indigo-500 {
   background-image: none !important;
   background-color: #191919 !important;
   color: #FFFFFF !important;
   box-shadow: none !important;
 }
 
-html:not(.dark) .bg-violet-600,
-html:not(.dark) .bg-purple-600 {
+html:not(.dark):not([data-marketing="true"]) .bg-violet-600,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-600 {
   background-color: #191919 !important;
   color: #FFFFFF !important;
 }
 
-html:not(.dark) .bg-violet-600:hover,
-html:not(.dark) .bg-purple-600:hover {
+html:not(.dark):not([data-marketing="true"]) .bg-violet-600:hover,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-600:hover {
   background-color: #2F2E2B !important;
 }
 
-html:not(.dark) .bg-purple-600\/30,
-html:not(.dark) .bg-violet-500\/10,
-html:not(.dark) .bg-violet-500\/15,
-html:not(.dark) .bg-violet-500\/20,
-html:not(.dark) .bg-violet-600\/10,
-html:not(.dark) .bg-violet-600\/20,
-html:not(.dark) .bg-purple-500\/10,
-html:not(.dark) .bg-purple-500\/15,
-html:not(.dark) .bg-purple-500\/20 {
+html:not(.dark):not([data-marketing="true"]) .bg-purple-600\/30,
+html:not(.dark):not([data-marketing="true"]) .bg-violet-500\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-violet-500\/15,
+html:not(.dark):not([data-marketing="true"]) .bg-violet-500\/20,
+html:not(.dark):not([data-marketing="true"]) .bg-violet-600\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-violet-600\/20,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-500\/10,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-500\/15,
+html:not(.dark):not([data-marketing="true"]) .bg-purple-500\/20 {
   background-color: #EFEFED !important;
   color: #37352F !important;
   border-color: rgba(55, 53, 47, 0.12) !important;
 }
 
-html:not(.dark) .text-violet-300,
-html:not(.dark) .text-violet-400 {
+html:not(.dark):not([data-marketing="true"]) .text-violet-300,
+html:not(.dark):not([data-marketing="true"]) .text-violet-400 {
   color: #37352F !important;
 }
 
-html:not(.dark) .border-violet-500\/20,
-html:not(.dark) .border-violet-500\/30 {
+html:not(.dark):not([data-marketing="true"]) .border-violet-500\/20,
+html:not(.dark):not([data-marketing="true"]) .border-violet-500\/30 {
   border-color: rgba(55, 53, 47, 0.12) !important;
 }
 
 /* Pitch deck presentation view in light mode */
-html:not(.dark) .pitch-deck-screen-view {
+html:not(.dark):not([data-marketing="true"]) .pitch-deck-screen-view {
   background-color: #F7F6F3 !important;
 }
 
-html:not(.dark) .pitch-deck-screen-view .bg-\[\#101014\],
-html:not(.dark) .pitch-deck-screen-view .bg-\[\#17171E\] {
+html:not(.dark):not([data-marketing="true"]) .pitch-deck-screen-view .bg-\[\#101014\],
+html:not(.dark):not([data-marketing="true"]) .pitch-deck-screen-view .bg-\[\#17171E\] {
   background-color: #FFFFFF !important;
   color: #37352F !important;
   border-color: rgba(55, 53, 47, 0.12) !important;
 }
 
-html:not(.dark) .pitch-deck-screen-view footer {
+html:not(.dark):not([data-marketing="true"]) .pitch-deck-screen-view footer {
   background-color: #F7F6F3 !important;
   border-top-color: rgba(55, 53, 47, 0.12) !important;
 }
 
-html:not(.dark) .pitch-deck-screen-view footer kbd {
+html:not(.dark):not([data-marketing="true"]) .pitch-deck-screen-view footer kbd {
   background-color: #EFEFED !important;
   color: #191919 !important;
   border-color: rgba(55, 53, 47, 0.14) !important;

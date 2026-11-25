@@ -151,6 +151,8 @@ class ChatBriefResponse(BaseModel):
     suggested_objective: str | None = None
     suggested_custom_brief: str | None = None
     suggested_deliverable_preferences: list[str] | None = None
+    suggested_platforms: list[str] | None = None
+    suggested_target_audience: list[str] | None = None
     suggested_period_month: int | None = None
     suggested_period_year: int | None = None
     suggested_start_date: str | None = None

@@ -86,6 +86,8 @@ def scrub_creative_content(text: str) -> str:
     for pat in platform_meta_patterns:
         cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
 
+    cleaned = re.sub(r"\s*through\s+[^.!?\n]+?(?:'s)?\s+Standard\s+Services\.?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bStandard\s+Services\b", "our team", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned).strip()
     return cleaned
 
@@ -255,7 +257,12 @@ class ContentArchitectAgent:
         tone_do = "; ".join(brand_context.tone_guidelines.do) if brand_context and brand_context.tone_guidelines.do else "Professional, clear"
         tone_dont = "; ".join(brand_context.tone_guidelines.dont) if brand_context and brand_context.tone_guidelines.dont else "Hype, unsubstantiated claims"
         prohibited_terms = ", ".join([pt.term for pt in brand_context.prohibited_terms]) if brand_context and brand_context.prohibited_terms else "None"
-        offers_text = ", ".join([o.name for o in brand_context.verified_offers]) if brand_context and brand_context.verified_offers else "Standard Services"
+        client_display = brand_context.business_name if brand_context else "the brand"
+        offers_text = (
+            ", ".join([o.name for o in brand_context.verified_offers])
+            if brand_context and brand_context.verified_offers
+            else (f"{', '.join(brief.pinned_entities)}" if brief.pinned_entities else f"{client_display} core offering")
+        )
         factual_boundaries = brand_context.get_factual_boundary_prompt() if brand_context else ""
 
         # Derive dynamic tone, emoji policy, visual motifs, and carousel structure (Constraints 3 & 4)
@@ -278,17 +285,16 @@ class ContentArchitectAgent:
         if previously_generated_summary:
             mem_items = []
             for item in previously_generated_summary:
+                struct_note = f" | Structure='{item['structure_outline']}'" if item.get("structure_outline") else ""
                 mem_items.append(
                     f"  * Slot {item['slot_index']} (Day {item['planned_day']}, {item.get('hook_category', 'general')}): "
-                    f"Hook='{item['primary_hook']}' | Visual='{item['opening_visual']}' | CTA='{item['call_to_action']}'"
+                    f"Hook='{item['primary_hook']}' | Visual='{item['opening_visual']}' | CTA='{item['call_to_action']}'{struct_note}"
                 )
             memory_section = (
-                f"\n### CROSS-BATCH ANTI-REPETITION MEMORY (DO NOT REPEAT):\n"
-                f"The following deliverables were already created in earlier batches for this campaign:\n"
+                f"\n### CROSS-BATCH ANTI-REPETITION MEMORY (DO NOT CLONE OR SYNONYMIZE):\n"
+                f"The following deliverables already exist in this campaign:\n"
                 + "\n".join(mem_items) + "\n"
-                f"STRICT DIRECTIVE: You MUST NOT reuse the same opening hook phrasing, visual camera framing, "
-                f"or call-to-action structure as the previously generated deliverables above! "
-                f"Each deliverable MUST feel distinctly authored with fresh creative angles.\n"
+                f"STRICT DIRECTIVE: Do NOT reuse the same opening hook metaphor, CTA template, camera framing, or slide skeleton (e.g., if a prior carousel used a 4-step audit or X-vs-Y comparison table, you MUST pick a totally different creative structure such as a day-in-the-life breakdown, single teardown, myth-busting proof, or step-by-step walkthrough).\n"
             )
 
         # Revision Instructions if repairing
@@ -331,12 +337,13 @@ class ContentArchitectAgent:
 Your task is to generate high-density, production-ready deliverable plans for EXACTLY {len(batch_slots)} slots:
 
 {revision_section}
-### CAMPAIGN STRATEGY
+### CAMPAIGN STRATEGY & AGREED CHAT PLAN (HIGHEST PRIORITY)
 - Campaign Theme: {strategy.campaign_theme}
 - Strategic Thesis: {strategy.strategic_thesis or 'Brand differentiation through authentic proof'}
 - Audience Core Tension: {strategy.core_tension or 'Addressing unsaid psychological friction'}
 - Primary Objective: {strategy.primary_objective}
-- Client Brief Notes: {brief.custom_brief or 'None specified'}
+- Agreed Studio Chat Brief & Proposed Plan (FOLLOW THIS CLOSELY — honor discussed hooks, slide concepts, reel beats/durations, products, and angles):
+{brief.custom_brief or 'None specified'}
 
 {factual_boundaries}
 
@@ -370,8 +377,9 @@ Your task is to generate high-density, production-ready deliverable plans for EX
 
 2. CAROUSELS (5 to 7 Slides Target - Constraint 4):
    - {carousel_structure}
-   - Every slide MUST specify a clear, physically producible `visual_layout` and crisp `headline`.
+   - Every slide MUST specify a clear, physically producible `visual_layout`, crisp `headline`, and clean `image_prompt` (pure photography description of the visual scene/subject/lighting with zero text, typography, or logos so it renders cleanly in Flux).
    - Complete social caption with verified CTA (following emoji policy: {emoji_policy}).
+   - Also populate `visual_asset_prompt` on the DeliverablePlan with a clean photographic hero scene prompt (lighting, subject, textures, framing; no text/logo words).
 
 3. PROOF GROUNDING & PLACEHOLDERS (Constraint 2):
    - When a slot has no verified proof points or mentions NONE_USE_PLACEHOLDER, emit '[CLIENT_INPUT_NEEDED: <specific missing fact>]' instead of fabricating metrics!
@@ -380,8 +388,10 @@ Your task is to generate high-density, production-ready deliverable plans for EX
 4. ANTI-CLICHÉ PROHIBITIONS (STRICT):
    - NEVER use marketing slop: "delve", "game-changer", "unleash", "revolutionize", "elevate", "in today's fast-paced world", "skyrocket", "supercharge", "dive into", "unlock your potential", "look no further", "secret sauce".
 
-5. TOPIC ROTATION (Bug 9):
-   - Do NOT repeat the exact same sub-topic across deliverables! Rotate across distinct buyer considerations, operational realities, and value angles.
+5. TOPIC, FRAMEWORK & CONCRETE SPECIFICITY RULES (ALL INDUSTRIES):
+   - NEVER repeat the same core thesis, metaphor, or slide framework across deliverables in this batch or across prior batches! If Deliverable A explains a broad problem, Deliverable B MUST zoom into a concrete moment, teardown, tactile craft step, customer objection, or real-world use case.
+   - USE TANGIBLE BRIEF NOUNS, NOT ABSTRACT BUZZWORDS: Ground every script and slide in the exact products, ingredients, workflows, environments, or customer situations from the Client Brief & Verified Offers (avoid vague consultant filler like "visibility signals", "operating picture", or "value propositions").
+   - CTA HYGIENE: Write natural, human CTAs matching the brand offer (e.g., "Book a walkthrough", "Reserve a tasting table", "Shop Batch 09"). NEVER write generic words like "Standard Services".
 
 6. STRICT ENGLISH REQUIREMENT:
    - All text, voiceover scripts, captions, and slide copy MUST be written exclusively in English.
@@ -551,6 +561,12 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                     elif d.visual_asset_prompt or d.graphic_copy:
                         opening_visual = d.visual_asset_prompt or d.graphic_copy or ""
 
+                    structure_outline = ""
+                    if d.deliverable_type == "carousel" and d.carousel_slides:
+                        structure_outline = " -> ".join(s.headline[:36] for s in d.carousel_slides[:4])
+                    elif d.deliverable_type == "reel" and d.reel_scenes:
+                        structure_outline = " -> ".join(s.timestamp_range for s in d.reel_scenes[:4])
+
                     previously_generated_summary.append({
                         "slot_index": d.slot_index,
                         "planned_day": d.planned_day,
@@ -558,6 +574,7 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                         "hook_category": d.hook_category,
                         "opening_visual": opening_visual[:160],
                         "call_to_action": d.call_to_action,
+                        "structure_outline": structure_outline,
                     })
         else:
             for wave_start in range(0, len(slot_chunks), concurrency):
@@ -578,6 +595,12 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                         elif d.visual_asset_prompt or d.graphic_copy:
                             opening_visual = d.visual_asset_prompt or d.graphic_copy or ""
 
+                        structure_outline = ""
+                        if d.deliverable_type == "carousel" and d.carousel_slides:
+                            structure_outline = " -> ".join(s.headline[:36] for s in d.carousel_slides[:4])
+                        elif d.deliverable_type == "reel" and d.reel_scenes:
+                            structure_outline = " -> ".join(s.timestamp_range for s in d.reel_scenes[:4])
+
                         previously_generated_summary.append({
                             "slot_index": d.slot_index,
                             "planned_day": d.planned_day,
@@ -585,6 +608,7 @@ Your task is to generate high-density, production-ready deliverable plans for EX
                             "hook_category": d.hook_category,
                             "opening_visual": opening_visual[:160],
                             "call_to_action": d.call_to_action,
+                            "structure_outline": structure_outline,
                         })
 
         # Post-generation anti-cloning and hook deduplication pass
@@ -741,11 +765,12 @@ async def content_architect_node(
 ) -> dict[str, Any]:
     """
     LangGraph node entry point for Content Architect Agent.
-    
+
     1. Consumes campaign_strategy, brief, and brand_context.
-    2. Executes ContentArchitectAgent with micro-batching.
-    3. Records execution telemetry (AgentTelemetry).
-    4. Writes exclusively to state["deliverable_plans"].
+    2. Executes selective micro-batch repair on failing slots OR full generation.
+    3. Always preserves original brief context during repairs.
+    4. Records execution telemetry (AgentTelemetry).
+    5. Writes exclusively to state["deliverable_plans"].
     """
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
@@ -766,121 +791,25 @@ async def content_architect_node(
         agent = ContentArchitectAgent(model_name=model_name)
         quality_eval = state.get("quality_evaluation")
         rev_instructions = None
-        failing_indices = getattr(quality_eval, "failing_deliverable_indices", None) if quality_eval else None
-
-        existing_plans = state.get("deliverable_plans")
-
-        if existing_plans and failing_indices:
-            # Selective repair path
-            findings = getattr(quality_eval, "findings", []) if quality_eval else []
-            logger.info(f"Triggering selective repair for failing deliverable indices: {failing_indices}")
-            plans = await agent.repair_deliverables(
-                existing_deliverables=existing_plans,
-                failing_indices=failing_indices,
-                findings=findings,
-                strategy=strategy,
-                brand_context=state.get("brand_context"),
-                brief=state.get("brief"),
-            )
-        else:
-            # Full micro-batch generation path
-            if quality_eval and quality_eval.revision_instruction and quality_eval.revision_instruction.target_agent == "content_architect":
-                rev_instructions = quality_eval.revision_instruction.instructions
-
-            plans = await agent.run(
-                strategy=strategy,
-                brief=state["brief"],
-                brand_context=state.get("brand_context"),
-                revision_instructions=rev_instructions,
-            )
-
-        duration_ms = (time.perf_counter() - start_perf) * 1000.0
-        end_time = datetime.now(timezone.utc).isoformat()
-
-        telemetry = AgentTelemetry(
-            agent_name=agent_name,
-            start_time=start_time,
-            end_time=end_time,
-            duration_ms=duration_ms,
-            model_name=model_name,
-            success=True,
-        )
-
-        return {
-            "deliverable_plans": plans,
-            "pipeline_agents_executed": [agent_name],
-            "agent_traces": [telemetry],
-            "current_agent": agent_name,
-        }
-
-    except Exception as e:
-        duration_ms = (time.perf_counter() - start_perf) * 1000.0
-        end_time = datetime.now(timezone.utc).isoformat()
-        err_msg = f"Content Architect failed: {str(e)}"
-        logger.error(err_msg, exc_info=True)
-
-        telemetry = AgentTelemetry(
-            agent_name=agent_name,
-            start_time=start_time,
-            end_time=end_time,
-            duration_ms=duration_ms,
-            model_name=model_name,
-            success=False,
-            error_message=str(e),
-        )
-
-        return {
-            "pipeline_agents_executed": [agent_name],
-            "agent_traces": [telemetry],
-            "errors": [err_msg],
-            "current_agent": agent_name,
-        }
-
-
-
-async def content_architect_node(
-    state: CampaignState,
-) -> dict[str, Any]:
-    """
-    LangGraph node entry point for Content Architect Agent.
-    
-    1. Consumes campaign_strategy, brief, and brand_context.
-    2. Executes ContentArchitectAgent.
-    3. Records execution telemetry (AgentTelemetry).
-    4. Writes exclusively to state["deliverable_plans"].
-    """
-    start_time = datetime.now(timezone.utc).isoformat()
-    start_perf = time.perf_counter()
-    agent_name = "content_architect"
-    model_name = settings.CAMPAIGN_CONTENT_MODEL
-
-    strategy = state.get("campaign_strategy")
-    if not strategy:
-        err_msg = "Content Architect failed: campaign_strategy is missing from state."
-        logger.error(err_msg)
-        return {
-            "pipeline_agents_executed": [agent_name],
-            "errors": [err_msg],
-            "current_agent": agent_name,
-        }
-
-    try:
-        agent = ContentArchitectAgent(model_name=model_name)
-        quality_eval = state.get("quality_evaluation")
-        rev_instructions = None
-        if quality_eval and quality_eval.revision_instruction and quality_eval.revision_instruction.target_agent == "content_architect":
+        if (
+            quality_eval
+            and quality_eval.revision_instruction
+            and quality_eval.revision_instruction.target_agent == "content_architect"
+        ):
             rev_instructions = quality_eval.revision_instruction.instructions
 
         existing_plans = state.get("deliverable_plans") or []
         failing_indices = getattr(quality_eval, "failing_deliverable_indices", []) if quality_eval else []
 
         if existing_plans and failing_indices and quality_eval and quality_eval.revision_required:
+            logger.info(f"Triggering selective repair for failing deliverable indices: {failing_indices}")
             plans = await agent.repair_deliverables(
                 existing_deliverables=existing_plans,
                 failing_indices=failing_indices,
                 findings=quality_eval.findings if quality_eval else [],
                 strategy=strategy,
                 brand_context=state.get("brand_context"),
+                brief=state.get("brief"),
             )
         else:
             plans = await agent.run(

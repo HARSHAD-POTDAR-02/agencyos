@@ -19,7 +19,10 @@ from app.campaign_intelligence.schemas.strategy import (
     StrategicAngle,
 )
 from app.campaign_intelligence.schemas.trace import AgentTelemetry
-from app.campaign_intelligence.tools.date_utils import extract_format_and_count_from_text
+from app.campaign_intelligence.tools.date_utils import (
+    extract_format_and_count_from_text,
+    extract_format_breakdown_from_text,
+)
 from app.core.config import settings
 from app.core.llm import invoke_structured_llm
 
@@ -174,47 +177,86 @@ def derive_slot_allocation_targets(
     targets: list[dict[str, Any]] = []
     pref_formats = [p.lower().strip() for p in (brief.deliverable_preferences or []) if p.strip()]
 
-    if quota_pool:
-        # Match preferred formats from quota pool first
+    # Honor explicit per-format requests (e.g. {'carousel': 2, 'reel': 1}) from brief or chat
+    explicit_breakdown: dict[str, int] = dict(getattr(brief, "deliverable_requests", None) or {})
+    if not explicit_breakdown and (brief.custom_brief or brief.objective):
+        explicit_breakdown = extract_format_breakdown_from_text(
+            f"{brief.objective} {brief.custom_brief or ''}"
+        )
+
+    def _pick_platform(fmt: str, idx: int) -> str:
+        if len(platforms) == 1:
+            return platforms[0]
+        if platforms:
+            if "reel" in fmt and "instagram" in platforms:
+                return "instagram"
+            if fmt == "carousel" and "linkedin" in platforms and "instagram" not in platforms:
+                return "linkedin"
+            return platforms[idx % len(platforms)]
+        return "instagram" if "reel" in fmt else "linkedin"
+
+    if explicit_breakdown:
+        expanded_slots: list[dict[str, str]] = []
+        slot_idx = 0
+        for fmt, cnt in explicit_breakdown.items():
+            if isinstance(cnt, int) and cnt > 0:
+                for _ in range(cnt):
+                    expanded_slots.append({
+                        "deliverable_type": fmt,
+                        "target_platform": _pick_platform(fmt, slot_idx),
+                    })
+                    slot_idx += 1
+        # Respect quota ceiling or explicit target_count when capped
+        if expanded_slots:
+            if explicit_count and len(expanded_slots) > target_count:
+                targets = expanded_slots[:target_count]
+            elif brand_context and brand_context.contract_quotas and len(expanded_slots) > target_count:
+                targets = expanded_slots[:target_count]
+            else:
+                targets = expanded_slots
+    elif quota_pool:
+        # Filter quota pool to requested platforms first when caller specified platforms
         remaining_pool = list(quota_pool)
+        if platforms:
+            plat_set = {p.lower().strip() for p in platforms}
+            plat_matched = [item for item in remaining_pool if item["target_platform"].lower().strip() in plat_set]
+            if plat_matched:
+                remaining_pool = plat_matched
         if pref_formats:
             matched_pool = [item for item in remaining_pool if any(pref in item["deliverable_type"].lower() for pref in pref_formats)]
             other_pool = [item for item in remaining_pool if item not in matched_pool]
             remaining_pool = matched_pool + other_pool
 
-        # Select target_count items evenly or sequentially from quota pool
+        # Select target_count items evenly or sequentially from quota pool, enforcing brief.platforms
         step = max(1, len(remaining_pool) // max(1, target_count))
         for i in range(target_count):
             idx = (i * step) % len(remaining_pool) if remaining_pool else 0
-            chosen = remaining_pool[idx] if idx < len(remaining_pool) else remaining_pool[0]
-            targets.append(dict(chosen))
+            chosen = dict(remaining_pool[idx] if idx < len(remaining_pool) else remaining_pool[0])
+            if platforms and chosen.get("target_platform", "").lower().strip() not in {p.lower().strip() for p in platforms}:
+                chosen["target_platform"] = _pick_platform(chosen.get("deliverable_type", "carousel"), i)
+            targets.append(chosen)
     elif performance_playbook and performance_playbook.recommended_format_mix:
         mix = performance_playbook.recommended_format_mix
         mix_pool: list[dict[str, str]] = []
+        idx_counter = 0
         for fmt, cnt in mix.items():
             if isinstance(cnt, int) and cnt > 0:
-                plat = "linkedin" if fmt == "carousel" else "instagram"
-                if plat not in platforms and platforms:
-                    plat = platforms[0]
                 for _ in range(cnt):
-                    mix_pool.append({"deliverable_type": fmt, "target_platform": plat})
+                    mix_pool.append({"deliverable_type": fmt, "target_platform": _pick_platform(fmt, idx_counter)})
+                    idx_counter += 1
         if mix_pool:
             for i in range(target_count):
                 targets.append(dict(mix_pool[i % len(mix_pool)]))
     elif pref_formats:
         for i in range(target_count):
             fmt = pref_formats[i % len(pref_formats)]
-            plat = "instagram" if "reel" in fmt else "linkedin"
-            if plat not in platforms and platforms:
-                plat = platforms[0]
-            targets.append({"deliverable_type": fmt, "target_platform": plat})
+            targets.append({"deliverable_type": fmt, "target_platform": _pick_platform(fmt, i)})
     else:
         # Balanced default fallback
         default_fmts = ["reel", "carousel"]
         for i in range(target_count):
             fmt = default_fmts[i % len(default_fmts)]
-            plat = platforms[i % len(platforms)] if platforms else ("instagram" if fmt == "reel" else "linkedin")
-            targets.append({"deliverable_type": fmt, "target_platform": plat})
+            targets.append({"deliverable_type": fmt, "target_platform": _pick_platform(fmt, i)})
 
     # 4. Chronological Day Distribution
     if duration_days == 1:
@@ -490,6 +532,7 @@ class CampaignStrategistAgent:
         brand_context: BrandContext | None = None,
         market_research: MarketResearchReport | None = None,
         performance_playbook: PerformancePlaybook | None = None,
+        revision_instructions: str | None = None,
     ) -> CampaignStrategy:
         """
         Execute strategic synthesis across all intelligence inputs.
@@ -504,6 +547,14 @@ class CampaignStrategistAgent:
             brand_text_parts.append(f"- Prescribed Tone (DO): {'; '.join(brand_context.tone_guidelines.do) if brand_context.tone_guidelines.do else 'Professional'}")
             brand_text_parts.append(f"- Proscribed Tone (DONT): {'; '.join(brand_context.tone_guidelines.dont) if brand_context.tone_guidelines.dont else 'Hype'}")
             
+            # Surface past human rejections & client review feedback so Strategy avoids repeating rejected angles
+            if getattr(brand_context, "feedback_history", None):
+                recent_fb = brand_context.feedback_history[:5]
+                fb_lines = [f"  * [{fb.classification}] {fb.content[:220]}" for fb in recent_fb if getattr(fb, "content", None)]
+                if fb_lines:
+                    brand_text_parts.append("Past Client Rejections & Review Feedback (DO NOT REPEAT):")
+                    brand_text_parts.extend(fb_lines)
+
             # Append 3-tier factual boundaries
             brand_text_parts.append("\n" + brand_context.get_factual_boundary_prompt())
         else:
@@ -589,14 +640,16 @@ Synthesize the internal brand reality, external market research, and historical 
 ### 3. HISTORICAL PERFORMANCE & FATIGUE SIGNALS (Agent 3)
 {perf_summary}
 
-### 4. CAMPAIGN BRIEF & OBJECTIVE
+### 4. CAMPAIGN BRIEF & AGREED CHAT PLAN (HIGHEST PRIORITY — FOLLOW CLOSELY)
 - Primary Objective: {brief.objective}
-- Custom Brief Notes: {brief.custom_brief or 'None'}
+- Agreed Studio Chat Brief & Proposed Plan:
+{brief.custom_brief or 'None'}
 - Target Platforms: {', '.join(target_platforms)}
 - Target Formats: {', '.join(brief.deliverable_preferences) if brief.deliverable_preferences else 'Any'}
 - Campaign Timeline: {timeline_info}
 - Budget: {f"${brief.budget:,.2f}" if brief.budget else "Unspecified / Retainer Scope"}
 {hero_guidance}
+- ALIGNMENT MANDATE: If the Agreed Studio Chat Brief & Proposed Plan above specifies concrete deliverable concepts, hooks, angles, reel durations, tone, or topics discussed with the user in chat, you MUST build your strategy, angles, and `deliverable_slots` directly around that agreed plan rather than inventing an unrelated concept.
 
 ### 5. INDUSTRY TONE & FUNNEL GROUNDING
 {industry_funnel_guidance}
@@ -639,6 +692,12 @@ Formulate a master Campaign Strategy strictly conforming to the JSON schema:
    - NEVER invent discounts, false statistics, or unverified claims.
    - All strategy components MUST be written exclusively in English.
 """
+        if revision_instructions:
+            prompt += f"""
+### QUALITY GATE REVISION MANDATE (HIGHEST PRIORITY)
+The previous campaign strategy failed QA review. You MUST fix every issue below cleanly in this revision:
+{revision_instructions}
+"""
 
         # 5. Invoke LLM
         strategy: CampaignStrategy = await invoke_structured_llm(
@@ -657,11 +716,41 @@ Formulate a master Campaign Strategy strictly conforming to the JSON schema:
             performance_playbook=performance_playbook,
         )
 
-        # 7. Deterministic Validation against Brand Rules
+        # 7. Deterministic Validation against Brand Rules (Auto-repair once if prohibited terms detected)
         rule_violations = validate_strategy_against_brand_rules(strategy, brand_context)
         if rule_violations:
-            logger.warning(f"Rule violations detected in generated strategy: {rule_violations}")
-            strategy.assumptions_and_risks.extend([f"RULE VIOLATION MITIGATION: {v}" for v in rule_violations])
+            logger.warning(f"Rule violations detected in generated strategy: {rule_violations}. Triggering self-repair.")
+            repair_prompt = (
+                prompt
+                + "\n### MANDATORY PROHIBITED-TERM REPAIR\n"
+                + "The previous strategy violated strict client rules:\n- "
+                + "\n- ".join(rule_violations)
+                + "\nRewrite the strategy removing every prohibited term completely."
+            )
+            try:
+                strategy = await invoke_structured_llm(
+                    prompt=repair_prompt,
+                    schema_class=CampaignStrategy,
+                    temperature=max(0.1, self.temperature - 0.2),
+                    model=self.model_name,
+                )
+                strategy = reconcile_and_pad_slots(
+                    strategy=strategy,
+                    brief=brief,
+                    brand_context=brand_context,
+                    market_research=market_research,
+                    performance_playbook=performance_playbook,
+                )
+                remaining_violations = validate_strategy_against_brand_rules(strategy, brand_context)
+                if remaining_violations:
+                    strategy.assumptions_and_risks.extend(
+                        [f"RULE VIOLATION MITIGATION: {v}" for v in remaining_violations]
+                    )
+            except Exception as repair_exc:
+                logger.warning(f"Strategy rule self-repair failed: {repair_exc}")
+                strategy.assumptions_and_risks.extend(
+                    [f"RULE VIOLATION MITIGATION: {v}" for v in rule_violations]
+                )
 
         return strategy
 
@@ -671,11 +760,12 @@ async def campaign_strategist_node(
 ) -> dict[str, Any]:
     """
     LangGraph node entry point for Campaign Strategist Agent.
-    
+
     1. Consumes intelligence from brand_context, market_research, and performance_playbook.
-    2. Executes CampaignStrategistAgent.
-    3. Records execution telemetry (AgentTelemetry).
-    4. Writes exclusively to state["campaign_strategy"].
+    2. Checks for Quality Gate revision instructions if routed back from Agent 6.
+    3. Executes CampaignStrategistAgent.
+    4. Records execution telemetry (AgentTelemetry).
+    5. Writes exclusively to state["campaign_strategy"].
     """
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
@@ -683,81 +773,26 @@ async def campaign_strategist_node(
     model_name = settings.CAMPAIGN_STRATEGY_MODEL
 
     try:
+        quality_eval = state.get("quality_evaluation")
+        rev_instructions = None
+        if (
+            quality_eval
+            and quality_eval.revision_required
+            and quality_eval.revision_instruction
+            and quality_eval.revision_instruction.target_agent == "campaign_strategist"
+        ):
+            rev_instructions = (
+                f"Reason: {quality_eval.revision_instruction.reason}\n"
+                f"Instructions: {quality_eval.revision_instruction.instructions}"
+            )
+
         agent = CampaignStrategistAgent(model_name=model_name)
         strategy = await agent.run(
             brief=state["brief"],
             brand_context=state.get("brand_context"),
             market_research=state.get("market_research"),
             performance_playbook=state.get("performance_playbook"),
-        )
-
-        duration_ms = (time.perf_counter() - start_perf) * 1000.0
-        end_time = datetime.now(timezone.utc).isoformat()
-
-        telemetry = AgentTelemetry(
-            agent_name=agent_name,
-            start_time=start_time,
-            end_time=end_time,
-            duration_ms=duration_ms,
-            model_name=model_name,
-            success=True,
-        )
-
-        return {
-            "campaign_strategy": strategy,
-            "pipeline_agents_executed": [agent_name],
-            "agent_traces": [telemetry],
-            "current_agent": agent_name,
-        }
-
-    except Exception as e:
-        duration_ms = (time.perf_counter() - start_perf) * 1000.0
-        end_time = datetime.now(timezone.utc).isoformat()
-        err_msg = f"Campaign Strategist failed: {str(e)}"
-        logger.error(err_msg, exc_info=True)
-
-        telemetry = AgentTelemetry(
-            agent_name=agent_name,
-            start_time=start_time,
-            end_time=end_time,
-            duration_ms=duration_ms,
-            model_name=model_name,
-            success=False,
-            error_message=str(e),
-        )
-
-        return {
-            "pipeline_agents_executed": [agent_name],
-            "agent_traces": [telemetry],
-            "errors": [err_msg],
-            "current_agent": agent_name,
-        }
-
-
-
-async def campaign_strategist_node(
-    state: CampaignState,
-) -> dict[str, Any]:
-    """
-    LangGraph node entry point for Campaign Strategist Agent.
-    
-    1. Consumes intelligence from brand_context, market_research, and performance_playbook.
-    2. Executes CampaignStrategistAgent.
-    3. Records execution telemetry (AgentTelemetry).
-    4. Writes exclusively to state["campaign_strategy"].
-    """
-    start_time = datetime.now(timezone.utc).isoformat()
-    start_perf = time.perf_counter()
-    agent_name = "campaign_strategist"
-    model_name = settings.CAMPAIGN_STRATEGY_MODEL
-
-    try:
-        agent = CampaignStrategistAgent(model_name=model_name)
-        strategy = await agent.run(
-            brief=state["brief"],
-            brand_context=state.get("brand_context"),
-            market_research=state.get("market_research"),
-            performance_playbook=state.get("performance_playbook"),
+            revision_instructions=rev_instructions,
         )
 
         duration_ms = (time.perf_counter() - start_perf) * 1000.0

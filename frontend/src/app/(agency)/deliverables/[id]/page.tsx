@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { deliverableApi, approvalApi, publishingApi, reviewApi, API_BASE } from "@/lib/api";
+import { useAgencyWebSocket } from "@/lib/websocket-context";
 import PublishModal from "@/components/publishing/PublishModal";
 import {
   ArrowLeft,
@@ -71,6 +72,7 @@ interface ContentVersion {
   notes: string | null;
   uploaded_by_id: string;
   created_at: string;
+  url?: string;
 }
 
 interface DeliverableDetail {
@@ -172,6 +174,14 @@ function DeliverableDetailContent() {
   const [uploadNotes, setUploadNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // AI Visual Generation (Flux-3-Image-Klein -> S3/B2)
+  const [showGenerateVisualModal, setShowGenerateVisualModal] = useState(false);
+  const [visualPreset, setVisualPreset] = useState<"square_1_1" | "portrait_4_5" | "reel_9_16">("portrait_4_5");
+  const [visualPrompt, setVisualPrompt] = useState("");
+  const [visualSlideIndex, setVisualSlideIndex] = useState<string>("");
+  const [generatingVisual, setGeneratingVisual] = useState(false);
+  const [visualJobNotice, setVisualJobNotice] = useState<{ type: "queued" | "ready" | "error"; message: string } | null>(null);
 
   // Approval state
   const [reviewComment, setReviewComment] = useState("");
@@ -370,6 +380,60 @@ function DeliverableDetailContent() {
       setUploadError(err instanceof Error ? err.message : "Failed to upload file");
     } finally {
       setUploading(false);
+    }
+  };
+
+  useAgencyWebSocket("VISUAL_ASSETS_READY", (envelope) => {
+    if (envelope?.data?.deliverable_id !== id) return;
+    setVisualJobNotice({
+      type: "ready",
+      message: `Rendered v${envelope.data.version_number} (${envelope.data.width}×${envelope.data.height}) saved to S3. ${envelope.data.credits_remaining} credits remaining.`,
+    });
+    fetchDeliverable().then(() => {
+      if (envelope.data?.content_version_id) {
+        setSelectedVersionId(envelope.data.content_version_id);
+      }
+    });
+  });
+
+  useAgencyWebSocket("VISUAL_ASSET_FAILED", (envelope) => {
+    if (envelope?.data?.deliverable_id !== id) return;
+    setVisualJobNotice({
+      type: "error",
+      message: envelope.data?.error || "Visual generation failed. Zero credits deducted.",
+    });
+  });
+
+  const handleGenerateVisual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!effectiveAgencyId || !token || !id) return;
+    try {
+      setGeneratingVisual(true);
+      setVisualJobNotice(null);
+      const slideNum = visualSlideIndex.trim() ? Number(visualSlideIndex.trim()) : undefined;
+      const res = await deliverableApi.generateVisual(
+        effectiveAgencyId,
+        id,
+        {
+          preset: visualPreset,
+          prompt: visualPrompt.trim() || undefined,
+          slide_index: slideNum,
+          task_id: selectedTaskId !== "all" ? selectedTaskId : null,
+        },
+        token
+      );
+      setShowGenerateVisualModal(false);
+      setVisualJobNotice({
+        type: "queued",
+        message: `Rendering ${res.width}×${res.height} visual via Flux Klein (${res.credit_cost} credits reserved on success)...`,
+      });
+    } catch (err: unknown) {
+      setVisualJobNotice({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to start visual generation",
+      });
+    } finally {
+      setGeneratingVisual(false);
     }
   };
 
@@ -645,7 +709,9 @@ function DeliverableDetailContent() {
   const isDocument = isPdf || isDoc || isTxt;
 
   const mediaUrl = currentPreviewVersion
-    ? `${API_BASE}/uploads/${currentPreviewVersion.storage_key}`
+    ? currentPreviewVersion.url && currentPreviewVersion.url.startsWith("http")
+      ? currentPreviewVersion.url
+      : `${API_BASE}/uploads/${currentPreviewVersion.storage_key}`
     : null;
 
   return (
@@ -789,7 +855,19 @@ function DeliverableDetailContent() {
             </button>
           )}
 
-          {/* Upload Button */}
+          {/* Generate Visual (Flux Klein -> S3/B2) */}
+          <button
+            onClick={() => {
+              setVisualJobNotice(null);
+              setShowGenerateVisualModal(true);
+            }}
+            className="inline-flex items-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Generate Visual</span>
+          </button>
+
+          {/* Upload Custom Button */}
           <button
             onClick={() => {
               setUploadTaskId(selectedTaskId !== "all" ? selectedTaskId : "none");
@@ -798,10 +876,35 @@ function DeliverableDetailContent() {
             className="inline-flex items-center gap-2 bg-[#A78BFA] hover:bg-[#B69BFF] text-[#101014] text-xs font-semibold px-3.5 py-1.5 rounded-xl shadow-[0_0_12px_rgba(167,139,250,0.25)] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>Upload New Version</span>
+            <span>Upload Custom</span>
           </button>
         </div>
       </div>
+
+      {visualJobNotice && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-xs font-mono flex items-center justify-between gap-3 ${
+            visualJobNotice.type === "ready"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+              : visualJobNotice.type === "error"
+              ? "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300"
+              : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            {visualJobNotice.type === "queued" && <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />}
+            {visualJobNotice.type === "ready" && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+            {visualJobNotice.type === "error" && <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+            <span>{visualJobNotice.message}</span>
+          </span>
+          <button
+            onClick={() => setVisualJobNotice(null)}
+            className="text-[11px] opacity-70 hover:opacity-100 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Deliverable Meta Header */}
       <div className="surface-card rounded-2xl border border-white/[0.08] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
@@ -1792,6 +1895,124 @@ function DeliverableDetailContent() {
                   ) : (
                     <>
                       <Upload className="w-3.5 h-3.5" /> Upload Version
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Visual Modal (Flux-3-Image-Klein -> S3/B2) */}
+      {showGenerateVisualModal && (
+        <div className="fixed inset-0 z-50 bg-[#101014]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="surface-card rounded-2xl border border-white/[0.12] p-6 max-w-lg w-full shadow-2xl space-y-4 text-[#F2F0F7]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-heading font-bold">
+                    Generate Visual Asset (Flux-3-Image-Klein)
+                  </h3>
+                  <p className="text-[10px] font-mono text-[#A3A0B0]">
+                    Persists directly to S3 · 5 AI Credits deducted only on success
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGenerateVisualModal(false)}
+                className="text-[#A3A0B0] hover:text-[#F2F0F7] text-xs font-mono p-1 rounded-lg hover:bg-white/[0.06] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleGenerateVisual} className="space-y-4">
+              {visualJobNotice?.type === "error" && (
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
+                  {visualJobNotice.message}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#A3A0B0]">
+                  Platform Aspect Ratio Preset
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: "portrait_4_5", label: "4:5 Portrait", dims: "896×1120", sub: "IG Feed / Carousel" },
+                    { id: "square_1_1", label: "1:1 Square", dims: "1024×1024", sub: "IG / FB / LI Feed" },
+                    { id: "reel_9_16", label: "9:16 Vertical", dims: "768×1360", sub: "Reel Cover" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setVisualPreset(opt.id as "square_1_1" | "portrait_4_5" | "reel_9_16")}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        visualPreset === opt.id
+                          ? "border-emerald-400 bg-emerald-500/15 text-white"
+                          : "border-white/[0.1] bg-white/[0.03] text-[#A3A0B0] hover:border-white/25"
+                      }`}
+                    >
+                      <p className="text-xs font-semibold">{opt.label}</p>
+                      <p className="text-[10px] font-mono opacity-80">{opt.dims}</p>
+                      <p className="text-[10px] opacity-65 mt-0.5">{opt.sub}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#A3A0B0]">
+                  Clean Visual Prompt
+                </label>
+                <textarea
+                  rows={3}
+                  value={visualPrompt}
+                  onChange={(e) => setVisualPrompt(e.target.value)}
+                  placeholder={`Describe the scene for "${deliverable.title}" (lighting, subject, composition). Rendered text and logos are automatically suppressed.`}
+                  className="w-full rounded-xl border border-white/[0.12] bg-[#0D0D11]/60 p-3 text-xs text-[#F2F0F7] placeholder:text-[#6B6A65] focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#A3A0B0]">
+                  Carousel Slide Number (Optional)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={visualSlideIndex}
+                  onChange={(e) => setVisualSlideIndex(e.target.value)}
+                  placeholder="Leave blank for hero asset, or 1-20 for slide"
+                  className="w-full rounded-xl border border-white/[0.12] bg-[#0D0D11]/60 px-3 py-2 text-xs text-[#F2F0F7] placeholder:text-[#6B6A65] focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setShowGenerateVisualModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-[#A3A0B0] hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={generatingVisual}
+                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-[#101014] rounded-xl disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {generatingVisual ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Queuing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" /> Render to S3 (5 Credits)
                     </>
                   )}
                 </button>

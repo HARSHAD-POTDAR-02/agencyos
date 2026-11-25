@@ -171,7 +171,7 @@ async def run_campaign_pipeline(
 
     thread_config = {
         "configurable": {
-            "thread_id": f"campaign-{state.get('campaign_id', uuid.uuid4())}",
+            "thread_id": f"campaign-{state.get('campaign_id', uuid.uuid4())}-{state['run_id']}",
         }
     }
 

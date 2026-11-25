@@ -308,11 +308,14 @@ export const campaignApi = {
       suggested_objective?: string;
       suggested_custom_brief?: string;
       suggested_deliverable_preferences?: string[];
+      suggested_platforms?: string[];
+      suggested_target_audience?: string[];
       suggested_period_month?: number;
       suggested_period_year?: number;
       suggested_start_date?: string;
       suggested_end_date?: string;
       suggested_duration_days?: number;
+      suggested_deliverable_count?: number;
       is_ready_to_generate: boolean;
       campaign_id?: string;
       session_id?: string;
@@ -707,6 +710,33 @@ export const deliverableApi = {
     apiFetch(`/agencies/${agencyId}/deliverables/${deliverableId}/versions`, {
       method: "POST",
       body: formData,
+      token,
+    }),
+
+  generateVisual: (
+    agencyId: string,
+    deliverableId: string,
+    data: {
+      preset: "square_1_1" | "portrait_4_5" | "reel_9_16";
+      prompt?: string;
+      slide_index?: number;
+      steps?: number;
+      task_id?: string | null;
+    },
+    token: string
+  ) =>
+    apiFetch<{
+      status: "queued";
+      job_id: string;
+      deliverable_id: string;
+      preset: string;
+      width: number;
+      height: number;
+      credit_cost: number;
+      credits_available: number;
+    }>(`/agencies/${agencyId}/deliverables/${deliverableId}/generate-visual`, {
+      method: "POST",
+      body: data,
       token,
     }),
 
@@ -1284,15 +1314,18 @@ export const operationalWorkflowApi = {
       campaign_name: string;
       theme: string;
       primary_goal: string;
-      target_audience: string | string[];
+      target_audience?: string | string[];
       platforms?: string[];
       formats?: string[];
       deliverable_count?: number;
       key_offer?: string;
       additional_context?: string;
+      pinned_entities?: string[];
       brand_id?: string;
       period_month?: number;
       period_year?: number;
+      start_date?: string;
+      end_date?: string;
       duration_days?: number;
     },
     token: string

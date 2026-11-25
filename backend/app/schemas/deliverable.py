@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 
 from app.models.deliverable import DeliverableStatus
 from app.schemas.campaign import DeliverableOut
@@ -28,9 +28,12 @@ class ContentVersionOut(BaseModel):
     uploaded_by_id: uuid.UUID
     created_at: datetime
 
+    @computed_field
     @property
     def url(self) -> str:
-        return f"/uploads/{self.storage_key}"
+        from app.services.tunnel_service import get_effective_media_url
+
+        return get_effective_media_url(self.storage_key)
 
 
 class DeliverableDetailOut(DeliverableOut):

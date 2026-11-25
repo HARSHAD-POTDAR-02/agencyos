@@ -301,13 +301,80 @@ def sanitize_date_year(date_str: str | None, target_year: int, allow_past_year: 
     return date_str
 
 
+def _normalize_format_token(tok: str) -> str:
+    s = tok.strip().lower().rstrip("s")
+    if s in ("video", "short", "reel"):
+        return "reel"
+    if s in ("carousel", "slide", "deck"):
+        return "carousel"
+    if s in ("static", "image", "photo", "infographic"):
+        return "static"
+    return s
+
+
+def extract_platforms_from_text(text: str) -> list[str]:
+    """Extract explicit social platform names mentioned in text."""
+    if not text:
+        return []
+    t = text.lower()
+    platforms: list[str] = []
+    if re.search(r"\b(instagram|insta|ig)\b", t):
+        platforms.append("instagram")
+    if re.search(r"\blinkedin\b", t):
+        platforms.append("linkedin")
+    if re.search(r"\b(facebook|fb)\b", t):
+        platforms.append("facebook")
+    if re.search(r"\b(youtube|shorts)\b", t):
+        platforms.append("youtube")
+    if re.search(r"\b(twitter|x\.com)\b", t):
+        platforms.append("twitter")
+    return platforms
+
+
+def extract_format_breakdown_from_text(text: str) -> dict[str, int]:
+    """
+    Extract explicit per-format deliverable counts from text.
+    Example: '2 insta carousels and 1 reel' -> {'carousel': 2, 'reel': 1}.
+    """
+    if not text:
+        return {}
+
+    t = text.lower()
+    # Skip durations like "30 sec video" or "5 day sprint" from counting as deliverable quantities
+    pattern = re.compile(
+        r"\b(\d{1,2})\s+(?!days?\b|weeks?\b|months?\b|secs?\b|seconds?\b|mins?\b|minutes?\b|slides?\b|scenes?\b)"
+        r"(?:(?:instagram|insta|ig|linkedin|facebook|fb|youtube|twitter|short[- ]?form|multi[- ]?slide|single[- ]?image|[a-z]+)\s+){0,2}"
+        r"(reels?|carousels?|static(?:\s+posts?)?|short[- ]?form\s+videos?|videos?)\b",
+        re.IGNORECASE,
+    )
+    breakdown: dict[str, int] = {}
+    for m in pattern.finditer(t):
+        try:
+            cnt = int(m.group(1))
+        except (ValueError, IndexError):
+            continue
+        if not (1 <= cnt <= 60):
+            continue
+        raw_fmt = m.group(2).lower()
+        if "carousel" in raw_fmt:
+            fmt = "carousel"
+        elif "reel" in raw_fmt or "video" in raw_fmt:
+            fmt = "reel"
+        elif "static" in raw_fmt:
+            fmt = "static"
+        else:
+            fmt = _normalize_format_token(raw_fmt)
+        breakdown[fmt] = breakdown.get(fmt, 0) + cnt
+    return breakdown
+
+
 def extract_format_and_count_from_text(text: str) -> tuple[list[str] | None, int | None]:
     """
     Extracts explicit deliverable format preferences (e.g. ['reel']) and requested deliverable count
     from user prompt or brief text.
     Handles phrases like:
     - 'give me 3 reel ideas' -> (['reel'], 3)
-    - '3 reel s' -> (['reel'], 3)
+    - '2 insta carousels and 1 reel' -> (['carousel', 'reel'], 3)
     - 'need 5 carousels' -> (['carousel'], 5)
     - 'reels and carousels' -> (['reel', 'carousel'], None)
     """
@@ -315,41 +382,36 @@ def extract_format_and_count_from_text(text: str) -> tuple[list[str] | None, int
         return None, None
 
     t = text.lower()
+    breakdown = extract_format_breakdown_from_text(t)
 
-    # 1. Check for explicit count + format (e.g. "3 reel ideas", "3 reels", "3 reel s", "5 carousels", "5 deliverables")
-    count_match = re.search(
-        r"\b(?:give me|generate|create|plan|need|want|show me|for)?\s*(\d{1,2})\s+(?:[a-z]+\s+)?(reel|carousel|static|video|post|deliverable)s?\b",
-        t,
-        re.IGNORECASE,
-    )
-    extracted_count: int | None = None
-    if count_match:
-        try:
-            cnt = int(count_match.group(1))
-            if 1 <= cnt <= 60:
-                extracted_count = cnt
-        except ValueError:
-            pass
+    # 1. Determine total count: prefer sum of explicit format counts (e.g. 2 carousels + 1 reel = 3)
+    extracted_count: int | None = sum(breakdown.values()) if breakdown else None
+    if extracted_count is None:
+        count_match = re.search(
+            r"\b(?:give me|generate|create|plan|need|want|show me|for)?\s*(\d{1,2})\s+(?:[a-z]+\s+)?(reel|carousel|static|video|post|deliverable)s?\b",
+            t,
+            re.IGNORECASE,
+        )
+        if count_match:
+            try:
+                cnt = int(count_match.group(1))
+                if 1 <= cnt <= 60:
+                    extracted_count = cnt
+            except ValueError:
+                pass
 
-    # 2. Check for explicit format mentions
+    # 2. Check for explicit format mentions (preserving breakdown order when present)
     wants_reels = bool(re.search(r"\b(reel|reels|reel\s+s|short[- ]?form video|short[- ]?form videos)\b", t))
     wants_carousels = bool(re.search(r"\b(carousel|carousels|multi[- ]?slide|slide deck)\b", t))
     wants_static = bool(re.search(r"\b(static|single[- ]?image|photo post|infographic)\b", t))
 
-    formats: list[str] = []
-    if wants_reels and not wants_carousels and not wants_static:
-        formats = ["reel"]
-    elif wants_carousels and not wants_reels and not wants_static:
-        formats = ["carousel"]
-    elif wants_static and not wants_reels and not wants_carousels:
-        formats = ["static"]
-    else:
-        if wants_reels:
-            formats.append("reel")
-        if wants_carousels:
-            formats.append("carousel")
-        if wants_static:
-            formats.append("static")
+    formats: list[str] = list(breakdown.keys())
+    if wants_carousels and "carousel" not in formats:
+        formats.append("carousel")
+    if wants_reels and "reel" not in formats:
+        formats.append("reel")
+    if wants_static and "static" not in formats:
+        formats.append("static")
 
     return (formats if formats else None, extracted_count)
 

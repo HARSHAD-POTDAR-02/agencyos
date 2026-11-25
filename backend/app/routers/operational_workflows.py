@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -13,8 +13,15 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.campaign_intelligence.schemas.campaign import CampaignBrief
+from app.campaign_intelligence.tools.date_utils import (
+    extract_date_range_from_text,
+    extract_format_and_count_from_text,
+    extract_format_breakdown_from_text,
+    extract_platforms_from_text,
+)
 from app.core.database import AsyncSessionLocal, get_db
 from app.dependencies import get_current_user, require_agency_member
+from app.models.brand_profile import BrandProfile
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.operational_workflow import (
     AssigneeType,
@@ -54,12 +61,13 @@ class LaunchWorkflowRequest(BaseModel):
     campaign_name: str
     theme: str | None = None
     primary_goal: str | None = None
-    target_audience: str | list[str] = Field(default_factory=lambda: ["Enterprise Decision Makers & Technical Leads"])
-    platforms: list[str] = Field(default_factory=lambda: ["linkedin"])
-    formats: list[str] = Field(default_factory=lambda: ["carousel", "video_script"])
-    deliverable_count: int = 2
+    target_audience: str | list[str] | None = None
+    platforms: list[str] | None = None
+    formats: list[str] | None = None
+    deliverable_count: int | None = None
     key_offer: str | None = None
     additional_context: str | None = None
+    pinned_entities: list[str] = Field(default_factory=list)
     brand_id: str | None = None
     period_month: int | None = None
     period_year: int | None = None
@@ -157,37 +165,138 @@ async def launch_operational_campaign(
     Launch a new 14-task operational campaign run in the AgencyOS DAG engine.
     """
     now = datetime.now(timezone.utc)
-    target_month = payload.period_month or now.month
-    target_year = payload.period_year or now.year
 
-    # Normalize target_audience to list[str]
+    # Parse explicit start/end dates when provided from Studio chat
+    start_dt: date | None = None
+    end_dt: date | None = None
+    if payload.start_date:
+        try:
+            start_dt = datetime.strptime(payload.start_date.strip()[:10], "%Y-%m-%d").date()
+        except Exception:
+            start_dt = None
+    if payload.end_date:
+        try:
+            end_dt = datetime.strptime(payload.end_date.strip()[:10], "%Y-%m-%d").date()
+        except Exception:
+            end_dt = None
+
+    scan_text = " ".join(
+        p for p in [payload.additional_context or "", payload.theme or "", payload.primary_goal or ""] if p
+    ).strip()
+
+    # Extract explicit user-requested platforms/counts without double-counting assistant plan sections
+    user_req_text = ""
+    if payload.additional_context:
+        if "User Requirements from Chat:" in payload.additional_context:
+            after_user = payload.additional_context.split("User Requirements from Chat:", 1)[1]
+            user_req_text = after_user.split("Proposed Plan & Concepts Discussed in Chat", 1)[0].strip()
+        else:
+            user_req_text = payload.additional_context.split("Proposed Plan & Concepts Discussed in Chat", 1)[0].strip()
+    intent_scan_text = " ".join(
+        p for p in [user_req_text, payload.theme or "", payload.primary_goal or ""] if p
+    ).strip() or scan_text
+
+    if not start_dt and scan_text:
+        extracted_dates = extract_date_range_from_text(
+            scan_text,
+            default_year=payload.period_year or now.year,
+            reference_start_date=payload.start_date,
+        )
+        if extracted_dates:
+            start_dt = extracted_dates.start_date
+            end_dt = end_dt or extracted_dates.end_date
+
+    resolved_duration = payload.duration_days
+    if start_dt and end_dt and not resolved_duration:
+        resolved_duration = max(1, (end_dt - start_dt).days + 1)
+    if not resolved_duration:
+        resolved_duration = 1
+    if not start_dt:
+        start_dt = now.date()
+    if not end_dt:
+        end_dt = start_dt + timedelta(days=max(0, resolved_duration - 1))
+
+    target_month = payload.period_month or start_dt.month
+    target_year = payload.period_year or start_dt.year
+
+    # Normalize target_audience; fall back to the client's actual BrandProfile audience instead of hardcoded jargon
+    audience_list: list[str] = []
     if isinstance(payload.target_audience, list):
-        audience_list = payload.target_audience
+        audience_list = [str(a).strip() for a in payload.target_audience if str(a).strip()]
     elif isinstance(payload.target_audience, str) and payload.target_audience.strip():
         audience_list = [a.strip() for a in payload.target_audience.split(",") if a.strip()]
-    else:
-        audience_list = ["Enterprise Decision Makers & Technical Leads"]
 
-    objective_str = (payload.primary_goal or payload.theme or payload.campaign_name or "Drive high-intent enterprise pipeline").strip()
+    if not audience_list:
+        bp_res = await db.execute(select(BrandProfile).where(BrandProfile.client_id == payload.client_id))
+        bp = bp_res.scalars().first()
+        if bp and bp.target_audience:
+            if isinstance(bp.target_audience, list):
+                audience_list = [str(a).strip() for a in bp.target_audience if str(a).strip()]
+            elif isinstance(bp.target_audience, dict):
+                audience_list = [str(v).strip() for v in bp.target_audience.values() if str(v).strip()]
+            else:
+                audience_list = [str(bp.target_audience).strip()]
+    if not audience_list:
+        audience_list = ["Target Customers & Decision Makers"]
+
+    objective_str = (payload.primary_goal or payload.theme or payload.campaign_name or "Drive qualified engagement and conversions").strip()
     if len(objective_str) < 3:
-        objective_str = "Drive high-intent enterprise pipeline"
+        objective_str = "Drive qualified engagement and conversions"
 
-    custom_brief_str = f"Campaign: {payload.campaign_name}. Theme: {payload.theme or payload.campaign_name}. Goal: {objective_str}. {payload.additional_context or ''}".strip()
+    # Separate real social platforms from format names and extract explicit format breakdowns from brief/chat
+    valid_platforms = {"instagram", "linkedin", "facebook", "youtube", "twitter", "tiktok"}
+    raw_platforms = [p.lower().strip() for p in (payload.platforms or []) if p and p.strip()]
+    explicit_platforms = [p for p in raw_platforms if p in valid_platforms]
+    leaked_formats = [p for p in raw_platforms if p not in valid_platforms]
+
+    extracted_platforms = extract_platforms_from_text(intent_scan_text)
+    resolved_platforms = explicit_platforms or extracted_platforms or ["linkedin", "instagram"]
+
+    extracted_fmts, extracted_cnt = extract_format_and_count_from_text(intent_scan_text)
+    format_breakdown = extract_format_breakdown_from_text(intent_scan_text)
+    if payload.deliverable_count and format_breakdown and sum(format_breakdown.values()) > payload.deliverable_count:
+        # Avoid inflated breakdown if user prompt echoed counts across multiple lines
+        last_line = [ln.strip() for ln in user_req_text.splitlines() if ln.strip()]
+        if last_line:
+            single_bd = extract_format_breakdown_from_text(last_line[-1])
+            if single_bd:
+                format_breakdown = single_bd
+    resolved_formats = (
+        [f.lower().strip() for f in (payload.formats or []) if f and f.strip()]
+        or leaked_formats
+        or extracted_fmts
+        or ["carousel", "reel"]
+    )
+    resolved_count = (
+        payload.deliverable_count
+        or (sum(format_breakdown.values()) if format_breakdown else None)
+        or extracted_cnt
+    )
+
+    pinned_note = f"\nPinned Hero Entities: {', '.join(payload.pinned_entities)}" if payload.pinned_entities else ""
+    key_offer_note = f"\nKey Offer: {payload.key_offer}" if payload.key_offer else ""
+    custom_brief_parts = [
+        f"Campaign: {payload.campaign_name} | Theme: {payload.theme or payload.campaign_name} | Goal: {objective_str}",
+        payload.additional_context.strip() if payload.additional_context and payload.additional_context.strip() else "",
+    ]
+    custom_brief_str = "\n\n".join(p for p in custom_brief_parts if p) + key_offer_note + pinned_note
 
     brief = CampaignBrief(
         client_id=payload.client_id,
         agency_id=agency_id,
         period_month=target_month,
         period_year=target_year,
-        start_date=now.date(),
-        end_date=now.date() + timedelta(days=max(0, (payload.duration_days or 1) - 1)),
-        duration_days=payload.duration_days or 1,
-        target_deliverables_count=payload.deliverable_count,
+        start_date=start_dt,
+        end_date=end_dt,
+        duration_days=resolved_duration,
+        target_deliverables_count=resolved_count,
         objective=objective_str,
         custom_brief=custom_brief_str,
         target_audience=audience_list,
-        platforms=payload.platforms or ["linkedin"],
-        deliverable_preferences=payload.formats or ["carousel", "video_script"],
+        platforms=resolved_platforms,
+        deliverable_preferences=resolved_formats,
+        deliverable_requests=format_breakdown,
+        pinned_entities=payload.pinned_entities,
     )
 
     tasks_def, dep_tuples = build_campaign_dag_definition(

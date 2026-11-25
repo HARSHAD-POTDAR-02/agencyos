@@ -121,6 +121,7 @@ interface TeleprompterProps {
   reelTitle?: string;
   wordCount?: number;
   theme?: "light" | "dark";
+  compact?: boolean;
 }
 
 export function TeleprompterPreview({
@@ -129,6 +130,7 @@ export function TeleprompterPreview({
   reelTitle,
   wordCount,
   theme = "light",
+  compact = false,
 }: TeleprompterProps) {
   const preset = SCRIPT_PRESETS[clientKey] ?? SCRIPT_PRESETS.solis;
   const displayClient = clientName ?? preset.clientName;
@@ -320,9 +322,9 @@ export function TeleprompterPreview({
       </div>
 
       {/* Prompter Visual Body */}
-      <div className="relative p-4 sm:p-6">
+      <div className={compact ? "relative p-3.5 sm:p-4" : "relative p-4 sm:p-6"}>
         {/* Scene Selector Pills */}
-        <div className="flex items-center justify-center gap-1.5 overflow-x-auto pb-4 relative z-20">
+        <div className={`flex items-center justify-center gap-1.5 overflow-x-auto relative z-20 ${compact ? "pb-2.5" : "pb-4"}`}>
           {scenes.map((scene, idx) => (
             <button
               key={scene.marker}
@@ -345,43 +347,45 @@ export function TeleprompterPreview({
         {/* Scrolling Script Viewport with Margin-Pinned Eyeline Reticle & Top/Bottom Fade Scrims */}
         <div className="relative">
           {/* Outer Margin Eyeline Reticles (Pinned to left/right gutters so text never collides) */}
-          <div className="hidden md:flex items-center justify-between absolute left-0 right-0 top-1/2 -translate-y-1/2 pointer-events-none z-10 px-2">
-            <div
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border ${
-                isDark
-                  ? "bg-[#17171E]/90 border-[#0F7B6C]/40 text-emerald-400"
-                  : "bg-[#FAF9F6]/90 border-[#0F7B6C]/30 text-[#0F7B6C]"
-              }`}
-            >
-              <Eye className="w-2.5 h-2.5" />
-              <span>EYELINE</span>
+          {!compact && (
+            <div className="hidden md:flex items-center justify-between absolute left-0 right-0 top-1/2 -translate-y-1/2 pointer-events-none z-10 px-2">
+              <div
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border ${
+                  isDark
+                    ? "bg-[#17171E]/90 border-[#0F7B6C]/40 text-emerald-400"
+                    : "bg-[#FAF9F6]/90 border-[#0F7B6C]/30 text-[#0F7B6C]"
+                }`}
+              >
+                <Eye className="w-2.5 h-2.5" />
+                <span>EYELINE</span>
+              </div>
+              <div
+                className={`px-2 py-0.5 rounded text-[9px] font-mono border ${
+                  isDark
+                    ? "bg-[#17171E]/90 border-[#26262B] text-white/60"
+                    : "bg-[#FAF9F6]/90 border-[#EAE7DF] text-[#6B6A65]"
+                }`}
+              >
+                9:16 CAM
+              </div>
             </div>
-            <div
-              className={`px-2 py-0.5 rounded text-[9px] font-mono border ${
-                isDark
-                  ? "bg-[#17171E]/90 border-[#26262B] text-white/60"
-                  : "bg-[#FAF9F6]/90 border-[#EAE7DF] text-[#6B6A65]"
-              }`}
-            >
-              9:16 CAM
-            </div>
-          </div>
+          )}
 
           {/* Top & Bottom Fade Scrims */}
           <div
-            className={`pointer-events-none absolute top-0 left-0 right-0 h-10 z-10 bg-gradient-to-b ${
+            className={`pointer-events-none absolute top-0 left-0 right-0 ${compact ? "h-6" : "h-10"} z-10 bg-gradient-to-b ${
               isDark ? "from-[#111114] to-transparent" : "from-[#FFFFFF] to-transparent"
             }`}
           />
           <div
-            className={`pointer-events-none absolute bottom-0 left-0 right-0 h-10 z-10 bg-gradient-to-t ${
+            className={`pointer-events-none absolute bottom-0 left-0 right-0 ${compact ? "h-6" : "h-10"} z-10 bg-gradient-to-t ${
               isDark ? "from-[#111114] to-transparent" : "from-[#FFFFFF] to-transparent"
             }`}
           />
 
           <div
             ref={scrollRef}
-            className="h-56 overflow-y-auto px-4 md:px-24 py-10 space-y-12 text-center scroll-smooth relative z-0 select-none"
+            className={`${compact ? "h-36 px-3 py-5 space-y-6" : "h-56 px-4 md:px-24 py-10 space-y-12"} overflow-y-auto text-center scroll-smooth relative z-0 select-none`}
           >
             {scenes.map((scene, idx) => (
               <div
@@ -391,7 +395,7 @@ export function TeleprompterPreview({
                 }`}
               >
                 <span
-                  className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-mono font-semibold mb-3 tabular-nums ${
+                  className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-mono font-semibold ${compact ? "mb-1.5" : "mb-3"} tabular-nums ${
                     isDark
                       ? "bg-[#26262B] text-amber-300"
                       : "bg-[#FBF3DB] text-[#9A6700]"
@@ -400,7 +404,7 @@ export function TeleprompterPreview({
                   {scene.marker} · {scene.cue}
                 </span>
                 <p
-                  className={`text-xl sm:text-2xl font-medium leading-relaxed tracking-tight max-w-xl mx-auto ${
+                  className={`${compact ? "text-base sm:text-lg" : "text-xl sm:text-2xl"} font-medium leading-relaxed tracking-tight max-w-xl mx-auto ${
                     isDark ? "text-white" : "text-[#111114]"
                   }`}
                 >

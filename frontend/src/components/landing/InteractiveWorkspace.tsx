@@ -515,11 +515,11 @@ export function InteractiveWorkspace({
   const headingTxt = appDarkChrome ? "text-[#F2F0F7]" : "text-[#191919]";
   const mutedTxt = appDarkChrome ? "text-[#A3A0B0]" : "text-[#6B6A65]";
   const hairline = appDarkChrome ? "border-white/[0.08]" : "border-[rgba(55,53,47,0.09)]";
+  const divideHairline = appDarkChrome ? "divide-white/[0.08]" : "divide-[rgba(55,53,47,0.09)]";
 
   return (
     <div ref={containerRef} className="w-full">
-      <motion.div
-        style={{ rotateX, transformPerspective: 1200 }}
+      <div
         className={`rounded-2xl border shadow-[0_24px_60px_-15px_rgba(17,17,20,0.14)] overflow-hidden flex flex-col md:flex-row min-h-[680px] transition-colors duration-200 ${shellBg}`}
       >
         {/* Mobile Client + Route Rail (< md) */}
@@ -846,7 +846,7 @@ export function InteractiveWorkspace({
                 </div>
 
                 {/* 4-Column Linear Telemetry Strip */}
-                <div className={`rounded-xl border overflow-hidden divide-y sm:divide-y-0 sm:divide-x ${hairline} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${cardBg}`}>
+                <div className={`rounded-xl border overflow-hidden divide-y sm:divide-y-0 sm:divide-x ${hairline} ${divideHairline} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${cardBg}`}>
                   <div className="p-3.5 space-y-1">
                     <div className="flex items-center justify-between text-[10px] font-mono uppercase">
                       <span className={mutedTxt}>Active Retainers</span>
@@ -931,7 +931,7 @@ export function InteractiveWorkspace({
                             <th className="py-2 px-3 text-right font-semibold">Due</th>
                           </tr>
                         </thead>
-                        <tbody className={`divide-y ${hairline}`}>
+                        <tbody className={`divide-y ${divideHairline}`}>
                           {filteredDashboardRows.map((row) => (
                             <tr key={row.title} className="h-10">
                               <td className={`py-2 px-3.5 font-medium ${headingTxt}`}>{row.title}</td>
@@ -1035,7 +1035,7 @@ export function InteractiveWorkspace({
                 </div>
 
                 {/* 5-Segment Editorial Execution Strip (workspace/page.tsx lines 381-495) */}
-                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x ${hairline} ${cardBg}`}>
+                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x ${hairline} ${divideHairline} ${cardBg}`}>
                   {[
                     { id: "action_required", label: "To Execute", count: "6", sub: "ready to work", icon: CheckSquare },
                     { id: "revisions", label: "Needs Update", count: "1", sub: "feedback", icon: AlertTriangle },
@@ -1211,7 +1211,7 @@ export function InteractiveWorkspace({
                           <th className="py-2.5 px-3 text-right font-semibold">Context</th>
                         </tr>
                       </thead>
-                      <tbody className={`divide-y ${hairline}`}>
+                      <tbody className={`divide-y ${divideHairline}`}>
                         {allClientsList.map((c) => (
                           <tr key={c.key} className="h-12">
                             <td className="py-2.5 px-3.5">
@@ -1481,7 +1481,7 @@ export function InteractiveWorkspace({
                 </div>
 
                 {/* 5-Segment Telemetry Strip */}
-                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-5 divide-x ${hairline} ${cardBg}`}>
+                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-5 divide-x ${hairline} ${divideHairline} ${cardBg}`}>
                   {[
                     ["Remaining", String(currentClient.activeTasks)],
                     ["Ready to Script", "4"],
@@ -1534,7 +1534,7 @@ export function InteractiveWorkspace({
                     </div>
                   </div>
                 ) : (
-                  <div className={`rounded-xl border divide-y text-xs ${cardBg} ${hairline}`}>
+                  <div className={`rounded-xl border divide-y text-xs ${cardBg} ${hairline} ${divideHairline}`}>
                     {currentClient.pipelineRows.map((row) => (
                       <div key={row.title} className="p-3 flex items-center justify-between">
                         <div>
@@ -1897,7 +1897,7 @@ export function InteractiveWorkspace({
                       <div key={d}>{d}</div>
                     ))}
                   </div>
-                  <div className={`grid grid-cols-7 divide-x divide-y text-[10px] ${hairline}`}>
+                  <div className={`grid grid-cols-7 divide-x divide-y text-[10px] ${hairline} ${divideHairline}`}>
                     {[
                       { day: 22, post: null },
                       { day: 23, post: { title: "Teaser Hook", net: "IG", status: "Published" } },
@@ -2135,7 +2135,7 @@ export function InteractiveWorkspace({
                 </div>
 
                 {/* 4-Segment Linear Telemetry Strip matching team/page.tsx line 363 */}
-                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-4 divide-x ${hairline} ${cardBg}`}>
+                <div className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-4 divide-x ${hairline} ${divideHairline} ${cardBg}`}>
                   <div>
                     <p className={`text-[9px] font-mono uppercase ${mutedTxt}`}>Total Members</p>
                     <p className={`text-lg font-bold font-mono tabular-nums ${headingTxt}`}>5</p>
@@ -2175,7 +2175,7 @@ export function InteractiveWorkspace({
                   ))}
                 </div>
 
-                <div className={`rounded-xl border divide-y text-xs ${cardBg} ${hairline}`}>
+                <div className={`rounded-xl border divide-y text-xs ${cardBg} ${hairline} ${divideHairline}`}>
                   {teamMembers.map((m) => (
                     <div key={m.email} className="p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -2371,7 +2371,7 @@ export function InteractiveWorkspace({
             )}
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -10,11 +10,14 @@ Endpoints:
 """
 from __future__ import annotations
 
+import asyncio
+from datetime import date
 from pathlib import Path
+from typing import Literal
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,8 +33,14 @@ from app.models.user import Membership, User
 from app.schemas.comment import CommentCreate, CommentOut
 from app.schemas.deliverable import ContentVersionOut, DeliverableDetailOut
 from app.schemas.campaign import DeliverableOut, DeliverableUpdate
+from app.services.credit_service import IMAGE_GENERATION_CREDIT_COST, precheck_agency_credits
 from app.services.storage_service import delete_file, save_file
 from app.services.tenant_service import assert_deliverable_belongs_to_agency
+from app.services.visual_generation_service import (
+    VisualPreset,
+    execute_visual_generation_job,
+    resolve_preset_dimensions,
+)
 
 router = APIRouter(tags=["deliverables"])
 
@@ -308,6 +317,95 @@ async def upload_version(
     await db.commit()
     await db.refresh(content_version)
     return ContentVersionOut.model_validate(content_version)
+
+
+# ---------------------------------------------------------------------------
+# POST generate AI visual asset asynchronously (NVIDIA Flux-3-Image-Klein -> S3/B2)
+# ---------------------------------------------------------------------------
+
+
+class GenerateVisualRequest(BaseModel):
+    preset: VisualPreset = "portrait_4_5"
+    prompt: str | None = Field(None, max_length=1500)
+    slide_index: int | None = Field(None, ge=1, le=20)
+    steps: int = Field(35, ge=1, le=50)
+    task_id: uuid.UUID | None = None
+
+
+class GenerateVisualAcceptedOut(BaseModel):
+    status: Literal["queued"] = "queued"
+    job_id: str
+    deliverable_id: uuid.UUID
+    preset: VisualPreset
+    width: int
+    height: int
+    credit_cost: int
+    credits_available: int
+
+
+@router.post(
+    "/agencies/{agency_id}/deliverables/{deliverable_id}/generate-visual",
+    response_model=GenerateVisualAcceptedOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def generate_deliverable_visual(
+    agency_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    payload: GenerateVisualRequest,
+    _: Membership = Depends(require_agency_member),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> GenerateVisualAcceptedOut:
+    """
+    Pre-check agency credits, validate Flux Klein resolution preset (1024x1024, 896x1120, or 768x1360),
+    and queue asynchronous visual generation uploaded strictly to remote S3/B2 storage.
+    """
+    await _get_deliverable_or_404(deliverable_id, agency_id, db)
+
+    if payload.task_id is not None:
+        task = await db.get(Task, payload.task_id)
+        if not task or task.deliverable_id != deliverable_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specified task does not belong to this deliverable.",
+            )
+
+    try:
+        width, height, _label = resolve_preset_dimensions(payload.preset)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+    credits_available = await precheck_agency_credits(
+        agency_id=agency_id,
+        required_credits=IMAGE_GENERATION_CREDIT_COST,
+        db=db,
+    )
+
+    job_id = uuid.uuid4().hex
+    asyncio.create_task(
+        execute_visual_generation_job(
+            job_id=job_id,
+            agency_id=agency_id,
+            deliverable_id=deliverable_id,
+            user_id=current_user.id,
+            preset=payload.preset,
+            raw_prompt=payload.prompt,
+            slide_index=payload.slide_index,
+            steps=payload.steps,
+            task_id=payload.task_id,
+        )
+    )
+
+    return GenerateVisualAcceptedOut(
+        status="queued",
+        job_id=job_id,
+        deliverable_id=deliverable_id,
+        preset=payload.preset,
+        width=width,
+        height=height,
+        credit_cost=IMAGE_GENERATION_CREDIT_COST,
+        credits_available=credits_available,
+    )
 
 
 # ---------------------------------------------------------------------------

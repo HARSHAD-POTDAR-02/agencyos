@@ -588,7 +588,9 @@ function CampaignPlansContent() {
                 {draft?.start_date && draft?.end_date && (
                   <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[#A78BFA] font-mono font-bold">
                     <CalendarDays className="w-3.5 h-3.5" />
-                    <span>Sprint Timeline: {draft.start_date} to {draft.end_date} ({draft.duration_days || deliverables.length} Days)</span>
+                    <span>
+                      Sprint Timeline: {draft.start_date} to {draft.end_date} ({draft.duration_days || deliverables.length}-Day Sprint · {deliverables.length} Deliverables)
+                    </span>
                   </div>
                 )}
               </div>
@@ -775,7 +777,14 @@ function CampaignPlansContent() {
                     <div>
                       <div className="flex items-center justify-between gap-1 pb-2 border-b border-white/[0.06]">
                         <div className="flex flex-col min-w-0">
-                          <span className="font-heading font-bold text-[#F2F0F7] text-xs">Day {item.day_number}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-heading font-bold text-[#F2F0F7] text-xs">
+                              Deliverable {idx + 1}
+                            </span>
+                            <span className="text-[10px] font-mono text-[#A3A0B0]">
+                              · Day {item.planned_day || item.day_number}
+                            </span>
+                          </div>
                           {item.date_label && (
                             <span className="text-[10px] text-[#A78BFA] font-mono font-semibold truncate">
                               {item.date_label}

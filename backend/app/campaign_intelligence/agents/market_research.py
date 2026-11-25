@@ -94,7 +94,7 @@ class MarketResearchAgent:
         platforms = brief.platforms or ["linkedin", "instagram"]
         location = brand_context.location if brand_context else None
 
-        # 2. Gather real external research evidence
+        # 2. Gather real external research evidence (with adaptive broadened retry if sparse)
         evidence_list: list[ResearchEvidence] = await gather_market_evidence(
             industry=industry,
             target_audience=audience,
@@ -102,6 +102,19 @@ class MarketResearchAgent:
             custom_brief=brief.custom_brief,
             location=location,
         )
+        if len(evidence_list) < 2:
+            broadened_evidence = await gather_market_evidence(
+                industry=industry,
+                target_audience=audience or ["Decision Makers"],
+                platforms=platforms,
+                custom_brief=brief.objective,
+                location=None,
+            )
+            seen_urls = {ev.source_url for ev in evidence_list}
+            for ev in broadened_evidence:
+                if ev.source_url not in seen_urls:
+                    evidence_list.append(ev)
+                    seen_urls.add(ev.source_url)
 
         # 3. Format evidence for LLM prompt (Select top 5-6 deduplicated items with deep excerpts)
         sorted_evidence = sorted(evidence_list, key=lambda e: e.relevance_score, reverse=True)[:6]
@@ -226,7 +239,7 @@ async def market_research_node(
     start_time = datetime.now(timezone.utc).isoformat()
     start_perf = time.perf_counter()
     agent_name = "market_research"
-    model_name = settings.GROQ_MODEL
+    model_name = getattr(settings, "MARKET_RESEARCH_MODEL", None) or settings.GROQ_MODEL
 
     try:
         agent = MarketResearchAgent(model_name=model_name)

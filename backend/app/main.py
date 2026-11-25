@@ -36,6 +36,7 @@ from app.routers import (
     cortex,
     websockets,
     webhooks,
+    waitlist,
 )
 
 
@@ -157,6 +158,7 @@ app.include_router(operational_workflows.router)
 app.include_router(cortex.router)
 app.include_router(websockets.router)
 app.include_router(webhooks.router)
+app.include_router(waitlist.router)
 
 # ---------------------------------------------------------------------------
 # Static file serving for uploads

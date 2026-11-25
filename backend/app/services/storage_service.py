@@ -164,6 +164,47 @@ def save_text_content(deliverable_id: uuid.UUID, file_name: str, text: str) -> t
     return storage_key, checksum, file_size
 
 
+async def save_remote_bytes(
+    data: bytes,
+    deliverable_id: uuid.UUID,
+    file_name: str,
+    content_type: str = "image/jpeg",
+) -> tuple[str, str, int]:
+    """
+    Persist generated visual bytes directly to Backblaze B2 / S3 object storage
+    without writing to local filesystem storage.
+
+    Returns:
+        (storage_key, checksum_sha256, file_size_bytes)
+    """
+    s3 = _get_boto3_client()
+    if not s3:
+        raise RuntimeError(
+            "Remote S3/Backblaze B2 object storage is not configured. Refusing local disk storage."
+        )
+
+    checksum = hashlib.sha256(data).hexdigest()
+    file_size = len(data)
+    suffix = Path(file_name).suffix or ".jpg"
+    unique_name = f"{uuid.uuid4().hex}{suffix}"
+    storage_key = f"{deliverable_id}/{unique_name}"
+    bucket = _get_bucket_name()
+
+    def _sync_put() -> None:
+        s3.put_object(
+            Bucket=bucket,
+            Key=storage_key,
+            Body=data,
+            ContentType=content_type,
+        )
+
+    await asyncio.to_thread(_sync_put)
+    logger.info(
+        f"Uploaded generated visual {storage_key} ({file_size} bytes) directly to remote bucket [{bucket}]."
+    )
+    return storage_key, checksum, file_size
+
+
 def upload_local_file(local_file_path: str, storage_key: str, content_type: str = "image/jpeg") -> bool:
     """
     Upload an existing file from the local filesystem to Backblaze B2 / S3.
